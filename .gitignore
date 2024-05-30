@@ -3,6 +3,7 @@ logs
 photos
 deteccionmovimiento
 package-lock.json
+.env
 
 dist
 dist-ssr
