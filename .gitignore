@@ -2,6 +2,7 @@ node_modules
 logs
 photos
 deteccionmovimiento
+package-lock.json
 
 dist
 dist-ssr
