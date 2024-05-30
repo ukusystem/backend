@@ -4,6 +4,7 @@ photos
 deteccionmovimiento
 package-lock.json
 .env
+git-extras
 
 dist
 dist-ssr
