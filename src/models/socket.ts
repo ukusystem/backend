@@ -1,6 +1,6 @@
 import { Server as HttpServer } from "http";
 import { Server } from "socket.io";
-import { accesoSocket, alarmaSocket, energiaSocket, pinesEntradaSocket, sensorTemperaturaSocket, ticketSocket , streamRecordSocket, lastSnapshotSocket, sensorTemperaturaSocketFinal, moduloEnergiaSocket, pinesEntradaSocketFinal, registroAccesoSocket, registroEntradaSocket } from "../controllers/socket";
+import { accesoSocket, alarmaSocket, energiaSocket, pinesEntradaSocket, sensorTemperaturaSocket, ticketSocket , streamRecordSocket, lastSnapshotSocket, sensorTemperaturaSocketFinal, moduloEnergiaSocket, pinesEntradaSocketFinal, registroAccesoSocket, registroEntradaSocket, SensorTemperaturaMap } from "../controllers/socket";
 import { streamSocketFinal } from "../controllers/socket/streamFinal";
 import { Auth } from "./auth";
 import { pinesSalidaSocket } from "../controllers/socket/pinesSalida";
@@ -110,6 +110,15 @@ export class Sockets {
     this.#io.of(/^\/lastsnapshot\/\d+$/).on("connection", (socket)=>{lastSnapshotSocket(this.#io, socket)})
 
 
+  }
+
+  async initMaps(){
+    try {
+      await SensorTemperaturaMap.init()
+    } catch (error) {
+      console.log("Socket Model | Error init maps")
+      console.log(error)
+    }
   }
 
 }
