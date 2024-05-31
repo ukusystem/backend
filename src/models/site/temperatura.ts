@@ -1,9 +1,10 @@
 import { MySQL2 } from "../../database/mysql";
-import { handleErrorWithArgument } from "../../utils/simpleErrorHandler";
+import { handleErrorWithArgument, handleErrorWithoutArgument } from "../../utils/simpleErrorHandler";
 
 import type { SensorTemperatura } from "../../types/db";
 import { RowDataPacket } from "mysql2";
 import dayjs from "dayjs";
+import { Init } from "../init";
 
 interface SensorTemperaturaRowData extends RowDataPacket, SensorTemperatura {}
 
@@ -11,6 +12,30 @@ type RegistroTemperaturaInfo = { temperatura: number; hora_min: number };
 interface RegistroTemperaturaRowData extends RowDataPacket, RegistroTemperaturaInfo {}
 
 export class Temperatura {
+
+  static getAllSensoresTemperatura = handleErrorWithoutArgument<(SensorTemperatura & {ctrl_id:number})[]>(async () => {
+    const regionNodos = await Init.getRegionNodos()
+    if( regionNodos.length > 0){
+      const sensoresTempData = await regionNodos.reduce(async (resultPromise, item) => {
+        const result = await resultPromise;
+        const { nododb_name, ctrl_id } = item;
+
+        const sensorsData = await MySQL2.executeQuery<SensorTemperaturaRowData[]>({ sql: `SELECT * from ${nododb_name}.sensortemperatura` });
+
+        if (sensorsData.length > 0) {
+          for (let sensor of sensorsData) {
+            result.push({...sensor,ctrl_id})
+          }
+        }
+
+        return result
+      },Promise.resolve([] as (SensorTemperatura & {ctrl_id:number})[] ))
+      return sensoresTempData
+    }
+
+    return [];
+  }, "Temperatura.getAllSensoresTemperatura");
+  
   static getSensoresTemperaturaByCtrlID = handleErrorWithArgument<SensorTemperatura[], { ctrl_id: number }>(async ({ ctrl_id }) => {
     const sensoresTempData = await MySQL2.executeQuery<SensorTemperaturaRowData[]>({ sql: `SELECT * from ${"nodo" + ctrl_id}.sensortemperatura WHERE activo = 1` });
 
