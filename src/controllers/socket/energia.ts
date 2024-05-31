@@ -65,6 +65,7 @@ export const moduloEnergiaSocket = async (io: Server, socket: Socket) => {
 interface IMedidorEnergiaSocket {
   ctrl_id: number;
   me_id: number;
+  descripcion: string | null;
   voltaje: number | null;
   amperaje: number | null;
   fdp: number | null;
@@ -84,9 +85,10 @@ frecuencia: number | null;
 potenciaw: number | null;
 potenciakwh: number | null;
 activo: number | null;
+descripcion: string | null;
 
 constructor(props: IMedidorEnergiaSocket) {
-  const { ctrl_id, me_id, voltaje, amperaje, fdp, frecuencia, potenciaw, potenciakwh, activo, } = props;
+  const { ctrl_id, me_id, voltaje, amperaje, fdp, frecuencia, potenciaw, potenciakwh, activo,descripcion } = props;
   this.ctrl_id = ctrl_id;
   this.me_id = me_id;
   this.voltaje = voltaje;
@@ -96,6 +98,7 @@ constructor(props: IMedidorEnergiaSocket) {
   this.potenciaw = potenciaw;
   this.potenciakwh = potenciakwh;
   this.activo = activo;
+  this.descripcion = descripcion;
 }
 
 public setCtrlId(ctrl_id: IMedidorEnergiaSocket["ctrl_id"]): void {
@@ -125,6 +128,9 @@ public setPotenciakwh(potenciakwh: IMedidorEnergiaSocket["potenciakwh"]): void {
 public setActivo(activo: IMedidorEnergiaSocket["activo"]): void {
   this.activo = activo;
 }
+public setDescripcion(descripcion: IMedidorEnergiaSocket["descripcion"]): void {
+  this.descripcion = descripcion;
+}
 
 public toJSON(): IMedidorEnergiaSocket {
   const result: IMedidorEnergiaSocket = {
@@ -137,6 +143,7 @@ public toJSON(): IMedidorEnergiaSocket {
     potenciaw: this.potenciaw,
     potenciakwh: this.potenciakwh,
     activo: this.activo,
+    descripcion: this.descripcion,
   };
   return result;
 }
@@ -179,7 +186,7 @@ export class MedidorEnergiaMap {
   }
 
   private static update(medidor: MedidorEnergiaSocket) {
-    const { ctrl_id, me_id, activo, amperaje, fdp, frecuencia, potenciakwh, potenciaw, voltaje, } = medidor.toJSON();
+    const { ctrl_id, me_id, activo, amperaje, fdp, frecuencia, potenciakwh, potenciaw, voltaje,descripcion } = medidor.toJSON();
     if (MedidorEnergiaMap.map.hasOwnProperty(ctrl_id)) {
       if (MedidorEnergiaMap.map[ctrl_id].hasOwnProperty(me_id)) {
         const currentMedEnergia = MedidorEnergiaMap.map[ctrl_id][me_id];
@@ -192,6 +199,7 @@ export class MedidorEnergiaMap {
         if (potenciakwh) currentMedEnergia.setPotenciakwh(potenciakwh);
         if (potenciaw) currentMedEnergia.setPotenciaw(potenciaw);
         if (voltaje) currentMedEnergia.setVoltaje(voltaje);
+        if (descripcion) currentMedEnergia.setDescripcion(descripcion);
       }
     }
   }

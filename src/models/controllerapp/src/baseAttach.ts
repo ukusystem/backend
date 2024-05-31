@@ -632,15 +632,14 @@ export class BaseAttach extends Mortal {
   ) {
     const newEnergy = new sm.MedidorEnergiaSocket({
       me_id: meID,
-      serie: serie ?? DEF_TXT, // No va
-      descripcion: desc ?? DEF_TXT, // No va
-      voltaje: voltaje ?? DEF_NUM,
-      amperaje: amperaje ?? DEF_NUM,
-      fdp: fdp ?? DEF_NUM,
-      frecuencia: frecuencia ?? DEF_NUM,
-      potenciaw: potenciaw ?? DEF_NUM,
-      potenciakwh: potenciakwh ?? DEF_NUM,
-      activo: active ?? DEF_ACTIVE, // No va
+      descripcion: desc,
+      voltaje: voltaje,
+      amperaje: amperaje,
+      fdp: fdp,
+      frecuencia: frecuencia,
+      potenciaw: potenciaw,
+      potenciakwh: potenciakwh,
+      activo: active,
       ctrl_id: nodeID,
     });
     if (active === 0) {
