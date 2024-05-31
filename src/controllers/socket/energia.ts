@@ -1,6 +1,6 @@
 import { Server, Socket } from "socket.io";
 import { MySQL2 } from "../../database/mysql";
-import { Controlador, MedidorEnergia } from "../../types/db";
+import { Energia } from "../../models/site/energia";
 
 export const energiaSocket = async (io: Server, socket: Socket) => {
   let intervalId: NodeJS.Timeout | null = null;
@@ -45,7 +45,7 @@ export const moduloEnergiaSocket = async (io: Server, socket: Socket) => {
 
     socket.on("disconnect", () => {
       const clientsCount = io.of(`/modulo_energia/${ctrl_id}`).sockets.size;
-      console.log(`Socket Modulo Energia | clientes_conectados = ${clientsCount}| ctrl_id = ${ctrl_id}`);
+      console.log(`Socket Modulo Energia | clientes_conectados = ${clientsCount} | ctrl_id = ${ctrl_id}`);
       if (clientsCount == 0 ) {
         if(intervalEnergia.hasOwnProperty(ctrl_id)){
           console.log(`Socket Modulo Energia | Eliminado SetInterval | ctrl_id = ${ctrl_id}`)
@@ -54,7 +54,7 @@ export const moduloEnergiaSocket = async (io: Server, socket: Socket) => {
         }
       }
     });
-  
+
     socket.on("error", (error: any) => {
       console.log(`Socket Modulo Energia | Error | ctrl_id = ${ctrl_id}`)
       console.error(error)
@@ -62,56 +62,88 @@ export const moduloEnergiaSocket = async (io: Server, socket: Socket) => {
 
 }
 
-type IMedidorEnergiaSocket = MedidorEnergia & Pick<Controlador,"ctrl_id">
-
-export class MedidorEnergiaSocket implements IMedidorEnergiaSocket {
+interface IMedidorEnergiaSocket {
   ctrl_id: number;
   me_id: number;
-  serie: number | string;
-  descripcion: string;
-  voltaje: number;
-  amperaje: number;
-  fdp: number;
-  frecuencia: number;
-  potenciaw: number;
-  potenciakwh: number;
-  activo: number;
+  voltaje: number | null;
+  amperaje: number | null;
+  fdp: number | null;
+  frecuencia: number | null;
+  potenciaw: number | null;
+  potenciakwh: number | null;
+  activo: number | null;
+}
 
-  constructor(props: IMedidorEnergiaSocket) {
-    const {ctrl_id,me_id,serie,descripcion,voltaje,amperaje,fdp,frecuencia,potenciaw,potenciakwh ,activo} = props
-    this.ctrl_id = ctrl_id;
-    this.me_id = me_id;
-    this.serie = serie;
-    this.descripcion = descripcion;
-    this.voltaje = voltaje;
-    this.amperaje = amperaje;
-    this.fdp = fdp;
-    this.frecuencia = frecuencia;
-    this.potenciaw = potenciaw;
-    this.potenciakwh = potenciakwh;
-    this.activo = activo
-  }
+export class MedidorEnergiaSocket implements IMedidorEnergiaSocket {
+ctrl_id: number;
+me_id: number;
+voltaje: number | null;
+amperaje: number | null;
+fdp: number | null;
+frecuencia: number | null;
+potenciaw: number | null;
+potenciakwh: number | null;
+activo: number | null;
 
-  public toJSON(): IMedidorEnergiaSocket {
-    const result : IMedidorEnergiaSocket = {
-      ctrl_id: this.ctrl_id,
-      me_id: this.me_id,
-      serie: this.serie,
-      descripcion: this.descripcion,
-      voltaje: this.voltaje,
-      amperaje: this.amperaje,
-      fdp: this.fdp,
-      frecuencia: this.frecuencia,
-      potenciaw: this.potenciaw,
-      potenciakwh: this.potenciakwh,
-      activo: this.activo
-    };
-    return result;
-  }
+constructor(props: IMedidorEnergiaSocket) {
+  const { ctrl_id, me_id, voltaje, amperaje, fdp, frecuencia, potenciaw, potenciakwh, activo, } = props;
+  this.ctrl_id = ctrl_id;
+  this.me_id = me_id;
+  this.voltaje = voltaje;
+  this.amperaje = amperaje;
+  this.fdp = fdp;
+  this.frecuencia = frecuencia;
+  this.potenciaw = potenciaw;
+  this.potenciakwh = potenciakwh;
+  this.activo = activo;
+}
 
+public setCtrlId(ctrl_id: IMedidorEnergiaSocket["ctrl_id"]): void {
+  this.ctrl_id = ctrl_id;
+}
+public setMeId(me_id: IMedidorEnergiaSocket["me_id"]): void {
+  this.me_id = me_id;
+}
+public setVoltaje(voltaje: IMedidorEnergiaSocket["voltaje"]): void {
+  this.voltaje = voltaje;
+}
+public setAmperaje(amperaje: IMedidorEnergiaSocket["amperaje"]): void {
+  this.amperaje = amperaje;
+}
+public setFdp(fdp: IMedidorEnergiaSocket["fdp"]): void {
+  this.fdp = fdp;
+}
+public setFrecuencia(frecuencia: IMedidorEnergiaSocket["frecuencia"]): void {
+  this.frecuencia = frecuencia;
+}
+public setPotenciaw(potenciaw: IMedidorEnergiaSocket["potenciaw"]): void {
+  this.potenciaw = potenciaw;
+}
+public setPotenciakwh(potenciakwh: IMedidorEnergiaSocket["potenciakwh"]): void {
+  this.potenciakwh = potenciakwh;
+}
+public setActivo(activo: IMedidorEnergiaSocket["activo"]): void {
+  this.activo = activo;
+}
+
+public toJSON(): IMedidorEnergiaSocket {
+  const result: IMedidorEnergiaSocket = {
+    ctrl_id: this.ctrl_id,
+    me_id: this.me_id,
+    voltaje: this.voltaje,
+    amperaje: this.amperaje,
+    fdp: this.fdp,
+    frecuencia: this.frecuencia,
+    potenciaw: this.potenciaw,
+    potenciakwh: this.potenciakwh,
+    activo: this.activo,
+  };
+  return result;
+}
 }
 
 export class MedidorEnergiaMap {
+
   static map: { [ctrl_id: string]: { [me_id: string]: MedidorEnergiaSocket } } = {};
 
   private static exists(args: { ctrl_id: string; me_id: string }) {
@@ -147,11 +179,33 @@ export class MedidorEnergiaMap {
   }
 
   private static update(medidor: MedidorEnergiaSocket) {
-    const { ctrl_id, me_id } = medidor.toJSON();
+    const { ctrl_id, me_id, activo, amperaje, fdp, frecuencia, potenciakwh, potenciaw, voltaje, } = medidor.toJSON();
     if (MedidorEnergiaMap.map.hasOwnProperty(ctrl_id)) {
       if (MedidorEnergiaMap.map[ctrl_id].hasOwnProperty(me_id)) {
-        MedidorEnergiaMap.map[ctrl_id][me_id] = medidor;
+        const currentMedEnergia = MedidorEnergiaMap.map[ctrl_id][me_id];
+        currentMedEnergia.setCtrlId(ctrl_id);
+        currentMedEnergia.setMeId(me_id);
+        if (activo) currentMedEnergia.setActivo(activo);
+        if (amperaje) currentMedEnergia.setAmperaje(amperaje);
+        if (fdp) currentMedEnergia.setFdp(fdp);
+        if (frecuencia) currentMedEnergia.setFrecuencia(frecuencia);
+        if (potenciakwh) currentMedEnergia.setPotenciakwh(potenciakwh);
+        if (potenciaw) currentMedEnergia.setPotenciaw(potenciaw);
+        if (voltaje) currentMedEnergia.setVoltaje(voltaje);
       }
+    }
+  }
+
+  public static async init() {
+    try {
+        let initData = await Energia.getAllModuloEnergia()
+        for (let medidor of initData) {
+          let newMedEnergia = new MedidorEnergiaSocket(medidor);
+          MedidorEnergiaMap.add_update(newMedEnergia);
+        }
+    } catch (error) {
+      console.log(`Socket Medidor Energia | MedidorEnergiaMap | Error al inicilizar modulos`);
+      console.error(error);
     }
   }
 
@@ -159,7 +213,7 @@ export class MedidorEnergiaMap {
     const { ctrl_id, me_id } = medidor.toJSON();
     if (MedidorEnergiaMap.map.hasOwnProperty(ctrl_id)) {
       if (MedidorEnergiaMap.map[ctrl_id].hasOwnProperty(me_id)) {
-        delete MedidorEnergiaMap.map[ctrl_id][me_id];
+        MedidorEnergiaMap.map[ctrl_id][me_id].setActivo(0);
       }
     }
   }
@@ -185,10 +239,9 @@ export class MedidorEnergiaMap {
         }
       }
     }
-    let sortedData = resultData.sort((r1, r2) => r1.me_id- r2.me_id); // ordenamiento ascendente
+    let sortedData = resultData.sort((r1, r2) => r1.me_id - r2.me_id); // ordenamiento ascendente
     return sortedData;
   }
-
 }
 
 
