@@ -14,6 +14,9 @@ import * as cp from 'child_process'
     // Inicializar dectecion de movimiento
     // await server.motion()
 
+    // Init Maps
+    await server.initmaps()
+
     // Mio
     server.runController();
 

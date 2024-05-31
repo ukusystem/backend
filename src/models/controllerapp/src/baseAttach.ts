@@ -652,12 +652,12 @@ export class BaseAttach extends Mortal {
 
   _notifyTemp(stID: number, nodeID: number, active: number | null = null, current: number | null = null, serie: string | null = null, desc: string | null = null) {
     const newTemp = new sm.SensorTemperaturaSocket({
-      activo: active ?? DEF_ACTIVE,
-      actual: current ?? DEF_ACTIVE,
+      activo: active,
+      actual: current,
       ctrl_id: nodeID,
-      serie: serie ?? DEF_TXT,
+      serie: serie,
       st_id: stID,
-      ubicacion: desc ?? DEF_TXT,
+      ubicacion: desc,
     });
     // this._log('Notifying web about tempertaure.')
     if (active === 0) {
