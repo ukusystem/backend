@@ -1,71 +1,92 @@
 import { Server, Socket } from "socket.io";
 import { Temperatura } from "../../models/site/temperatura";
-import { Controlador, SensorTemperatura } from "../../types/db";
-
 
 export const sensorTemperaturaSocket = async (io: Server, socket: Socket) => {
-    
-    let intervalId: NodeJS.Timeout | null = null; // Referencia al intervalo
-
-    if (!intervalId) {
-    intervalId = setInterval(async () => {
-      const nspSensores = socket.nsp;
-      const [, , ctrl_id , id] = nspSensores.name.split("/"); // Namespace : "/sensor_temperatura/ctrl_id/id" 
-
-      const test = await Temperatura.getSensorDataByCtrlIdAndStId({ctrl_id: Number(ctrl_id), st_id: Number(id)})
-
-      if( test){
-        // const currentLoad = Math.floor(Math.random() * 11) + 10;
-        const horaAleatoria = Math.floor(Math.random() * 24);
-        socket.emit("temperatura", {hora_min: horaAleatoria, temperatura: test.actual});
-      }
-    }, 1000);
+  const nspSensores = socket.nsp;
+  const [, ,ctrl_id ,st_id] = nspSensores.name.split("/"); // Namespace : "/sensor_temperatura/ctrl_id/id" 
+  const observer = new TemperatureItemSocketObserver(socket);
+  SensorTemperaturaMap.registerItemObserver(Number(ctrl_id),Number(st_id),observer)
+  //emit initial data
+  const data = SensorTemperaturaMap.getDataByCtrlIDAndStID(ctrl_id,st_id)
+  if(data){
+    socket.nsp.emit("temperatura", data);
   }
-
+  
   socket.on("disconnect", () => {
-    if (intervalId) {
-      clearInterval(intervalId);
-      intervalId = null;
-    }
+    const clientsCount = io.of(`/sensor_temperatura/${ctrl_id}/${st_id}`).sockets.size;
+      console.log(`Socket Sensor Temperatura Item | clientes_conectados = ${clientsCount}| ctrl_id = ${ctrl_id} | st_id = ${st_id}`);
+      if (clientsCount == 0 ) {
+        console.log(`Socket Sensor Temperatura Item | Eliminado Observer | ctrl_id = ${ctrl_id} | st_id = ${st_id}`)
+        SensorTemperaturaMap.unregisterItemObserver(Number(ctrl_id),Number(st_id))
+      }
   });
-
-  socket.on("eror", () => {
+  
+  socket.on("error", (error: any) => {
     console.log("Error de conexion");
+    console.error(error)
   });
-};
 
-const intervalSensorTemp : {[ctrl_id: string]: NodeJS.Timeout } = {}
+};
 
 export const sensorTemperaturaSocketFinal = async ( io: Server, socket: Socket ) => {
 
   const nspStream = socket.nsp;
   const [, , ctrl_id] = nspStream.name.split("/"); // Namespace : "/sensor_temperaturafinal/ctrl_id"
   console.log(`Socket Sensor Temperatura | Cliente ID: ${socket.id} | Petición ctrl_id: ${ctrl_id}`);
-  if(!intervalSensorTemp.hasOwnProperty(ctrl_id)){
-    intervalSensorTemp[ctrl_id] = setInterval(() => {
-      const data = SensorTemperaturaMap.getDataByCtrlID(ctrl_id)
-      socket.nsp.emit("temperaturafinal", data);
-    }, 1000)
-  }
+  
+  const observerList = new TemperatureListSocketObserver(socket);
+  SensorTemperaturaMap.registerListObserver(Number(ctrl_id),observerList)
+  //emit initial data
+  const data = SensorTemperaturaMap.getDataByCtrlID(ctrl_id)
+  socket.nsp.emit("temperaturafinal", data);
 
   socket.on("disconnect", () => {
     const clientsCount = io.of(`/sensor_temperaturafinal/${ctrl_id}`).sockets.size;
     console.log(`Socket Sensor Temperatura | clientes_conectados = ${clientsCount}| ctrl_id = ${ctrl_id}`);
     if (clientsCount == 0 ) {
-      if(intervalSensorTemp.hasOwnProperty(ctrl_id)){
-        console.log(`Socket Sensor Temperatura | Eliminado SetInterval | ctrl_id = ${ctrl_id}`)
-        clearInterval(intervalSensorTemp[ctrl_id])
-        delete intervalSensorTemp[ctrl_id]
-      }
+      console.log(`Socket Sensor Temperatura | Eliminado ListObserver | ctrl_id = ${ctrl_id}`)
+      SensorTemperaturaMap.unregisterListObserver(Number(ctrl_id))
     }
   });
 
   socket.on("error", (error: any) => {
     console.log(`Socket Sensor Temperatura | Error | ctrl_id = ${ctrl_id}`)
-      console.error(error)
+    console.error(error)
   });
 };
 
+interface TemperatureListObserver {
+  update(data: ISensorTemperaturaSocket[]): void;
+}
+
+interface TemperatureItemObserver {
+  update(data: ISensorTemperaturaSocket): void;
+}
+
+class TemperatureListSocketObserver implements TemperatureListObserver {
+  private socket: Socket;
+
+  constructor(socket: Socket) {
+      this.socket = socket;
+  }
+
+  update(data: ISensorTemperaturaSocket[]): void {
+      this.socket.nsp.emit("temperaturafinal", data);
+  }
+}
+
+class TemperatureItemSocketObserver implements TemperatureItemObserver {
+  private socket: Socket;
+
+  constructor(socket: Socket) {
+      this.socket = socket;
+  }
+
+  update(data: ISensorTemperaturaSocket): void {
+    let nowDate = Date.now()
+    this.socket.nsp.emit("temperatura", {...data,hora_min:nowDate});
+  }
+}
 
 interface ISensorTemperaturaSocket {
   ctrl_id: number;
@@ -135,6 +156,54 @@ export class SensorTemperaturaMap {
 
   static map: { [ctrl_id: string]: { [st_id: string]: SensorTemperaturaSocket }; } = {};
 
+  static observers: {[ctrl_id: string]:{ [st_id: string]: TemperatureItemObserver }} = {};
+  static listobservers: {[ctrl_id: string]:TemperatureListObserver} = {};
+
+  public static registerItemObserver(ctrl_id: number,st_id: number, observer: TemperatureItemObserver): void {
+    if(!SensorTemperaturaMap.observers[ctrl_id]){
+      SensorTemperaturaMap.observers[ctrl_id] = {}
+    }
+    if(!SensorTemperaturaMap.observers[ctrl_id][st_id]){
+      SensorTemperaturaMap.observers[ctrl_id][st_id] = observer
+    }
+  }
+
+  public static registerListObserver(ctrl_id: number, observer: TemperatureListObserver): void {
+    if(!SensorTemperaturaMap.listobservers[ctrl_id]){
+      SensorTemperaturaMap.listobservers[ctrl_id] = observer
+    }
+  }
+
+  public static unregisterItemObserver(ctrl_id: number,st_id: number): void {
+    if(SensorTemperaturaMap.observers[ctrl_id]){
+      if(SensorTemperaturaMap.observers[ctrl_id][st_id]){
+        delete SensorTemperaturaMap.observers[ctrl_id][st_id]
+      }
+    }
+  }
+
+  public static unregisterListObserver(ctrl_id: number): void {
+    if(SensorTemperaturaMap.listobservers[ctrl_id]){
+      delete SensorTemperaturaMap.listobservers[ctrl_id]
+    }
+  }
+
+  public static notifyItemObserver(ctrl_id: number,st_id: number,sensor: SensorTemperaturaSocket):void{
+    if(SensorTemperaturaMap.observers[ctrl_id]){
+      if(SensorTemperaturaMap.observers[ctrl_id][st_id]){
+        SensorTemperaturaMap.observers[ctrl_id][st_id].update(sensor.toJSON())
+      }
+    }
+  }
+
+  public static notifyListObserver(ctrl_id: number,data: SensorTemperaturaSocket):void{
+    if(SensorTemperaturaMap.listobservers[ctrl_id]){
+      const tempList = SensorTemperaturaMap.getDataByCtrlID(String(data.ctrl_id))
+      SensorTemperaturaMap.listobservers[ctrl_id].update(tempList)
+    }
+  }
+  
+
   private static exists(args: { ctrl_id: string; st_id: string }) {
     const { ctrl_id, st_id } = args;
 
@@ -164,6 +233,7 @@ export class SensorTemperaturaMap {
 
     if (!SensorTemperaturaMap.map[ctrl_id].hasOwnProperty(st_id)) {
       SensorTemperaturaMap.map[ctrl_id][st_id] = sensor;
+      SensorTemperaturaMap.notifyListObserver(ctrl_id,sensor)
     }
   }
 
@@ -174,10 +244,17 @@ export class SensorTemperaturaMap {
         const currentSenTemp = SensorTemperaturaMap.map[ctrl_id][st_id];
         currentSenTemp.setCtrlId(ctrl_id);
         currentSenTemp.setStId(st_id);
-        if (activo) currentSenTemp.setActivo(activo);
+        if (activo) {
+          currentSenTemp.setActivo(activo)
+          if(currentSenTemp.activo != activo){
+            SensorTemperaturaMap.notifyListObserver(ctrl_id,sensor)
+          }
+        };
         if (actual) currentSenTemp.setActual(actual);
         if (serie) currentSenTemp.setSerie(serie);
         if (ubicacion) currentSenTemp.setUbicacion(ubicacion);
+        SensorTemperaturaMap.notifyItemObserver(ctrl_id,st_id,sensor)
+
       }
     }
   }
@@ -200,6 +277,7 @@ export class SensorTemperaturaMap {
     if (SensorTemperaturaMap.map.hasOwnProperty(ctrl_id)) {
       if (SensorTemperaturaMap.map[ctrl_id].hasOwnProperty(st_id)) {
         SensorTemperaturaMap.map[ctrl_id][st_id].setActivo(0);
+        SensorTemperaturaMap.notifyListObserver(ctrl_id,sensor)
       }
     }
   }
@@ -225,8 +303,17 @@ export class SensorTemperaturaMap {
         }
       }
     }
-    let sortedData = resultData.sort((r1, r2) => r1.st_id > r2.st_id ? 1 : r1.st_id < r2.st_id ? -1 : 0 );
+    let sortedData = resultData.sort((r1, r2) => r1.st_id - r2.st_id);
     return sortedData;
+  }
+  public static getDataByCtrlIDAndStID(ctrl_id: string,st_id: string) {
+    let resultData: ISensorTemperaturaSocket | null = null ;
+    if (SensorTemperaturaMap.map.hasOwnProperty(ctrl_id)) {
+     if(SensorTemperaturaMap.map[ctrl_id].hasOwnProperty(st_id)){
+      resultData = SensorTemperaturaMap.map[ctrl_id][st_id].toJSON()
+     }
+    }
+    return resultData;
   }
 }
 

@@ -1,0 +1,1 @@
+import{j as t,S as s,T as e}from"./index-4ffecd31.js";const n="/assets/emptyData-e7a50cc8.svg",p=({children:a})=>t.jsxs(s,{spacing:1,alignItems:"center",children:[t.jsx("img",{src:n,alt:"",width:100}),t.jsx(e,{component:"p",variant:"body1",children:a&&a||"No data"})]});export{p as E};
