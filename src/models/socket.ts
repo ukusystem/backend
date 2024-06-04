@@ -74,10 +74,10 @@ export class Sockets {
     this.#io.of(/^\/sensor_temperaturafinal\/\d+$/).on("connection", (socket)=>{sensorTemperaturaSocketFinal(this.#io, socket)})
 
     
-    // Namespace : "/energias/nodo_id"
-    this.#io.of(/^\/energias\/\d+$/).on("connection", (socket)=>{energiaSocket(this.#io, socket)})
-    // Namespace : "/modulo_energia/ctrl_id"
-    this.#io.of(/^\/modulo_energia\/\d+$/).on("connection", (socket)=>{moduloEnergiaSocket(this.#io, socket)})
+    // Namespace : "/energia/ctrl_id/me_id"
+    this.#io.of(/^\/energia\/\d+\/\d+$/).on("connection", (socket)=>{energiaSocket(this.#io, socket)})
+    // Namespace : "/list_energia/ctrl_id"
+    this.#io.of(/^\/list_energia\/\d+$/).on("connection", (socket)=>{moduloEnergiaSocket(this.#io, socket)})
 
 
     // Namespace :  "/accesos/nodo_id"

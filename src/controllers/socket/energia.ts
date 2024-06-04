@@ -1,65 +1,97 @@
 import { Server, Socket } from "socket.io";
-import { MySQL2 } from "../../database/mysql";
 import { Energia } from "../../models/site/energia";
 
 export const energiaSocket = async (io: Server, socket: Socket) => {
-  let intervalId: NodeJS.Timeout | null = null;
-  if (!intervalId) {
-    intervalId = setInterval(async () => {
-      const nspEnergias = socket.nsp;
-
-      const [, , ctrl_id] = nspEnergias.name.split("/");// Namespace : "/energias/nodo_id"
-
-      const registroEnergias = await MySQL2.executeQuery({sql:`SELECT * FROM ${"nodo" + ctrl_id}.medidorenergia WHERE activo = 1`})
-
-      socket.emit("energias", registroEnergias);
-    }, 1000);
+  const nspEnergias = socket.nsp;
+  const [, ,ctrl_id,me_id] = nspEnergias.name.split("/");// Namespace : "/energia/ctrl_id/me_id"
+  const observer = new ModEnergiaItemSocketObserver(socket);
+  MedidorEnergiaMap.registerItemObserver(Number(ctrl_id),Number(me_id),observer)
+  //emit initial data
+  const data = MedidorEnergiaMap.getDataByCtrlIDAndMeID(ctrl_id,me_id)
+  if(data){
+    socket.nsp.emit("energia", data);
   }
 
   socket.on("disconnect", () => {
-    if (intervalId) {
-      clearInterval(intervalId);
-      intervalId = null;
+    const clientsCount = io.of(`/energia/${ctrl_id}/${me_id}`).sockets.size;
+      console.log(`Socket Modulo Energia Item | clientes_conectados = ${clientsCount}| ctrl_id = ${ctrl_id} | me_id = ${me_id}`);
+      if (clientsCount == 0 ) {
+        console.log(`Socket Modulo Energia Item | Eliminado Observer | ctrl_id = ${ctrl_id} | me_id = ${me_id}`)
+        MedidorEnergiaMap.unregisterItemObserver(Number(ctrl_id),Number(me_id))
+      }
+  });
+  
+  socket.on("error", (error: any) => {
+    console.log(`Socket Modulo Energia Item | Error | ctrl_id = ${ctrl_id} | me_id = ${me_id}`)
+    console.error(error)
+  });
+
+};
+
+export const moduloEnergiaSocket = async (io: Server, socket: Socket) => {
+
+  const nspEnergia = socket.nsp;
+  const [, , ctrl_id] = nspEnergia.name.split("/"); // Namespace : "/list_energia/ctrl_id"
+  console.log(`Socket Modulo Energia | Cliente ID: ${socket.id} | Petición ctrl_id: ${ctrl_id}`);
+
+  const observerList = new ModEnergiaListSocketObserver(socket);
+  MedidorEnergiaMap.registerListObserver(Number(ctrl_id),observerList)
+  //emit initial data
+  const data = MedidorEnergiaMap.getDataByCtrlID(ctrl_id)
+  socket.nsp.emit("list_energia", data); //moduloenergia
+
+  socket.on("disconnect", () => {
+    const clientsCount = io.of(`/list_energia/${ctrl_id}`).sockets.size;
+    console.log(`Socket Modulo Energia | ListObserver | clientes_conectados = ${clientsCount} | ctrl_id = ${ctrl_id}`);
+    if (clientsCount == 0 ) {
+      console.log(`Socket Modulo Energia | Eliminado ListObserver | ctrl_id = ${ctrl_id}`)
+      MedidorEnergiaMap.unregisterListObserver(Number(ctrl_id))
     }
   });
 
-  
-};
+  socket.on("error", (error: any) => {
+    console.log(`Socket Modulo Energia | Error | ctrl_id = ${ctrl_id}`)
+    console.error(error)
+  });
 
+}
 
-const intervalEnergia : {[ctrl_id: string]: NodeJS.Timeout } = {}
+interface ModEnergiaListObserver {
+  update(data: IMedidorEnergiaSocket[]): void;
+}
 
-export const moduloEnergiaSocket = async (io: Server, socket: Socket) => {
-  
-    const nspEnergia = socket.nsp;
-    const [, , ctrl_id] = nspEnergia.name.split("/"); // Namespace : "/modulo_energia/ctrl_id"
+interface ModEnergiaItemObserver {
+  update(data: IMedidorEnergiaSocket): void;
+}
 
-    console.log(`Socket Modulo Energia | Cliente ID: ${socket.id} | Petición ctrl_id: ${ctrl_id}`);
+// interface ModEnergiaSubject<T> {
+//   registerObserver(observer: T): void;
+//   unregisterObserver(observer: T): void;
+//   notifyObservers(): void;
+// }
 
-    if(!intervalEnergia.hasOwnProperty(ctrl_id)){
-      intervalEnergia[ctrl_id] = setInterval(() => {
-        const data = MedidorEnergiaMap.getDataByCtrlID(ctrl_id)
-        socket.nsp.emit("moduloenergia", data);
-      }, 1000)
-    }
+class ModEnergiaListSocketObserver implements ModEnergiaListObserver {
+  private socket: Socket;
 
-    socket.on("disconnect", () => {
-      const clientsCount = io.of(`/modulo_energia/${ctrl_id}`).sockets.size;
-      console.log(`Socket Modulo Energia | clientes_conectados = ${clientsCount} | ctrl_id = ${ctrl_id}`);
-      if (clientsCount == 0 ) {
-        if(intervalEnergia.hasOwnProperty(ctrl_id)){
-          console.log(`Socket Modulo Energia | Eliminado SetInterval | ctrl_id = ${ctrl_id}`)
-          clearInterval(intervalEnergia[ctrl_id])
-          delete intervalEnergia[ctrl_id]
-        }
-      }
-    });
+  constructor(socket: Socket) {
+      this.socket = socket;
+  }
 
-    socket.on("error", (error: any) => {
-      console.log(`Socket Modulo Energia | Error | ctrl_id = ${ctrl_id}`)
-      console.error(error)
-    });
+  update(data: IMedidorEnergiaSocket[]): void {
+      this.socket.nsp.emit("list_energia", data);
+  }
+}
 
+class ModEnergiaItemSocketObserver implements ModEnergiaItemObserver {
+  private socket: Socket;
+
+  constructor(socket: Socket) {
+      this.socket = socket;
+  }
+
+  update(data: IMedidorEnergiaSocket): void {
+    this.socket.nsp.emit("energia", data);
+  }
 }
 
 interface IMedidorEnergiaSocket {
@@ -76,16 +108,16 @@ interface IMedidorEnergiaSocket {
 }
 
 export class MedidorEnergiaSocket implements IMedidorEnergiaSocket {
-ctrl_id: number;
-me_id: number;
-voltaje: number | null;
-amperaje: number | null;
-fdp: number | null;
-frecuencia: number | null;
-potenciaw: number | null;
-potenciakwh: number | null;
-activo: number | null;
-descripcion: string | null;
+  ctrl_id: number;
+  me_id: number;
+  voltaje: number | null;
+  amperaje: number | null;
+  fdp: number | null;
+  frecuencia: number | null;
+  potenciaw: number | null;
+  potenciakwh: number | null;
+  activo: number | null;
+  descripcion: string | null;
 
 constructor(props: IMedidorEnergiaSocket) {
   const { ctrl_id, me_id, voltaje, amperaje, fdp, frecuencia, potenciaw, potenciakwh, activo,descripcion } = props;
@@ -152,6 +184,52 @@ public toJSON(): IMedidorEnergiaSocket {
 export class MedidorEnergiaMap {
 
   static map: { [ctrl_id: string]: { [me_id: string]: MedidorEnergiaSocket } } = {};
+  static observers: {[ctrl_id: string]:{ [me_id: string]: ModEnergiaItemObserver }} = {};
+  static listobservers: {[ctrl_id: string]:ModEnergiaListObserver} = {};
+
+  public static registerItemObserver(ctrl_id: number,me_id: number, observer: ModEnergiaItemObserver): void {
+    if(!MedidorEnergiaMap.observers[ctrl_id]){
+      MedidorEnergiaMap.observers[ctrl_id] = {}
+    }
+    if(!MedidorEnergiaMap.observers[ctrl_id][me_id]){
+      MedidorEnergiaMap.observers[ctrl_id][me_id] = observer
+    }
+  }
+
+  public static registerListObserver(ctrl_id: number, observer: ModEnergiaListObserver): void {
+    if(!MedidorEnergiaMap.listobservers[ctrl_id]){
+      MedidorEnergiaMap.listobservers[ctrl_id] = observer
+    }
+  }
+
+  public static unregisterItemObserver(ctrl_id: number,me_id: number): void {
+    if(MedidorEnergiaMap.observers[ctrl_id]){
+      if(MedidorEnergiaMap.observers[ctrl_id][me_id]){
+        delete MedidorEnergiaMap.observers[ctrl_id][me_id]
+      }
+    }
+  }
+
+  public static unregisterListObserver(ctrl_id: number): void {
+    if(MedidorEnergiaMap.listobservers[ctrl_id]){
+      delete MedidorEnergiaMap.listobservers[ctrl_id]
+    }
+  }
+
+  public static notifyItemObserver(ctrl_id: number,me_id: number,data: MedidorEnergiaSocket):void{
+    if(MedidorEnergiaMap.observers[ctrl_id]){
+      if(MedidorEnergiaMap.observers[ctrl_id][me_id]){
+        MedidorEnergiaMap.observers[ctrl_id][me_id].update(data.toJSON())
+      }
+    }
+  }
+
+  public static notifyListObserver(ctrl_id: number,data: MedidorEnergiaSocket):void{
+    if(MedidorEnergiaMap.listobservers[ctrl_id]){
+      const tempList = MedidorEnergiaMap.getDataByCtrlID(String(data.ctrl_id))
+      MedidorEnergiaMap.listobservers[ctrl_id].update(tempList)
+    }
+  }
 
   private static exists(args: { ctrl_id: string; me_id: string }) {
     const { ctrl_id, me_id } = args;
@@ -182,6 +260,7 @@ export class MedidorEnergiaMap {
 
     if (!MedidorEnergiaMap.map[ctrl_id].hasOwnProperty(me_id)) {
       MedidorEnergiaMap.map[ctrl_id][me_id] = medidor;
+      MedidorEnergiaMap.notifyListObserver(ctrl_id,medidor)
     }
   }
 
@@ -190,16 +269,21 @@ export class MedidorEnergiaMap {
     if (MedidorEnergiaMap.map.hasOwnProperty(ctrl_id)) {
       if (MedidorEnergiaMap.map[ctrl_id].hasOwnProperty(me_id)) {
         const currentMedEnergia = MedidorEnergiaMap.map[ctrl_id][me_id];
-        currentMedEnergia.setCtrlId(ctrl_id);
-        currentMedEnergia.setMeId(me_id);
-        if (activo) currentMedEnergia.setActivo(activo);
-        if (amperaje) currentMedEnergia.setAmperaje(amperaje);
-        if (fdp) currentMedEnergia.setFdp(fdp);
-        if (frecuencia) currentMedEnergia.setFrecuencia(frecuencia);
-        if (potenciakwh) currentMedEnergia.setPotenciakwh(potenciakwh);
-        if (potenciaw) currentMedEnergia.setPotenciaw(potenciaw);
-        if (voltaje) currentMedEnergia.setVoltaje(voltaje);
-        if (descripcion) currentMedEnergia.setDescripcion(descripcion);
+        if (ctrl_id && currentMedEnergia.ctrl_id != ctrl_id) currentMedEnergia.setCtrlId(ctrl_id);
+        if (me_id && currentMedEnergia.me_id != me_id) currentMedEnergia.setMeId(me_id);
+        if (activo && currentMedEnergia.activo != activo){
+          currentMedEnergia.setActivo(activo); 
+          MedidorEnergiaMap.notifyListObserver(ctrl_id,medidor);
+        } 
+        if (amperaje && currentMedEnergia.amperaje != amperaje) currentMedEnergia.setAmperaje(amperaje);
+        if (fdp && currentMedEnergia.fdp != fdp) currentMedEnergia.setFdp(fdp);
+        if (frecuencia && currentMedEnergia.frecuencia != frecuencia) currentMedEnergia.setFrecuencia(frecuencia);
+        if (potenciakwh && currentMedEnergia.potenciakwh != potenciakwh) currentMedEnergia.setPotenciakwh(potenciakwh);
+        if (potenciaw && currentMedEnergia.potenciaw != potenciaw) currentMedEnergia.setPotenciaw(potenciaw);
+        if (voltaje && currentMedEnergia.voltaje != voltaje) currentMedEnergia.setVoltaje(voltaje);
+        if (descripcion && currentMedEnergia.descripcion != descripcion) currentMedEnergia.setDescripcion(descripcion);
+
+        MedidorEnergiaMap.notifyItemObserver(ctrl_id,me_id,medidor);
       }
     }
   }
@@ -222,6 +306,7 @@ export class MedidorEnergiaMap {
     if (MedidorEnergiaMap.map.hasOwnProperty(ctrl_id)) {
       if (MedidorEnergiaMap.map[ctrl_id].hasOwnProperty(me_id)) {
         MedidorEnergiaMap.map[ctrl_id][me_id].setActivo(0);
+        MedidorEnergiaMap.notifyListObserver(ctrl_id,medidor)
       }
     }
   }
@@ -250,45 +335,30 @@ export class MedidorEnergiaMap {
     let sortedData = resultData.sort((r1, r2) => r1.me_id - r2.me_id); // ordenamiento ascendente
     return sortedData;
   }
+
+  public static getDataByCtrlIDAndMeID(ctrl_id: string, me_id: string){
+    let resultData: IMedidorEnergiaSocket | null = null ;
+    if (MedidorEnergiaMap.map.hasOwnProperty(ctrl_id)) {
+     if(MedidorEnergiaMap.map[ctrl_id].hasOwnProperty(me_id)){
+      resultData = MedidorEnergiaMap.map[ctrl_id][me_id].toJSON()
+     }
+    }
+    return resultData;
+  }
+
 }
 
 
-(() => {
+// (() => {
+//   setTimeout(()=>{
+//     const randomNumber = Math.floor(Math.random() * (220 - 200 + 1)) + 200;
+//     const newSensorTemp = new MedidorEnergiaSocket({ me_id: 4, descripcion: "Medidor 4", voltaje: randomNumber, amperaje: 0, fdp: 0, frecuencia: 60, potenciaw: 0, potenciakwh: 0.03, activo: 1, ctrl_id: 1 });
+//     MedidorEnergiaMap.delete(newSensorTemp)
+//   },20000)
 
-  // setInterval(() => {
-  //   const randomNumber = Math.floor(Math.random() * (220 - 200 + 1)) + 200;
-  //   const randomNumber2 = Math.floor(Math.random() * (220 - 200 + 1)) + 200;
-
-  //   const newSensorTemp = new MedidorEnergiaSocket({ me_id: 4, serie: "SERIE4", descripcion: "Medidor 4", voltaje: randomNumber, amperaje: 0, fdp: 0, frecuencia: 60, potenciaw: 0, potenciakwh: 0.03, activo: 1, ctrl_id: 27 });
-  //   const newSensorTemp2 = new MedidorEnergiaSocket({me_id: 6,serie: "SERIE6",descripcion: "Medidor 6 con transformador",voltaje: randomNumber2,amperaje: 0.23,fdp: 0.67,frecuencia: 59.9,potenciaw: 33.9,potenciakwh: 5.95,activo: 1,ctrl_id: 27,});
-
-  //   MedidorEnergiaMap.add_update(newSensorTemp);
-  //   MedidorEnergiaMap.add_update(newSensorTemp2);
-
-  // }, 2000);
-
-  // setTimeout(()=>{
-  //   const randomNumber = Math.floor(Math.random() * (220 - 200 + 1)) + 200;
-  //   const newSensorTemp = new MedidorEnergiaSocket({ me_id: 5, serie: "SERIE5", descripcion: "Medidor 5", voltaje: randomNumber, amperaje: 0, fdp: 0, frecuencia: 60, potenciaw: 0, potenciakwh: 0.03, activo: 1, ctrl_id: 27 });
-  //   MedidorEnergiaMap.add_update(newSensorTemp)
-  // },10000)
-
-  // setTimeout(()=>{
-  //   const randomNumber = Math.floor(Math.random() * (220 - 200 + 1)) + 200;
-  //   const newSensorTemp = new MedidorEnergiaSocket({ me_id: 7, serie: "SERIE7", descripcion: "Medidor 7", voltaje: randomNumber, amperaje: 0, fdp: 0, frecuencia: 60, potenciaw: 0, potenciakwh: 0.03, activo: 1, ctrl_id: 27 });
-  //   MedidorEnergiaMap.add_update(newSensorTemp)
-  // },20000)
-
-  // setTimeout(()=>{
-  //   const randomNumber = Math.floor(Math.random() * (220 - 200 + 1)) + 200;
-  //   const newSensorTemp = new MedidorEnergiaSocket({ me_id: 5, serie: "SERIE5", descripcion: "Medidor 5", voltaje: randomNumber, amperaje: 0, fdp: 0, frecuencia: 60, potenciaw: 0, potenciakwh: 0.03, activo: 1, ctrl_id: 27 });
-  //   MedidorEnergiaMap.delete(newSensorTemp)
-  // },60000)
-
-  // setTimeout(()=>{
-  //   const randomNumber = Math.floor(Math.random() * (220 - 200 + 1)) + 200;
-  //   const newSensorTemp = new MedidorEnergiaSocket({ me_id: 7, serie: "SERIE7", descripcion: "Medidor 7", voltaje: randomNumber, amperaje: 0, fdp: 0, frecuencia: 60, potenciaw: 0, potenciakwh: 0.03, activo: 1, ctrl_id: 27 });
-  //   MedidorEnergiaMap.delete(newSensorTemp)
-  // },70000)
-
-})();
+//   setInterval(()=>{
+//     const randomNumber = Math.floor(Math.random() * (220 - 200 + 1)) + 200;
+//     const newSensorTemp = new MedidorEnergiaSocket({ me_id: 7, descripcion: "Medidor 7", voltaje: randomNumber, amperaje: 0, fdp: 0, frecuencia: 60, potenciaw: 0, potenciakwh: 0.03, activo: 1, ctrl_id: 1 });
+//     MedidorEnergiaMap.add_update(newSensorTemp)
+//   },5000)
+// })();

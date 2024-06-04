@@ -242,17 +242,16 @@ export class SensorTemperaturaMap {
     if (SensorTemperaturaMap.map.hasOwnProperty(ctrl_id)) {
       if (SensorTemperaturaMap.map[ctrl_id].hasOwnProperty(st_id)) {
         const currentSenTemp = SensorTemperaturaMap.map[ctrl_id][st_id];
-        currentSenTemp.setCtrlId(ctrl_id);
-        currentSenTemp.setStId(st_id);
-        if (activo) {
+        if (ctrl_id && currentSenTemp.ctrl_id != ctrl_id) currentSenTemp.setCtrlId(ctrl_id);
+        if (st_id && currentSenTemp.st_id != st_id) currentSenTemp.setStId(st_id);
+        if (activo && currentSenTemp.activo != activo) {
           currentSenTemp.setActivo(activo)
-          if(currentSenTemp.activo != activo){
-            SensorTemperaturaMap.notifyListObserver(ctrl_id,sensor)
-          }
+          SensorTemperaturaMap.notifyListObserver(ctrl_id,sensor);
         };
-        if (actual) currentSenTemp.setActual(actual);
-        if (serie) currentSenTemp.setSerie(serie);
-        if (ubicacion) currentSenTemp.setUbicacion(ubicacion);
+        if (actual && currentSenTemp.actual != actual) currentSenTemp.setActual(actual);
+        if (serie && currentSenTemp.serie != serie) currentSenTemp.setSerie(serie);
+        if (ubicacion && currentSenTemp.ubicacion != ubicacion) currentSenTemp.setUbicacion(ubicacion);
+        
         SensorTemperaturaMap.notifyItemObserver(ctrl_id,st_id,sensor)
 
       }
