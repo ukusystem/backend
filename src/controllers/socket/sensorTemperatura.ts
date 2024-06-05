@@ -1,5 +1,6 @@
 import { Server, Socket } from "socket.io";
 import { Temperatura } from "../../models/site/temperatura";
+import { Controlador, SensorTemperatura } from "../../types/db";
 
 export const sensorTemperaturaSocket = async (io: Server, socket: Socket) => {
   const nspSensores = socket.nsp;
@@ -7,9 +8,9 @@ export const sensorTemperaturaSocket = async (io: Server, socket: Socket) => {
   const observer = new TemperatureItemSocketObserver(socket);
   SensorTemperaturaMap.registerItemObserver(Number(ctrl_id),Number(st_id),observer)
   //emit initial data
-  const data = SensorTemperaturaMap.getDataByCtrlIDAndStID(ctrl_id,st_id)
+  const data = SensorTemperaturaMap.getSensorTemperatura(ctrl_id,st_id)
   if(data){
-    socket.nsp.emit("temperatura", data);
+    socket.nsp.emit("temperatura", data.toJSON());
   }
   
   socket.on("disconnect", () => {
@@ -88,7 +89,9 @@ class TemperatureItemSocketObserver implements TemperatureItemObserver {
   }
 }
 
-interface ISensorTemperaturaSocket {
+type ISensorTemperaturaSocket = SensorTemperatura & Pick<Controlador,"ctrl_id">
+
+interface ISensorTemperaturaSocketBad {
   ctrl_id: number;
   st_id: number;
   serie: string | null;
@@ -97,13 +100,68 @@ interface ISensorTemperaturaSocket {
   activo: number | null;
 }
 
-export class SensorTemperaturaSocket implements ISensorTemperaturaSocket {
+export class SensorTemperaturaSocketBad implements ISensorTemperaturaSocketBad {
   ctrl_id: number;
   st_id: number;
   serie: string | null;
   ubicacion: string | null;
   actual: number | null;
   activo: number | null;
+
+  constructor(props: ISensorTemperaturaSocketBad) {
+    const { ctrl_id, activo, actual, serie, st_id, ubicacion } = props;
+    this.ctrl_id = ctrl_id;
+    this.activo = activo;
+    this.actual = actual;
+    this.ubicacion = ubicacion;
+    this.st_id = st_id;
+    this.serie = serie;
+  }
+
+  public setCtrlId(ctrl_id: ISensorTemperaturaSocketBad["ctrl_id"]): void {
+    this.ctrl_id = ctrl_id;
+  }
+
+  public setStId(st_id: ISensorTemperaturaSocketBad["st_id"]): void {
+    this.st_id = st_id;
+  }
+
+  public setSerie(serie: ISensorTemperaturaSocketBad["serie"]): void {
+    this.serie = serie;
+  }
+
+  public setUbicacion(ubicacion: ISensorTemperaturaSocketBad["ubicacion"]): void {
+    this.ubicacion = ubicacion;
+  }
+
+  public setActual(actual: ISensorTemperaturaSocketBad["actual"]): void {
+    this.actual = actual;
+  }
+
+  public setActivo(activo: ISensorTemperaturaSocketBad["activo"]): void {
+    this.activo = activo;
+  }
+
+  public toJSON(): ISensorTemperaturaSocketBad {
+    const result: ISensorTemperaturaSocketBad = {
+      ctrl_id: this.ctrl_id,
+      activo: this.activo,
+      actual: this.actual,
+      ubicacion: this.ubicacion,
+      st_id: this.st_id,
+      serie: this.serie,
+    };
+    return result;
+  }
+}
+
+export class SensorTemperaturaSocket implements ISensorTemperaturaSocket {
+  st_id: number;
+  serie: string;
+  ubicacion: string;
+  actual: number;
+  activo: number;
+  ctrl_id: number;
 
   constructor(props: ISensorTemperaturaSocket) {
     const { ctrl_id, activo, actual, serie, st_id, ubicacion } = props;
@@ -114,7 +172,7 @@ export class SensorTemperaturaSocket implements ISensorTemperaturaSocket {
     this.st_id = st_id;
     this.serie = serie;
   }
-
+  
   public setCtrlId(ctrl_id: ISensorTemperaturaSocket["ctrl_id"]): void {
     this.ctrl_id = ctrl_id;
   }
@@ -242,15 +300,15 @@ export class SensorTemperaturaMap {
     if (SensorTemperaturaMap.map.hasOwnProperty(ctrl_id)) {
       if (SensorTemperaturaMap.map[ctrl_id].hasOwnProperty(st_id)) {
         const currentSenTemp = SensorTemperaturaMap.map[ctrl_id][st_id];
-        if (ctrl_id && currentSenTemp.ctrl_id != ctrl_id) currentSenTemp.setCtrlId(ctrl_id);
-        if (st_id && currentSenTemp.st_id != st_id) currentSenTemp.setStId(st_id);
-        if (activo && currentSenTemp.activo != activo) {
+        if (currentSenTemp.ctrl_id != ctrl_id) currentSenTemp.setCtrlId(ctrl_id);
+        if (currentSenTemp.st_id != st_id) currentSenTemp.setStId(st_id);
+        if (currentSenTemp.activo != activo) {
           currentSenTemp.setActivo(activo)
           SensorTemperaturaMap.notifyListObserver(ctrl_id,sensor);
         };
-        if (actual && currentSenTemp.actual != actual) currentSenTemp.setActual(actual);
-        if (serie && currentSenTemp.serie != serie) currentSenTemp.setSerie(serie);
-        if (ubicacion && currentSenTemp.ubicacion != ubicacion) currentSenTemp.setUbicacion(ubicacion);
+        if (currentSenTemp.actual != actual) currentSenTemp.setActual(actual);
+        if (currentSenTemp.serie != serie) currentSenTemp.setSerie(serie);
+        if (currentSenTemp.ubicacion != ubicacion) currentSenTemp.setUbicacion(ubicacion);
         
         SensorTemperaturaMap.notifyItemObserver(ctrl_id,st_id,sensor)
 
@@ -271,25 +329,76 @@ export class SensorTemperaturaMap {
     }
   }
 
-  public static delete(sensor: SensorTemperaturaSocket) {
-    const { ctrl_id, st_id } = sensor.toJSON();
-    if (SensorTemperaturaMap.map.hasOwnProperty(ctrl_id)) {
-      if (SensorTemperaturaMap.map[ctrl_id].hasOwnProperty(st_id)) {
-        SensorTemperaturaMap.map[ctrl_id][st_id].setActivo(0);
-        SensorTemperaturaMap.notifyListObserver(ctrl_id,sensor)
+  public static delete(sensor: SensorTemperaturaSocket | SensorTemperaturaSocketBad ) {
+    if(sensor instanceof SensorTemperaturaSocket ){
+      const { ctrl_id, st_id } = sensor.toJSON();
+      if (SensorTemperaturaMap.map.hasOwnProperty(ctrl_id)) {
+        if (SensorTemperaturaMap.map[ctrl_id].hasOwnProperty(st_id)) {
+          SensorTemperaturaMap.map[ctrl_id][st_id].setActivo(0);
+          SensorTemperaturaMap.notifyListObserver(ctrl_id,sensor)
+        }
+      }
+    }else{
+      const { st_id, ctrl_id,activo,actual,serie,ubicacion } = sensor.toJSON();
+      const currentSenTemp = SensorTemperaturaMap.getSensorTemperatura(String(ctrl_id),String(st_id))
+      if(currentSenTemp){
+        if (SensorTemperaturaMap.map.hasOwnProperty(ctrl_id)) {
+          if (SensorTemperaturaMap.map[ctrl_id].hasOwnProperty(st_id)) {
+            if(currentSenTemp.ctrl_id != ctrl_id) currentSenTemp.setCtrlId(ctrl_id);
+            if(currentSenTemp.st_id != st_id) currentSenTemp.setStId(st_id);
+            // if(activo != null && currentSenTemp.activo != activo) currentSenTemp.setActivo(activo);
+            currentSenTemp.setActivo(0);
+            if(actual != null && currentSenTemp.actual != actual) currentSenTemp.setActual(actual);
+            if(serie != null && currentSenTemp.serie != serie) currentSenTemp.setSerie(serie);
+            if(ubicacion != null && currentSenTemp.ubicacion != ubicacion) currentSenTemp.setUbicacion(ubicacion);
+            // SensorTemperaturaMap.map[ctrl_id][st_id].setActivo(0);
+            SensorTemperaturaMap.notifyListObserver(ctrl_id,currentSenTemp)
+          }
+        }
       }
     }
   }
 
-  public static add_update(sensor: SensorTemperaturaSocket) {
-    const { st_id, ctrl_id } = sensor.toJSON();
-    const exists = SensorTemperaturaMap.exists({ ctrl_id: String(ctrl_id), st_id: String(st_id), });
+  public static add_update(sensor: SensorTemperaturaSocket | SensorTemperaturaSocketBad) {
+    if(sensor instanceof SensorTemperaturaSocket ){
+      const { st_id, ctrl_id } = sensor.toJSON();
+      const exists = SensorTemperaturaMap.exists({ ctrl_id: String(ctrl_id), st_id: String(st_id), });
+  
+      if (!exists) {
+        SensorTemperaturaMap.add(sensor);
+      } else {
+        SensorTemperaturaMap.update(sensor);
+      }
+    }else{
+      const { st_id, ctrl_id,activo,actual,serie,ubicacion } = sensor.toJSON();
+      const currentSenTemp = SensorTemperaturaMap.getSensorTemperatura(String(ctrl_id),String(st_id))
+      if(currentSenTemp){
+        if(currentSenTemp.ctrl_id != ctrl_id) currentSenTemp.setCtrlId(ctrl_id);
+        if(currentSenTemp.st_id != st_id) currentSenTemp.setStId(st_id);
+        if(activo != null && currentSenTemp.activo != activo) currentSenTemp.setActivo(activo);
+        if(actual != null && currentSenTemp.actual != actual) currentSenTemp.setActual(actual);
+        if(serie != null && currentSenTemp.serie != serie) currentSenTemp.setSerie(serie);
+        if(ubicacion != null && currentSenTemp.ubicacion != ubicacion) currentSenTemp.setUbicacion(ubicacion);
 
-    if (!exists) {
-      SensorTemperaturaMap.add(sensor);
-    } else {
-      SensorTemperaturaMap.update(sensor);
+        const exists = SensorTemperaturaMap.exists({ ctrl_id: String(currentSenTemp.ctrl_id), st_id: String(currentSenTemp.st_id), });
+        if (!exists) {
+          SensorTemperaturaMap.add(currentSenTemp);
+        } else {
+          SensorTemperaturaMap.update(currentSenTemp);
+        }
+      }
     }
+  }
+
+  public static getSensorTemperatura(ctrl_id: string,st_id: string){
+    let result:SensorTemperaturaSocket | null = null;
+    if (SensorTemperaturaMap.map.hasOwnProperty(ctrl_id)) {
+      if(SensorTemperaturaMap.map[ctrl_id].hasOwnProperty(st_id)){
+        result = SensorTemperaturaMap.map[ctrl_id][st_id]
+      }
+    }
+    return result
+
   }
 
   public static getDataByCtrlID(ctrl_id: string) {
@@ -305,46 +414,44 @@ export class SensorTemperaturaMap {
     let sortedData = resultData.sort((r1, r2) => r1.st_id - r2.st_id);
     return sortedData;
   }
-  public static getDataByCtrlIDAndStID(ctrl_id: string,st_id: string) {
-    let resultData: ISensorTemperaturaSocket | null = null ;
-    if (SensorTemperaturaMap.map.hasOwnProperty(ctrl_id)) {
-     if(SensorTemperaturaMap.map[ctrl_id].hasOwnProperty(st_id)){
-      resultData = SensorTemperaturaMap.map[ctrl_id][st_id].toJSON()
-     }
-    }
-    return resultData;
-  }
+
 }
 
-// (()=>{
-//   setInterval(()=>{
+(()=>{
+  // setInterval(()=>{
 
-//     const randomNumber = Math.floor(Math.random() * 11) + 20;
-//     const randomNumber2 = Math.floor(Math.random() * 11) + 20;
+  //   const randomNumber = Math.floor(Math.random() * 11) + 20;
+  //   const randomNumber2 = Math.floor(Math.random() * 11) + 20;
 
-//     const newSensorTemp = new SensorTemperaturaSocket({activo:1,actual:randomNumber, ctrl_id:27,serie:"rewrew",st_id:1,ubicacion:"Ubicacion"})
-//     const newSensorTemp2 = new SensorTemperaturaSocket({activo:1,actual:randomNumber2, ctrl_id:27,serie:"rewrew",st_id:2,ubicacion:"Ubicacion2"})
+  //   const newSensorTemp = new SensorTemperaturaSocket({activo:1,actual:randomNumber, ctrl_id:27,serie:"rewrew",st_id:1,ubicacion:"Ubicacion"})
+  //   const newSensorTemp2 = new SensorTemperaturaSocket({activo:1,actual:randomNumber2, ctrl_id:27,serie:"rewrew",st_id:2,ubicacion:"Ubicacion2"})
 
-//     SensorTemperaturaMap.add_update(newSensorTemp)
-//     SensorTemperaturaMap.add_update(newSensorTemp2)
+  //   SensorTemperaturaMap.add_update(newSensorTemp)
+  //   SensorTemperaturaMap.add_update(newSensorTemp2)
 
-//   },2000)
+  // },2000)
 
-//   setTimeout(()=>{
-//     const randomNumber = Math.floor(Math.random() * 11) + 20;
-//     const newSensorTemp = new SensorTemperaturaSocket({activo:1,actual:randomNumber, ctrl_id:27,serie:"rewrew",st_id:3,ubicacion:"Ubicacion3"})
-//     SensorTemperaturaMap.add_update(newSensorTemp)
-//   },10000)
+  // setTimeout(()=>{
+  //   const randomNumber = Math.floor(Math.random() * 11) + 20;
+  //   const newSensorTemp = new SensorTemperaturaSocket({activo:1,actual:randomNumber, ctrl_id:27,serie:"rewrew",st_id:3,ubicacion:"Ubicacion3"})
+  //   SensorTemperaturaMap.add_update(newSensorTemp)
+  // },10000)
 
-//   setTimeout(()=>{
-//     const randomNumber = Math.floor(Math.random() * 11) + 20;
-//     const newSensorTemp = new SensorTemperaturaSocket({activo:1,actual:randomNumber, ctrl_id:27,serie:"rewrew",st_id:4,ubicacion:"Ubicacion4"})
-//     SensorTemperaturaMap.add_update(newSensorTemp)
-//   },20000)
+  // setTimeout(()=>{
+  //   const randomNumber = Math.floor(Math.random() * 11) + 20;
+  //   const newSensorTemp = new SensorTemperaturaSocket({activo:1,actual:randomNumber, ctrl_id:27,serie:"rewrew",st_id:4,ubicacion:"Ubicacion4"})
+  //   SensorTemperaturaMap.add_update(newSensorTemp)
+  // },20000)
 
-//   setTimeout(()=>{
-//     const randomNumber = Math.floor(Math.random() * 11) + 20;
-//     const newSensorTemp = new SensorTemperaturaSocket({activo:1,actual:randomNumber, ctrl_id:27,serie:"rewrew",st_id:3,ubicacion:"Ubicacion3"})
-//     SensorTemperaturaMap.delete(newSensorTemp)
-//   },60000)
-// })()
+  // setTimeout(()=>{
+  //   const randomNumber = Math.floor(Math.random() * 11) + 20;
+  //   const newSensorTemp = new SensorTemperaturaSocket({activo:1,actual:randomNumber, ctrl_id:27,serie:"rewrew",st_id:3,ubicacion:"Ubicacion3"})
+  //   SensorTemperaturaMap.delete(newSensorTemp)
+  // },60000)
+  //   setInterval(()=>{
+  //   const randomNumber = Math.floor(Math.random() * 11) + 20;
+  
+  //   const newSensorTemp = new SensorTemperaturaSocket({activo:1,actual:randomNumber, ctrl_id:27,serie:"rewrew",st_id:3,ubicacion:"Ubicacion X"})
+  //   SensorTemperaturaMap.add_update(newSensorTemp)
+  // },2000)
+})()

@@ -650,7 +650,7 @@ export class BaseAttach extends Mortal {
   }
 
   _notifyTemp(stID: number, nodeID: number, active: number | null = null, current: number | null = null, serie: string | null = null, desc: string | null = null) {
-    const newTemp = new sm.SensorTemperaturaSocket({
+    const newTemp = new sm.SensorTemperaturaSocketBad({
       activo: active,
       actual: current,
       ctrl_id: nodeID,
@@ -722,16 +722,16 @@ export class BaseAttach extends Mortal {
     order: number | null = null
   ) {
     // this._log(`Notifying web about output.`);
-    const newOutput = new sm.PinesSalidaSocket({
+    const newOutput = new sm.PinesSalidaSocketBad({
       ps_id: pin,
       pin: pin,
-      es_id: es_id ?? DEF_ID,
-      descripcion: desc ?? DEF_TXT,
-      estado: state ?? DEF_ACTIVE,
-      activo: active ?? DEF_ACTIVE,
+      es_id: es_id ,
+      descripcion: desc ,
+      estado: state ,
+      activo: active ,
       automatico: auto,
       ctrl_id: nodeID,
-      orden: order ?? DEF_ORDER,
+      orden: order ,
     });
     // To disable the pin
     if (active === 0) {
