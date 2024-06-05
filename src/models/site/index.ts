@@ -1,2 +1,2 @@
-export * from "./control"
 export * from "./multimedia"
+export * from "./pinsalida"
