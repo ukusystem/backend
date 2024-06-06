@@ -630,7 +630,7 @@ export class BaseAttach extends Mortal {
     potenciaw: number | null = null,
     potenciakwh: number | null = null
   ) {
-    const newEnergy = new sm.MedidorEnergiaSocket({
+    const newEnergy = new sm.MedidorEnergiaSocketBad({
       me_id: meID,
       descripcion: desc,
       voltaje: voltaje,

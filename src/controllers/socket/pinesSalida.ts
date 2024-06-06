@@ -43,7 +43,7 @@ export const pinesSalidaSocket =async (io:Server, socket: Socket) => {
 }
 
 type IPinesSalidaSocket = PinesSalida & Pick<Controlador, "ctrl_id"> & {automatico: boolean , orden: number };
-interface IPinesSalidaSocket2 {
+interface IPinesSalidaSocketBad {
   ps_id: number,
   pin: number,
   es_id: number | null,
@@ -140,7 +140,7 @@ export class PinesSalidaSocket implements IPinesSalidaSocket {
   
 }
 
-export class PinesSalidaSocketBad implements IPinesSalidaSocket2 {
+export class PinesSalidaSocketBad implements IPinesSalidaSocketBad {
 
   ps_id: number;
   pin: number;
@@ -152,7 +152,7 @@ export class PinesSalidaSocketBad implements IPinesSalidaSocket2 {
   ctrl_id: number;
   orden: number | null;
 
-  constructor(props: IPinesSalidaSocket2) {
+  constructor(props: IPinesSalidaSocketBad) {
     const { activo, ctrl_id, descripcion, es_id, estado, pin, ps_id, automatico, orden, } = props;
     this.ps_id = ps_id;
     this.pin = pin;
@@ -166,36 +166,36 @@ export class PinesSalidaSocketBad implements IPinesSalidaSocket2 {
   }
   
 
-  public setPsId(ps_id: IPinesSalidaSocket2["ps_id"]): void {
+  public setPsId(ps_id: IPinesSalidaSocketBad["ps_id"]): void {
     this.ps_id = ps_id;
   }
-  public setPin(pin: IPinesSalidaSocket2["pin"]): void {
+  public setPin(pin: IPinesSalidaSocketBad["pin"]): void {
     this.pin = pin;
   }
-  public setEsId(es_id: IPinesSalidaSocket2["es_id"]): void {
+  public setEsId(es_id: IPinesSalidaSocketBad["es_id"]): void {
     this.es_id = es_id;
   }
-  public setDescripcion(descripcion: IPinesSalidaSocket2["descripcion"]): void {
+  public setDescripcion(descripcion: IPinesSalidaSocketBad["descripcion"]): void {
     this.descripcion = descripcion;
   }
-  public setActivo(activo: IPinesSalidaSocket2["activo"]): void {
+  public setActivo(activo: IPinesSalidaSocketBad["activo"]): void {
     this.activo = activo;
   }
-  public setEstado(estado: IPinesSalidaSocket2["estado"]): void {
+  public setEstado(estado: IPinesSalidaSocketBad["estado"]): void {
     this.estado = estado;
   }
-  public setCtrlId(ctrl_id: IPinesSalidaSocket2["ctrl_id"]): void {
+  public setCtrlId(ctrl_id: IPinesSalidaSocketBad["ctrl_id"]): void {
     this.ctrl_id = ctrl_id;
   }
-  public setAutomatico(automatico: IPinesSalidaSocket2["automatico"]): void {
+  public setAutomatico(automatico: IPinesSalidaSocketBad["automatico"]): void {
     this.automatico = automatico;
   }
-  public setOrden(orden: IPinesSalidaSocket2["orden"]): void {
+  public setOrden(orden: IPinesSalidaSocketBad["orden"]): void {
     this.orden = orden;
   }
 
-  public toJSON(): IPinesSalidaSocket2 {
-    const result: IPinesSalidaSocket2 = {
+  public toJSON(): IPinesSalidaSocketBad {
+    const result: IPinesSalidaSocketBad = {
       ps_id: this.ps_id,
       pin: this.pin,
       es_id: this.es_id,
@@ -370,7 +370,7 @@ export class PinesSalidaMap  {
 
       const pinSalidaData = await PinSalida.getAllPinesSalida()
       for (let pinSal of pinSalidaData) {
-        let newPinSalida = new PinesSalidaSocket({...pinSal, automatico: true,orden:0});
+        let newPinSalida = new PinesSalidaSocket({...pinSal, automatico: false ,orden:0});
         PinesSalidaMap.add_update(newPinSalida);
       }
       
@@ -481,18 +481,18 @@ export class PinesSalidaMap  {
     return resultOrdered
   }
 
-  public static getListPinesSalida(ctrl_id:string,es_id:string) : PinesSalida[] {
-    let result : PinesSalida[] = []
+  public static getListPinesSalida(ctrl_id:string,es_id:string) : IPinesSalidaSocket[] {
+    let result : IPinesSalidaSocket[] = []
     if (PinesSalidaMap.map.hasOwnProperty(ctrl_id)){
       if(PinesSalidaMap.map[ctrl_id].hasOwnProperty(es_id)){
         let pinesSalida = PinesSalidaMap.map[ctrl_id][es_id].pines_salida
         let pinesSalidaActives = Object.values(pinesSalida).reduce((acc,cur)=>{
           let prevResult = acc;
           if(cur.activo == 1){
-            prevResult.push(cur)
+            prevResult.push(cur.toJSON())
           }
           return prevResult
-        },[] as PinesSalida[])
+        },[] as IPinesSalidaSocket[])
 
         result = pinesSalidaActives
       }
@@ -522,7 +522,7 @@ export class PinesSalidaMap  {
 }
 
 
-// (() => {
+(() => {
 
   // setInterval(() => {
   //   const randomNumber = Math.round(Math.random())
@@ -536,34 +536,34 @@ export class PinesSalidaMap  {
 
   // }, 2000);
 
-//   setTimeout(()=>{
-//     const randomNumber = Math.round(Math.random());
-//     const newSensorTemp = new PinesSalidaSocket({ ps_id: 3, pin: 3, es_id: 2, descripcion: "Salida 3", estado: randomNumber, activo: 1,automatico:false,ctrl_id:27,orden:0 });
-//     PinesSalidaMap.add_update(newSensorTemp)
-//   },10000)
+  // setTimeout(()=>{
+  //   const randomNumber = Math.round(Math.random());
+  //   const newSensorTemp = new PinesSalidaSocket({ ps_id: 3, pin: 3, es_id: 2, descripcion: "Salida 3", estado: randomNumber, activo: 1,automatico:false,ctrl_id:27,orden:0 });
+  //   PinesSalidaMap.add_update(newSensorTemp)
+  // },10000)
 
-//   setTimeout(()=>{
-//     const randomNumber = Math.round(Math.random());
-//     const newSensorTemp = new PinesSalidaSocket({ ps_id: 10, pin: 10, es_id: 1, descripcion: "Salida N", estado: randomNumber, activo: 1,automatico:false,ctrl_id:27,orden:0 });
-//     PinesSalidaMap.add_update(newSensorTemp)
-//   },10000)
+  // setTimeout(()=>{
+  //   const randomNumber = Math.round(Math.random());
+  //   const newSensorTemp = new PinesSalidaSocket({ ps_id: 10, pin: 10, es_id: 1, descripcion: "Salida N", estado: randomNumber, activo: 1,automatico:false,ctrl_id:27,orden:0 });
+  //   PinesSalidaMap.add_update(newSensorTemp)
+  // },10000)
 
-//   setTimeout(()=>{
-//     const randomNumber = Math.round(Math.random());
-//     const newSensorTemp = new PinesSalidaSocket({ ps_id: 4, pin: 4, es_id: 5, descripcion: "Salida 4", estado: randomNumber, activo: 1,automatico:false,ctrl_id:27,orden:0 });
-//     PinesSalidaMap.add_update(newSensorTemp)
-//   },20000)
+  // setTimeout(()=>{
+  //   const randomNumber = Math.round(Math.random());
+  //   const newSensorTemp = new PinesSalidaSocket({ ps_id: 4, pin: 4, es_id: 5, descripcion: "Salida 4", estado: randomNumber, activo: 1,automatico:false,ctrl_id:27,orden:0 });
+  //   PinesSalidaMap.add_update(newSensorTemp)
+  // },20000)
 
-//   setTimeout(()=>{
-//     const randomNumber = Math.round(Math.random());
-//     const newSensorTemp = new PinesSalidaSocket({ ps_id: 4, pin: 4, es_id: 5, descripcion: "Salida 4", estado: randomNumber, activo: 1,automatico:false,ctrl_id:27,orden:0 })
-//     PinesSalidaMap.delete(newSensorTemp)
-//   },60000)
+  // setTimeout(()=>{
+  //   const randomNumber = Math.round(Math.random());
+  //   const newSensorTemp = new PinesSalidaSocket({ ps_id: 4, pin: 4, es_id: 5, descripcion: "Salida 4", estado: randomNumber, activo: 1,automatico:false,ctrl_id:27,orden:0 })
+  //   PinesSalidaMap.delete(newSensorTemp)
+  // },60000)
 
-//   setTimeout(()=>{
-//     const randomNumber = Math.round(Math.random());
-//     const newSensorTemp = new PinesSalidaSocket({ ps_id: 3, pin: 3, es_id: 2, descripcion: "Salida 3", estado: randomNumber, activo: 1,automatico:false,ctrl_id:27,orden:0 });
-//     PinesSalidaMap.delete(newSensorTemp)
-//   },70000)
+  setInterval(()=>{
+    const randomNumber = Math.floor(Math.random() * 3) - 1; // -1 0 1
+    const newSensorTemp = new PinesSalidaSocket({ ps_id: 2, pin: 2, es_id: 1, descripcion: "Descrip 2", estado: 1, activo: 1,automatico:false,ctrl_id:27,orden:randomNumber });
+    PinesSalidaMap.add_update(newSensorTemp)
+  },5000)
 
-// })();
+})();
