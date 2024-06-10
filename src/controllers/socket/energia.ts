@@ -348,12 +348,8 @@ export class MedidorEnergiaMap {
     if (MedidorEnergiaMap.map.hasOwnProperty(ctrl_id)) {
       if (MedidorEnergiaMap.map[ctrl_id].hasOwnProperty(me_id)) {
         const currentMedEnergia = MedidorEnergiaMap.map[ctrl_id][me_id];
-        if (currentMedEnergia.ctrl_id != ctrl_id) currentMedEnergia.setCtrlId(ctrl_id);
-        if (currentMedEnergia.me_id != me_id) currentMedEnergia.setMeId(me_id);
-        if (currentMedEnergia.activo != activo){
-          currentMedEnergia.setActivo(activo); 
-          MedidorEnergiaMap.notifyListObserver(ctrl_id,medidor);
-        } 
+        // if (currentMedEnergia.ctrl_id != ctrl_id) currentMedEnergia.setCtrlId(ctrl_id);
+        // if (currentMedEnergia.me_id != me_id) currentMedEnergia.setMeId(me_id);
         if (currentMedEnergia.amperaje != amperaje) currentMedEnergia.setAmperaje(amperaje);
         if (currentMedEnergia.fdp != fdp) currentMedEnergia.setFdp(fdp);
         if (currentMedEnergia.frecuencia != frecuencia) currentMedEnergia.setFrecuencia(frecuencia);
@@ -361,6 +357,10 @@ export class MedidorEnergiaMap {
         if (currentMedEnergia.potenciaw != potenciaw) currentMedEnergia.setPotenciaw(potenciaw);
         if (currentMedEnergia.voltaje != voltaje) currentMedEnergia.setVoltaje(voltaje);
         if (currentMedEnergia.descripcion != descripcion) currentMedEnergia.setDescripcion(descripcion);
+        if (currentMedEnergia.activo != activo){
+          currentMedEnergia.setActivo(activo); 
+          MedidorEnergiaMap.notifyListObserver(ctrl_id,medidor);
+        } 
 
         MedidorEnergiaMap.notifyItemObserver(ctrl_id,me_id,medidor);
       }
@@ -417,7 +417,6 @@ export class MedidorEnergiaMap {
         const currentMedidor = MedidorEnergiaMap.getDataByCtrlIDAndMeID(String(ctrl_id), String(me_id));
         if( currentMedidor ){ // existe modulo energia
           // actualizar
-          if(activo !== null && currentMedidor.activo != activo) currentMedidor.setActivo(activo);
           if(amperaje !== null && currentMedidor.amperaje != amperaje) currentMedidor.setAmperaje(amperaje);
           if(descripcion !== null && currentMedidor.descripcion != descripcion) currentMedidor.setDescripcion(descripcion);
           if(fdp !== null && currentMedidor.fdp != fdp) currentMedidor.setFdp(fdp);
@@ -425,6 +424,10 @@ export class MedidorEnergiaMap {
           if(potenciakwh !== null && currentMedidor.potenciakwh != potenciakwh) currentMedidor.setPotenciakwh(potenciakwh);
           if(potenciaw !== null && currentMedidor.potenciaw != potenciaw) currentMedidor.setPotenciaw(potenciaw);
           if(voltaje !== null && currentMedidor.voltaje != voltaje) currentMedidor.setVoltaje(voltaje);
+          if(activo !== null && currentMedidor.activo != activo) {
+            currentMedidor.setActivo(activo);
+            MedidorEnergiaMap.notifyListObserver(ctrl_id,currentMedidor);
+          };
 
           MedidorEnergiaMap.notifyItemObserver(ctrl_id,me_id,currentMedidor);
           // MedidorEnergiaMap.update(currentMedidor);

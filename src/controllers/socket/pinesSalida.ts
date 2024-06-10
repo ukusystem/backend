@@ -393,12 +393,17 @@ export class PinesSalidaMap  {
           if (currentPinSal.ctrl_id != ctrl_id ) currentPinSal.setCtrlId(ctrl_id);
           if (currentPinSal.ps_id != ps_id ) currentPinSal.setPsId(ps_id);
           if (currentPinSal.es_id != es_id ) currentPinSal.setEsId(es_id);
-          if (currentPinSal.activo != activo ) currentPinSal.setActivo(activo);
           if (currentPinSal.automatico != automatico ) currentPinSal.setAutomatico(automatico);
           if (currentPinSal.descripcion != descripcion ) currentPinSal.setDescripcion(descripcion);
           if (currentPinSal.estado != estado ) currentPinSal.setEstado(estado);
           if (currentPinSal.orden != orden ) currentPinSal.setOrden(orden);
           if (currentPinSal.pin != pin ) currentPinSal.setPin(pin);
+          if (currentPinSal.activo != activo ) {
+            currentPinSal.setActivo(activo);
+            let newListPinSal = PinesSalidaMap.getListPinesSalida(String(ctrl_id),String(es_id))
+            PinesSalidaMap.notifyListPinesSalida(ctrl_id,newListPinSal)
+
+          };
 
           PinesSalidaMap.notifyItemPinSalida(ctrl_id,pinSal.toJSON())
         }
@@ -472,13 +477,17 @@ export class PinesSalidaMap  {
         if(currentPinSalSocket){ // existe pin salida
           // actualizar
           if (es_id !== null && currentPinSalSocket.es_id != es_id ) currentPinSalSocket.setEsId(es_id);
-          if (activo !== null && currentPinSalSocket.activo != activo ) currentPinSalSocket.setActivo(activo);
           if (currentPinSalSocket.automatico != automatico ) currentPinSalSocket.setAutomatico(automatico);
           if (descripcion !== null && currentPinSalSocket.descripcion != descripcion ) currentPinSalSocket.setDescripcion(descripcion);
           if (estado !== null && currentPinSalSocket.estado != estado ) currentPinSalSocket.setEstado(estado);
           if (orden !== null && currentPinSalSocket.orden != orden ) currentPinSalSocket.setOrden(orden);
           if (currentPinSalSocket.pin != pin ) currentPinSalSocket.setPin(pin);
-
+          if (activo !== null && currentPinSalSocket.activo != activo ){
+            currentPinSalSocket.setActivo(activo);
+            let newListPinSal = PinesSalidaMap.getListPinesSalida(String(ctrl_id),String(es_id))
+            PinesSalidaMap.notifyListPinesSalida(ctrl_id,newListPinSal)
+          } 
+          
           // PinesSalidaMap.update(currentPinSalSocket);
           PinesSalidaMap.notifyItemPinSalida(ctrl_id,currentPinSalSocket)
 

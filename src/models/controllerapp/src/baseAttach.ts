@@ -688,13 +688,13 @@ export class BaseAttach extends Mortal {
     date: string | null = null
   ) {
     // this._log(`Notifying web about input.`);
-    const newInput = new sm.PinesEntradaSocket({
+    const newInput = new sm.PinesEntradaSocketBad({
       pe_id: pin,
       pin: pin,
-      ee_id: ee_id ?? DEF_ID,
-      descripcion: desc ?? DEF_TXT,
-      estado: state ?? DEF_ACTIVE,
-      activo: active ?? DEF_ACTIVE,
+      ee_id: ee_id,
+      descripcion: desc,
+      estado: state,
+      activo: active,
       ctrl_id: nodeID,
     });
     // To disable the pin
@@ -1189,7 +1189,7 @@ export class NodeAttach extends BaseAttach {
             // Send to the other backend
             this._notifyInput(true, pin, this.controllerID, null, null, state, null, useful.formatTimestamp(pinDate));
             // sm.PinesEntradaMap.add_update(
-            //   new sm.PinesEntradaSocket({ pe_id: pin, pin: pin, ee_id: DEF_ID, descripcion: DEF_TXT, estado: state, activo: DEF_ACTIVE, ctrl_id: this.controllerID })
+            //   new sm.PinesEntradaSocketBad({ pe_id: pin, pin: pin, ee_id: DEF_ID, descripcion: DEF_TXT, estado: state, activo: DEF_ACTIVE, ctrl_id: this.controllerID })
             // );
             // sm.RegistroEntradaMap.add(
             //   new sm.RegistroEntradaSocket({ rentd_id: 1, pin: pin, estado: state ? 1 : 0, fecha: useful.formatTimestamp(pinDate), ee_id: DEF_ID, ctrl_id: this.controllerID })
