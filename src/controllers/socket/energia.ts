@@ -425,6 +425,8 @@ export class MedidorEnergiaMap {
           if(potenciakwh !== null && currentMedidor.potenciakwh != potenciakwh) currentMedidor.setPotenciakwh(potenciakwh);
           if(potenciaw !== null && currentMedidor.potenciaw != potenciaw) currentMedidor.setPotenciaw(potenciaw);
           if(voltaje !== null && currentMedidor.voltaje != voltaje) currentMedidor.setVoltaje(voltaje);
+
+          MedidorEnergiaMap.notifyItemObserver(ctrl_id,me_id,currentMedidor);
           // MedidorEnergiaMap.update(currentMedidor);
         }else{
           // agregar

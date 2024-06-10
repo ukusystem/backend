@@ -12,13 +12,13 @@ export async function main() {
 }
 
 export async function onTicket(newTicket:Ticket){
-  await mainService?.onTicket(newTicket)
+  return await mainService?.onTicket(newTicket)
 }
 
 export async function onFinishTicket(newTicket: FinishTicket) {
-  await mainService?.onFinishTicket(newTicket);
+  return await mainService?.onFinishTicket(newTicket);
 }
 
 export async function onOrder(newTicket: PinOrder) {
-  await mainService?.onOrder(newTicket);
+  return await mainService?.onOrder(newTicket);
 }

@@ -1,6 +1,20 @@
 import { Server, Socket } from "socket.io";
 import { Controlador, EquipoSalida, PinesSalida } from "../../types/db";
 import { PinSalida } from "../../models/site";
+import { onOrder } from "../../models/controllerapp/controller";
+
+interface OrdenPinSalida {
+  action: -1 | 0 | 1
+  ctrl_id : number,
+  pin: number
+  es_id: number
+}
+
+interface ResponseOrdenPinSalida {
+  success: boolean;
+  message: string;
+  ordenSend: OrdenPinSalida
+}
 
 export const pinesSalidaSocket =async (io:Server, socket: Socket) => {
   
@@ -24,6 +38,35 @@ export const pinesSalidaSocket =async (io:Server, socket: Socket) => {
     let newItemPinSal = PinesSalidaMap.getItemPinSalida(ctrl_id,String(es_id),String(ps_id))
     if(newItemPinSal){
       socket.nsp.emit("item_pin_salida",newItemPinSal)
+    }
+  })
+
+  socket.on("orden_pin_salida",async ({action,ctrl_id,pin,es_id}: OrdenPinSalida)=>{
+    console.log("orden: ",{action,ctrl_id,pin, es_id} )
+    try {
+      const ordenResult =  await onOrder({action,ctrl_id,pin})
+      if(ordenResult != undefined){
+        console.log("result_orden: ", ordenResult.resultado, ordenResult.mensaje)
+        if(ordenResult.resultado){ // orden correcto
+          if (PinesSalidaMap.map.hasOwnProperty(ctrl_id)) {
+            if (PinesSalidaMap.map[ctrl_id].hasOwnProperty(es_id)) {
+              if(PinesSalidaMap.map[ctrl_id][es_id].pines_salida.hasOwnProperty(pin)){
+
+                const  currentPinSal = PinesSalidaMap.map[ctrl_id][es_id].pines_salida[pin]
+                currentPinSal.setOrden(action)
+                PinesSalidaMap.add_update(currentPinSal);
+
+                socket.emit("response_orden_pin_salida",{success:ordenResult.resultado , message: ordenResult.mensaje, ordenSend:{action,ctrl_id,pin,es_id}} as ResponseOrdenPinSalida )
+              }
+            }
+          }
+        }else{
+          socket.emit("response_orden_pin_salida",{success:ordenResult.resultado , message: ordenResult.mensaje, ordenSend:{action,ctrl_id,pin,es_id}} as ResponseOrdenPinSalida )
+        }
+      }
+    } catch (error) {
+      // console.log(first)
+      console.error(error)
     }
   })
 
@@ -424,24 +467,27 @@ export class PinesSalidaMap  {
       }
     }else{
       const { ps_id, ctrl_id,es_id ,activo,automatico,descripcion,estado,orden,pin } = pinSal.toJSON();
-      const newPinSalSocket = PinesSalidaMap.getEsId(pinSal)
-      if(newPinSalSocket){
-        if (newPinSalSocket.ctrl_id != ctrl_id ) newPinSalSocket.setCtrlId(ctrl_id);
-        if (newPinSalSocket.ps_id != ps_id ) newPinSalSocket.setPsId(ps_id);
-        if (es_id !== null && newPinSalSocket.es_id != es_id ) newPinSalSocket.setEsId(es_id);
-        if (activo !== null && newPinSalSocket.activo != activo ) newPinSalSocket.setActivo(activo);
-        if (newPinSalSocket.automatico != automatico ) newPinSalSocket.setAutomatico(automatico);
-        if (descripcion !== null && newPinSalSocket.descripcion != descripcion ) newPinSalSocket.setDescripcion(descripcion);
-        if (estado !== null && newPinSalSocket.estado != estado ) newPinSalSocket.setEstado(estado);
-        if (orden !== null && newPinSalSocket.orden != orden ) newPinSalSocket.setOrden(orden);
-        if (newPinSalSocket.pin != pin ) newPinSalSocket.setPin(pin);
+      if(ps_id !== null && ctrl_id != null){ 
+        const currentPinSalSocket = PinesSalidaMap.getEsId(pinSal)
+        if(currentPinSalSocket){ // existe pin salida
+          // actualizar
+          if (es_id !== null && currentPinSalSocket.es_id != es_id ) currentPinSalSocket.setEsId(es_id);
+          if (activo !== null && currentPinSalSocket.activo != activo ) currentPinSalSocket.setActivo(activo);
+          if (currentPinSalSocket.automatico != automatico ) currentPinSalSocket.setAutomatico(automatico);
+          if (descripcion !== null && currentPinSalSocket.descripcion != descripcion ) currentPinSalSocket.setDescripcion(descripcion);
+          if (estado !== null && currentPinSalSocket.estado != estado ) currentPinSalSocket.setEstado(estado);
+          if (orden !== null && currentPinSalSocket.orden != orden ) currentPinSalSocket.setOrden(orden);
+          if (currentPinSalSocket.pin != pin ) currentPinSalSocket.setPin(pin);
 
-        
-        const exists = PinesSalidaMap.exists({ctrl_id: String(newPinSalSocket.ctrl_id),ps_id: String(newPinSalSocket.ps_id),es_id:String(newPinSalSocket.es_id)});
-        if (!exists) {
-          PinesSalidaMap.add(newPinSalSocket);
+          // PinesSalidaMap.update(currentPinSalSocket);
+          PinesSalidaMap.notifyItemPinSalida(ctrl_id,currentPinSalSocket)
+
         } else {
-          PinesSalidaMap.update(newPinSalSocket);
+          // agregar 
+          if( es_id != null && activo != null && automatico != null && descripcion != null && estado != null && orden != null && pin != null ){
+            const newPinSalSocket = new PinesSalidaSocket({ ps_id, ctrl_id,es_id ,activo,automatico,descripcion,estado,orden,pin })
+            PinesSalidaMap.add(newPinSalSocket);
+          }
         }
       }
     }
@@ -560,10 +606,10 @@ export class PinesSalidaMap  {
   //   PinesSalidaMap.delete(newSensorTemp)
   // },60000)
 
-  setInterval(()=>{
-    const randomNumber = Math.floor(Math.random() * 3) - 1; // -1 0 1
-    const newSensorTemp = new PinesSalidaSocket({ ps_id: 2, pin: 2, es_id: 1, descripcion: "Descrip 2", estado: 1, activo: 1,automatico:false,ctrl_id:27,orden:randomNumber });
-    PinesSalidaMap.add_update(newSensorTemp)
-  },5000)
+  // setInterval(()=>{
+  //   const randomNumber = Math.floor(Math.random() * 3) - 1; // -1 0 1
+  //   const newSensorTemp = new PinesSalidaSocket({ ps_id: 2, pin: 2, es_id: 1, descripcion: "Descrip 2", estado: 1, activo: 1,automatico:false,ctrl_id:27,orden:randomNumber });
+  //   PinesSalidaMap.add_update(newSensorTemp)
+  // },5000)
 
 })();

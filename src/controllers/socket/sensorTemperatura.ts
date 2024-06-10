@@ -23,7 +23,7 @@ export const sensorTemperaturaSocket = async (io: Server, socket: Socket) => {
   });
   
   socket.on("error", (error: any) => {
-    console.log("Error de conexion");
+    console.log(`Socket Sensor Temperatura Item | Error | ctrl_id = ${ctrl_id} | st_id = ${st_id}`);
     console.error(error)
   });
 
@@ -370,6 +370,8 @@ export class SensorTemperaturaMap {
           if(actual != null && currentSenTemp.actual != actual) currentSenTemp.setActual(actual);
           if(serie != null && currentSenTemp.serie != serie) currentSenTemp.setSerie(serie);
           if(ubicacion != null && currentSenTemp.ubicacion != ubicacion) currentSenTemp.setUbicacion(ubicacion);
+
+          SensorTemperaturaMap.notifyItemObserver(ctrl_id,st_id,currentSenTemp)
           // SensorTemperaturaMap.update(currentSenTemp)
         }else{
           // agregar
