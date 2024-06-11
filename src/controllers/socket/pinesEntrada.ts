@@ -42,57 +42,6 @@ export const pinesEntradaSocket =async (io:Server, socket: Socket) => {
     
 }
 
-
-interface EquipoEntradaRowData extends RowDataPacket, EquipoEntrada {}
-
-const intervalPinesEntrada : {[ctrl_id: string]: NodeJS.Timeout } = {}
-let equiposEntrada : EquipoEntrada[] | null = null
-
-type PinesEntradaDataSocket =IPinesEntradaSocket &  Pick<EquipoEntrada,"detector">
-
-function getPinesEntradaData(pinesEntrada: IPinesEntradaSocket[]) : PinesEntradaDataSocket[][] {
-  if (equiposEntrada !== null) {
-    // juntar pines entrada con equipo de entrada
-    const resultadoPrev = pinesEntrada.reduce((prev, cur) => {
-      const result = prev;
-      if(equiposEntrada !== null){
-        const findEquip = equiposEntrada.find((equipo) => equipo.ee_id === cur.ee_id);
-        if (findEquip) {
-          const { detector } = findEquip;
-          result.push({ ...cur, detector });
-        }
-      }
-      return result;
-    }, [] as PinesEntradaDataSocket[]);
-
-    // agrupar por detector
-    const resultObject: Record<string, PinesEntradaDataSocket[]> = {};
-    resultadoPrev.forEach((item) => {
-      const key = item.detector;
-
-      if (!resultObject[key]) {
-        resultObject[key] = [];
-      }
-
-      resultObject[key].push(item);
-    });
-
-    // ordenar por pe_id para cada detector
-    Object.keys(resultObject).forEach((key) => {
-      let detectorArray = resultObject[key];
-      let detectorArraySorted = detectorArray.sort((a, b) => a.pe_id - b.pe_id);
-      resultObject[key] = detectorArraySorted;
-    });
-
-    // ordenar por ee_id
-    let resultValues = Object.values(resultObject);
-    let resultValuesSorted = resultValues.sort((a, b) => a[0].ee_id - b[0].ee_id);
-
-    return resultValuesSorted;
-  }
-  return []
-}
-
 export const pinesEntradaSocketFinal =async (io:Server, socket: Socket) => {
 
   const nspEnergia = socket.nsp;
@@ -107,34 +56,12 @@ export const pinesEntradaSocketFinal =async (io:Server, socket: Socket) => {
   if(data){
   }
 
-  // if(equiposEntrada == null){
-  //   try {
-  //     const equiEntData = await MySQL2.executeQuery<EquipoEntradaRowData[]>({sql: `SELECT * FROM general.equipoentrada`})
-  //     equiposEntrada = equiEntData
-  //   } catch (error) {
-  //     console.log(`Socket Pines Entrada | Error al obtener equipos de entrada`)
-  //     console.error(error)
-  //   }
-  // }
-
-  // if(!intervalPinesEntrada.hasOwnProperty(ctrl_id)){
-  //   intervalPinesEntrada[ctrl_id] = setInterval(() => {
-  //     const data = PinesEntradaMap.getListPinesSalida(ctrl_id)
-  //     const finalData = getPinesEntradaData(data)
-  //     socket.nsp.emit("pinesentradafinal", finalData);
-  //   }, 1000)
-  // }
-
   socket.on("disconnect", () => {
     const clientsCount = io.of(`/pines_entradafinal/${ctrl_id}`).sockets.size;
     console.log(`Socket Pines Entrada | clientes_conectados = ${clientsCount} | ctrl_id = ${ctrl_id}`);
     if (clientsCount == 0 ) {
-      if(intervalPinesEntrada.hasOwnProperty(ctrl_id)){
-        console.log(`Socket Pines Entrada | Eliminado Obsever | ctrl_id = ${ctrl_id}`)
-        // clearInterval(intervalPinesEntrada[ctrl_id])
-        // delete intervalPinesEntrada[ctrl_id]
-        PinesEntradaMap.unregisterObserver(Number(ctrl_id))
-      }
+      console.log(`Socket Pines Entrada | Eliminado Observer | ctrl_id = ${ctrl_id}`)
+      PinesEntradaMap.unregisterObserver(Number(ctrl_id))
     }
   });
 
@@ -518,17 +445,17 @@ export class PinesEntradaMap {
 //     PinesEntradaMap.add_update(newSensorTemp)
 //   },20000)
 
-  setTimeout(()=>{
-    const randomNumber = Math.round(Math.random());
-    const newSensorTemp = new PinesEntradaSocket({pe_id: 6 , pin: 6,ee_id: 6,descripcion: "Entrada 6",estado: 1,activo: 1,ctrl_id: 27})
-    PinesEntradaMap.add_update(newSensorTemp)
-  },60000)
+  // setTimeout(()=>{
+  //   const randomNumber = Math.round(Math.random());
+  //   const newSensorTemp = new PinesEntradaSocket({pe_id: 6 , pin: 6,ee_id: 6,descripcion: "Entrada 6",estado: 1,activo: 1,ctrl_id: 27})
+  //   PinesEntradaMap.add_update(newSensorTemp)
+  // },60000)
 
-  setInterval(()=>{
-    const randomNumber = Math.round(Math.random());
-    const newSensorTemp = new PinesEntradaSocket({pe_id: 5,pin: 5,ee_id: 5,descripcion: "Entrada 5",estado: randomNumber,activo: 1,ctrl_id: 27});
-    PinesEntradaMap.add_update(newSensorTemp)
-  },5000)
+  // setInterval(()=>{
+  //   const randomNumber = Math.round(Math.random());
+  //   const newSensorTemp = new PinesEntradaSocket({pe_id: 5,pin: 5,ee_id: 5,descripcion: "Entrada 5",estado: randomNumber,activo: 1,ctrl_id: 27});
+  //   PinesEntradaMap.add_update(newSensorTemp)
+  // },5000)
 
 })();
 

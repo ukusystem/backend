@@ -601,8 +601,8 @@ export class BaseAttach extends Mortal {
 
   _notifyCard(serie: number, admin: number, authorized: number, date: string, co_id: number, ea_id: number, type: number, ctrl_id: number) {
     this._log("Notifying web about card.");
-    const newEntry = new sm.RegistroAccesoSocket({
-      ra_id: 1, // No va
+    const newEntry = new sm.RegistroAccesoSocketBad({
+      // ra_id: 1, // No va
       serie: serie,
       administrador: admin,
       autorizacion: authorized ? 1 : 0,
@@ -611,7 +611,7 @@ export class BaseAttach extends Mortal {
       ea_id: ea_id,
       tipo: type,
       sn_id: 1,
-      contrata: DEF_TXT, // No va
+      // contrata: DEF_TXT, // No va
       ctrl_id: ctrl_id,
     });
     sm.RegistroAccesoMap.add(newEntry);

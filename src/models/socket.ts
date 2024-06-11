@@ -1,6 +1,6 @@
 import { Server as HttpServer } from "http";
 import { Server } from "socket.io";
-import { accesoSocket, alarmaSocket, energiaSocket, pinesEntradaSocket, sensorTemperaturaSocket, ticketSocket , streamRecordSocket, lastSnapshotSocket, sensorTemperaturaSocketFinal, moduloEnergiaSocket, pinesEntradaSocketFinal, registroAccesoSocket, registroEntradaSocket, SensorTemperaturaMap } from "../controllers/socket";
+import {  alarmaSocket, energiaSocket, pinesEntradaSocket, sensorTemperaturaSocket, ticketSocket , streamRecordSocket, lastSnapshotSocket, sensorTemperaturaSocketFinal, moduloEnergiaSocket, pinesEntradaSocketFinal, registroEntradaSocket, SensorTemperaturaMap, registroAccesoSocket } from "../controllers/socket";
 import { streamSocketFinal } from "../controllers/socket/streamFinal";
 import { Auth } from "./auth";
 import { pinesSalidaSocket } from "../controllers/socket/pinesSalida";
@@ -81,7 +81,7 @@ export class Sockets {
 
 
     // Namespace :  "/accesos/nodo_id"
-    this.#io.of(/^\/accesos\/\d+$/).on("connection", (socket)=>{accesoSocket(this.#io, socket)})
+    // this.#io.of(/^\/accesos\/\d+$/).on("connection", (socket)=>{accesoSocket(this.#io, socket)})
     // Namespace :  "/registro_acceso/ctrl_id"
     this.#io.of(/^\/registro_acceso\/\d+$/).on("connection", (socket)=>{registroAccesoSocket(this.#io, socket)})
 

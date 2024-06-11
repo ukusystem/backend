@@ -1,4 +1,5 @@
-export * from "./acceso";
+// export * from "./acceso";
+export * from "./registroAcceso"
 export * from "./alarma";
 export * from "./energia";
 export * from "./pinesEntrada";
@@ -7,3 +8,4 @@ export * from "./ticket";
 export * from "./recordStream"
 export * from "./lastSnapshot"
 export * from "./pinesSalida"
+
