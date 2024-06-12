@@ -1,6 +1,6 @@
 import { Server as HttpServer } from "http";
 import { Server } from "socket.io";
-import {  alarmaSocket, energiaSocket, pinesEntradaSocket, sensorTemperaturaSocket, ticketSocket , streamRecordSocket, lastSnapshotSocket, sensorTemperaturaSocketFinal, moduloEnergiaSocket, pinesEntradaSocketFinal, registroEntradaSocket, SensorTemperaturaMap, registroAccesoSocket } from "../controllers/socket";
+import {  energiaSocket, pinesEntradaSocket, sensorTemperaturaSocket, ticketSocket , streamRecordSocket, lastSnapshotSocket, sensorTemperaturaSocketFinal, moduloEnergiaSocket, pinesEntradaSocketFinal, registroEntradaSocket, SensorTemperaturaMap, registroAccesoSocket } from "../controllers/socket";
 import { streamSocketFinal } from "../controllers/socket/streamFinal";
 import { Auth } from "./auth";
 import { pinesSalidaSocket } from "../controllers/socket/pinesSalida";
@@ -86,7 +86,7 @@ export class Sockets {
     this.#io.of(/^\/registro_acceso\/\d+$/).on("connection", (socket)=>{registroAccesoSocket(this.#io, socket)})
 
     // Namespace: "/alarmas/nodo_id/"
-    this.#io.of(/^\/alarmas\/\d+$/).on("connection", (socket)=>{alarmaSocket(this.#io, socket)})
+    // this.#io.of(/^\/alarmas\/\d+$/).on("connection", (socket)=>{alarmaSocket(this.#io, socket)})
     // Namespace :  "/registro_entrada/ctrl_id"
     this.#io.of(/^\/registro_entrada\/\d+$/).on("connection", (socket)=>{registroEntradaSocket(this.#io, socket)})
 

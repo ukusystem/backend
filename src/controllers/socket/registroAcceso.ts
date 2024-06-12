@@ -203,7 +203,6 @@ class RegistroAccesoSocketObserver implements RegistroAccesoObserver {
       this.socket = socket;
   }
   updateRegistroAcceso(data: IRegistroAccesoSocket): void {
-    console.log("emit:", JSON.stringify(data))
     this.socket.nsp.emit("new_registro_acceso", data);
   }
 

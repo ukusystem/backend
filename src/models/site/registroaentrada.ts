@@ -18,8 +18,8 @@ export class RegistroEntradaSite {
               const regAcc = await MySQL2.executeQuery<RegistroEntradaRowData[]>({ sql: `SELECT * from ${nododb_name}.registroentrada ORDER BY rentd_id DESC LIMIT 5` });
       
               if (regAcc.length > 0) {
-                for (let pin of regAcc) {
-                  result.push({...pin,ctrl_id})
+                for (let reg of regAcc) {
+                  result.push({...reg,ctrl_id})
                 }
               }
       
@@ -30,11 +30,11 @@ export class RegistroEntradaSite {
         return [];   
     },"RegistroEntradaSite.getAllRegistrosEntrada")
 
-    static getEquiposEntrada = handleErrorWithoutArgument<EquipoEntrada[]>(async ()=>{
-        const equiposSalida = await MySQL2.executeQuery<EquipoEntradaRowData[]>({sql:`SELECT * FROM general.equipoentrada WHERE activo = 1`})
-        if(equiposSalida.length > 0){{
-            return equiposSalida
-        }}
-        return []
-    },"RegistroEntradaSite.getEquiposEntrada")
+    // static getEquiposEntrada = handleErrorWithoutArgument<EquipoEntrada[]>(async ()=>{
+    //     const equiposSalida = await MySQL2.executeQuery<EquipoEntradaRowData[]>({sql:`SELECT * FROM general.equipoentrada WHERE activo = 1`})
+    //     if(equiposSalida.length > 0){{
+    //         return equiposSalida
+    //     }}
+    //     return []
+    // },"RegistroEntradaSite.getEquiposEntrada")
 }

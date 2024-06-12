@@ -707,7 +707,7 @@ export class BaseAttach extends Mortal {
     }
     // To show in the 'alerts' section
     if (resgister) {
-      sm.RegistroEntradaMap.add(new sm.RegistroEntradaSocket({ rentd_id: DEF_ID, pin: pin, estado: state ?? DEF_ACTIVE, fecha: date ?? useful.DUMMY_DATE, ee_id: ee_id ?? DEF_ID, ctrl_id: nodeID }));
+      sm.RegistroEntradaMap.add(new sm.RegistroEntradaSocketBad({ pin: pin, estado: state ?? DEF_ACTIVE, fecha: date ?? useful.DUMMY_DATE, ctrl_id: nodeID }));
     }
   }
 

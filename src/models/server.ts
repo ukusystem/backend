@@ -23,8 +23,8 @@ import { vmsRoutes } from "../routes/vms.routes";
 import { frontEndRoutes } from "../routes/frontend.routes";
 import { DeteccionMovimiento } from "./camera/CameraMotion";
 import { main } from "./controllerapp/controller";
-import { MedidorEnergiaMap, PinesEntradaMap, PinesSalidaMap, RegistroAccesoMap, SensorTemperaturaMap } from "../controllers/socket";
-import { ContrataMap } from "./maps";
+import { MedidorEnergiaMap, PinesEntradaMap, PinesSalidaMap, RegistroAccesoMap, RegistroEntradaMap, SensorTemperaturaMap } from "../controllers/socket";
+import { ContrataMap, EquipoAccesoMap, EquipoEntradaMap, EquipoSalidaMap } from "./maps";
 
 export class ServerApp {
   #app: Application;
@@ -123,12 +123,19 @@ export class ServerApp {
 
   async initmaps(){
     try {
+      // inicializar maps generales primero:
+      await ContrataMap.init() // inicializar antes que RegistroAccesoMap
+      await EquipoAccesoMap.init()
+      await EquipoEntradaMap.init()
+      await EquipoSalidaMap.init()
+
       await SensorTemperaturaMap.init()
       await MedidorEnergiaMap.init()
       await PinesSalidaMap.init()
       await PinesEntradaMap.init()
-      await ContrataMap.init() // inicializar antes que RegistroAccesoMap
       await RegistroAccesoMap.init()
+      await RegistroEntradaMap.init()
+
     } catch (error) {
       console.log("Server Model | Error init maps")
       console.log(error)

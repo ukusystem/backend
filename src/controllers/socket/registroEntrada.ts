@@ -1,11 +1,9 @@
 
 import { Server, Socket } from "socket.io";
-import { MySQL2 } from "../../database/mysql";
-import { Controlador, RegistroEntrada } from "../../types/db";
-import { RowDataPacket } from "mysql2";
-
-
-const intervalRegistroEntrada : {[ctrl_id: string]: NodeJS.Timeout } = {}
+import { Controlador, EquipoEntrada, RegistroEntrada } from "../../types/db";
+import { EquipoEntradaMap } from "../../models/maps";
+import { RegistroEntradaSite } from "../../models/site";
+import { PinesEntradaMap } from "./pinesEntrada";
 
 export const registroEntradaSocket = async (io: Server, socket: Socket) => {
   const nspEnergia = socket.nsp;
@@ -13,22 +11,18 @@ export const registroEntradaSocket = async (io: Server, socket: Socket) => {
 
   console.log(`Socket Registro Entrada | Cliente ID: ${socket.id} | Petición ctrl_id: ${ctrl_id}`);
 
-  if(!intervalRegistroEntrada.hasOwnProperty(ctrl_id)){
-    intervalRegistroEntrada[ctrl_id] = setInterval(async () => {
-      const data = await RegistroEntradaMap.getDataByCtrlID(ctrl_id)
-      socket.nsp.emit("registroentrada", data);
-    }, 1000)
-  }
+  let newObserver = new RegistroEntradaSocketObserver(socket)
+  RegistroEntradaMap.registerObserver(Number(ctrl_id),newObserver)
+  //emit initial data:
+  let regEntData = RegistroEntradaMap.getRegistrosEntrada(ctrl_id);
+  socket.nsp.emit("list_registros_entrada",regEntData)
 
   socket.on("disconnect", () => {
     const clientsCount = io.of(`/registro_acceso/${ctrl_id}`).sockets.size;
     console.log(`Socket Registro Entrada | clientes_conectados = ${clientsCount} | ctrl_id = ${ctrl_id}`);
     if (clientsCount == 0 ) {
-      if(intervalRegistroEntrada.hasOwnProperty(ctrl_id)){
-        console.log(`Socket Registro Entrada | Eliminado SetInterval | ctrl_id = ${ctrl_id}`)
-        clearInterval(intervalRegistroEntrada[ctrl_id])
-        delete intervalRegistroEntrada[ctrl_id]
-      }
+      console.log(`Socket Registro Entrada | Eliminado Obeserver | ctrl_id = ${ctrl_id}`)
+      RegistroEntradaMap.unregisterObserver(Number(ctrl_id))
     }
   });
 
@@ -38,78 +32,167 @@ export const registroEntradaSocket = async (io: Server, socket: Socket) => {
   });
 }
 
-type IRegistroEntradaSocket = RegistroEntrada & Pick<Controlador, "ctrl_id">
-interface RegistroEntradaRowDataSocket extends RegistroEntrada, RowDataPacket {}
+type IRegistroEntradaSocket = Omit<RegistroEntrada,"rentd_id"> & Pick<Controlador, "ctrl_id"> & Pick<EquipoEntrada,"detector">
 
 export class RegistroEntradaSocket implements IRegistroEntradaSocket {
-  rentd_id: number;
-  pin: number;
-  estado: number;
-  ee_id: number;
-  fecha: string;
+
   ctrl_id: number;
+  pin: number; // --> pe_id // PinesEntradaMap -- obtener ee_id
+  estado: number;
+  fecha: string;
+  ee_id: number;
+
+  detector: string;
 
   constructor(props: IRegistroEntradaSocket) {
-    const { ctrl_id, ee_id, estado, fecha, pin, rentd_id } = props;
-    this.rentd_id = rentd_id;
+    const { ctrl_id, ee_id, estado, fecha, pin, detector } = props;
     this.pin = pin;
     this.estado = estado;
     this.ee_id = ee_id;
     this.fecha = fecha;
     this.ctrl_id = ctrl_id;
+    this.detector = detector;
   }
 
   public toJSON() : IRegistroEntradaSocket {
     const result: IRegistroEntradaSocket = {
-      rentd_id: this.rentd_id,
       pin: this.pin,
       estado: this.estado,
       ee_id: this.ee_id,
       fecha: this.fecha,
       ctrl_id: this.ctrl_id,
+      detector: this.detector
     };
     return result
   }
 }
 
-export class RegistroEntradaMap {
-  static map : { [ctrl_id: string]: RegistroEntradaSocket[] } = {};
+type IRegistroEntradaSocketBad = Omit<RegistroEntrada,"rentd_id" | "ee_id"> & Pick<Controlador, "ctrl_id">
 
-  public static async add(regEnt: RegistroEntradaSocket) {
-    const { ctrl_id } = regEnt.toJSON();
+export class RegistroEntradaSocketBad implements IRegistroEntradaSocketBad {
+
+  ctrl_id: number;
+  pin: number; // --> pe_id // PinesEntradaMap -- obtener ee_id
+  estado: number;
+  fecha: string;
+
+  constructor(props: IRegistroEntradaSocketBad) {
+    const { ctrl_id, estado, fecha, pin } = props;
+    this.pin = pin;
+    this.estado = estado;
+    this.fecha = fecha;
+    this.ctrl_id = ctrl_id;
+  }
+
+  public toJSON() : IRegistroEntradaSocketBad {
+    const result: IRegistroEntradaSocketBad = {
+      pin: this.pin,
+      estado: this.estado,
+      fecha: this.fecha,
+      ctrl_id: this.ctrl_id,
+    };
+    return result
+  }
+
+}
+
+interface RegistroEntradaObserver {
+  updateRegistroAcceso(data: IRegistroEntradaSocket): void;
+}
+
+// interface RegistroEntradaSubject {
+//   registerObserver(ctrl_id: number, observer: RegistroEntradaObserver): void;
+//   unregisterObserver(ctrl_id: number): void;
+//   notityRegistroAcceso(data:RegistroEntradaSocket) : void
+// }
+
+class RegistroEntradaSocketObserver implements RegistroEntradaObserver {
+  private socket: Socket;
+
+  constructor(socket: Socket) {
+      this.socket = socket;
+  }
+  updateRegistroAcceso(data: IRegistroEntradaSocket): void {
+    this.socket.nsp.emit("new_registro_entrada", data);
+  }
+
+}
+
+export class RegistroEntradaMap  {
+
+  static map : { [ctrl_id: string]: RegistroEntradaSocket[] } = {};
+  static observers: {[ctrl_id: string]:RegistroEntradaObserver} = {};
+
+  public static registerObserver(ctrl_id: number, observer: RegistroEntradaObserver): void {
+    if(!RegistroEntradaMap.observers[ctrl_id]){
+      RegistroEntradaMap.observers[ctrl_id] = observer
+    }
+  }
+  public static unregisterObserver(ctrl_id: number): void {
+    if(RegistroEntradaMap.observers[ctrl_id]){
+      delete RegistroEntradaMap.observers[ctrl_id]
+    }
+  }
+  public static notityRegistroAcceso(data: RegistroEntradaSocket): void {
+    if(RegistroEntradaMap.observers[data.ctrl_id]){
+      RegistroEntradaMap.observers[data.ctrl_id].updateRegistroAcceso(data.toJSON())
+    }
+  }
+
+  public static add(regEnt: RegistroEntradaSocket |  RegistroEntradaSocketBad) {
+    const { ctrl_id ,pin } = regEnt.toJSON();
 
     if (!RegistroEntradaMap.map.hasOwnProperty(ctrl_id)) {
-
       RegistroEntradaMap.map[ctrl_id] = []
-
-      let regisAccInit = await RegistroEntradaMap.get_init_data(ctrl_id)
-
-      regisAccInit.forEach(item => {
-        let newRegAccSoc = new RegistroEntradaSocket({...item, ctrl_id})
-        RegistroEntradaMap.map[ctrl_id].push(newRegAccSoc)
-      })
-
     }
 
-    RegistroEntradaMap.map[ctrl_id].unshift(regEnt)  // agregar elementos al comienzo
-    RegistroEntradaMap.map[ctrl_id].splice(5) // elimina elementos desde el index 5
+    if(regEnt instanceof RegistroEntradaSocket){
+      RegistroEntradaMap.map[ctrl_id].unshift(regEnt)  // agregar elementos al comienzo
+      // notificar
+      RegistroEntradaMap.notityRegistroAcceso(regEnt)
+    }else{
+      const currentPinEntrada = PinesEntradaMap.getPinSalida(String(ctrl_id),String(pin));
+      if(currentPinEntrada){
+        if(EquipoEntradaMap.map[currentPinEntrada.ee_id]){
+          let newRegEnt = new RegistroEntradaSocket({...regEnt,ee_id:currentPinEntrada.ee_id,detector:EquipoEntradaMap.map[currentPinEntrada.ee_id].detector})
+          RegistroEntradaMap.map[ctrl_id].unshift(newRegEnt)  // agregar elementos al comienzo
+          // notificar
+          RegistroEntradaMap.notityRegistroAcceso(newRegEnt)
+        }
+      }
+    }
+
+    if(RegistroEntradaMap.map[ctrl_id].length > 5){
+      RegistroEntradaMap.map[ctrl_id].splice(5) // elimina elementos desde el index 5
+    }
 
   }
 
-  private static async get_init_data(ctrl_id: Controlador["ctrl_id"]){
-    const regisEntradaInit = await  MySQL2.executeQuery<RegistroEntradaRowDataSocket[]>({sql: `SELECT * FROM ${"nodo" + ctrl_id}.registroentrada ORDER BY rentd_id DESC LIMIT 5`})
-    return regisEntradaInit
+  public static async init(){
+    try {
+      let initialRegistrosEntrada = await RegistroEntradaSite.getAllRegistrosEntrada()
+      for(let regEnt of initialRegistrosEntrada.reverse()){
+        if(EquipoEntradaMap.map[regEnt.ee_id]){
+          let newRegAcc = new RegistroEntradaSocket({...regEnt,detector:EquipoEntradaMap.map[regEnt.ee_id].detector})
+          RegistroEntradaMap.add(newRegAcc)
+        }
+      }
+    } catch (error) {
+      console.log(`Socket Registro Entrada | RegistroEntradaMap | Error al inicializar registros entrada`);
+      console.error(error);  
+    }
   }
 
-  public static async getDataByCtrlID(ctrl_id: string) {
+  public static getRegistrosEntrada(ctrl_id: string) {
     let resultData: IRegistroEntradaSocket[] = [];
-    if (RegistroEntradaMap.map.hasOwnProperty(ctrl_id)) {
+    if (RegistroEntradaMap.map[ctrl_id]) {
       RegistroEntradaMap.map[ctrl_id].forEach((item) => {
         resultData.push(item.toJSON());
       });
     }
     return resultData;
   }
+
 }
 
 

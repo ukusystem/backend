@@ -6,11 +6,12 @@ import path from "path";
 import fs from "fs";
 import { Cam } from "onvif";
 import { MySQL2 } from "../../database/mysql";
-import { verifyImageMarkers } from "../../utils/stream";
+import { createImageBase64, verifyImageMarkers } from "../../utils/stream";
 import { addCredentialToRtsp, getMulticastRtspStreamAndSubStream } from "../../utils/getCameraRtspLinks";
 import { Init } from "../init";
 import { decrypt } from "../../utils/decrypt";
 import { CameraForFront } from "../controllerapp/src/frontend/camaraForFront";
+import { Socket } from "socket.io";
 
 interface CameraMotionProps {
   ip: string;
@@ -131,7 +132,12 @@ export class CameraMotion implements CameraMotionProps, CameraMotionMethods {
                 const imagePath = path.join(pathImg, `captura_${Date.now()}.jpg`); // ---> deteccionmovimiento\img\Arequipa\172.16.4.110\2024-01-26\13\captura_1706292419800.jpg
 
                 fs.writeFileSync(imagePath, this.imageBuffer);
+
+                let imageBase64 = createImageBase64(this.imageBuffer)
+                CameraMotionMap.notityImageMotion(this.ctrl_id,imageBase64)
+
                 insertPathToDB(imagePath, this.ctrl_id, this.cmr_id, 0);
+
               } catch (error) {
                 console.log(`Detección Movimiento | Error al guardar imagen | ctrl_id: ${this.ctrl_id} | ip: ${this.ip} `);
                 console.error(error);
@@ -625,8 +631,49 @@ export const DeteccionMovimiento = async () => {
 //   delete_all: () => void;
 // }
 
+interface MotionDeteccionObserver {
+  updateRegistroAcceso(imageBase64: string): void;
+}
+
+// interface MotionDeteccionSubject {
+//   registerObserver(ctrl_id: number, observer: MotionDeteccionObserver): void;
+//   unregisterObserver(ctrl_id: number): void;
+//   notityImageMotion(ctrl_id:number,imageBase64: string) : void
+// }
+
+export class MotionDeteccionSocketObserver implements MotionDeteccionObserver {
+  private socket: Socket;
+
+  constructor(socket: Socket) {
+      this.socket = socket;
+  }
+  updateRegistroAcceso(imageBase64: string): void {
+    this.socket.nsp.emit("new_image", imageBase64);
+  }
+}
+
 export class CameraMotionMap {
-  static CameraMotionMap: { [ctrl_id: string]: { [cmr_id: string]: CameraMotion } } = {};
+  
+  static map: { [ctrl_id: string]: { [cmr_id: string]: CameraMotion } } = {};
+  static observers: { [ctrl_id:string]:MotionDeteccionObserver } = {};
+  static lastImage:{ [ctrl_id:string]:string } = {}
+
+  public static registerObserver(ctrl_id: number, observer: MotionDeteccionObserver): void {
+    if(!CameraMotionMap.observers[ctrl_id]){
+      CameraMotionMap.observers[ctrl_id] = observer
+    }
+  }
+  public static unregisterObserver(ctrl_id: number): void {
+    if(CameraMotionMap.observers[ctrl_id]){
+      delete CameraMotionMap.observers[ctrl_id]
+    }
+  }
+  public static notityImageMotion(ctrl_id: number,imageBase64: string): void {
+    if(CameraMotionMap.observers[ctrl_id]){
+      CameraMotionMap.observers[ctrl_id].updateRegistroAcceso(imageBase64)
+    }
+    CameraMotionMap.lastImage[ctrl_id] = imageBase64
+  }
 
   static #existsCameraMotionMap(props: { ctrl_id: string; cmr_id: string }): boolean {
     const { cmr_id, ctrl_id } = props;
@@ -634,11 +681,11 @@ export class CameraMotionMap {
     let is_ctrl_id: boolean = false;
     let is_cmr_id: boolean = false;
 
-    for (const ctrl_id_key in CameraMotionMap.CameraMotionMap) {
+    for (const ctrl_id_key in CameraMotionMap.map) {
       if (ctrl_id_key == ctrl_id) {
         is_ctrl_id = true;
       }
-      for (const cmr_id_key in CameraMotionMap.CameraMotionMap[ctrl_id_key]) {
+      for (const cmr_id_key in CameraMotionMap.map[ctrl_id_key]) {
         if (cmr_id_key == cmr_id) {
           is_cmr_id = true;
         }
@@ -651,16 +698,16 @@ export class CameraMotionMap {
   private static add(cam: CameraForFront | CameraMotion) {
     const { cmr_id, contraseña, ctrl_id, ip, usuario } = CameraMotionMap.#get_properties(cam);
 
-    if (!CameraMotionMap.CameraMotionMap.hasOwnProperty(ctrl_id)) {
-      CameraMotionMap.CameraMotionMap[ctrl_id] = {};
+    if (!CameraMotionMap.map.hasOwnProperty(ctrl_id)) {
+      CameraMotionMap.map[ctrl_id] = {};
     }
 
-    if (!CameraMotionMap.CameraMotionMap[ctrl_id].hasOwnProperty(cmr_id)) {
+    if (!CameraMotionMap.map[ctrl_id].hasOwnProperty(cmr_id)) {
       const camMotion = new CameraMotion({ ip, usuario, contraseña, cmr_id, ctrl_id });
-      CameraMotionMap.CameraMotionMap[ctrl_id][cmr_id] = camMotion;
+      CameraMotionMap.map[ctrl_id][cmr_id] = camMotion;
       // Ejecutar
       try {
-        CameraMotionMap.CameraMotionMap[ctrl_id][cmr_id].execute();
+        CameraMotionMap.map[ctrl_id][cmr_id].execute();
       } catch (error) {
         console.log(`Detección Movimiento | Error en CameraMotionActions.add | ctrl_id: ${ctrl_id} | cmr_id: ${cmr_id} | ip: ${ip}`);
         console.error(error);
@@ -670,14 +717,14 @@ export class CameraMotionMap {
 
   static #update(cam: CameraForFront | CameraMotion) {
     const { cmr_id, contraseña, ctrl_id, ip, usuario } = CameraMotionMap.#get_properties(cam);
-    if (CameraMotionMap.CameraMotionMap.hasOwnProperty(ctrl_id)) {
-      if (CameraMotionMap.CameraMotionMap[ctrl_id].hasOwnProperty(cmr_id)) {
-        const beforeCamMotion = CameraMotionMap.CameraMotionMap[ctrl_id][cmr_id];
+    if (CameraMotionMap.map.hasOwnProperty(ctrl_id)) {
+      if (CameraMotionMap.map[ctrl_id].hasOwnProperty(cmr_id)) {
+        const beforeCamMotion = CameraMotionMap.map[ctrl_id][cmr_id];
         let b_ip = beforeCamMotion.ip;
         let b_contraseña = beforeCamMotion.contraseña;
         let b_usuario = beforeCamMotion.usuario;
         if (b_ip != ip || b_contraseña != contraseña || b_usuario != usuario) {
-          delete CameraMotionMap.CameraMotionMap[ctrl_id][cmr_id];
+          delete CameraMotionMap.map[ctrl_id][cmr_id];
           // Agregar nuevo
           CameraMotionMap.add(cam);
         }
@@ -711,17 +758,17 @@ export class CameraMotionMap {
 
   static delete(cam: CameraForFront | CameraMotion) {
     const { cmr_id, ctrl_id } = CameraMotionMap.#get_properties(cam);
-    if (CameraMotionMap.CameraMotionMap.hasOwnProperty(ctrl_id)) {
-      if (CameraMotionMap.CameraMotionMap[ctrl_id].hasOwnProperty(cmr_id)) {
-        delete CameraMotionMap.CameraMotionMap[ctrl_id][cmr_id];
+    if (CameraMotionMap.map.hasOwnProperty(ctrl_id)) {
+      if (CameraMotionMap.map[ctrl_id].hasOwnProperty(cmr_id)) {
+        delete CameraMotionMap.map[ctrl_id][cmr_id];
       }
     }
   }
 
   static delete_all() {
-    for (const ctrl_id_key in CameraMotionMap.CameraMotionMap) {
-      for (const cmr_id_key in CameraMotionMap.CameraMotionMap[ctrl_id_key]) {
-        delete CameraMotionMap.CameraMotionMap[ctrl_id_key][cmr_id_key];
+    for (const ctrl_id_key in CameraMotionMap.map) {
+      for (const cmr_id_key in CameraMotionMap.map[ctrl_id_key]) {
+        delete CameraMotionMap.map[ctrl_id_key][cmr_id_key];
       }
     }
   }
@@ -741,14 +788,14 @@ export class CameraMotionMap {
   static reconnect(cameraID: number, nodoID: number) {
     // If exists
     if (CameraMotionMap.#existsCameraMotionMap({ ctrl_id : String(nodoID), cmr_id : String(cameraID) })) {
-      const beforeCamMotion = CameraMotionMap.CameraMotionMap[nodoID][cameraID];
+      const beforeCamMotion = CameraMotionMap.map[nodoID][cameraID];
       let b_ip = beforeCamMotion.ip;
       let b_contraseña = beforeCamMotion.contraseña;
       let b_usuario = beforeCamMotion.usuario;
       // Ensure deletion
-      delete CameraMotionMap.CameraMotionMap[nodoID][cameraID];
+      delete CameraMotionMap.map[nodoID][cameraID];
       // Add again
-      CameraMotionMap.add(new CameraForFront(cameraID, nodoID, b_ip, b_usuario, b_contraseña));
+      CameraMotionMap.add_update(new CameraForFront(cameraID, nodoID, b_ip, b_usuario, b_contraseña));
     }
   }
 }
