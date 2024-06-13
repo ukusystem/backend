@@ -4,8 +4,10 @@ import { Ticket } from "../../models/ticket";
 import type { RequestWithUser } from "../../types/requests";
 import { CustomError } from "../../utils/CustomError";
 import { TECHNICIAN_PORT, TECHNICIAN_SERVER_IP } from "../../configs/server.configs";
+import { onFinishTicket } from "../../models/controllerapp/controller";
 import { FinishTicket } from "../../models/controllerapp/src/finishTicket";
-import { Main } from "../../models/controllerapp/src/main";
+// import { FinishTicket } from "../../models/controllerapp/src/finishTicket";
+// import { Main } from "../../models/controllerapp/src/main";
 
 interface TicketUpdateBody {
   action: number;
@@ -44,18 +46,36 @@ export const upadateTicket = asyncErrorHandler(
 
 
         if( beforeEventAction || duringEventAction ){
-
+          
           if(user.rol === "Administrador" || user.rol === "Usuario"){
-            const response = await fetch( `http://${TECHNICIAN_SERVER_IP}:${TECHNICIAN_PORT}/servlets/ticketaction`, { method: "POST", body: JSON.stringify({ action, ctrl_id, rt_id }) } );
-            const responseJson = await response.json()
-            
-            if (response.ok) {
-              return res.json({success: true,message: "Accion realizada con éxito",});
-            } else {
-              const statusCode = response.status;
-              console.log(responseJson)
-              return res.status(statusCode).json({ success: false, message: "Ocurrrio un error al ejecutar la acción.", });
+
+            try {
+              const response = await onFinishTicket(new FinishTicket(action,ctrl_id,rt_id))
+              if(response){
+                if(response.resultado){ // success
+                  return res.json({success: true,message: "Accion realizada con éxito",});
+                }else{
+                  return res.json({success: false,message: response.mensaje,});
+                }
+              }else{
+                return res.status(500).json({ success: false, message: "Internal Server Error Update Ticket, Backend-Technician", });
+              }
+            } catch (error) {
+              return res.status(500).json({ success: false, message: "Internal Server Error, Backend-Technician", });
             }
+            
+
+            // const response = await fetch( `http://${TECHNICIAN_SERVER_IP}:${TECHNICIAN_PORT}/servlets/ticketaction`, { method: "POST", body: JSON.stringify({ action, ctrl_id, rt_id }) } );
+            // const responseJson = await response.json()
+            
+            // if (response.ok) {
+            //   return res.json({success: true,message: "Accion realizada con éxito",});
+            // } else {
+            //   const statusCode = response.status;
+            //   console.log(responseJson)
+            //   return res.status(statusCode).json({ success: false, message: "Ocurrrio un error al ejecutar la acción.", });
+            // }
+
           }
         }
 
@@ -65,18 +85,32 @@ export const upadateTicket = asyncErrorHandler(
 
               // =========== Usar esto
               // Main.onFinishTicket(new FinishTicket( action, ctrl_id, rt_id ));
-
-              const response = await fetch( `http://${TECHNICIAN_SERVER_IP}:${TECHNICIAN_PORT}/servlets/ticketaction`, { method: "POST", body: JSON.stringify({ action, ctrl_id, rt_id }) } );
-              const responseJson = await response.json()
-              
-              if (response.ok) {
-                
-                return res.json({success: true,message: "Accion realizada con éxito",});
-              } else {
-                const statusCode = response.status;
-                console.log(responseJson)
-                return res.status(statusCode).json({ success: false, message: "Ocurrrio un error al ejecutar la acción.", });
+              try {
+                const response = await onFinishTicket(new FinishTicket(action,ctrl_id,rt_id))
+                if(response){
+                  if(response.resultado){ // success
+                    return res.json({success: true,message: "Accion realizada con éxito",});
+                  }else{
+                    return res.json({success: false,message: response.mensaje,});
+                  }
+                }else{
+                  return res.status(500).json({ success: false, message: "Internal Server Error Update Ticket, Backend-Technician", });
+                }
+              } catch (error) {
+                return res.status(500).json({ success: false, message: "Internal Server Error, Backend-Technician", });
               }
+
+              // const response = await fetch( `http://${TECHNICIAN_SERVER_IP}:${TECHNICIAN_PORT}/servlets/ticketaction`, { method: "POST", body: JSON.stringify({ action, ctrl_id, rt_id }) } );
+              // const responseJson = await response.json()
+              
+              // if (response.ok) {
+                
+              //   return res.json({success: true,message: "Accion realizada con éxito",});
+              // } else {
+              //   const statusCode = response.status;
+              //   console.log(responseJson)
+              //   return res.status(statusCode).json({ success: false, message: "Ocurrrio un error al ejecutar la acción.", });
+              // }
   
             }
           }

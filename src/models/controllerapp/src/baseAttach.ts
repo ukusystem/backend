@@ -2027,7 +2027,7 @@ export class ManagerAttach extends BaseAttach {
                           break;
                         }
                         cameraPassword.setString(encrytedCameraPassword);
-                        newCameraItem.password = encrytedCameraPassword;
+                        newCameraItem.contraseña = encrytedCameraPassword;
                       }
 
                       // Save camera

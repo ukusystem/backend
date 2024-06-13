@@ -1,7 +1,8 @@
 import { NodeAttach, ManagerAttach, Selector, BaseAttach } from "./baseAttach";
-import { Personal } from "../../../controllers/ticket/createTicket";
+// import { Personal } from "../../../controllers/ticket/createTicket";
 import { Changes, Result, States, getState } from "./enums";
-import { Solicitante } from "../../../controllers/ticket";
+// import { Solicitante } from "../../../controllers/ticket";
+
 import { PartialTicket } from "./partialTicket";
 import { RequestResult } from "./requestResult";
 import { AtomicNumber } from "./atomicNumber";
@@ -14,7 +15,7 @@ import { Logger } from "./logger";
 import { Camera } from "./camera";
 import { Bundle } from "./bundle";
 import { Mortal } from "./mortal";
-import { Ticket } from "./ticket";
+import { Ticket ,type  Personal, type Solicitante } from "./ticket";
 import { PinOrder } from "./types";
 import fs from "fs";
 import * as config from "./../../../configs/server.configs";
@@ -89,9 +90,12 @@ export class Main {
    */
   #conditionsMet = true;
 
-  static readonly isWindows = useful.isWindows();
+  // static readonly isWindows2 = useful.isWindows();
+  // static readonly isWindows2 = true;
+  static  isWindows = false
 
   constructor() {
+    Main.isWindows = useful.isWindows();
     /* Logger */
 
     this.logger = new Logger("msControllerService", Main.LOGGER_RELATIVE_PATH);
@@ -623,7 +627,7 @@ export class Main {
    */
   async onTicket(newTicket: Ticket): Promise<RequestResult> {
     const solicitor = newTicket.solicitante;
-    if (Main.validateSolicitor(solicitor)) {
+    if (!Main.validateSolicitor(solicitor)) {
       this.log("Solicitor is not valid");
       // return States.ILLEGAL;
       return new RequestResult(false, "Algún campo contiene un valor fuera de rango.");
@@ -957,6 +961,8 @@ export class Main {
           if (change === Changes.TO_ACTIVE) {
             this.log(`Reconnecting camera ${cam.cameraIP}`);
             CameraMotionMap.reconnect(cam.cameraID, cam.nodeID);
+          }else if(change === Changes.TO_INACTIVE){
+            CameraMotionMap.deleteFfmpegProccess(cam.cameraID, cam.nodeID)
           }
         }
         cam.errorNotified = false;

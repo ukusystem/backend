@@ -6,7 +6,7 @@ import bcrypt from "bcrypt";
 import dayjs from "dayjs";
 import path from "path";
 import * as codes from "./codes";
-
+// import process from 'node:process'
 const BCRYPT_STRENGTH = 12;
 const MAX_FILE_SIZE_B = 5 * 1000 * 1000;
 const PHOTO_BASE_NAME = "foto";
@@ -38,6 +38,7 @@ export function isWindows(): boolean {
     osName = process.platform;
   }
   return osName === "win32";
+  // return true
 }
 
 /**

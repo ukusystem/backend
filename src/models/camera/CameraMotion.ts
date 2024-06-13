@@ -34,6 +34,8 @@ interface CameraMotionMethods {
   processEvent: (eventTime: any, eventTopic: any, eventProperty: any, sourceName: any, sourceValue: any, dataName: any, dataValue: any, rtspUrl: string) => void;
 }
 
+
+
 export class CameraMotion implements CameraMotionProps, CameraMotionMethods {
   ip: string;
   usuario: string;
@@ -607,7 +609,7 @@ export const DeteccionMovimiento = async () => {
 
         const contraseñaDecrypt = decrypt(contraseña);
         const camMotion = new CameraMotion({ ip, usuario, contraseña: contraseñaDecrypt, cmr_id, ctrl_id });
-        CameraMotionMap.add_update(camMotion);
+        CameraMotionMap.add_whithout_execute(camMotion);
         // try {
         //   await camMotion.execute()
         // } catch (error) {
@@ -675,7 +677,7 @@ export class CameraMotionMap {
     CameraMotionMap.lastImage[ctrl_id] = imageBase64
   }
 
-  static #existsCameraMotionMap(props: { ctrl_id: string; cmr_id: string }): boolean {
+  static #exists(props: { ctrl_id: string; cmr_id: string }): boolean {
     const { cmr_id, ctrl_id } = props;
 
     let is_ctrl_id: boolean = false;
@@ -695,72 +697,76 @@ export class CameraMotionMap {
     return is_ctrl_id && is_cmr_id;
   }
 
-  private static add(cam: CameraForFront | CameraMotion) {
-    const { cmr_id, contraseña, ctrl_id, ip, usuario } = CameraMotionMap.#get_properties(cam);
+  // static #addcam(cam: CameraMotion) {
+  //   // const { cmr_id, contraseña, ctrl_id, ip, usuario } = CameraMotionMap.#get_properties(cam);
 
-    if (!CameraMotionMap.map.hasOwnProperty(ctrl_id)) {
-      CameraMotionMap.map[ctrl_id] = {};
+  //   if (!CameraMotionMap.map.hasOwnProperty(cam.ctrl_id)) {
+  //     CameraMotionMap.map[cam.ctrl_id] = {};
+  //   }
+
+  //   if (!CameraMotionMap.map[cam.ctrl_id].hasOwnProperty(cam.cmr_id)) {
+  //     // const camMotion = new CameraMotion({ ip, usuario, contraseña, cmr_id, ctrl_id });
+  //     CameraMotionMap.map[cam.ctrl_id][cam.cmr_id] = cam;
+  //     // Ejecutar
+  //     try {
+  //       CameraMotionMap.map[cam.ctrl_id][cam.cmr_id].execute();
+  //     } catch (error) {
+  //       console.log(`Detección Movimiento | Error en CameraMotionActions.add | ctrl_id: ${cam.ctrl_id} | cmr_id: ${cam.cmr_id} | ip: ${cam.ip}`);
+  //       console.error(error);
+  //     }
+  //   }
+  // }
+
+
+  static #addcam(cam: CameraMotion , execute: boolean = true) {
+    // const { cmr_id, contraseña, ctrl_id, ip, usuario } = CameraMotionMap.#get_properties(cam);
+
+    if (!CameraMotionMap.map.hasOwnProperty(cam.ctrl_id)) {
+      CameraMotionMap.map[cam.ctrl_id] = {};
     }
 
-    if (!CameraMotionMap.map[ctrl_id].hasOwnProperty(cmr_id)) {
-      const camMotion = new CameraMotion({ ip, usuario, contraseña, cmr_id, ctrl_id });
-      CameraMotionMap.map[ctrl_id][cmr_id] = camMotion;
-      // Ejecutar
-      try {
-        CameraMotionMap.map[ctrl_id][cmr_id].execute();
-      } catch (error) {
-        console.log(`Detección Movimiento | Error en CameraMotionActions.add | ctrl_id: ${ctrl_id} | cmr_id: ${cmr_id} | ip: ${ip}`);
-        console.error(error);
-      }
-    }
-  }
-
-  static #update(cam: CameraForFront | CameraMotion) {
-    const { cmr_id, contraseña, ctrl_id, ip, usuario } = CameraMotionMap.#get_properties(cam);
-    if (CameraMotionMap.map.hasOwnProperty(ctrl_id)) {
-      if (CameraMotionMap.map[ctrl_id].hasOwnProperty(cmr_id)) {
-        const beforeCamMotion = CameraMotionMap.map[ctrl_id][cmr_id];
-        let b_ip = beforeCamMotion.ip;
-        let b_contraseña = beforeCamMotion.contraseña;
-        let b_usuario = beforeCamMotion.usuario;
-        if (b_ip != ip || b_contraseña != contraseña || b_usuario != usuario) {
-          delete CameraMotionMap.map[ctrl_id][cmr_id];
-          // Agregar nuevo
-          CameraMotionMap.add(cam);
+    if (!CameraMotionMap.map[cam.ctrl_id].hasOwnProperty(cam.cmr_id)) {
+      // const camMotion = new CameraMotion({ ip, usuario, contraseña, cmr_id, ctrl_id });
+      CameraMotionMap.map[cam.ctrl_id][cam.cmr_id] = cam;
+      if(execute){
+        // Ejecutar
+        try {
+          CameraMotionMap.map[cam.ctrl_id][cam.cmr_id].execute();
+        } catch (error) {
+          console.log(`Detección Movimiento | Error en CameraMotionActions.add | ctrl_id: ${cam.ctrl_id} | cmr_id: ${cam.cmr_id} | ip: ${cam.ip}`);
+          console.error(error);
         }
       }
     }
   }
 
-  static #get_properties(cam: CameraForFront | CameraMotion) {
-    let ip: string;
-    let usuario: string;
-    let contraseña: string;
-    let cmr_id: number;
-    let ctrl_id: number;
-
-    if (cam instanceof CameraForFront) {
-      ip = cam.cameraIP;
-      usuario = cam.user;
-      contraseña = cam.password;
-      cmr_id = cam.cameraID;
-      ctrl_id = cam.controllerID;
-    } else {
-      ip = cam.ip;
-      usuario = cam.usuario;
-      contraseña = cam.contraseña;
-      cmr_id = cam.cmr_id;
-      ctrl_id = cam.ctrl_id;
+  static #updatecam(cam: CameraMotion) {
+    // const { cmr_id, contraseña, ctrl_id, ip, usuario } = CameraMotionMap.#get_properties(cam);
+    if (CameraMotionMap.map.hasOwnProperty(cam.ctrl_id)) {
+      if (CameraMotionMap.map[cam.ctrl_id].hasOwnProperty(cam.cmr_id)) {
+        const beforeCamMotion = CameraMotionMap.map[cam.ctrl_id][cam.cmr_id];
+        let b_ip = beforeCamMotion.ip;
+        let b_contraseña = beforeCamMotion.contraseña;
+        let b_usuario = beforeCamMotion.usuario;
+        if (b_ip != cam.ip || b_contraseña != cam.contraseña || b_usuario != cam.usuario) {
+          if(beforeCamMotion.ffmpegProcessImage != null) beforeCamMotion.ffmpegProcessImage.kill();
+          if(beforeCamMotion.ffmpegProcessVideo != null) beforeCamMotion.ffmpegProcessVideo.kill();
+          delete CameraMotionMap.map[cam.ctrl_id][cam.cmr_id];
+          // Agregar nuevo
+          CameraMotionMap.#addcam(cam);
+        }
+      }
     }
-
-    return { ip, usuario, contraseña, cmr_id, ctrl_id };
   }
 
   static delete(cam: CameraForFront | CameraMotion) {
-    const { cmr_id, ctrl_id } = CameraMotionMap.#get_properties(cam);
-    if (CameraMotionMap.map.hasOwnProperty(ctrl_id)) {
-      if (CameraMotionMap.map[ctrl_id].hasOwnProperty(cmr_id)) {
-        delete CameraMotionMap.map[ctrl_id][cmr_id];
+    // const { cmr_id, ctrl_id } = CameraMotionMap.#get_properties(cam);
+    if (CameraMotionMap.map.hasOwnProperty(cam.ctrl_id)) {
+      if (CameraMotionMap.map[cam.ctrl_id].hasOwnProperty(cam.cmr_id)) {
+        const currentCamMot = CameraMotionMap.map[cam.ctrl_id][cam.cmr_id]
+        if(currentCamMot.ffmpegProcessImage != null ) currentCamMot.ffmpegProcessImage.kill();
+        if(currentCamMot.ffmpegProcessVideo != null ) currentCamMot.ffmpegProcessVideo.kill();
+        delete CameraMotionMap.map[cam.ctrl_id][cam.cmr_id];
       }
     }
   }
@@ -773,29 +779,157 @@ export class CameraMotionMap {
     }
   }
 
-  static add_update: (cam: CameraForFront | CameraMotion) => void = (cam) => {
-    const { cmr_id, ctrl_id } = CameraMotionMap.#get_properties(cam);
-    //Comprobar existencia
-    const exists = CameraMotionMap.#existsCameraMotionMap({ ctrl_id: String(ctrl_id), cmr_id: String(cmr_id) });
-
+  static add_whithout_execute(cam: CameraMotion){
+    const exists = CameraMotionMap.#exists({ ctrl_id: String(cam.ctrl_id), cmr_id: String(cam.cmr_id) });
     if (!exists) {
-      CameraMotionMap.add(cam);
-    } else {
-      CameraMotionMap.#update(cam);
+      CameraMotionMap.#addcam(cam,false);
+    } 
+  }
+  static add_update (cam: CameraForFront | CameraMotion): void{
+    // const { cmr_id, ctrl_id } = CameraMotionMap.#get_properties(cam);
+    //Comprobar existencia
+    const exists = CameraMotionMap.#exists({ ctrl_id: String(cam.ctrl_id), cmr_id: String(cam.cmr_id) });
+
+    if(cam instanceof CameraMotion){
+      if (!exists) {
+        CameraMotionMap.#addcam(cam);
+      } else {
+        CameraMotionMap.#updatecam(cam);
+      }
+    }else{
+      let front_cmr_id = cam.cmr_id;
+      let front_ctrl_id = cam.ctrl_id;
+      let front_ip = cam.ip;
+      let front_contraseña = cam.contraseña;
+      let front_usuario = cam.usuario;
+
+      if(!exists){ // add
+        if( front_cmr_id != null && front_ctrl_id != null && front_ip != null && front_contraseña != null && front_usuario != null ){
+          const newCamMot = new CameraMotion({ ip : front_ip, usuario: front_usuario, contraseña: front_contraseña, cmr_id :front_cmr_id, ctrl_id: front_ctrl_id });
+          CameraMotionMap.#addcam(newCamMot);
+        }
+      }else{ // update
+        const currentCamMot = CameraMotionMap.map[cam.ctrl_id][cam.cmr_id];
+
+        let new_ip = front_ip ?? currentCamMot.ip;
+        let new_contraseña = front_contraseña ?? currentCamMot.contraseña;
+        let new_usuario = front_usuario ?? currentCamMot.usuario;
+
+        const newCamMot = new CameraMotion({ ip : new_ip, usuario: new_usuario, contraseña: new_contraseña, cmr_id :front_cmr_id, ctrl_id: front_ctrl_id });
+        CameraMotionMap.#updatecam(newCamMot);
+      }
     }
+
   };
 
-  static reconnect(cameraID: number, nodoID: number) {
+  static async reconnect(cameraID: number, nodoID: number) {
+    console.log("======================reconnectando====================",cameraID,nodoID)
     // If exists
-    if (CameraMotionMap.#existsCameraMotionMap({ ctrl_id : String(nodoID), cmr_id : String(cameraID) })) {
+    if (CameraMotionMap.#exists({ ctrl_id : String(nodoID), cmr_id : String(cameraID) })) {
       const beforeCamMotion = CameraMotionMap.map[nodoID][cameraID];
+      let b_cmr_id = beforeCamMotion.cmr_id
+      let b_ctrl_id = beforeCamMotion.ctrl_id
       let b_ip = beforeCamMotion.ip;
       let b_contraseña = beforeCamMotion.contraseña;
       let b_usuario = beforeCamMotion.usuario;
       // Ensure deletion
+      if(beforeCamMotion.ffmpegProcessImage != null ) beforeCamMotion.ffmpegProcessImage.kill();
+      if(beforeCamMotion.ffmpegProcessVideo != null ) beforeCamMotion.ffmpegProcessVideo.kill();
       delete CameraMotionMap.map[nodoID][cameraID];
       // Add again
-      CameraMotionMap.add_update(new CameraForFront(cameraID, nodoID, b_ip, b_usuario, b_contraseña));
+      // CameraMotionMap.add_update(new CameraForFront(cameraID, nodoID, b_ip, b_usuario, b_contraseña));
+      const newCamRec = new CameraReconnect({
+        cmr_id: b_cmr_id,
+        ctrl_id: b_ctrl_id,
+        ip: b_ip,
+        contraseña: b_contraseña,
+        usuario: b_usuario,
+      })
+
+       await newCamRec.execute()
+
     }
+  }
+
+  static deleteFfmpegProccess(cmr_id:number,ctrl_id: number){
+    console.log("================Eliminando Procesos===============", ctrl_id, cmr_id);
+    if (CameraMotionMap.map.hasOwnProperty(ctrl_id)) {
+      if (CameraMotionMap.map[ctrl_id].hasOwnProperty(cmr_id)) {
+        const currentCamMot = CameraMotionMap.map[ctrl_id][cmr_id]
+        if(currentCamMot.ffmpegProcessImage != null ) currentCamMot.ffmpegProcessImage.kill();
+        if(currentCamMot.ffmpegProcessVideo != null ) currentCamMot.ffmpegProcessVideo.kill();
+        // delete CameraMotionMap.map[ctrl_id][cmr_id];
+      }
+    }
+  }
+}
+
+
+class CameraReconnect {
+  ip: string;
+  usuario: string;
+  contraseña: string;
+  cmr_id: number;
+  ctrl_id: number;
+
+  interval_proccess: NodeJS.Timeout | null = null
+
+  constructor(props: Pick<CameraMotionProps, "ip" | "usuario" | "contraseña" | "cmr_id" | "ctrl_id">) {
+    const { cmr_id, ctrl_id, ip, contraseña, usuario } = props;
+    this.cmr_id = cmr_id;
+    this.ctrl_id = ctrl_id;
+    this.ip = ip;
+    this.contraseña = contraseña;
+    this.usuario = usuario;
+  }
+
+  public async execute(){
+    try {
+
+      let isConnected = await this.#connect();
+      if(isConnected){
+        console.log("connectado primer intento")
+        const newCamMotion = new CameraMotion({cmr_id:this.cmr_id,ctrl_id:this.ctrl_id,ip:this.ip,contraseña:this.contraseña,usuario:this.usuario})
+        CameraMotionMap.add_update(newCamMotion)
+      }
+      // {
+      //   console.log("creando setInterval")
+      //   // this.interval_proccess = setInterval(async ()=>{
+      //   //   let isConnected = await this.#connect();
+      //   //   console.log("setInterval reconectando",isConnected)
+      //   //   if(isConnected){
+      //   //     // const newCamMotion = new CameraMotion({cmr_id:this.cmr_id,ctrl_id:this.ctrl_id,ip:this.ip,contraseña:this.contraseña,usuario:this.usuario})
+      //   //     // CameraMotionMap.add_update(newCamMotion)
+      //   //     if(this.interval_proccess){
+      //   //       clearInterval(this.interval_proccess)
+      //   //       console.log("eliminando setInterval")
+      //   //     }
+      //   //   }
+
+      //   // },30000)
+      // }
+    } catch (error) {
+      
+    }
+  }
+
+  #connect() : Promise<boolean> {
+    const camOvifProps = {
+      hostname: this.ip,
+      username: this.usuario,
+      password: this.contraseña,
+      timeout: 5000,
+      preserveAddress: false,
+      autoconnect: true,
+    };
+
+    return new Promise<boolean>((resolve, reject) => {
+      new Cam(camOvifProps, function (err: any) {
+        if (err) {
+          return resolve(false);
+        }
+        return resolve(true);
+      });
+    });
   }
 }
