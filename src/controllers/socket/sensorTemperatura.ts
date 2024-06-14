@@ -10,7 +10,7 @@ export const sensorTemperaturaSocket = async (io: Server, socket: Socket) => {
   //emit initial data
   const data = SensorTemperaturaMap.getSensorTemperatura(ctrl_id,st_id)
   if(data){
-    socket.nsp.emit("temperatura", data.toJSON());
+    socket.emit("temperatura", data.toJSON());
   }
   
   socket.on("disconnect", () => {
@@ -39,7 +39,7 @@ export const sensorTemperaturaSocketFinal = async ( io: Server, socket: Socket )
   SensorTemperaturaMap.registerListObserver(Number(ctrl_id),observerList)
   //emit initial data
   const data = SensorTemperaturaMap.getDataByCtrlID(ctrl_id)
-  socket.nsp.emit("temperaturafinal", data);
+  socket.emit("temperaturafinal", data);
 
   socket.on("disconnect", () => {
     const clientsCount = io.of(`/sensor_temperaturafinal/${ctrl_id}`).sockets.size;

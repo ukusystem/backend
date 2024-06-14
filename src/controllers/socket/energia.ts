@@ -10,7 +10,7 @@ export const energiaSocket = async (io: Server, socket: Socket) => {
   //emit initial data
   const data = MedidorEnergiaMap.getDataByCtrlIDAndMeID(ctrl_id,me_id)
   if(data){
-    socket.nsp.emit("energia", data.toJSON());
+    socket.emit("energia", data.toJSON());
   }
 
   socket.on("disconnect", () => {
@@ -39,7 +39,7 @@ export const moduloEnergiaSocket = async (io: Server, socket: Socket) => {
   MedidorEnergiaMap.registerListObserver(Number(ctrl_id),observerList)
   //emit initial data
   const data = MedidorEnergiaMap.getDataByCtrlID(ctrl_id)
-  socket.nsp.emit("list_energia", data); //moduloenergia
+  socket.emit("list_energia", data); //moduloenergia
 
   socket.on("disconnect", () => {
     const clientsCount = io.of(`/list_energia/${ctrl_id}`).sockets.size;

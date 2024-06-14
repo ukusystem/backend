@@ -27,17 +27,17 @@ export const pinesSalidaSocket =async (io:Server, socket: Socket) => {
 
   //emit initial data
   let newEquipSal = PinesSalidaMap.getEquiposSalida(String(ctrl_id));
-  socket.nsp.emit("equipos_salida",newEquipSal)
+  socket.emit("equipos_salida",newEquipSal)
   
   socket.on("initial_list_pines_salida",(es_id: number)=>{
     let newListPinSal = PinesSalidaMap.getListPinesSalida(String(ctrl_id),String(es_id));
-    socket.nsp.emit("list_pines_salida",newListPinSal)
+    socket.emit("list_pines_salida",newListPinSal)
   })
 
   socket.on("initial_item_pin_salida",(es_id: number, ps_id:number)=>{
     let newItemPinSal = PinesSalidaMap.getItemPinSalida(ctrl_id,String(es_id),String(ps_id))
     if(newItemPinSal){
-      socket.nsp.emit("item_pin_salida",newItemPinSal)
+      socket.emit("item_pin_salida",newItemPinSal)
     }
   })
 

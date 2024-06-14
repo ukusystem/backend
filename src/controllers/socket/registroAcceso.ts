@@ -12,7 +12,7 @@ export const registroAccesoSocket = async (io: Server, socket: Socket) => {
   RegistroAccesoMap.registerObserver(Number(ctrl_id),newObserver)
   //emit initial data:
   let regAccData = RegistroAccesoMap.getRegistrosAcceso(ctrl_id);
-  socket.nsp.emit("list_registros_acceso",regAccData)
+  socket.emit("list_registros_acceso",regAccData)
 
 
   socket.on("disconnect", () => {

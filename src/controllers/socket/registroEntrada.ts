@@ -15,7 +15,7 @@ export const registroEntradaSocket = async (io: Server, socket: Socket) => {
   RegistroEntradaMap.registerObserver(Number(ctrl_id),newObserver)
   //emit initial data:
   let regEntData = RegistroEntradaMap.getRegistrosEntrada(ctrl_id);
-  socket.nsp.emit("list_registros_entrada",regEntData)
+  socket.emit("list_registros_entrada",regEntData)
 
   socket.on("disconnect", () => {
     const clientsCount = io.of(`/registro_acceso/${ctrl_id}`).sockets.size;

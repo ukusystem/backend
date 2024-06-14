@@ -52,7 +52,7 @@ export const pinesEntradaSocketFinal =async (io:Server, socket: Socket) => {
   PinesEntradaMap.registerObserver(Number(ctrl_id),observer);
   //emit initial data:
   const data = PinesEntradaMap.getListPinesSalida(ctrl_id)
-  socket.nsp.emit("list_pines_entrada", data);
+  socket.emit("list_pines_entrada", data);
   if(data){
   }
 
