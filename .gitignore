@@ -2,6 +2,7 @@ node_modules
 logs
 photos
 deteccionmovimiento
+archivos
 package-lock.json
 .env
 git-extras

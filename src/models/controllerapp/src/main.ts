@@ -530,6 +530,7 @@ export class Main {
       case States.REJECTED:
       case States.UNATTENDED:
         isFinal = true;
+        break;
       default:
         isFinal = false;
     }
@@ -538,6 +539,7 @@ export class Main {
       case States.ACCEPTED:
       case States.WAITING_APPROVE:
         second = true;
+        break;
       default:
         second = false;
     }
