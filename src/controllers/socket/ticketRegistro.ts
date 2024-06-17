@@ -2,15 +2,15 @@ import { Server, Socket } from "socket.io";
 import { TicketMap, TicketScheduleSocketObserver } from "../../models/ticketschedule";
 // import { Ticket } from "../../models/ticket";
 
-export const ticketSocket = async (io: Server, socket: Socket) => {
+export const ticketRegistroSocket = async (io: Server, socket: Socket) => {
   const nspTickets = socket.nsp;
   const [, , ctrl_id] = nspTickets.name.split("/"); // Namespace: "/tickets/ctrl_id/"
 
   let newObserver = new TicketScheduleSocketObserver(socket)
   TicketMap.registerObserver(Number(ctrl_id),newObserver)
-  // emit initial data
-  let data = TicketMap.getTicket(Number(ctrl_id))
-  socket.emit("tickets", data);
+
+  // emit initial data:
+
 
   // let intervalId: NodeJS.Timeout | null = null;
   // if (!intervalId) {
@@ -34,3 +34,5 @@ export const ticketSocket = async (io: Server, socket: Socket) => {
   //   }
   // });
 };
+
+

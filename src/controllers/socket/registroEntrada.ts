@@ -103,7 +103,7 @@ interface RegistroEntradaObserver {
 // interface RegistroEntradaSubject {
 //   registerObserver(ctrl_id: number, observer: RegistroEntradaObserver): void;
 //   unregisterObserver(ctrl_id: number): void;
-//   notityRegistroAcceso(data:RegistroEntradaSocket) : void
+//   notifyRegistroAcceso(data:RegistroEntradaSocket) : void
 // }
 
 class RegistroEntradaSocketObserver implements RegistroEntradaObserver {
@@ -133,7 +133,7 @@ export class RegistroEntradaMap  {
       delete RegistroEntradaMap.observers[ctrl_id]
     }
   }
-  public static notityRegistroAcceso(data: RegistroEntradaSocket): void {
+  public static notifyRegistroAcceso(data: RegistroEntradaSocket): void {
     if(RegistroEntradaMap.observers[data.ctrl_id]){
       RegistroEntradaMap.observers[data.ctrl_id].updateRegistroAcceso(data.toJSON())
     }
@@ -149,7 +149,7 @@ export class RegistroEntradaMap  {
     if(regEnt instanceof RegistroEntradaSocket){
       RegistroEntradaMap.map[ctrl_id].unshift(regEnt)  // agregar elementos al comienzo
       // notificar
-      RegistroEntradaMap.notityRegistroAcceso(regEnt)
+      RegistroEntradaMap.notifyRegistroAcceso(regEnt)
     }else{
       const currentPinEntrada = PinesEntradaMap.getPinSalida(String(ctrl_id),String(pin));
       if(currentPinEntrada){
@@ -157,7 +157,7 @@ export class RegistroEntradaMap  {
           let newRegEnt = new RegistroEntradaSocket({...regEnt,ee_id:currentPinEntrada.ee_id,detector:EquipoEntradaMap.map[currentPinEntrada.ee_id].detector})
           RegistroEntradaMap.map[ctrl_id].unshift(newRegEnt)  // agregar elementos al comienzo
           // notificar
-          RegistroEntradaMap.notityRegistroAcceso(newRegEnt)
+          RegistroEntradaMap.notifyRegistroAcceso(newRegEnt)
         }
       }
     }

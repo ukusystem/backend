@@ -21,7 +21,7 @@ import * as cp from 'child_process'
     server.runController();
 
     // Actulizar Tickets no atendidos:
-    server.ticketNoAtendidoTest();
+    // server.ticketNoAtendidoTest();
 
     // test()
   } catch (error) {

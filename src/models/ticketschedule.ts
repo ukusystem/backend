@@ -1,4 +1,7 @@
 import { CronJob } from "cron";
+import dayjs from "dayjs";
+import { Socket } from "socket.io";
+import { Ticket } from "./ticket";
 
 export class TicketSchedule {
   #cron: CronJob<null,ITicketCronContext>;
@@ -16,44 +19,123 @@ interface TicketMapProps {
     [ctrl_id: string]: {
       [id: string]: {
         ticket: RegistroTicketObject;
-        schedule: TicketSchedule;
+        startSchedule: TicketSchedule | null;
+        endSchedule: TicketSchedule | null;
       };
     };
   };
 }
 
+interface TicketScheduleObserver {
+  updateTicketSchedule(data: ITicketCronContext,typeAct: "add"| "update" | "delete"): void;
+}
+
+// interface TicketScheduleSubject {
+//   registerObserver(ctrl_id: number, observer: TicketScheduleObserver): void;
+//   unregisterObserver(ctrl_id: number): void;
+//   notifyTicketSchedule(data:ITicketCronContext,typeAct: "add"| "update" | "delete") : void
+// }
+
+export class TicketScheduleSocketObserver implements TicketScheduleObserver {
+  private socket: Socket;
+
+  constructor(socket: Socket) {
+      this.socket = socket;
+  }
+  updateTicketSchedule(data: ITicketCronContext,typeAct: "add"| "update" | "delete"): void {
+    if(typeAct == "add"){
+      this.socket.nsp.emit("add_ticket", data);
+    }else if(typeAct == "update"){
+      this.socket.nsp.emit("update_ticket", data);
+    }else if( typeAct == "delete"){
+      this.socket.nsp.emit("delete_ticket", data);
+    }
+  }
+
+}
+
+
 export class TicketMap {
+
   static readonly tickets: TicketMapProps["tickets"] = {};
+  static observers: {[ctrl_id: string]:TicketScheduleObserver} = {};
+
+  public static registerObserver(ctrl_id: number, observer: TicketScheduleObserver): void {
+    if(!TicketMap.observers[ctrl_id]){
+      TicketMap.observers[ctrl_id] = observer
+    }
+  }
+  public static unregisterObserver(ctrl_id: number): void {
+    if(TicketMap.observers[ctrl_id]){
+      delete TicketMap.observers[ctrl_id]
+    }
+  }
+  public static notifyTicketSchedule(data: RegistroTicketObject,typeAct: "add"| "update" | "delete"): void {
+    let nowDateNext7 = dayjs().startOf("date").add(7,"day").unix();
+
+    if(TicketMap.observers[data.ctrl_id]){
+      if(data.fechatermino < nowDateNext7){
+        TicketMap.observers[data.ctrl_id].updateTicketSchedule(data.toJSON(),typeAct)
+      }
+    }
+  }
 
   static add(ticket: RegistroTicketObject): void {
     if (!TicketMap.tickets[ticket.ctrl_id]) {
       TicketMap.tickets[ticket.ctrl_id] = {};
     }
     if(!TicketMap.tickets[ticket.ctrl_id][ticket.id]){
+      const currentDateHour = dayjs().unix()
+      let newStartTicketSchedule : TicketSchedule | null = null
+      let newEndTicketSchedule : TicketSchedule | null = null
 
-        const newCron = CronJob.from<null,ITicketCronContext>({
-            cronTime: new Date(ticket.fechacomienzo*1000),
-            onTick: function (this: ITicketCronContext) {
-              if(TicketMap.tickets[this.ctrl_id]){
-                  if(TicketMap.tickets[this.ctrl_id][this.id]){
-                       // comprobar ticket estado -> Esperando
-                      if(TicketMap.tickets[this.ctrl_id][this.id].ticket.estd_id == TicketState.Esperando){
-                          // notificar ticket no atendido
-
-                          // eliminar ticket
-                          TicketMap.delete(this.ctrl_id, this.id)
-                      }
-                  }
-              }
-            },
-            onComplete:null,
-            start: true,
-            context: ticket.toJSON()
+      if((ticket.fechacomienzo > currentDateHour) && ticket.estd_id == TicketState.Esperando){ // crear cron
+        const newCronStart = CronJob.from<null,ITicketCronContext>({
+          cronTime: new Date(ticket.fechacomienzo*1000),
+          onTick: function (this: ITicketCronContext) {
+            if(TicketMap.tickets[this.ctrl_id]){
+                if(TicketMap.tickets[this.ctrl_id][this.id]){
+                     // comprobar ticket estado -> Esperando
+                    if(TicketMap.tickets[this.ctrl_id][this.id].ticket.estd_id == TicketState.Esperando){
+                        // notificar ticket no atendido
+                        // TicketMap.notifyTicketSchedule(TicketMap.tickets[this.ctrl_id][this.id].ticket,"delete")
+                        // eliminar ticket
+                        TicketMap.delete(this.ctrl_id, this.id)
+                    }
+                }
+            }
+          },
+          onComplete:null,
+          start: true,
+          context: ticket.toJSON(),
         });
-      
-        const newTicketSchedule = new TicketSchedule(newCron)
-      
-        TicketMap.tickets[ticket.ctrl_id][ticket.id] = {ticket: ticket,schedule: newTicketSchedule}
+        newStartTicketSchedule = new TicketSchedule(newCronStart)
+
+      }
+
+      if(ticket.fechatermino > currentDateHour){
+        const newCronEnd = CronJob.from<null,ITicketCronContext>({
+          cronTime: new Date(ticket.fechatermino*1000),
+          onTick: function (this: ITicketCronContext) {
+            if(TicketMap.tickets[this.ctrl_id]){
+                if(TicketMap.tickets[this.ctrl_id][this.id]){
+                  TicketMap.delete(this.ctrl_id, this.id)
+                }
+            }
+          },
+          onComplete:null,
+          start: true,
+          context: ticket.toJSON(),
+        });
+        newEndTicketSchedule = new TicketSchedule(newCronEnd)
+      }
+
+      if(newStartTicketSchedule || newEndTicketSchedule){
+        TicketMap.tickets[ticket.ctrl_id][ticket.id] = {ticket: ticket,startSchedule: newStartTicketSchedule,endSchedule:newEndTicketSchedule}
+        // notify
+        TicketMap.notifyTicketSchedule(ticket,"add")
+        // console.log(JSON.stringify(TicketMap.tickets))
+      }
     }
   }
 
@@ -61,6 +143,8 @@ export class TicketMap {
     if (TicketMap.tickets[ctrl_id]) {
       if (TicketMap.tickets[ctrl_id][id]) {
         TicketMap.tickets[ctrl_id][id].ticket.setEstdId(estd_id);
+        // notify
+        TicketMap.notifyTicketSchedule(TicketMap.tickets[ctrl_id][id].ticket,"update")
       }
     }
   }
@@ -68,16 +152,47 @@ export class TicketMap {
   static delete(ctrl_id:number,id:number): void {
     if (TicketMap.tickets[ctrl_id]) {
         if (TicketMap.tickets[ctrl_id][id]) {
-            // detener cron
-            TicketMap.tickets[ctrl_id][id].schedule.stop()
-            // eliminar instancia
-            delete TicketMap.tickets[ctrl_id][id]
+          // detener cron
+          TicketMap.tickets[ctrl_id][id].startSchedule?.stop()
+          TicketMap.tickets[ctrl_id][id].endSchedule?.stop()
+          // notify
+          TicketMap.notifyTicketSchedule(TicketMap.tickets[ctrl_id][id].ticket,"delete")
+          // eliminar instancia
+          delete TicketMap.tickets[ctrl_id][id]
         }
+    }
+  }
+
+  static getTicket(ctrl_id:number){
+    let resultData: ITicketCronContext[] = [];
+    if (TicketMap.tickets.hasOwnProperty(ctrl_id)) {
+      Object.values(TicketMap.tickets[ctrl_id]).forEach((item) => {
+        let nowDateNext7 = dayjs().startOf("date").add(7,"day").unix();
+        if(item.ticket.fechatermino < nowDateNext7 ){
+          resultData.push(item.ticket.toJSON());
+        }
+
+      });
+    }
+    return resultData
+  }
+
+  static async init(){
+    try {
+      const initialTickets = await Ticket.getTicketsPendientesAceptados();
+      for(let ticket of initialTickets){
+        const {estd_id,fechacomienzo,fechatermino, ...rest} = ticket
+        const newRegTicket = new RegistroTicketObject({...rest,id: ticket.rt_id,fechacomienzo: dayjs(fechacomienzo).unix(),fechatermino: dayjs(fechatermino).unix()})
+        TicketMap.add(newRegTicket)
+      }
+    } catch (error) {
+      console.log(`Socket Tickets | TicketMap | Error al inicializar tickets`);
+      console.error(error);  
     }
   }
 }
 
-class RegistroTicketObject implements ITicketCronContext {
+export class RegistroTicketObject implements ITicketCronContext {
 
   readonly telefono: string;
   readonly correo: string;
@@ -156,7 +271,7 @@ Esperando : 1 ,
 Aceptado : 2 ,
 Cancelado : 3 ,
 Rechazado : 4 ,
-Completado : 5 ,
+// Completado : 5 ,
 // Error : 6 ,
 // Montado : 7 ,
 // Desmontado : 8 ,
@@ -166,8 +281,16 @@ Completado : 5 ,
 // Desconectado : 12 ,
 // MalFormato : 13 ,
 // Inexistente : 14 ,
-Invalido : 15 ,
+// Invalido : 15 ,
 Finalizado : 16 ,
 Anulado : 17 ,
-NoAtendido : 18 
+NoAtendido : 18
 }
+
+
+// let newRegTicket = new RegistroTicketObject({ telefono: "987654321354", correo: "jhon_le@b.v", descripcion: "tests est ste est", fechacomienzo: 1718655250 , fechatermino: 1718662450, prioridad: 2, p_id: 26, tt_id: 2, sn_id: 1, co_id: 1, ctrl_id: 27, id: 1, });
+// TicketMap.add(newRegTicket)
+
+// setTimeout(() => {
+//   TicketMap.update(27,1,TicketState.Aceptado)
+// }, 60000);

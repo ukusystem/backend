@@ -193,7 +193,7 @@ interface RegistroAccesoObserver {
 // interface PinesSalidaSubject {
 //   registerObserver(ctrl_id: number, observer: RegistroAccesoObserver): void;
 //   unregisterObserver(ctrl_id: number): void;
-//   notityRegistroAcceso(data:RegistroAccesoSocket) : void
+//   notifyRegistroAcceso(data:RegistroAccesoSocket) : void
 // }
 
 class RegistroAccesoSocketObserver implements RegistroAccesoObserver {
@@ -223,7 +223,7 @@ export class RegistroAccesoMap  {
       delete RegistroAccesoMap.observers[ctrl_id]
     }
   }
-  public static notityRegistroAcceso(data: RegistroAccesoSocket): void {
+  public static notifyRegistroAcceso(data: RegistroAccesoSocket): void {
     if(RegistroAccesoMap.observers[data.ctrl_id]){
       RegistroAccesoMap.observers[data.ctrl_id].updateRegistroAcceso(data.toJSON())
     }
@@ -239,18 +239,18 @@ export class RegistroAccesoMap  {
     if(regAcc instanceof RegistroAccesoSocket){
       RegistroAccesoMap.map[ctrl_id].unshift(regAcc)  // agregar elementos al comienzo
       // notificar
-      RegistroAccesoMap.notityRegistroAcceso(regAcc)
+      RegistroAccesoMap.notifyRegistroAcceso(regAcc)
     }else{
 
       if(ContrataMap.map[regAcc.co_id]){
         let newRegAcc = new RegistroAccesoSocket({...regAcc,contrata:ContrataMap.map[regAcc.co_id].contrata})
         RegistroAccesoMap.map[ctrl_id].unshift(newRegAcc)  // agregar elementos al comienzo
         // notificar
-        RegistroAccesoMap.notityRegistroAcceso(newRegAcc)
+        RegistroAccesoMap.notifyRegistroAcceso(newRegAcc)
       }else{ // sin contrata
         let newRegAccSinContrata = new RegistroAccesoSocket({...regAcc,contrata:"sin_contrata"})
         RegistroAccesoMap.map[ctrl_id].unshift(newRegAccSinContrata)
-        RegistroAccesoMap.notityRegistroAcceso(newRegAccSinContrata)
+        RegistroAccesoMap.notifyRegistroAcceso(newRegAccSinContrata)
 
       }
     }

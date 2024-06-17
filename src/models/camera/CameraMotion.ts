@@ -136,7 +136,7 @@ export class CameraMotion implements CameraMotionProps, CameraMotionMethods {
                 fs.writeFileSync(imagePath, this.imageBuffer);
 
                 let imageBase64 = createImageBase64(this.imageBuffer)
-                CameraMotionMap.notityImageMotion(this.ctrl_id,imageBase64)
+                CameraMotionMap.notifyImageMotion(this.ctrl_id,imageBase64)
 
                 insertPathToDB(imagePath, this.ctrl_id, this.cmr_id, 0);
 
@@ -640,7 +640,7 @@ interface MotionDeteccionObserver {
 // interface MotionDeteccionSubject {
 //   registerObserver(ctrl_id: number, observer: MotionDeteccionObserver): void;
 //   unregisterObserver(ctrl_id: number): void;
-//   notityImageMotion(ctrl_id:number,imageBase64: string) : void
+//   notifyImageMotion(ctrl_id:number,imageBase64: string) : void
 // }
 
 export class MotionDeteccionSocketObserver implements MotionDeteccionObserver {
@@ -670,7 +670,7 @@ export class CameraMotionMap {
       delete CameraMotionMap.observers[ctrl_id]
     }
   }
-  public static notityImageMotion(ctrl_id: number,imageBase64: string): void {
+  public static notifyImageMotion(ctrl_id: number,imageBase64: string): void {
     if(CameraMotionMap.observers[ctrl_id]){
       CameraMotionMap.observers[ctrl_id].updateRegistroAcceso(imageBase64)
     }

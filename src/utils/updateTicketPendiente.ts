@@ -5,7 +5,7 @@ import { Ticket } from "../models/ticket"
 export const updateTicketPendiente = async () => {
     try {
         // Obtener ticket de todos los nodos:
-        const ticketsPendientes = await Ticket.getTicketsPendientes();
+        const ticketsPendientes = await Ticket.getTicketsPendientesAceptados();
         if(ticketsPendientes.length>0){
             ticketsPendientes.forEach(async (ticket)=>{
                 const {fechacomienzo, ctrl_id, rt_id}= ticket

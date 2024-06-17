@@ -13,6 +13,7 @@ import { getExtesionFile } from "../../utils/getExtensionFile";
 
 import { Ticket ,Personal,Solicitante } from "../../models/controllerapp/src/ticket";
 import { onTicket } from "../../models/controllerapp/controller";
+import { RegistroTicketObject, TicketMap } from "../../models/ticketschedule";
 
 // ======================== Agregar esto
 // import { LoadedFile } from "../../models/controllerapp/src/types";
@@ -167,9 +168,15 @@ export const createTicket = asyncErrorHandler( async (req: Request, res: Respons
         try {
           const newTicket = new Ticket(archivosData, formValues.solicitante, formValues.personales)
           let response = await onTicket(newTicket)
-          console.log( response)
+          // console.log( response)
           if(response){
             if(response.resultado){ // success
+
+              if(response.id){
+                let newTicket = new RegistroTicketObject({...formValues.solicitante,id: response.id})
+                TicketMap.add(newTicket)
+              }
+              
               return res.json({success: true,message: "Ticket creado correctamente.",});
             }else{
               return res.json({success: false,message: response.mensaje,});

@@ -25,6 +25,7 @@ import { DeteccionMovimiento } from "./camera/CameraMotion";
 import { main } from "./controllerapp/controller";
 import { MedidorEnergiaMap, PinesEntradaMap, PinesSalidaMap, RegistroAccesoMap, RegistroEntradaMap, SensorTemperaturaMap } from "../controllers/socket";
 import { ContrataMap, EquipoAccesoMap, EquipoEntradaMap, EquipoSalidaMap } from "./maps";
+import { TicketMap } from "./ticketschedule";
 
 export class ServerApp {
   #app: Application;
@@ -135,6 +136,7 @@ export class ServerApp {
       await PinesEntradaMap.init()
       await RegistroAccesoMap.init()
       await RegistroEntradaMap.init()
+      await TicketMap.init()
 
     } catch (error) {
       console.log("Server Model | Error init maps")

@@ -5,6 +5,7 @@ import { handleErrorWithArgument, handleErrorWithoutArgument } from "../utils/si
 import { Init } from "./init";
 import { UserInfo } from "./auth";
 import { CustomError } from "../utils/CustomError";
+import dayjs from "dayjs";
 
 
 type PersonalInfo = Pick<Personal, "p_id"|"nombre" | "apellido"| "telefono" | "dni"  | "c_id" | "co_id" | "foto">
@@ -51,6 +52,20 @@ export class Ticket {
             return []
         }
         ,"Ticket.getTicketsByControladorId"
+    )
+
+    static getTicketsAceptadosByCtrlId24H = handleErrorWithArgument< RegistroTicket[],Pick<Controlador,"ctrl_id"> & {fecha0M24: string}>(
+        async ({ctrl_id,fecha0M24})=>{
+
+            
+            const registroTickets = await MySQL2.executeQuery<RegistroTicketRowData[]>({sql:`SELECT * FROM ${"nodo"+ctrl_id}.registroticket WHERE fechacomienzo > ? AND estd_id = 2 `,values:[fecha0M24]})
+
+            if(registroTickets.length>0){
+                return registroTickets
+            }
+            return []
+        }
+        ,"Ticket.getTicketsAceptadosByCtrlId24H"
     )
 
     static getNext7DaysByCtrlId= handleErrorWithArgument<RegistroTicket[] ,Pick<Controlador,"ctrl_id">>(
@@ -148,25 +163,31 @@ export class Ticket {
 
     },"Ticket.getArchivosCargados");
 
-    static getTicketsPendientes = handleErrorWithoutArgument<(RegistroTicket & {ctrl_id:number})[] | []>(
+    static getTicketsPendientesAceptados = handleErrorWithoutArgument<(RegistroTicket & {ctrl_id:number})[] | []>(
         async ()=>{
+            let backDateHour = dayjs().startOf("date").subtract(1,"day").format("YYYY-MM-DD HH:mm:ss")
             const region_nodos = await Init.getRegionNodos()
             if(region_nodos.length>0){
-                const allHistorial = await region_nodos.reduce(async (acc, item) => {
+                const allRegistros = await region_nodos.reduce(async (acc, item) => {
                     const resultAcc = await acc;
                     const { region, nodo, ctrl_id, nododb_name } = item;
-                    const registroTickets = await Ticket.getTicketsPendientesByControladorId({ctrl_id});
-                    if(registroTickets.length>0){
-                        const finalRegistroTickets = registroTickets.map((ticket) => ({ ...ticket, ctrl_id }));
+                    const registroTicketsPend = await Ticket.getTicketsPendientesByControladorId({ctrl_id});
+                    if(registroTicketsPend.length>0){
+                        const finalRegistroTickets = registroTicketsPend.map((ticket) => ({ ...ticket, ctrl_id }));
                         resultAcc.push(...finalRegistroTickets)
+                    }
+                    const regisTickAcep = await Ticket.getTicketsAceptadosByCtrlId24H({ctrl_id:ctrl_id,fecha0M24:backDateHour})
+                    if(regisTickAcep.length > 0){
+                        const finalRegisTickAcep = regisTickAcep.map((ticket)=>({...ticket,ctrl_id}))
+                        resultAcc.push(...finalRegisTickAcep)
                     }
                     return resultAcc;
                 }, Promise.resolve([] as (RegistroTicket & {ctrl_id:number})[]));
-                return allHistorial
+                return allRegistros
             }
             return []
         }
-        , "Ticket.getTodosPendientes"
+        , "Ticket.getTicketsPendientesAceptados"
     )
 
     static getRegistrosByCtrlIdAndLimitAndOffset = handleErrorWithArgument<RegistroTicketDetail[],{ctrl_id:number, limit:number, offset: number, user: UserInfo}>( async({ctrl_id,limit,offset,user})=>{
