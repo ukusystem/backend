@@ -1,6 +1,7 @@
 import { resolve } from "path";
 import { ServerApp } from "./models/server";
 import * as cp from 'child_process'
+import { TicketMap } from "./models/ticketschedule";
 
 (async () => {
   try {
@@ -19,6 +20,8 @@ import * as cp from 'child_process'
 
     // Mio
     server.runController();
+
+    await TicketMap.init()
 
     // Actulizar Tickets no atendidos:
     // server.ticketNoAtendidoTest();

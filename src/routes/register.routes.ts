@@ -5,6 +5,8 @@ export const registerRoutes = Router();
 
 // Registros POST /register
 registerRoutes.post("/register",registerController.getRegisters)  // Cambiar de metodo
+// Registros GET /register/:TipoRegistro?ctrlId=1&startDate=""&endDate="" & ...others...
+registerRoutes.get("/register/:tiporegistro",registerController.getRegisters)
 
 // DownloadExcel POST /register/download/excel
 registerRoutes.post("/register/download/excel",registerController.excelDownload)

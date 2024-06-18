@@ -1,6 +1,7 @@
 import { AtomicNumber } from "./atomicNumber";
 import { BaseAttach } from "./baseAttach";
 import fs from "fs/promises";
+import fsNormal from "fs";
 import crypto from "crypto";
 import bcrypt from "bcrypt";
 import dayjs from "dayjs";
@@ -117,6 +118,9 @@ async function writeFileFromBase64(base64: string, filePath: string, byteSize: A
     const temp = Buffer.from(base64, "base64");
     if (temp.length <= MAX_FILE_SIZE_B) {
       const parent = path.dirname(filePath);
+      if (!fsNormal.existsSync(parent)) {
+        fsNormal.mkdirSync(parent, { recursive: true });
+      }
       // await fs.mkdir(parent,{recursive:true})
       // console.log('Directories created')
       await fs.writeFile(filePath, temp);

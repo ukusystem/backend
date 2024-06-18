@@ -42,8 +42,8 @@ ticketRoutes.get("/ticket/registros/:rt_id",auth,validateRequestDataFinal({param
 // Ticket Detalles GET "/ticket/detalles?rt_id=number&ctrl_id=number"
 ticketRoutes.get("/ticket/detalles",auth,validateRequestDataFinal({ querySchema:getTicketDetallesSchema},{hasQuery:true}),getTicketDetalles)
 
-// FotoActividadPersonal POST "/ticket/fotoactividadpersonal/:xfoto"
-ticketRoutes.post("/ticket/fotoactividadpersonal",validateRequestData(getFotoActividadPersonalSchema,{hasBody:true}),getFotoActividadPersonal)
+// FotoActividadPersonal GET "/ticket/fotoactividadpersonal?path:encodeURIComponennt"
+ticketRoutes.get("/ticket/fotoactividadpersonal",validateRequestDataFinal({ querySchema: getFotoActividadPersonalSchema},{hasQuery:true}),getFotoActividadPersonal)
 
 // DownloadArchivo POST "/ticket/download/archivo"
 ticketRoutes.post("/ticket/download/archivo",validateRequestData(downloadArchivoSchema,{hasBody:true}), downloadArchivo)

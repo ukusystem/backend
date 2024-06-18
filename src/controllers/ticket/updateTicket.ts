@@ -6,6 +6,7 @@ import { CustomError } from "../../utils/CustomError";
 import { TECHNICIAN_PORT, TECHNICIAN_SERVER_IP } from "../../configs/server.configs";
 import { onFinishTicket } from "../../models/controllerapp/controller";
 import { FinishTicket } from "../../models/controllerapp/src/finishTicket";
+import { TicketMap } from "../../models/ticketschedule";
 // import { FinishTicket } from "../../models/controllerapp/src/finishTicket";
 // import { Main } from "../../models/controllerapp/src/main";
 
@@ -52,7 +53,9 @@ export const upadateTicket = asyncErrorHandler(
             try {
               const response = await onFinishTicket(new FinishTicket(action,ctrl_id,rt_id))
               if(response){
-                if(response.resultado){ // success
+                if(response.resultado ){ // success
+                  TicketMap.update(ctrl_id,rt_id,action)
+                  console.log(ctrl_id,rt_id,action,{success: true,message: "Accion realizada con éxito",})
                   return res.json({success: true,message: "Accion realizada con éxito",});
                 }else{
                   return res.json({success: false,message: response.mensaje,});
@@ -89,6 +92,7 @@ export const upadateTicket = asyncErrorHandler(
                 const response = await onFinishTicket(new FinishTicket(action,ctrl_id,rt_id))
                 if(response){
                   if(response.resultado){ // success
+                    TicketMap.update(ctrl_id,rt_id,action)
                     return res.json({success: true,message: "Accion realizada con éxito",});
                   }else{
                     return res.json({success: false,message: response.mensaje,});

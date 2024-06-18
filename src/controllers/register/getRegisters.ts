@@ -9,3 +9,14 @@ export const getRegisters = asyncErrorHandler(
     res.status(200).json(registroData);
   }
 );
+
+// /register/:TipoRegistro?ctrlId=1&startDate=""&endDate="" & ...others...
+export const getRegistersFinal = asyncErrorHandler(
+  async (req: Request, res: Response, _next: NextFunction) => {
+    const params = req.params // TipoRegistro
+    const query = req.query //
+    // const { fecha_fin, fecha_inicio, ctrl_id, tipo_registro } = req.body as RegisterArgs;
+    // const registroData = await Register.getRegistroByNodoAndTypeAndDateTimeRange({fecha_fin, fecha_inicio, ctrl_id, tipo_registro});
+    // res.status(200).json(registroData);
+  }
+);

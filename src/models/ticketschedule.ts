@@ -2,6 +2,8 @@ import { CronJob } from "cron";
 import dayjs from "dayjs";
 import { Socket } from "socket.io";
 import { Ticket } from "./ticket";
+import { onFinishTicket } from "./controllerapp/controller";
+import { FinishTicket } from "./controllerapp/src/finishTicket";
 
 export class TicketSchedule {
   #cron: CronJob<null,ITicketCronContext>;
@@ -89,6 +91,13 @@ export class TicketMap {
       let newStartTicketSchedule : TicketSchedule | null = null
       let newEndTicketSchedule : TicketSchedule | null = null
 
+      if((ticket.fechacomienzo < currentDateHour) && ticket.estd_id == TicketState.Esperando){
+        // notificar ticket no atendido
+        onFinishTicket(new FinishTicket(TicketState.NoAtendido,ticket.ctrl_id,ticket.id))
+        // console.log("Notificando ticket no atendido:",ticket.ctrl_id,ticket.id)
+        return
+      }
+
       if((ticket.fechacomienzo > currentDateHour) && ticket.estd_id == TicketState.Esperando){ // crear cron
         const newCronStart = CronJob.from<null,ITicketCronContext>({
           cronTime: new Date(ticket.fechacomienzo*1000),
@@ -98,7 +107,7 @@ export class TicketMap {
                      // comprobar ticket estado -> Esperando
                     if(TicketMap.tickets[this.ctrl_id][this.id].ticket.estd_id == TicketState.Esperando){
                         // notificar ticket no atendido
-                        // TicketMap.notifyTicketSchedule(TicketMap.tickets[this.ctrl_id][this.id].ticket,"delete")
+                        onFinishTicket(new FinishTicket(TicketState.NoAtendido,this.ctrl_id,this.id))
                         // eliminar ticket
                         TicketMap.delete(this.ctrl_id, this.id)
                     }
@@ -142,9 +151,15 @@ export class TicketMap {
   static update(ctrl_id:number,id:number,estd_id:number): void {
     if (TicketMap.tickets[ctrl_id]) {
       if (TicketMap.tickets[ctrl_id][id]) {
-        TicketMap.tickets[ctrl_id][id].ticket.setEstdId(estd_id);
-        // notify
-        TicketMap.notifyTicketSchedule(TicketMap.tickets[ctrl_id][id].ticket,"update")
+        if(estd_id == TicketState.Aceptado ){
+          TicketMap.tickets[ctrl_id][id].ticket.setEstdId(estd_id);
+          // notify
+          TicketMap.notifyTicketSchedule(TicketMap.tickets[ctrl_id][id].ticket,"update")
+        }
+
+        if(estd_id == TicketState.Cancelado || estd_id == TicketState.Rechazado || estd_id == TicketState.Finalizado || estd_id == TicketState.Anulado || estd_id == TicketState.NoAtendido){
+          TicketMap.delete(ctrl_id, id)
+        }
       }
     }
   }
@@ -271,26 +286,7 @@ Esperando : 1 ,
 Aceptado : 2 ,
 Cancelado : 3 ,
 Rechazado : 4 ,
-// Completado : 5 ,
-// Error : 6 ,
-// Montado : 7 ,
-// Desmontado : 8 ,
-// Expulsado : 9 ,
-// Timeout : 10 ,
-// Ejecutado : 11 ,
-// Desconectado : 12 ,
-// MalFormato : 13 ,
-// Inexistente : 14 ,
-// Invalido : 15 ,
 Finalizado : 16 ,
 Anulado : 17 ,
 NoAtendido : 18
 }
-
-
-// let newRegTicket = new RegistroTicketObject({ telefono: "987654321354", correo: "jhon_le@b.v", descripcion: "tests est ste est", fechacomienzo: 1718655250 , fechatermino: 1718662450, prioridad: 2, p_id: 26, tt_id: 2, sn_id: 1, co_id: 1, ctrl_id: 27, id: 1, });
-// TicketMap.add(newRegTicket)
-
-// setTimeout(() => {
-//   TicketMap.update(27,1,TicketState.Aceptado)
-// }, 60000);

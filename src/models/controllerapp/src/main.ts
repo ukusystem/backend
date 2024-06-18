@@ -572,7 +572,7 @@ export class Main {
           case States.ACCEPTED:
             const start = useful.datetimeToLong(ticketData[0].fechacomienzo);
             const end = useful.datetimeToLong(ticketData[0].fechatermino);
-            this.finishTicket(States.ACCEPTED, ticketID, nodeID);
+            await this.finishTicket(States.ACCEPTED, ticketID, nodeID);
             this.addTicket(nodeID, new PartialTicket(ticketID, ticketData[0].co_id, start, end));
             monitor = States.EXECUTED;
             break;
@@ -581,7 +581,7 @@ export class Main {
           case States.UNATTENDED:
             // At this point, the current state can only be ACCEPTED or WAITING_APPROVE so
             // it can always be rejected.
-            this.finishTicket(newAction, ticketID, nodeID);
+            await this.finishTicket(newAction, ticketID, nodeID);
             // Ticket was never accepted so there is no need to alter the pending tickets,
             // but anyways.
             this.removeTicket(nodeID, ticketID);
@@ -601,7 +601,7 @@ export class Main {
           case States.NULLIFIED:
           case States.CANCELLED:
           case States.REJECTED:
-            this.finishTicket(newAction, ticketID, nodeID);
+            await this.finishTicket(newAction, ticketID, nodeID);
             // Ticket was never accepted so there is no need to alter the pending tickets,
             // but anyways.
             this.removeTicket(nodeID, ticketID);
@@ -655,7 +655,7 @@ export class Main {
       }
       // Write photo, if conditions are met
       const byteSize = new AtomicNumber();
-      const newFileName = await this.processPhotoField(worker, byteSize, nodeID);
+      const newFileName = useful.getReplacedPath(await this.processPhotoField(worker, byteSize, nodeID) ?? "error") ;
       this.log(`File writing result: Filename = '${newFileName ?? "<photo not present>"}' Written = ${byteSize.inner} bytes`);
       // Save worker. All workers who are going to visit the node must have been sent
       // in the JSON.

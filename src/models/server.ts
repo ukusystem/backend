@@ -136,7 +136,7 @@ export class ServerApp {
       await PinesEntradaMap.init()
       await RegistroAccesoMap.init()
       await RegistroEntradaMap.init()
-      await TicketMap.init()
+      // await TicketMap.init() // iniciar despues de controller
 
     } catch (error) {
       console.log("Server Model | Error init maps")
