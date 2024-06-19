@@ -37,4 +37,14 @@ export class Register {
     
     return [];
   } , "Register.getRegistroByNodoAndTypeAndDateTimeRange");
+
+  static getRegistros = handleErrorWithArgument<RowDataPacket[],{type: string,ctrl_id: string,start_date:string,end_date:string, cursor:string,limit:number}> (
+    async ({ctrl_id,cursor,end_date,limit,start_date,type}) => {
+      const registros = await MySQL2.executeQuery<RowDataPacket[]>({sql:`SELECT * FROM ${"nodo" + ctrl_id}.registroacceso WHERE fecha BETWEEN ? AND ? ORDER BY ra_id DESC LIMIT ?`,values:[start_date,end_date,Number(limit)]})
+  
+      if(registros.length>0){
+        return registros;
+      }
+      return []
+  } , "Register.getRegistros");
 }
