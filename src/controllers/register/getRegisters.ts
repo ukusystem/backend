@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { asyncErrorHandler } from "../../utils/asynErrorHandler";
-import { RegisterArgs, Register } from "../../models/register";
+import { RegisterArgs, Register, RegisterType, RegisterConfigOptions } from "../../models/register";
 import z, { ZodError } from 'zod'
 
 export const getRegisters = asyncErrorHandler(
@@ -14,8 +14,9 @@ export const getRegisters = asyncErrorHandler(
 // Registros GET /register?type=""&ctrl_id=1&start_date=""&end_date=""&cursor=""&limit="" & ...others...
 export const getRegistersFinal = asyncErrorHandler(
   async (req: Request, res: Response, _next: NextFunction) => {
-    console.log(req.query)
-    // // Validar formulario
+
+
+    // Validar Registers params
     try {
       await registerSchema.parseAsync(req.query); // Validate  requests
     } catch (error) {
@@ -32,8 +33,12 @@ export const getRegistersFinal = asyncErrorHandler(
       return res.status(500).send("Ocurrió un error al realizar la solicitud. Por favor, comunícate con el equipo de soporte.");
     }
 
-    const {limit,ctrl_id,cursor,end_date,start_date,type} = req.query as {type: string,ctrl_id: string,start_date:string,end_date:string, cursor:string,limit:string} // Definir min-max limit : 0 - 100
-    const registroData = await Register.getRegistros({limit: adjustLimitRange(Number(limit)),ctrl_id,cursor,end_date,start_date,type})
+    const {limit,ctrl_id,cursor,end_date,start_date,type,...rest} = req.query as {type: string,ctrl_id: string,start_date:string,end_date:string, cursor: string | undefined,limit:string | undefined} // Definir min-max limit : 0 - 100
+    
+    console.log({limit,ctrl_id,cursor,end_date,start_date,type})
+    console.log(rest)
+    // console.log("FinalParams: ",getRegisterParams(type as RegisterType,rest))
+    const registroData = await Register.getRegistros({limit,ctrl_id,cursor,end_date,start_date,type,...rest})
     // Validar fehcha dos años seguidos
     return res.status(200).json(registroData)
 
@@ -42,8 +47,32 @@ export const getRegistersFinal = asyncErrorHandler(
 
 
 
-function adjustLimitRange (limit: number){
-  return Math.min(Math.max(limit, 0), 100)
+// function adjustLimitRange (limit: string | undefined){
+//   if(limit == undefined) return 10 ; // default value
+//   return Math.min(Math.max(Number(limit), 0), 100)
+// }
+
+
+// function getRegisterParams(type_register: RegisterType, reqQuery: Record<string,string>){
+//   let result: Record<string,string> = {}
+//   let regisOption = RegisterConfigOptions[type_register]
+
+//   if(regisOption){
+//     for(let q_key in reqQuery){
+//       if(regisOption.table_columns.includes(q_key)){
+//         if(typeof reqQuery[q_key] != "object" && reqQuery[q_key] != "" ){
+//           result[q_key] = reqQuery[q_key]
+//         }
+//       }
+//     }
+//     return result
+//   }
+
+//   return result
+// }
+
+function getInterfaceProps(inter: any ){
+
 }
 
 interface IResponsePagination {
@@ -56,61 +85,72 @@ interface IResponsePagination {
   }
 }
 
-type RegisterType =  "acceso" | "energia" | "entrada" | "estadocamara" | "microsd" | "peticion" | "salida" | "seguridad" | "temperatura" | "ticket" 
+// type RegisterType =  "acceso" | "energia" | "entrada" | "estadocamara" | "microsd" | "peticion" | "salida" | "seguridad" | "temperatura" | "ticket" 
 
-const RegistersOptions: {[key in RegisterType]: { has_yearly_tables: boolean; base_table_name: string; }} = {
-  acceso: {
-    has_yearly_tables: false,
-    base_table_name: "registroacceso",
-  },
-  energia: {
-    has_yearly_tables: true,
-    base_table_name: "registroenergia",
-  },
-  entrada: {
-    has_yearly_tables: true,
-    base_table_name: "registroentrada",
-  },
-  estadocamara: {
-    has_yearly_tables: false,
-    base_table_name: "registroestadocamara",
-  },
-  microsd: {
-    has_yearly_tables: false,
-    base_table_name: "registromicrosd",
-  },
-  peticion: {
-    has_yearly_tables: false,
-    base_table_name: "registropeticion",
-  },
-  salida: {
-    has_yearly_tables: true,
-    base_table_name: "registrosalida",
-  },
-  seguridad: {
-    has_yearly_tables: false,
-    base_table_name: "registroseguridad",
-  },
-  temperatura: {
-    has_yearly_tables: true,
-    base_table_name: "registrotemperatura",
-  },
-  ticket: {
-    has_yearly_tables: false,
-    base_table_name: "registroticket",
-  },
-};
+// const RegistersConfigOptions: {[key in RegisterType]: { has_yearly_tables: boolean; base_table_name: string;table_columns: string[]}} = {
+//   acceso: {
+//     has_yearly_tables: false,
+//     base_table_name: "registroacceso",
+//     table_columns: [ "ra_id",	"serie","administrador","autorizacion",	"fecha","co_id","ea_id","tipo","sn_id"]
+//   },
+//   energia: {
+//     has_yearly_tables: true,
+//     base_table_name: "registroenergia",
+//     table_columns: ["re_id","me_id","voltaje","amperaje","fdp","frecuencia","potenciaw","potenciakwh","fecha"]
+//   },
+//   entrada: {
+//     has_yearly_tables: true,
+//     base_table_name: "registroentrada",
+//     table_columns: ["rentd_id","pin","estado","fecha","ee_id"]
+//   },
+//   estadocamara: {
+//     has_yearly_tables: false,
+//     base_table_name: "registroestadocamara",
+//     table_columns: ["rec_id","cmr_id","fecha","conectado"]
+//   },
+//   microsd: {
+//     has_yearly_tables: false,
+//     base_table_name: "registromicrosd",
+//     table_columns: ["rmsd_id","fecha","estd_id"]
+//   },
+//   peticion: {
+//     has_yearly_tables: false,
+//     base_table_name: "registropeticion",
+//     table_columns: ["rp_id","pin","orden","fecha","estd_id"]
+//   },
+//   salida: {
+//     has_yearly_tables: true,
+//     base_table_name: "registrosalida",
+//     table_columns: ["rs_id","pin","estado","fecha","es_id"]
+//   },
+//   seguridad: {
+//     has_yearly_tables: false,
+//     base_table_name: "registroseguridad",
+//     table_columns: ["rsg_id","estado","fecha"]
+//   },
+//   temperatura: {
+//     has_yearly_tables: true,
+//     base_table_name: "registrotemperatura",
+//     table_columns: ["rtmp_id","st_id","valor","fecha"]
+//   },
+//   ticket: {
+//     has_yearly_tables: false,
+//     base_table_name: "registroticket",
+//     table_columns: ["rt_id","telefono","correo","descripcion","fechacomienzo","fechatermino","estd_id","fechaestadofinal","fechacreacion","prioridad","p_id","tt_id","sn_id","enviado","co_id",      ]
+//   },
+// };
 
 
 // {type: string,ctrl_id: string,start_date:string,end_date:string, cursor:string,limit:string}
 export const registerSchema = z.object({
   // type: z.string({required_error:"'type' es requerido",invalid_type_error:"'type' debe ser un string"}) ,
-  type: z.enum(["acceso" ,"energia" ,"entrada" ,"estadocamara" ,"microsd" ,"peticion" ,"salida" ,"seguridad" ,"temperatura" ,"ticket"],{errorMap: (zIssue)=>{ return {message: `invalid register type`}}}),
+  type: z.enum(["acceso" ,"energia" ,"entrada" ,"estadocamara" ,"microsd" ,"peticion" ,"salida" ,"seguridad" ,"temperatura" ,"ticket"],{errorMap: (_,ctx)=>{ return {message: ctx.defaultError}}}),
   ctrl_id: z.union([z.string(), z.number()],{errorMap: ()=>{return {message: "'ctrl_id' es requerido"}}}).pipe(z.coerce.number({required_error: "'ctrl_id' es requerido",invalid_type_error: "'ctrl_id' debe ser un numero"}).int("'ctrl_id' debe ser un numero entero").gte(0, "'ctrl_id' debe ser mayor o igual a 0")),
   start_date: z.string({required_error:"'start_date' es requerido",invalid_type_error:"'start_date' debe ser un string"}).regex(/^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1]) (2[0-3]|[01][0-9]):[0-5][0-9]:[0-5][0-9]$/g,"'start_date' es incorrecto."), 
   end_date: z.string({required_error:"'end_date' es requerido",invalid_type_error:"'end_date' debe ser un string"}).regex(/^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1]) (2[0-3]|[01][0-9]):[0-5][0-9]:[0-5][0-9]$/g,"'end_date' es incorrecto."), 
-  limit: z.union([z.string(), z.number()],{errorMap: ()=>{return {message: "'limit' es requerido"}}}).pipe(z.coerce.number({required_error: "'limit' es requerido",invalid_type_error: "'limit' debe ser un numero"}).int("'limit' debe ser un numero entero").gte(0, "'limit' debe ser mayor o igual a 0").lte(100,"'limit' debe ser menor o igual a 100")),
-
+  // limit: z.union([z.string(), z.number()],{errorMap: ()=>{return {message: "'limit' es requerido"}}}).pipe(z.coerce.number({required_error: "'limit' es requerido",invalid_type_error: "'limit' debe ser un numero"}).int("'limit' debe ser un numero entero").gte(0, "'limit' debe ser mayor o igual a 0").lte(100,"'limit' debe ser menor o igual a 100")),
+  limit: z.optional(z.coerce.number({required_error: "'limit' es requerido",invalid_type_error: "'limit' debe ser un numero",}).int("'limit' debe ser un numero entero").gte(0, "'limit' debe ser mayor o igual a 0").lte(100,"'limit' debe ser menor o igual a 100")),
+  cursor: z.optional(z.coerce.number({required_error: "'cursor' es requerido",invalid_type_error: "'cursor' debe ser un numero",}).int("'cursor' debe ser un numero entero")),
 },{required_error: "Se requiere incluir los campos 'rt_id' y 'ctrl_id' en los query params de la consulta"})
 // registro_archivocamara ----
 // registro_acceso
