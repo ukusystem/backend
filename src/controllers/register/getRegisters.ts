@@ -34,17 +34,17 @@ export const getRegistersFinal = asyncErrorHandler(
       return res.status(500).send("Ocurrió un error al realizar la solicitud. Por favor, comunícate con el equipo de soporte.");
     }
 
-    const {limit,ctrl_id,cursor,end_date,start_date,type,prev_cursor,...rest} = req.query as {type: string,ctrl_id: string,start_date:string,end_date:string, cursor: string | undefined,limit:string | undefined,prev_cursor: string | undefined} // Definir min-max limit : 0 - 100
+    const {limit,ctrl_id,cursor,is_next,end_date,start_date,type,prev_cursor,...rest} = req.query as {type: string,ctrl_id: string,start_date:string,end_date:string,is_next: string,cursor: string | undefined,limit:string | undefined,prev_cursor: string | undefined} // Definir min-max limit : 0 - 100
     
     // console.log({limit,ctrl_id,cursor,end_date,start_date,type})
     // console.log(rest)
     // console.log("FinalParams: ",getRegisterParams(type as RegisterType,rest))
-    const registroData = await Register.getRegistros({limit,ctrl_id,cursor,end_date,start_date,type,...rest});
+    const registroData = await Register.getRegistros({limit,ctrl_id,cursor,end_date,start_date,type,is_next,...rest});
     const lastElement = registroData.data[registroData.data.length -1]
     const next_id_cursor = lastElement ? Number(lastElement[registroData.order_by]) : null
     const firtsElement = registroData.data[0]
     const prev_id_cursor = firtsElement ? Number(firtsElement[registroData.order_by]) : null
-    // console.log(registroData.data[registroData.data.length -1][registroData.order_by])
+    // console.log(registroData.data[registroData.data.length -1][registroData.order_by]
     const finalResponse :IResponsePagination = {
       data : registroData.data,
       meta: {
@@ -88,6 +88,7 @@ export const registerSchema = z.object({
   // limit: z.union([z.string(), z.number()],{errorMap: ()=>{return {message: "'limit' es requerido"}}}).pipe(z.coerce.number({required_error: "'limit' es requerido",invalid_type_error: "'limit' debe ser un numero"}).int("'limit' debe ser un numero entero").gte(0, "'limit' debe ser mayor o igual a 0").lte(100,"'limit' debe ser menor o igual a 100")),
   limit: z.optional(z.coerce.number({required_error: "'limit' es requerido",invalid_type_error: "'limit' debe ser un numero",}).int("'limit' debe ser un numero entero").gte(0, "'limit' debe ser mayor o igual a 0").lte(100,"'limit' debe ser menor o igual a 100")),
   cursor: z.optional(z.coerce.number({required_error: "'cursor' es requerido",invalid_type_error: "'cursor' debe ser un numero",}).int("'cursor' debe ser un numero entero")),
+  is_next: z.enum(["true" ,"false"],{errorMap: (_,ctx)=>{ return {message: "is_next : " + ctx.defaultError}}})
 },{required_error: "Se requiere incluir los campos 'rt_id' y 'ctrl_id' en los query params de la consulta"})
 
 // registro_archivocamara ----

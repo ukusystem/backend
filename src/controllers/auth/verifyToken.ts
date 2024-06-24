@@ -31,7 +31,7 @@ export const verifyToken = asyncErrorHandler(
     }
 
     const { contraseña: contraseñaFound, ...userWithoutPassword } = userFound;
-    console.log(userWithoutPassword)
+    
     res.json(userWithoutPassword);
   }
 );

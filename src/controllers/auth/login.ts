@@ -30,8 +30,6 @@ export const login = asyncErrorHandler(
     res.cookie("token", token );
     const { contraseña: contraseñaFound, ...userWithoutPassword } = userFound;
     
-    console.log(userWithoutPassword)
-    
     res.json(userWithoutPassword);
   }
 );

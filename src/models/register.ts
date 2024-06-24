@@ -39,24 +39,25 @@ export class Register {
     return [];
   } , "Register.getRegistroByNodoAndTypeAndDateTimeRange");
 
-  static getRegistros = handleErrorWithArgument<{data:RowDataPacket[],order_by:string},{type: string,ctrl_id: string,start_date:string,end_date:string, cursor:string | undefined,limit:string | undefined}> (
-    async ({ctrl_id,cursor,end_date,limit,start_date,type,...rest}) => {
+  static getRegistros = handleErrorWithArgument<{data:RowDataPacket[],order_by:string},{type: string,ctrl_id: string,start_date:string,end_date:string,is_next:string, cursor:string | undefined,limit:string | undefined}> (
+    async ({ctrl_id,cursor,end_date,is_next,limit,start_date,type,...rest}) => {
       let registerOption = RegisterConfigOptions[type as RegisterType]
 
       const otherQueryParams = Register.getRegisterQueryParams(type as RegisterType,rest);
-      console.log(otherQueryParams)
+      // console.log(otherQueryParams)
+      // console.log("is_next",is_next)
       let select_clause : string = `SELECT *`;
       let from_clause : string = `FROM ${"nodo" + ctrl_id}.${registerOption.base_table_name}`;
-      let where_clause : string = cursor != undefined ? `WHERE ${registerOption.order_by} < ${Number(cursor)} AND ${registerOption.datetime_compare} BETWEEN '${start_date}' AND '${end_date}'` : `WHERE ${registerOption.datetime_compare} BETWEEN '${start_date}' AND '${end_date}'`;
+      let where_clause : string = cursor != undefined ? `WHERE ${registerOption.order_by} ${is_next == "true" ? "<" : ">"} ${Number(cursor)} AND ${registerOption.datetime_compare} BETWEEN '${start_date}' AND '${end_date}'` : `WHERE ${registerOption.datetime_compare} BETWEEN '${start_date}' AND '${end_date}'`;
       let additional_where_clause : string = Register.getPartialSqlQuery(otherQueryParams);
-      let orderby_clause : string = `ORDER BY ${registerOption.order_by} DESC`
+      let orderby_clause : string = `ORDER BY ${registerOption.order_by} ${is_next == "true" || cursor == undefined ? "DESC" : "ASC"}`
       let limit_clause: string = `LIMIT ${Register.adjustLimitRange(limit)}`
       const general_query = select_clause.concat(" ",from_clause," ",where_clause," ",additional_where_clause," ",orderby_clause," ",limit_clause)
-      console.log(general_query)
+      // console.log(general_query)
       // const registros = await MySQL2.executeQuery<RowDataPacket[]>({sql:`SELECT * FROM ${"nodo" + ctrl_id}.registroacceso WHERE fecha BETWEEN ? AND ? ORDER BY ra_id DESC LIMIT ?`,values:[start_date,end_date,Number(limit)]})
       const registros = await MySQL2.executeQuery<RowDataPacket[]>({sql:general_query})
       if(registros.length>0){
-        return {data: registros, order_by: registerOption.order_by};
+        return {data: is_next == "true" ? registros: registros.reverse() , order_by: registerOption.order_by};
       }
       return {data: [], order_by: registerOption.order_by}
   } , "Register.getRegistros");
@@ -158,7 +159,7 @@ export const RegisterConfigOptions: {[key in RegisterType]: { has_yearly_tables:
   },
   temperatura: {
     has_yearly_tables: true,
-    base_table_name: "registrotemperatura2023",
+    base_table_name: "registrotemperatura",
     table_columns: ["rtmp_id", "st_id", "valor", "fecha"],
     order_by: "rtmp_id",
     datetime_compare: "fecha"
