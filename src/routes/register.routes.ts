@@ -11,8 +11,12 @@ registerRoutes.get("/register",registerController.getRegistersFinal)
 // DownloadExcel POST /register/download/excel
 registerRoutes.post("/register/download/excel",registerController.excelDownload)
 
+registerRoutes.get("/register/download/excel",registerController.excelDownload)
+
 // DownloadCSV POST /register/download/csv
 registerRoutes.post("/register/download/csv",registerController.csvDownload)
 
+registerRoutes.get("/register/download/csv",registerController.csvDownload)
+
 // DownloadPDF POST /register/download/pdf
-registerRoutes.post("/register/download/pdf",registerController.pdfDownload)
+// registerRoutes.post("/register/download/pdf",registerController.pdfDownload)

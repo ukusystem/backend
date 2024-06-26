@@ -2,10 +2,15 @@ import exceljs from "exceljs";
 import { Request, Response, NextFunction } from "express";
 import { asyncErrorHandler } from "../../utils/asynErrorHandler";
 import { getFormattedDateTime } from "../../utils/getFormattedDateTime";
+import { Register } from "../../models/register";
 
 export const csvDownload = asyncErrorHandler(
   async (req: Request, res: Response, next: NextFunction) => {
-    const data : {data: Object[], title: string} = req.body;
+    // const data : {data: Object[], title: string} = req.body;
+    const {ctrl_id,end_date,start_date,type,col_delete,...rest} = req.query as {type: string,ctrl_id: string,start_date:string,end_date:string,col_delete: string | undefined | string[]}
+
+    const registerRows = await Register.getRegistrosDownload({col_delete,ctrl_id,end_date,start_date,type,...rest})
+
     //Create a Workbook
     const workbook = new exceljs.Workbook();
     // Set Workbook Properties
@@ -15,17 +20,17 @@ export const csvDownload = asyncErrorHandler(
     // workbook.modified = new Date();
 
     //Add a Worksheet
-    const worksheet = workbook.addWorksheet(data.title);
+    const worksheet = workbook.addWorksheet("REGISTRO_" + type.toUpperCase());
 
     // Columns:
-    worksheet.columns = Object.keys(data.data[0]).map((keydata) => ({
-      header: keydata.toUpperCase(),
-      key: keydata,
+    worksheet.columns = registerRows.columns.map((column) => ({
+      header: column.toUpperCase(),
+      key: column,
       width: 20,
     }));
 
     // Add Rows
-    data.data.forEach((row) => {
+    registerRows.data.forEach((row) => {
       worksheet.addRow(row);
     });
 
@@ -60,10 +65,7 @@ export const csvDownload = asyncErrorHandler(
 
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename=registro_${data.title.replace(
-        / /g,
-        "-"
-      )}_${getFormattedDateTime()}.csv`
+      `attachment; filename=registro_${type}_${getFormattedDateTime()}.csv`
     );
 
     workbook.csv.write(res).then(() => {
