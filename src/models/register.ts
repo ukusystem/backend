@@ -3,7 +3,6 @@ import { MySQL2 } from "../database/mysql";
 import { Controlador } from "../types/db";
 import { handleErrorWithArgument } from "../utils/simpleErrorHandler";
 import dayjs from "dayjs";
-import { string } from "zod";
 
 export type RegisterArgs = {fecha_fin: Date,fecha_inicio: Date,tipo_registro: string} & Pick<Controlador,"ctrl_id">
 export type RegisterType =  "acceso" | "energia" | "entrada" | "estadocamara" | "microsd" | "peticion" | "salida" | "seguridad" | "temperatura" | "ticket";
@@ -118,7 +117,7 @@ export class Register {
       }else{
         const general_query = select_clause.concat(" ",from_clause," ",where_clause," ",additional_where_clause," ",orderby_clause," ",limit_clause)
         const registros = await MySQL2.executeQuery<RowDataPacket[]>({sql:general_query})
-
+        console.log(general_query)
         if(registros.length>0){// dos años continuos
           return {data: p_action == "prev" ? registros.reverse() : registros , order_by: registerOption.order_by};
         }

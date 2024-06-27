@@ -6,7 +6,7 @@ import { Register } from "../../models/register";
 
 export const csvDownload = asyncErrorHandler(
   async (req: Request, res: Response, next: NextFunction) => {
-    // const data : {data: Object[], title: string} = req.body;
+    
     const {ctrl_id,end_date,start_date,type,col_delete,...rest} = req.query as {type: string,ctrl_id: string,start_date:string,end_date:string,col_delete: string | undefined | string[]}
 
     const registerRows = await Register.getRegistrosDownload({col_delete,ctrl_id,end_date,start_date,type,...rest})
