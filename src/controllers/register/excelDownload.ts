@@ -39,42 +39,6 @@ export const excelDownload = asyncErrorHandler(
       cell.font = { bold: true };
     });
 
-    // const colFilter = worksheet.getColumn(Object.keys(data.data[0]).length + 3);
-    // colFilter.header = "FILTROS APLICADOS";
-    // colFilter.width = 20;
-    // worksheet.getCell(1, Object.keys(data.data[0]).length + 3).font = {
-    //   bold: true,
-    // };
-
-    // if (data.filters.length > 0) {
-    //   worksheet.getCell(2, Object.keys(data.data[0]).length + 2).value =
-    //     "Filtro";
-    //   worksheet.getCell(2, Object.keys(data.data[0]).length + 2).font = {
-    //     bold: true,
-    //   };
-    //   worksheet.getCell(3, Object.keys(data.data[0]).length + 2).value =
-    //     "Valor";
-    //   worksheet.getCell(3, Object.keys(data.data[0]).length + 2).font = {
-    //     bold: true,
-    //   };
-    //   data.filters.forEach((filter, index) => {
-    //     worksheet.getColumn(
-    //       Object.keys(data.data[0]).length + 3 + index
-    //     ).width = 20;
-    //     worksheet.getCell(
-    //       2,
-    //       Object.keys(data.data[0]).length + 3 + index
-    //     ).value = filter.id;
-    //     worksheet.getCell(
-    //       3,
-    //       Object.keys(data.data[0]).length + 3 + index
-    //     ).value = JSON.stringify(filter.value);
-    //   });
-    // } else {
-    //   worksheet.getCell(2, Object.keys(data.data[0]).length + 3).value =
-    //     "Filtros no aplicados";
-    // }
-
     res.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
 
     res.setHeader(
