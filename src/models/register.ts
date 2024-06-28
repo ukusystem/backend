@@ -92,24 +92,43 @@ export class Register {
           let new_from_clause1 = `FROM ${"nodo" + ctrl_id}.${registerOption.base_table_name + startDate.year()}`;
           let new_from_clause2 = `FROM ${"nodo" + ctrl_id}.${registerOption.base_table_name + endDate.year()}`;
 
+          let finalRegistrosData1 : RowDataPacket[] = []
+          let finalRegistrosData2 : RowDataPacket[] = []
+
           let general_query1 = select_clause.concat(" ",new_from_clause1," ",where_clause," ",additional_where_clause," ",orderby_clause," ",limit_clause)
-          const registros1 = await MySQL2.executeQuery<RowDataPacket[]>({sql:general_query1});
-          const registros1Data = p_action == "prev" ? registros1.reverse() : registros1;
+          
+          // const registros1 = await MySQL2.executeQuery<RowDataPacket[]>({sql:general_query1});
+          // const registros1Data = p_action == "prev" ? registros1.reverse() : registros1;
           let limit_client = Register.adjustLimitRange(limit); // 1-100
 
-          if(registros1.length < limit_client){
+          try {
+            const registros1 = await MySQL2.executeQuery<RowDataPacket[]>({sql:general_query1});
+            finalRegistrosData1 = p_action == "prev" ? registros1.reverse() : registros1;
+            // let limit_client = Register.adjustLimitRange(limit); // 1-100
+          } catch (error) {
+            console.error(error)
+          }
+
+          if(finalRegistrosData1.length < limit_client){
             let general_query2 = select_clause.concat(" ",new_from_clause2," ",where_clause," ",additional_where_clause," ",orderby_clause," ",limit_clause)
-            const registros2 = await MySQL2.executeQuery<RowDataPacket[]>({sql:general_query2});
-            const registros2Data = p_action == "prev" ? registros2.reverse() : registros2
+            // const registros2 = await MySQL2.executeQuery<RowDataPacket[]>({sql:general_query2});
+            // const registros2Data = p_action == "prev" ? registros2.reverse() : registros2
 
-            let numRegisMissing = limit_client - registros1.length
+            try {
+              const registros2 = await MySQL2.executeQuery<RowDataPacket[]>({sql:general_query2});
+              finalRegistrosData2 = p_action == "prev" ? registros2.reverse() : registros2
+            } catch (error) {
+              console.error(error)
+            }
 
-            const registrosFinal = [...registros1Data,...registros2Data.slice(0,numRegisMissing)];
+            let numRegisMissing = limit_client - finalRegistrosData1.length
+
+            const registrosFinal = [...finalRegistrosData1,...finalRegistrosData2.slice(0,numRegisMissing)];
 
             return {data: registrosFinal , order_by: registerOption.order_by};
 
           }else{ // no consultar tabla siguiente
-            return {data: registros1Data , order_by: registerOption.order_by};
+            return {data: finalRegistrosData1 , order_by: registerOption.order_by};
           }
 
         }
@@ -145,6 +164,8 @@ export class Register {
 
       const startDate = dayjs(start_date,"YYYY-MM-DD HH:mm:ss")
       const endDate = dayjs(end_date,"YYYY-MM-DD HH:mm:ss");
+      const fecha = dayjs().format("YYYY-MM-DD HH:mm:ss")
+      console.log(fecha)
 
       let select_clause : string = `SELECT ${columns_visible.join(" , ")}`;
       let from_clause : string = `FROM ${"nodo" + ctrl_id}.${registerOption.base_table_name}`;
@@ -166,13 +187,30 @@ export class Register {
           let new_from_clause1 = `FROM ${"nodo" + ctrl_id}.${registerOption.base_table_name + startDate.year()}`;
           let new_from_clause2 = `FROM ${"nodo" + ctrl_id}.${registerOption.base_table_name + endDate.year()}`;
 
+          let finalRegistrosData1 : RowDataPacket[] = []
+          let finalRegistrosData2 : RowDataPacket[] = []
+
           let general_query1 = select_clause.concat(" ",new_from_clause1," ",where_clause," ",additional_where_clause," ",orderby_clause)
-          const registros1 = await MySQL2.executeQuery<RowDataPacket[]>({sql:general_query1});
+          try {
+            const registros1 = await MySQL2.executeQuery<RowDataPacket[]>({sql:general_query1});
+            if(registros1.length > 0){
+              finalRegistrosData1 = registros1
+            }
+          } catch (error) {
+            console.error(error)
+          }
 
           let general_query2 = select_clause.concat(" ",new_from_clause2," ",where_clause," ",additional_where_clause," ",orderby_clause)
-          const registros2 = await MySQL2.executeQuery<RowDataPacket[]>({sql:general_query2});
+          try {
+            const registros2 = await MySQL2.executeQuery<RowDataPacket[]>({sql:general_query2});
+            if(registros2.length > 0){
+              finalRegistrosData2 = registros2
+            } 
+          } catch (error) {
+            console.error(error)
+          }
 
-          return  {data:registros1.concat(registros2) , columns:columns_visible};
+          return  {data:[...finalRegistrosData1,...finalRegistrosData2] , columns:columns_visible};
 
         }
 

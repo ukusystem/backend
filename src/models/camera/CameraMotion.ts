@@ -12,6 +12,7 @@ import { Init } from "../init";
 import { decrypt } from "../../utils/decrypt";
 import { CameraForFront } from "../controllerapp/src/frontend/camaraForFront";
 import { Socket } from "socket.io";
+import dayjs from "dayjs";
 
 interface CameraMotionProps {
   ip: string;
@@ -592,8 +593,9 @@ const insertPathToDB = (newPath: string, ctrl_id: number, cmr_id: number, tipo: 
   (async () => {
     try {
       const finalPath = newPath.split(path.sep).join(path.posix.sep);
+      const fecha = dayjs().format("YYYY-MM-DD HH:mm:ss")
 
-      await MySQL2.executeQuery({ sql: `INSERT INTO ${"nodo" + ctrl_id}.registroarchivocamara (cmr_id,tipo,ruta) VALUES ( ? , ?, ?)`, values: [cmr_id, tipo, finalPath] });
+      await MySQL2.executeQuery({ sql: `INSERT INTO ${"nodo" + ctrl_id}.registroarchivocamara (cmr_id,tipo,ruta,fecha) VALUES ( ? , ?, ?)`, values: [cmr_id, tipo, finalPath,fecha] });
     } catch (error) {
       console.error("Error al insertar path a la db:\n", error);
     }
