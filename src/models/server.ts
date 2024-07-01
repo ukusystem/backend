@@ -26,6 +26,7 @@ import { main } from "./controllerapp/controller";
 import { MedidorEnergiaMap, PinesEntradaMap, PinesSalidaMap, RegistroAccesoMap, RegistroEntradaMap, SensorTemperaturaMap } from "../controllers/socket";
 import { ContrataMap, EquipoAccesoMap, EquipoEntradaMap, EquipoSalidaMap } from "./maps";
 import { TicketMap } from "./ticketschedule";
+import { dashboardRouter } from "../routes/dashboard.routes";
 
 export class ServerApp {
   #app: Application;
@@ -87,6 +88,8 @@ export class ServerApp {
     this.#app.use("/api/v1", initRoutes)
     // Camera
     this.#app.use("/api/v1", cameraRoutes)
+    // Dashboard:
+    this.#app.use("/api/v1",dashboardRouter)
     // Register
     this.#app.use("/api/v1", registerRoutes)
     // Ticket
