@@ -3,3 +3,8 @@ export * from "./activePinSalida"
 export * from "./countAlarma"
 export * from "./countTarjeta"
 export * from "./cameraStates"
+export * from "./ticketContrata"
+export * from "./ingresoContrata"
+export * from "./acumuladoKWH"
+export * from "./maxTempSensor"
+

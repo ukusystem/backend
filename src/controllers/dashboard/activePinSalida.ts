@@ -10,7 +10,7 @@ export const activePinSalida = asyncErrorHandler(
       res.json(data)
     } catch (error) {
       console.error(error)
-      res.json({total:0})
+      res.json([])
     }
   }
 );

@@ -172,7 +172,7 @@ export const createTicket = asyncErrorHandler( async (req: Request, res: Respons
           if(response){
             if(response.resultado && response.id){ // success
 
-              let newTicket = new RegistroTicketObject({...formValues.solicitante,id: response.id})
+              let newTicket = new RegistroTicketObject({...formValues.solicitante,id: response.id,estd_id:1}) // estado esperando
               TicketMap.add(newTicket)
               
               return res.json({success: true,message: "Ticket creado correctamente.",});

@@ -2,13 +2,9 @@ import { Response, NextFunction } from "express";
 import { asyncErrorHandler } from "../../utils/asynErrorHandler";
 import { Ticket } from "../../models/ticket";
 import type { RequestWithUser } from "../../types/requests";
-import { CustomError } from "../../utils/CustomError";
-import { TECHNICIAN_PORT, TECHNICIAN_SERVER_IP } from "../../configs/server.configs";
 import { onFinishTicket } from "../../models/controllerapp/controller";
 import { FinishTicket } from "../../models/controllerapp/src/finishTicket";
 import { TicketMap } from "../../models/ticketschedule";
-// import { FinishTicket } from "../../models/controllerapp/src/finishTicket";
-// import { Main } from "../../models/controllerapp/src/main";
 
 interface TicketUpdateBody {
   action: number;

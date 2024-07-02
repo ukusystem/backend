@@ -196,7 +196,7 @@ export class TicketMap {
     try {
       const initialTickets = await Ticket.getTicketsPendientesAceptados();
       for(let ticket of initialTickets){
-        const {estd_id,fechacomienzo,fechatermino, ...rest} = ticket
+        const {fechacomienzo,fechatermino, ...rest} = ticket
         const newRegTicket = new RegistroTicketObject({...rest,id: ticket.rt_id,fechacomienzo: dayjs(fechacomienzo).unix(),fechatermino: dayjs(fechatermino).unix()})
         TicketMap.add(newRegTicket)
       }
@@ -224,10 +224,10 @@ export class RegistroTicketObject implements ITicketCronContext {
 
   estd_id: number;
 
-  constructor(props: Omit<ITicketCronContext, "estd_id">) {
-    const { telefono, correo, descripcion, fechacomienzo, fechatermino, prioridad, p_id, tt_id, sn_id, co_id, ctrl_id, id, } = props;
+  constructor(props: ITicketCronContext) {
+    const { telefono, correo, descripcion, fechacomienzo, fechatermino, prioridad, p_id, tt_id, sn_id, co_id, ctrl_id, id,estd_id } = props;
     this.id = id;
-    this.estd_id = TicketState.Esperando;
+    this.estd_id = estd_id;
     this.telefono = telefono;
     this.correo = correo;
     this.descripcion = descripcion;
