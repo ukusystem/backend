@@ -10,7 +10,7 @@ export const countAlarma = asyncErrorHandler(
       res.json(data)
     } catch (error) {
       console.error(error)
-      res.json({total:0})
+      res.json({total_alarma:0})
     }
   }
 );

@@ -51,19 +51,18 @@ export class Dashboard {
       return [];
     },"Dashboard.getTotalActivePinSalida");
 
-    static getTotalAlarmas = handleErrorWithArgument<ITotal,IPropMethod>(async ({ctrl_id,isMonthly,date}) => {
+    static getTotalAlarmas = handleErrorWithArgument<{total_alarma: number},IPropMethod>(async ({ctrl_id,isMonthly,date}) => {
         const {endDate,startDate,year}=Dashboard.getStartEndDate(date,isMonthly)
         const finalTable = DashboardConfig.salida.has_yearly_tables ?`registrosalida${year}` :"registrosalida"
         const totalAlarmas = await MySQL2.executeQuery<TotalRowDataPacket[]>({sql:`SELECT COUNT(*) AS total FROM ${"nodo"+ctrl_id}.${finalTable} WHERE fecha BETWEEN '${startDate}' AND '${endDate}' AND estado = 1 AND alarma = 1`})
-        if(totalAlarmas.length > 0) return totalAlarmas[0];
-        return {total:0};
+        if(totalAlarmas.length > 0) return {total_alarma: totalAlarmas[0].total};
+        return {total_alarma:0};
     },"Dashboard.getTotalAlarmas");
 
-    static getTotalTarjeta = handleErrorWithoutArgument<ITotal>(async ()=>{
+    static getTotalTarjeta = handleErrorWithoutArgument<{total_tarjeta:number}>(async ()=>{
         const totalTarjetas = await MySQL2.executeQuery<TotalRowDataPacket[]>({sql:`SELECT COUNT(*) AS total FROM general.acceso WHERE activo = 1`})
-        if(totalTarjetas.length > 0) return totalTarjetas[0];
-
-        return {total:0};
+        if(totalTarjetas.length > 0) return {total_tarjeta: totalTarjetas[0].total};
+        return {total_tarjeta:0};
     },"Dashboard.getTotalTarjeta")
 
     static getCameraStates = handleErrorWithArgument<Record<any,any>[],Pick<Controlador,"ctrl_id">>(async ({ctrl_id}) => {
@@ -86,7 +85,7 @@ export class Dashboard {
     static getTotalIngresoContrata = handleErrorWithArgument<Record<any,any>[],IPropMethod>(async ({ctrl_id,isMonthly,date}) => {
         const {endDate,startDate,year}=Dashboard.getStartEndDate(date,isMonthly)
         const finalTable = DashboardConfig.acceso.has_yearly_tables ?`registroacceso${year}` :"registroacceso"
-        let subQuery = `SELECT ra.co_id, COUNT(*) AS ingreso_total FROM ${"nodo"+ctrl_id}.${finalTable} ra WHERE ra.fecha BETWEEN '${startDate}' AND '${endDate}' AND ra.tipo = 1 AND ra.autorizacion = 1 GROUP BY ra.co_id`
+        let subQuery = `SELECT ra.co_id, COUNT(*) AS total_ingreso FROM ${"nodo"+ctrl_id}.${finalTable} ra WHERE ra.fecha BETWEEN '${startDate}' AND '${endDate}' AND ra.tipo = 1 AND ra.autorizacion = 1 GROUP BY ra.co_id`
         let finalQuery = `SELECT ingresototal.* , co.contrata, co.descripcion FROM ( ${subQuery} ) AS ingresototal INNER JOIN general.contrata co ON ingresototal.co_id = co.co_id ORDER BY ingresototal.co_id `
         const totalIngresoContrata = await MySQL2.executeQuery<RowDataPacket[]>({sql:finalQuery})
         if(totalIngresoContrata.length > 0) return totalIngresoContrata;
@@ -136,7 +135,7 @@ const DashboardConfig: {[key in RegisterType]: { has_yearly_tables: boolean };} 
     has_yearly_tables: false,
   },
   energia: {
-    has_yearly_tables: true,
+    has_yearly_tables: false, // true
   },
   entrada: {
     has_yearly_tables: false,// true
