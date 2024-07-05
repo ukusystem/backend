@@ -22,6 +22,20 @@ interface AcumuladoKWHRowDataPacket extends RowDataPacket {
 }
 
 
+interface TotalAccesoTarjetaRemoto {
+  tarjeta:{total_registrado:number, total_noregistrado: number}, 
+  remoto:{total_remoto: number}
+}
+
+interface AccesoTarjetaRowData extends RowDataPacket {
+  acceso_tarjeta: "no_registrado" | "registrado" | "otros";
+  total: number;
+}
+interface AccesoRemotoRowData extends RowDataPacket {
+  total_acceso_remoto : number;
+}
+
+
 export class Dashboard {
 
     private static getStartEndDate(date: string, is_monthly: boolean){
@@ -92,6 +106,32 @@ export class Dashboard {
         return [];
     },"Dashboard.getTotalIngresoContrata");
 
+    static getTotalAccesoTarjetaRemoto = handleErrorWithArgument<{data: TotalAccesoTarjetaRemoto, start_date: string, end_date: string},IPropMethod>(async ({ctrl_id,isMonthly,date}) => {
+        const {endDate,startDate,year}=Dashboard.getStartEndDate(date,isMonthly)
+        const finalTableRegAcc = DashboardConfig.acceso.has_yearly_tables ?`registroacceso${year}` :"registroacceso"
+        const finalTableRegSal = DashboardConfig.salida.has_yearly_tables ?`registrosalida${year}` :"registrosalida"
+        const queryAccesoTarjeta = `SELECT CASE WHEN (co_id = 0 AND autorizacion = 0) THEN 'no_registrado' WHEN (co_id >= 1 AND autorizacion = 1) THEN 'registrado' ELSE 'otros' END AS acceso_tarjeta, COUNT(*) AS total FROM  ${"nodo"+ctrl_id}.${finalTableRegAcc} WHERE tipo = 1 AND fecha BETWEEN '${startDate}' AND '${endDate}' GROUP BY acceso_tarjeta`
+        const queryAccesoRemoto = `SELECT COUNT(*) as total_acceso_remoto FROM ${"nodo"+ctrl_id}.${finalTableRegSal} WHERE es_id = 1 AND estado = 1 AND fecha BETWEEN '${startDate}' AND '${endDate}'`
+
+        const resultAccesos : TotalAccesoTarjetaRemoto = {tarjeta:{total_registrado:0, total_noregistrado: 0}, remoto:{total_remoto: 0}}
+
+        const totalAccesoTarjeta = await MySQL2.executeQuery<AccesoTarjetaRowData[]>({sql:queryAccesoTarjeta})
+        if(totalAccesoTarjeta.length > 0){
+          totalAccesoTarjeta.forEach((totalAcc)=>{
+            if(totalAcc.acceso_tarjeta == "registrado") resultAccesos.tarjeta.total_registrado = totalAcc.total;
+            if(totalAcc.acceso_tarjeta == "no_registrado") resultAccesos.tarjeta.total_noregistrado = totalAcc.total;
+          })
+        }
+
+        const totalAccesoRemoto = await MySQL2.executeQuery<AccesoRemotoRowData[]>({sql:queryAccesoRemoto})
+        if(totalAccesoRemoto.length > 0){
+          resultAccesos.remoto.total_remoto = totalAccesoRemoto[0].total_acceso_remoto
+        }
+
+        return {data: resultAccesos, start_date:startDate, end_date:endDate}
+
+    },"Dashboard.getTotalAccesoTarjetaRemoto");
+
     static getAcumuladoKWH = handleErrorWithArgument<Record<any,any>,IPropMethod>(async ({ctrl_id,isMonthly,date}) => {
         const {endDate,startDate,year}=Dashboard.getStartEndDate(date,isMonthly)
         const finalTable = DashboardConfig.energia.has_yearly_tables ?`registroenergia${year}` :"registroenergia"
@@ -123,7 +163,7 @@ export class Dashboard {
       const maxTempSensor = await MySQL2.executeQuery<RowDataPacket[]>({sql:finalQuery})
       if(maxTempSensor.length > 0) return maxTempSensor;
       return [];
-  },"Dashboard.getMaxSensorTemperatura");
+    },"Dashboard.getMaxSensorTemperatura");
 
 
 }

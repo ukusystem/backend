@@ -7,4 +7,5 @@ export * from "./ticketContrata"
 export * from "./ingresoContrata"
 export * from "./acumuladoKWH"
 export * from "./maxTempSensor"
+export * from "./accesoTarjetaRemoto"
 

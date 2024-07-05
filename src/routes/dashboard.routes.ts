@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { activePinEntrada, activePinSalida, acumuladoKWH, cameraStates, countAlarma, countTarjeta, ingresoContrata, maxTemperaturaSensor, ticketContrata } from "../controllers/dashboard";
+import { accesoTarjetaRemoto, activePinEntrada, activePinSalida, acumuladoKWH, cameraStates, countAlarma, countTarjeta, ingresoContrata, maxTemperaturaSensor, ticketContrata } from "../controllers/dashboard";
 import { requestDataValidator } from "../middlewares/validator.middleware";
 import { dashboardSharedSchema } from "../schemas/dashboard";
 const dashboardRouter = Router()
@@ -13,5 +13,6 @@ dashboardRouter.get("/dashboard/ticketcontrata",requestDataValidator({querySchem
 dashboardRouter.get("/dashboard/ingresocontrata",requestDataValidator({querySchema:dashboardSharedSchema},{hasQuery:true}),ingresoContrata)
 dashboardRouter.get("/dashboard/kwh",requestDataValidator({querySchema:dashboardSharedSchema},{hasQuery:true}),acumuladoKWH)
 dashboardRouter.get("/dashboard/temperatura",requestDataValidator({querySchema:dashboardSharedSchema},{hasQuery:true}),maxTemperaturaSensor)
+dashboardRouter.get("/dashboard/acceso",requestDataValidator({querySchema:dashboardSharedSchema},{hasQuery:true}),accesoTarjetaRemoto)
 
 export {dashboardRouter}
