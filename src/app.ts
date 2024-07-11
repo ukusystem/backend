@@ -13,7 +13,7 @@ import { TicketMap } from "./models/ticketschedule";
     // Inicializar websockets
     server.websocket();
     // Inicializar dectecion de movimiento
-    await server.motion()
+    // await server.motion()
 
     // Init Maps
     await server.initmaps()

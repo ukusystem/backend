@@ -136,7 +136,7 @@ export class Register {
       }else{
         const general_query = select_clause.concat(" ",from_clause," ",where_clause," ",additional_where_clause," ",orderby_clause," ",limit_clause)
         const registros = await MySQL2.executeQuery<RowDataPacket[]>({sql:general_query})
-        console.log(general_query)
+        // console.log(general_query)
         if(registros.length>0){// dos años continuos
           return {data: p_action == "prev" ? registros.reverse() : registros , order_by: registerOption.order_by};
         }
@@ -165,7 +165,7 @@ export class Register {
       const startDate = dayjs(start_date,"YYYY-MM-DD HH:mm:ss")
       const endDate = dayjs(end_date,"YYYY-MM-DD HH:mm:ss");
       const fecha = dayjs().format("YYYY-MM-DD HH:mm:ss")
-      console.log(fecha)
+      // console.log(fecha)
 
       let select_clause : string = `SELECT ${columns_visible.join(" , ")}`;
       let from_clause : string = `FROM ${"nodo" + ctrl_id}.${registerOption.base_table_name}`;
@@ -217,7 +217,7 @@ export class Register {
       }else{
         const general_query = select_clause.concat(" ",from_clause," ",where_clause," ",additional_where_clause," ",orderby_clause)
         const registros = await MySQL2.executeQuery<RowDataPacket[]>({sql:general_query});
-        console.log(general_query)
+        // console.log(general_query)
         if(registros.length > 0){
           return {data:registros , columns:columns_visible};
         }

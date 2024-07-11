@@ -35,6 +35,15 @@ interface AccesoRemotoRowData extends RowDataPacket {
   total_acceso_remoto : number;
 }
 
+interface MaxTemperaturaRowData extends RowDataPacket {
+  st_id:     number;
+  max_valor: number;
+  rtmp_id:   number;
+  fecha:     string;
+  serie:     string;
+  ubicacion: string;
+}
+
 
 export class Dashboard {
 
@@ -65,12 +74,12 @@ export class Dashboard {
       return [];
     },"Dashboard.getTotalActivePinSalida");
 
-    static getTotalAlarmas = handleErrorWithArgument<{total_alarma: number},IPropMethod>(async ({ctrl_id,isMonthly,date}) => {
+    static getTotalAlarmas = handleErrorWithArgument<{data: {alarmas:Record<any,any>[],total_alarma: number}, start_date: string, end_date: string},IPropMethod>(async ({ctrl_id,isMonthly,date}) => {
         const {endDate,startDate,year}=Dashboard.getStartEndDate(date,isMonthly)
         const finalTable = DashboardConfig.salida.has_yearly_tables ?`registrosalida${year}` :"registrosalida"
-        const totalAlarmas = await MySQL2.executeQuery<TotalRowDataPacket[]>({sql:`SELECT COUNT(*) AS total FROM ${"nodo"+ctrl_id}.${finalTable} WHERE fecha BETWEEN '${startDate}' AND '${endDate}' AND estado = 1 AND alarma = 1`})
-        if(totalAlarmas.length > 0) return {total_alarma: totalAlarmas[0].total};
-        return {total_alarma:0};
+        const totalAlarmas = await MySQL2.executeQuery<RowDataPacket[]>({sql:`SELECT * FROM ${"nodo"+ctrl_id}.${finalTable} WHERE fecha BETWEEN '${startDate}' AND '${endDate}' AND estado = 1 AND alarma = 1`})
+        if(totalAlarmas.length > 0) return {data: {alarmas:totalAlarmas,total_alarma:totalAlarmas.length}, start_date:startDate, end_date:endDate};
+        return {data: {alarmas:[],total_alarma:0}, start_date:startDate, end_date:endDate};
     },"Dashboard.getTotalAlarmas");
 
     static getTotalTarjeta = handleErrorWithoutArgument<{total_tarjeta:number}>(async ()=>{
@@ -79,21 +88,22 @@ export class Dashboard {
         return {total_tarjeta:0};
     },"Dashboard.getTotalTarjeta")
 
-    static getCameraStates = handleErrorWithArgument<Record<any,any>[],Pick<Controlador,"ctrl_id">>(async ({ctrl_id}) => {
+    static getCameraStates = handleErrorWithArgument<{data: Record<any,any>[]},Pick<Controlador,"ctrl_id">>(async ({ctrl_id}) => {
         const camStates = await MySQL2.executeQuery<RowDataPacket[]>({sql:`SELECT c.cmr_id, c.tc_id , t.tipo, c.m_id, m.marca, c.ip , c.descripcion, c.conectado FROM ${"nodo" + ctrl_id}.camara c INNER JOIN general.marca m ON c.m_id = m.m_id INNER JOIN general.tipocamara t ON c.tc_id = t.tc_id WHERE c.activo = 1`})
-        if(camStates.length > 0) return camStates;
+        if(camStates.length > 0) return {data: camStates};
 
-        return [];
+        return {data: []};
     },"Dashboard.getCameraStates")
 
-    static getTotalTicketContrata = handleErrorWithArgument<Record<any,any>[],IPropMethod>(async ({ctrl_id,isMonthly,date}) => {
+    static getTotalTicketContrata = handleErrorWithArgument<{data: Record<any,any>[], start_date: string, end_date: string},IPropMethod>(async ({ctrl_id,isMonthly,date}) => {
         const {endDate,startDate,year}=Dashboard.getStartEndDate(date,isMonthly)
         const finalTable = DashboardConfig.ticket.has_yearly_tables ?`registroticket${year}` :"registroticket"
         let subQuery = `SELECT rt.co_id, COUNT(*) AS total_ticket  FROM ${"nodo"+ctrl_id}.${finalTable} rt WHERE rt.fechacomienzo BETWEEN '${startDate}' AND '${endDate}' AND ( rt.estd_id = 2 OR rt.estd_id = 16 ) GROUP BY rt.co_id`
         let finalQuery = `SELECT totalticket.* , co.contrata , co.descripcion FROM ( ${subQuery} ) AS totalticket INNER JOIN general.contrata co ON totalticket.co_id = co.co_id ORDER BY totalticket.co_id ASC `
+        // console.log(finalQuery)
         const totalTicketContrata = await MySQL2.executeQuery<RowDataPacket[]>({sql:finalQuery})
-        if(totalTicketContrata.length > 0) return totalTicketContrata;
-        return [];
+        if(totalTicketContrata.length > 0) return {data: totalTicketContrata, start_date:startDate, end_date:endDate};
+        return {data: [], start_date:startDate, end_date:endDate} ;
     },"Dashboard.getTotalTicketContrata");
 
     static getTotalIngresoContrata = handleErrorWithArgument<Record<any,any>[],IPropMethod>(async ({ctrl_id,isMonthly,date}) => {
@@ -155,14 +165,21 @@ export class Dashboard {
         return {acumulado: acumFinal , data: acumuladoKwh}
     },"Dashboard.getAcumuladoKWH");
 
-    static getMaxSensorTemperatura = handleErrorWithArgument<Record<any,any>[],IPropMethod>(async ({ctrl_id,isMonthly,date}) => {
+    static getMaxSensorTemperatura = handleErrorWithArgument<{data: MaxTemperaturaRowData[], start_date: string, end_date: string},IPropMethod>(async ({ctrl_id,isMonthly,date}) => {
       const {endDate,startDate,year}=Dashboard.getStartEndDate(date,isMonthly)
       const finalTable = DashboardConfig.temperatura.has_yearly_tables ?`registrotemperatura${year}` :"registrotemperatura"
-      let subQuery = `SELECT rt.st_id, MAX(rt.valor) as valor_maximo FROM ${"nodo"+ctrl_id}.${finalTable} rt WHERE rt.fecha BETWEEN '${startDate}' AND '${endDate}' GROUP BY rt.st_id`
-      let finalQuery = `SELECT maxtemperatura.* , st.serie , st.ubicacion FROM ( ${subQuery} ) AS maxtemperatura INNER JOIN nodo1.sensortemperatura st ON maxtemperatura.st_id = st.st_id WHERE st.activo = 1`
-      const maxTempSensor = await MySQL2.executeQuery<RowDataPacket[]>({sql:finalQuery})
-      if(maxTempSensor.length > 0) return maxTempSensor;
-      return [];
+
+      // subQuery1 quitar 'AND valor > 0'
+      let subQuery1 = `SELECT rt.st_id, MAX(rt.valor) AS max_valor  FROM ${"nodo"+ctrl_id}.${finalTable} rt WHERE rt.fecha BETWEEN '${startDate}' AND '${endDate}' AND valor > 0 GROUP BY rt.st_id`
+      let subQuery2 = `SELECT max_temp.* , rt.rtmp_id , rt.fecha FROM ${"nodo"+ctrl_id}.${finalTable} rt INNER JOIN ( ${subQuery1} ) max_temp ON rt.st_id = max_temp.st_id AND rt.valor = max_temp.max_valor WHERE rt.fecha BETWEEN '${startDate}' AND '${endDate}'`
+      let finalQuery2 = `SELECT maxtemperatura.* , st.serie , st.ubicacion FROM ( ${subQuery2} ) AS maxtemperatura INNER JOIN nodo1.sensortemperatura st ON maxtemperatura.st_id = st.st_id WHERE st.activo = 1 ORDER BY maxtemperatura.st_id ASC`
+      
+      const maxTempSensor = await MySQL2.executeQuery<MaxTemperaturaRowData[]>({sql:finalQuery2})
+
+      if(maxTempSensor.length > 0) {
+        return {data: maxTempSensor,start_date:startDate, end_date:endDate}
+      };
+      return {data: [],start_date:startDate, end_date:endDate};
     },"Dashboard.getMaxSensorTemperatura");
 
 

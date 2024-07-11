@@ -27,9 +27,7 @@ export class Init {
 
   static getControladores = handleErrorWithoutArgument<ControladorInfo[]>(async ()=>{
     // posiblemente agregar condicion: conectado controlador
-
-    const controladores = await MySQL2.executeQuery<ControladorInfoRowData[]>({sql:`SELECT c.ctrl_id, c.nodo, c.rgn_id, r.region , c.direccion, c.descripcion, c.latitud, c.longitud , c.serie , c.personalgestion , c.personalimplementador FROM general.controlador c INNER JOIN general.region r ON c.rgn_id = r.rgn_id WHERE c.activo = 1`})
-    console.log(controladores)
+    const controladores = await MySQL2.executeQuery<ControladorInfoRowData[]>({sql:`SELECT c.ctrl_id, c.nodo, c.rgn_id, r.region , c.direccion, c.descripcion, c.latitud, c.longitud , c.serie , c.personalgestion , c.personalimplementador FROM general.controlador c INNER JOIN general.region r ON c.rgn_id = r.rgn_id WHERE c.activo = 1 ORDER BY c.ctrl_id ASC`})
     if(controladores.length>0){
       return controladores
     }

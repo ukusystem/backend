@@ -12,7 +12,6 @@ import { ticketRoutes } from "../routes/ticket.routes";
 
 import { createServer } from "node:http";
 import path from "node:path";
-
 import { Sockets } from "./socket";
 import {smartMapRoutes } from "../routes/smartmap.routes";
 import { siteRoutes } from "../routes/site.routes";
@@ -25,8 +24,10 @@ import { DeteccionMovimiento } from "./camera/CameraMotion";
 import { main } from "./controllerapp/controller";
 import { MedidorEnergiaMap, PinesEntradaMap, PinesSalidaMap, RegistroAccesoMap, RegistroEntradaMap, SensorTemperaturaMap } from "../controllers/socket";
 import { ContrataMap, EquipoAccesoMap, EquipoEntradaMap, EquipoSalidaMap } from "./maps";
-import { TicketMap } from "./ticketschedule";
 import { dashboardRouter } from "../routes/dashboard.routes";
+
+// import { createServer as createServerHttps } from "https";
+// import fs from "fs";
 
 export class ServerApp {
   #app: Application;
@@ -37,7 +38,14 @@ export class ServerApp {
     this.#app = express();
     this.#port = PORT;
     this.#httpServer = createServer(this.#app);
-    // this.conectDB();
+    // this.#httpServer = createServerHttps(
+    //   {
+    //     key: fs.readFileSync("./crtssl/key.pem"),
+    //     cert: fs.readFileSync("./crtssl/crt.pem"),
+    //     passphrase: "test123.",
+    //   },
+    //   this.#app
+    // );
     this.middlewares();
     this.routes();
     this.listen();

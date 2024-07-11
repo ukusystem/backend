@@ -1,6 +1,7 @@
 node_modules
 logs
 photos
+crtssl
 deteccionmovimiento
 archivos
 package-lock.json

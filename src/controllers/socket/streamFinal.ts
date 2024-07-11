@@ -2,6 +2,7 @@ import { ChildProcessByStdio, spawn} from "child_process";
 import { Server, Socket } from "socket.io";
 import { createImageBase64, getFfmpegArgs, verifyImageMarkers, } from "../../utils/stream";
 import { CustomError } from "../../utils/CustomError";
+import { vmsLogger } from "../../services/loggers";
 
 interface IFmmpegProcess {
   [ctrl_id: string]: {
@@ -26,8 +27,9 @@ export const streamSocketFinal = async (io: Server, socket: Socket) => {
   const [, , ctrl_id, ip, q] = nspStream.name.split("/"); // Namespace : "/stream/nodo_id/camp_ip/calidad"
 
   setTimeout(async () => {
-    console.log(`Cliente ID: ${socket.id} | Petición Stream ctrl_id: ${ctrl_id}, ip: ${ip}, q:${q}`);
-    
+    // console.log(`Cliente ID: ${socket.id} | Petición Stream ctrl_id: ${ctrl_id}, ip: ${ip}, q:${q}`);
+    vmsLogger.info(`Cliente ID: ${socket.id} | Petición Stream ctrl_id: ${ctrl_id}, ip: ${ip}, q:${q}`)
+
     if (!ffmpegProcess.hasOwnProperty(ctrl_id)) {
       ffmpegProcess[ctrl_id] = {};
       ffmpegProccessLogs[ctrl_id]={}
@@ -58,17 +60,20 @@ export const streamSocketFinal = async (io: Server, socket: Socket) => {
         if (error instanceof CustomError || error instanceof Error) {
           socket.emit("isLoading", false);
           socket.emit("isError", true, error.message);
+
+          vmsLogger.error(error.message, error.stack)
           return;
         }
 
         socket.emit("isLoading", false);
         socket.emit( "isError", true, "Se ha producido un error inesperado al intentar obtener el stream." );
+        vmsLogger.error(`Se ha producido un error inesperado al intentar obtener el stream | ctrl_id: ${ctrl_id}, ip: ${ip}, q:${q}`)
         return;
       }
     }
 
-    console.log(`Procesos Ffmpeg en ejecución:`);
-    console.log(JSON.stringify(ffmpegProccessLogs))
+    // console.log(`Procesos Ffmpeg en ejecución:`);
+    // console.log(JSON.stringify(ffmpegProccessLogs))
 
     // Redirigir la salida de ffmpeg al cliente Socket.IO
     ffmpegProcess[ctrl_id][ip][q][0].stdout.on("data", (data: Buffer) => {
