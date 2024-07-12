@@ -63,7 +63,7 @@ export class Logger {
       zippedArchive: true, // Compress gzip
       maxSize: '20m', // Rotate after 20MB
       // maxFiles: '14d', // Only keep last 14 days
-      datePattern: 'YYYY-MM-DD_HH',
+      datePattern: 'YYYY-MM-DD',
       format: format.combine(
         format.timestamp({format: "YYYY-MM-DD hh:mm:ss"}),
         format(info => {

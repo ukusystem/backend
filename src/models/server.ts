@@ -15,9 +15,7 @@ import path from "node:path";
 import { Sockets } from "./socket";
 import {smartMapRoutes } from "../routes/smartmap.routes";
 import { siteRoutes } from "../routes/site.routes";
-import { updateTicketPendiente } from "../utils/updateTicketPendiente";
 
-import cron from 'node-cron'
 import { vmsRoutes } from "../routes/vms.routes";
 import { frontEndRoutes } from "../routes/frontend.routes";
 import { DeteccionMovimiento } from "./camera/CameraMotion";
@@ -66,10 +64,7 @@ export class ServerApp {
     await MySQL2.create()
   }
 
-
-
   middlewares() {
-
     //Cors
     this.#app.use(
       cors({
@@ -86,7 +81,6 @@ export class ServerApp {
     this.#app.use(express.json({limit:"10mb"}));
     // Parsear cookies
     this.#app.use(cookieParser());
-    // this.#app.use(express.raw({limit:"50MB"}))
   }
 
   routes() {
@@ -120,7 +114,6 @@ export class ServerApp {
   }
 
   async motion() {
-    // testMotion()
     try {
       await DeteccionMovimiento()
     } catch (error) {
@@ -153,14 +146,6 @@ export class ServerApp {
       console.log("Server Model | Error init maps")
       console.log(error)
     }
-  }
-
-  ticketNoAtendidoTest(){
-    // setInterval(updateTicketPendiente,60000);
-    cron.schedule('1 * * * * *', () => {
-      // console.log('running a task every minute + 1s');
-      updateTicketPendiente()
-    });
   }
 
   runController(){
