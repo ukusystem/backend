@@ -63,14 +63,57 @@ export const createDatabase = `
  */
 export const createTemperatureTable = `
 				CREATE TABLE IF NOT EXISTS %s.registrotemperatura%s (
-					rtmp_id bigint NOT NULL AUTO_INCREMENT,
-					st_id int NOT NULL,
-					valor float NOT NULL,
-					fecha timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+						rtmp_id bigint NOT NULL AUTO_INCREMENT,
+						st_id int NOT NULL,
+						valor float NOT NULL,
+						fecha timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
 					PRIMARY KEY (rtmp_id),
 					KEY fk_sensortemperatura_idx (st_id),
 					CONSTRAINT fk_sentemp%s FOREIGN KEY (st_id) REFERENCES %s.sensortemperatura (st_id)
 				) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+			`;
+
+export const createEnergyTable = `
+				CREATE TABLE IF NOT EXISTS %s.registroenergia%s (
+						re_id bigint NOT NULL AUTO_INCREMENT,
+						me_id int NOT NULL,
+						voltaje float NOT NULL,
+						amperaje float NOT NULL,
+						fdp float NOT NULL,
+						frecuencia float unsigned NOT NULL,
+						potenciaw float NOT NULL,
+						potenciakwh double unsigned NOT NULL,
+						fecha timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+					PRIMARY KEY (re_id),
+					KEY fk_medidor_idx (me_id),
+					CONSTRAINT fk_medidor%s FOREIGN KEY (me_id) REFERENCES %s.medidorenergia (me_id)
+				) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3
+			`;
+
+export const createInputRegistreTable = `
+				CREATE TABLE IF NOT EXISTS %s.registroentrada%s (
+						rentd_id int NOT NULL AUTO_INCREMENT,
+						pin tinyint NOT NULL,
+						estado tinyint NOT NULL,
+						fecha timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+						ee_id int NOT NULL,
+					PRIMARY KEY (rentd_id),
+					KEY fk_equipoentrada_idx (ee_id),
+					CONSTRAINT fk_equipoentrada%s FOREIGN KEY (ee_id) REFERENCES general.equipoentrada (ee_id) ON DELETE RESTRICT ON UPDATE RESTRICT
+				) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+			`;
+
+export const createOutputRegistreTable = `
+				CREATE TABLE IF NOT EXISTS %s.registrosalida%s (
+						rs_id int NOT NULL AUTO_INCREMENT,
+						pin tinyint NOT NULL,
+						estado tinyint NOT NULL,
+						fecha timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+						es_id int NOT NULL,
+					PRIMARY KEY (rs_id),
+					KEY fk_equiposalida_idx (es_id),
+					CONSTRAINT fk_equiposalida%s FOREIGN KEY (es_id) REFERENCES general.equiposalida (es_id) ON DELETE RESTRICT ON UPDATE RESTRICT
+				) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3
 			`;
 
 /* Events */
@@ -154,19 +197,19 @@ export const insertTemperature = `
 				VALUES (?, ?, ?);
 			`;
 
-export const setCurrentTemperature = `
-				UPDATE %s.sensortemperatura
-				SET actual=?
-				WHERE st_id = ?;
-			`;
+// export const setCurrentTemperature = `
+// 				UPDATE %s.sensortemperatura
+// 				SET actual=?
+// 				WHERE st_id = ?;
+// 			`;
 
 export const insertInputChanged = `
-				INSERT INTO %s.registroentrada (pin, estado, fecha, ee_id)
+				INSERT INTO %s.registroentrada%s (pin, estado, fecha, ee_id)
 				VALUES (?, ?, ?, (SELECT ee_id FROM %s.pinesentrada WHERE pin=?));
 			`;
 
 export const insertOutputChanged = `
-				INSERT INTO %s.registrosalida (pin, estado, fecha, es_id)
+				INSERT INTO %s.registrosalida%s (pin, estado, fecha, es_id)
 				VALUES (?, ?, ?, (SELECT es_id FROM %s.pinessalida WHERE pin=?));
 			`;
 

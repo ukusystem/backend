@@ -207,17 +207,26 @@ export class BaseAttach extends Mortal {
     const nodeDB = BaseAttach.getNodeDBName(nodeID);
     if (current) {
       // Verify that a temperature table of the current year exists.
-      if (!(await executeQuery<ResultSetHeader>(util.format(queries.createTemperatureTable, nodeDB, year, year, nodeDB)))) {
+      if (!(await BaseAttach.createTables(nodeDB, year))) {
         return false;
       }
     }
     // Next year's table
     if (month >= 11) {
-      if (!(await executeQuery<ResultSetHeader>(util.format(queries.createTemperatureTable, nodeDB, year + 1, year + 1, nodeDB)))) {
+      if (!await BaseAttach.createTables(nodeDB, year+1)) {
         return false;
       }
     }
     return true;
+  }
+
+  private static async createTables(name:string, year:number):Promise<boolean>{
+    let result =
+      !!(await executeQuery<ResultSetHeader>(util.format(queries.createTemperatureTable, name, year, year, name))) &&
+      !!(await executeQuery<ResultSetHeader>(util.format(queries.createEnergyTable, name, year, year, name))) &&
+      !!(await executeQuery<ResultSetHeader>(util.format(queries.createInputRegistreTable, name, year, year))) &&
+      !!(await executeQuery<ResultSetHeader>(util.format(queries.createOutputRegistreTable, name, year, year)));
+    return result;
   }
 
   /**
@@ -948,14 +957,6 @@ export class NodeAttach extends BaseAttach {
         const potenciakwh = power[7].getInt();
         const fecha = useful.formatTimestamp(power[0].getInt());
         this.insertSilent("power measure", [medidorID, voltaje, amperaje, fdp, frecuencia, potenciaw, potenciakwh, fecha], queries.insertPower, this.controllerID, false);
-        // This is not necessary any more
-        // this.insertSilent(
-        //   "current power",
-        //   [voltaje, amperaje, fdp, frecuencia, potenciaw, potenciakwh, medidorID],
-        //   queries.updatePower,
-        //   this.controllerID,
-        //   false
-        // );
 
         // Notify web about the energy
         this._notifyEnergy(medidorID, this.controllerID, null, null, voltaje, amperaje, fdp, frecuencia, potenciaw, potenciakwh);
@@ -989,21 +990,8 @@ export class NodeAttach extends BaseAttach {
           oneTemp = oneTempOptional;
           const sensorID = oneTemp[0].getInt();
           const sensorRead = oneTemp[1].getInt();
-          // sb.append(oneTemp[0].getInt())
-          // sb.append("=")
-          // sb.append(oneTemp[1].getInt())
-          // sb.append(";")
-          //this._log\("%d",big.longValue())
+          
           paramsForRegister.push([sensorID, sensorRead, currDate]);
-          // paramsForCurrent.push([sensorRead, sensorID]);
-
-          // insertSilent("temperature",
-          // new Object[] { oneTemp[0].getInt(), oneTemp[1].getInt(),
-          // useful.formatTimestamp(big) },
-          // queries.insertTemperature, this.controllerID, false)
-          // insertSilent("current temperture", new Object[] { oneTemp[1].getInt(),
-          // oneTemp[0].getInt() },
-          // queries.setCurrentTemperature, this.controllerID, false)
 
           // Send the data to the web app
           this._notifyTemp(sensorID, this.controllerID, null, sensorRead, null, null);
@@ -1179,9 +1167,10 @@ export class NodeAttach extends BaseAttach {
         const pin = pinData[0].getInt();
         const state = pinData[1].getInt() == codes.VALUE_TO_ACTIVE ? 1 : 0;
         const pinDate = pinData[2].getInt();
+        const ioYear = useful.getYearFromTimestamp(pinDate);
         switch (cmdOrValue) {
           case codes.CMD_INPUT_CHANGED:
-            await this.insertInputOutput("input changed", this.controllerID, pinData, queries.insertInputChanged);
+            await this.insertInputOutput("input changed", this.controllerID, pinData, true, ioYear);
             // Send to the other backend
             this._notifyInput(true, pin, this.controllerID, null, null, state, null, useful.formatTimestamp(pinDate));
             // sm.PinesEntradaMap.add_update(
@@ -1192,7 +1181,7 @@ export class NodeAttach extends BaseAttach {
             // );
             break;
           case codes.CMD_OUTPUT_CHANGED:
-            await this.insertInputOutput("output changed", this.controllerID, pinData, queries.insertOutputChanged);
+            await this.insertInputOutput("output changed", this.controllerID, pinData, false, ioYear);
             // This is not necessary here since real time output states are not shown in the web app
             // this._notifyOutput()
 
@@ -1324,7 +1313,10 @@ export class NodeAttach extends BaseAttach {
    * @param pinData Event data.
    * @param insertQuery Query to insert the event.
    */
-  private async insertInputOutput(name: string, nodeID: number, pinData: DataStruct[], insertQuery: string) {
+  private async insertInputOutput(name: string, nodeID: number, pinData: DataStruct[], isInput:boolean, year:string) {
+    // Format the query since this kind has three format specifiers
+    const fullQuery = util.format(isInput?queries.insertInputChanged:, BaseAttach.getNodeDBName(nodeID),year)
+
     // Pre-format the query since this kind has two format specifiers
     const middleQuery = BaseAttach.formatQueryWithNode(insertQuery, nodeID);
     await this.insertSilent(
@@ -1334,8 +1326,6 @@ export class NodeAttach extends BaseAttach {
       nodeID,
       true
     );
-    // This is no longer needed
-    // await this.insertSilent(name, [pinData[1].getInt() == codes.VALUE_TO_ACTIVE ? 1 : 0, pinData[0].getInt()], updateQuery, nodeID, true);
   }
 
   private mirrorMessage(command: string, logOnSend: boolean) {

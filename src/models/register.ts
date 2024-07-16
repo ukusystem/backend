@@ -89,8 +89,8 @@ export class Register {
             return {data: p_action == "prev" ? registros.reverse() : registros , order_by: registerOption.order_by};
           }
         }else{ // dos años continuos
-          let new_from_clause1 = `FROM ${"nodo" + ctrl_id}.${registerOption.base_table_name + startDate.year()}`;
-          let new_from_clause2 = `FROM ${"nodo" + ctrl_id}.${registerOption.base_table_name + endDate.year()}`;
+          let new_from_clause2 = `FROM ${"nodo" + ctrl_id}.${registerOption.base_table_name + startDate.year()}`;
+          let new_from_clause1 = `FROM ${"nodo" + ctrl_id}.${registerOption.base_table_name + endDate.year()}`;
 
           let finalRegistrosData1 : RowDataPacket[] = []
           let finalRegistrosData2 : RowDataPacket[] = []
