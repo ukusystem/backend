@@ -2,14 +2,10 @@ import { NextFunction, Request, Response } from "express";
 import { asyncErrorHandler } from "../../utils/asynErrorHandler";
 import { Dashboard } from "../../models/dashboard/dashboard";
 
-export const countTarjeta = asyncErrorHandler(
+export const dashboardStates = asyncErrorHandler(
   async (req: Request, res: Response, _next: NextFunction) => {
-    try {
-      const data = await Dashboard.getTotalTarjeta()
-      res.json(data)
-    } catch (error) {
-      console.error(error)
-      res.json({total_tarjeta:0,data:[]})
-    }
+    const {ctrl_id} = req.query as {ctrl_id:string}
+    const data = await Dashboard.getStates({ctrl_id:Number(ctrl_id)})
+    res.json(data)
   }
 );
