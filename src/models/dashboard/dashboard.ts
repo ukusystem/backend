@@ -83,9 +83,9 @@ export class Dashboard {
     },"Dashboard.getTotalAlarmas");
 
     static getTotalTarjeta = handleErrorWithoutArgument<{total_tarjeta:number}>(async ()=>{
-        const totalTarjetas = await MySQL2.executeQuery<TotalRowDataPacket[]>({sql:`SELECT COUNT(*) AS total FROM general.acceso WHERE activo = 1`})
-        if(totalTarjetas.length > 0) return {total_tarjeta: totalTarjetas[0].total};
-        return {total_tarjeta:0};
+        const totalTarjetas = await MySQL2.executeQuery<TotalRowDataPacket[]>({sql:`SELECT accesotarjeta.serie , accesotarjeta.administrador  , c.contrata , c.descripcion FROM (SELECT * FROM general.acceso WHERE activo = 1 AND ea_id = 1) AS accesotarjeta INNER JOIN general.contrata c ON accesotarjeta.co_id = c.co_id`})
+        if(totalTarjetas.length > 0) return {total_tarjeta: totalTarjetas.length, data:totalTarjetas};
+        return {total_tarjeta:0, data:[]};
     },"Dashboard.getTotalTarjeta")
 
     static getCameraStates = handleErrorWithArgument<{data: Record<any,any>[]},Pick<Controlador,"ctrl_id">>(async ({ctrl_id}) => {
@@ -93,6 +93,12 @@ export class Dashboard {
         if(camStates.length > 0) return {data: camStates};
 
         return {data: []};
+    },"Dashboard.getCameraStates")
+
+    static getStates = handleErrorWithArgument<{states: {camera:Record<any,any>[] , controller: Record<any,any>[] }},Pick<Controlador,"ctrl_id">>(async ({ctrl_id}) => {
+        const camStates = await MySQL2.executeQuery<RowDataPacket[]>({sql:`SELECT c.cmr_id, c.tc_id , t.tipo, c.m_id, m.marca, c.ip , c.descripcion, c.conectado FROM ${"nodo" + ctrl_id}.camara c INNER JOIN general.marca m ON c.m_id = m.m_id INNER JOIN general.tipocamara t ON c.tc_id = t.tc_id WHERE c.activo = 1`})
+        const controllerState = await MySQL2.executeQuery<RowDataPacket[]>({sql:`SELECT ctrl_id , nodo, direccion, descripcion , conectado FROM general.controlador WHERE ctrl_id = 1;`})
+        return {states: {camera:camStates , controller: controllerState }};
     },"Dashboard.getCameraStates")
 
     static getTotalTicketContrata = handleErrorWithArgument<{data: Record<any,any>[], start_date: string, end_date: string},IPropMethod>(async ({ctrl_id,isMonthly,date}) => {
