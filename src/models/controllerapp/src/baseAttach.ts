@@ -24,11 +24,6 @@ import * as codes from "./codes";
 import * as db2 from "./db2";
 import * as sm from "../../../controllers/socket";
 import { Main } from "./main";
-const DEF_TXT = "Texto random";
-const DEF_ACTIVE = 1;
-const DEF_ORDER = 0;
-const DEF_ID = 1;
-const DEF_NUM = 0
 
 /**
  * Base attachment for the sockets
@@ -487,7 +482,7 @@ export class BaseAttach extends Mortal {
       autoIncrement = nextID[0].AUTO_INCREMENT;
     }
     this._addEnd(valueEnd, endID, autoIncrement);
-    this._log(`Added end with value 0x${valueEnd.toString(16)}`);
+    // this._log(`Added end with value 0x${valueEnd.toString(16)}`);
   }
 
   /**
@@ -599,6 +594,7 @@ export class BaseAttach extends Mortal {
     return data;
   }
 
+
   _notifyCard(serie: number, admin: number, authorized: number, date: string, co_id: number, ea_id: number, type: number, ctrl_id: number) {
     this._log("Notifying web about card.");
     const newEntry = new sm.RegistroAccesoSocketBad({
@@ -621,7 +617,7 @@ export class BaseAttach extends Mortal {
     meID: number,
     nodeID: number,
     active: number | null = null,
-    serie: string | null = null,
+    // serie: string | null = null,
     desc: string | null = null,
     voltaje: number | null = null,
     amperaje: number | null = null,
@@ -706,8 +702,8 @@ export class BaseAttach extends Mortal {
       sm.PinesEntradaMap.add_update(newInput);
     }
     // To show in the 'alerts' section
-    if (resgister) {
-      sm.RegistroEntradaMap.add(new sm.RegistroEntradaSocketBad({ pin: pin, estado: state ?? DEF_ACTIVE, fecha: date ?? useful.DUMMY_DATE, ctrl_id: nodeID }));
+    if (resgister && state && date) {
+      sm.RegistroEntradaMap.add(new sm.RegistroEntradaSocketBad({ pin: pin, estado: state, fecha: date, ctrl_id: nodeID }));
     }
   }
 
@@ -962,7 +958,7 @@ export class NodeAttach extends BaseAttach {
         // );
 
         // Notify web about the energy
-        this._notifyEnergy(medidorID, this.controllerID, null, null, null, voltaje, amperaje, fdp, frecuencia, potenciaw, potenciakwh);
+        this._notifyEnergy(medidorID, this.controllerID, null, null, voltaje, amperaje, fdp, frecuencia, potenciaw, potenciakwh);
 
         break;
       case codes.CMD_TEMP:
@@ -1078,14 +1074,14 @@ export class NodeAttach extends BaseAttach {
           this._notifyTemp(temp[1], this.controllerID, temp[0], null, null, null);
         }
         for (let energy of paramsForEnergy) {
-          this._notifyEnergy(energy[1], this.controllerID, energy[0], null, null, null, null, null, null, null, null);
+          this._notifyEnergy(energy[1], this.controllerID, energy[0], null, null, null, null, null, null, null);
         }
         break;
       case codes.VALUE_ENERGY_ENABLE_ONE:
         this._log(`Received energy enable changed '${command}'`);
         const energyRes = await this.updatePeriferalEnable(parts, queries.updateEnergyEnable);
         if (energyRes) {
-          this._notifyEnergy(energyRes.pinID, this.controllerID, energyRes.enable, null, null, null, null, null, null, null, null);
+          this._notifyEnergy(energyRes.pinID, this.controllerID, energyRes.enable, null, null, null, null, null, null, null);
         }
         break;
       case codes.VALUE_INPUT_ENABLE_ONE:
@@ -1221,7 +1217,7 @@ export class NodeAttach extends BaseAttach {
         // The subnode id is still being designed, so a trivial value us used. This
         // value must exist in the table 'nodo'.'subnodo'
         const params = [serial, isAdmin, autorizado, date, 0, 0, isEntrance, 1];
-        this._log(`(${date}) Card read. Number = ${serial} result = ${autorizado} admin = ${isAdmin} reader type = ${isEntrance>0?'Entrance':'Exit'}`);
+        this._log(`(${date}) Card read. ID = ${cardID} Number = ${serial} result = ${autorizado} admin = ${isAdmin} reader type = ${isEntrance>0?'Entrance':'Exit'}`);
         const cardInfo = await executeQuery<db2.CardInfo[]>(queries.getCardInfo, [cardID]);
         let co_id = 0
         let ea_id = 0
@@ -1231,6 +1227,18 @@ export class NodeAttach extends BaseAttach {
           if (cardInfo.length === 1) {
             co_id = params[4] = cardInfo[0].co_id;
             ea_id = params[5] = cardInfo[0].ea_id;
+            if(!isAdmin){
+              // Since there is a company registered for that number
+              const tickets = await executeQuery<db2.GeneralNumber[]>(BaseAttach.formatQueryWithNode(queries.selectUnattendedTicket, this.controllerID), [co_id, date, date])
+              if(tickets){
+                for(const ticket of tickets){
+                  const updateRes = await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.updateAttendance, this.controllerID), [ticket.entero]);
+                  if(updateRes){
+                    this._log(`Ticket ID = ${ticket.entero} set to attended.`)
+                  }
+                }
+              }
+            }
           } else {
             this._log(`No rows returned for card ID = ${cardID}.`);
           }
@@ -1452,7 +1460,8 @@ export class NodeAttach extends BaseAttach {
   addLogin() {
     const pwd = Encryption.decrypt(this.password, true);
     if (pwd) {
-      this._addOne(new Message(codes.CMD_LOGIN, -1, [this.user, pwd]));
+      this._addOne(new Message(codes.CMD_LOGIN, -1, [this.user, pwd]).setLogOnSend(false));
+      this._log(`Added login`)
     }
   }
 
@@ -2055,7 +2064,7 @@ export class ManagerAttach extends BaseAttach {
                       const energyData = this._parseMessage(parts, queries.energyParse, id);
                       await this._updateItem("energy reader", energyData, queries.energyUpdate, id, targetNodeID);
                       if (energyData) {
-                        this._notifyEnergy(energyData[0].getInt(), targetNodeID, null, null, energyData[1].getString(), null, null, null, null, null, null);
+                        this._notifyEnergy(energyData[0].getInt(), targetNodeID, null, energyData[1].getString(), null, null, null, null, null, null);
                       }
                       break;
                     case codes.VALUE_TEMP_SENSOR:
@@ -2440,7 +2449,7 @@ export class ManagerAttach extends BaseAttach {
         count++;
       }
     }
-    this._log(`Added ${count} workers with value 0x${codes.VALUE_WORKER.toString(16)}`);
+    // this._log(`Added ${count} workers with value 0x${codes.VALUE_WORKER.toString(16)}`);
     // Add end of workers
     if (nextID && nextID.length === 1) {
       this._addEnd(codes.VALUE_WORKER_END, endID, nextID[0].AUTO_INCREMENT);
@@ -2473,11 +2482,11 @@ export class ManagerAttach extends BaseAttach {
       // this._log(`${count}`)
       count++;
     }
-    this._log(`Added ${count} nodes with value 0x${codes.VALUE_NODE.toString(16)}.`);
+    // this._log(`Added ${count} nodes with value 0x${codes.VALUE_NODE.toString(16)}.`);
     // Add end of nodes
     if (nextID && nextID.length === 1) {
       this._addEnd(codes.VALUE_NODES_END, endID, nextID[0].AUTO_INCREMENT);
-      this._log("Added end nodes.");
+      // this._log("Added end nodes.");
     }
   }
 }

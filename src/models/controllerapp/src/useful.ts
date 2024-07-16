@@ -17,7 +17,7 @@ const DATE_FORMAT = "YYYY-MM-DD HH:mm:ss";
 const YEAR_FORMAT = "YYYY";
 const MONTH_FORMAT = "MM";
 
-export const DUMMY_DATE = "2000-01-01 00:00:00";
+// export const DUMMY_DATE = "2000-01-01 00:00:00";
 
 const PHOTOS_RELATIVE_PATH = "photos";
 const REGISTERED_RELATIVE_PATH = "registered";

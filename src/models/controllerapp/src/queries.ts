@@ -125,7 +125,7 @@ export const insertCard = `
 export const getCardInfo = `
 				SELECT co_id, ea_id
 				FROM general.acceso
-				WHERE a_id =?;
+				WHERE a_id =? AND activo=1;
 			`;
 
 export const insertCtrlState = `
@@ -205,6 +205,21 @@ export const insertCameraState = `
 			`;
 
 /* Tickets and requests */
+
+/**
+ * rt_id, telefono, correo, descripcion, fechacomienzo, fechatermino, estd_id, fechaestadofinal, fechacreacion, 
+ * prioridad, p_id, tt_id, sn_id, enviado, co_id, asistencia
+ */
+export const selectUnattendedTicket = `
+				SELECT rt_id AS entero FROM %s.registroticket
+				WHERE co_id = ? AND fechacomienzo < ? AND fechatermino > ? AND enviado = 1 AND asistencia = 0;
+			`;
+
+export const updateAttendance = `
+				UPDATE %s.registroticket
+				SET asistencia = 1
+				WHERE rt_id = ?;
+				`;
 
 export const insertRequest = `
 				INSERT INTO %s.registropeticion ( pin, orden, fecha, estd_id)
