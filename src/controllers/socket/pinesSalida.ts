@@ -31,7 +31,11 @@ export const pinesSalidaSocket =async (io:Server, socket: Socket) => {
   
   socket.on("initial_list_pines_salida",(es_id: number)=>{
     let newListPinSal = PinesSalidaMap.getListPinesSalida(String(ctrl_id),String(es_id));
-    socket.emit("list_pines_salida",newListPinSal)
+    if (PinesSalidaMap.map.hasOwnProperty(ctrl_id)){
+      if(PinesSalidaMap.map[ctrl_id].hasOwnProperty(es_id)){
+        let {pines_salida,...equisal} = PinesSalidaMap.map[ctrl_id][es_id]
+        socket.emit("list_pines_salida",newListPinSal,equisal)
+      }}
   })
 
   socket.on("initial_item_pin_salida",(es_id: number, ps_id:number)=>{
@@ -255,14 +259,10 @@ export class PinesSalidaSocketBad implements IPinesSalidaSocketBad {
   
 }
 
-interface EquiTest extends EquipoSalida {
-  pines_salida:{
-    [ps_id:string]:PinesSalidaSocket
-  }
-}
+
 interface PinesSalidaObserver {
   updateEquiposSalida(data:EquipoSalida[]): void;
-  updateListPinesSalida(data: PinesSalida[]): void;
+  updateListPinesSalida(data: PinesSalida[],equipo_salida: EquipoSalida): void;
   updateItemPinSalida(data: IPinesSalidaSocket): void;
 }
 
@@ -270,7 +270,7 @@ interface PinesSalidaSubject {
   registerObserver(ctrl_id: number, observer: PinesSalidaObserver): void;
   unregisterObserver(ctrl_id: number, observer: PinesSalidaObserver): void;
   notifyEquiposSalida(ctrl_id: number, data: EquipoSalida[]): void;
-  notifyListPinesSalida(ctrl_id: number,es_id: number,data: PinesSalida[]): void;
+  notifyListPinesSalida(ctrl_id: number,equipo_salida: EquipoSalida,data: PinesSalida[]): void;
   notifyItemPinSalida(ctrl_id: number, es_id: number, ps_id: number,data: IPinesSalidaSocket): void;
 }
 
@@ -286,12 +286,19 @@ class PinesSalidaSocketObserver implements PinesSalidaObserver {
     this.socket.nsp.emit("equipos_salida", data);
   }
 
-  updateListPinesSalida(data: PinesSalida[]): void {
-    this.socket.nsp.emit("list_pines_salida", data);
+  updateListPinesSalida(data: PinesSalida[],info: EquipoSalida): void {
+    this.socket.nsp.emit("list_pines_salida", data,info);
   }
 
   updateItemPinSalida(data: IPinesSalidaSocket): void {
     this.socket.nsp.emit("item_pin_salida", data);
+    
+  }
+}
+
+interface EquiTest extends EquipoSalida {
+  pines_salida:{
+    [ps_id:string]:PinesSalidaSocket
   }
 }
 
@@ -316,10 +323,10 @@ export class PinesSalidaMap  {
       PinesSalidaMap.observers[ctrl_id].updateEquiposSalida(data)
     }
   }
-  // public static notifyListPinesSalida(ctrl_id: number, es_id: number, data: PinesSalida[]): void {
-  public static notifyListPinesSalida(ctrl_id: number, data: PinesSalida[]): void {
+  public static notifyListPinesSalida(ctrl_id: number, equipo_salida: EquipoSalida, data: PinesSalida[]): void {
+  // public static notifyListPinesSalida(ctrl_id: number, data: PinesSalida[]): void {
     if(PinesSalidaMap.observers[ctrl_id]){
-      PinesSalidaMap.observers[ctrl_id].updateListPinesSalida(data)
+      PinesSalidaMap.observers[ctrl_id].updateListPinesSalida(data,equipo_salida)
     }
   }
   // public static notifyItemPinSalida(ctrl_id: number, es_id: number, ps_id: number, data: IPinesSalidaSocket): void {
@@ -329,37 +336,62 @@ export class PinesSalidaMap  {
     }
   }
 
-  private static exists(args: { ctrl_id: string; es_id: string ; ps_id: string }) {
-    const { ctrl_id, ps_id , es_id } = args;
+  private static exists(args: { ctrl_id: string; ps_id: string }) {
+    const { ctrl_id, ps_id} = args;
 
-    let is_ctrl_id: boolean = false;
-    let is_es_id:boolean = false;
-    let is_ps_id: boolean = false;
+    // let is_ctrl_id: boolean = false;
+    // let is_es_id:boolean = false;
+    // let is_ps_id: boolean = false;
+
+    let found_ctrl_id: number = -1;
+    let found_es_id:number = -1;
+    let found_ps_id: number = -1;
 
     for (const ctrl_id_key in PinesSalidaMap.map) {
       if (ctrl_id_key == ctrl_id) {
-        is_ctrl_id = true;
-      }
+        // is_ctrl_id = true;
+        found_ctrl_id = Number(ctrl_id_key)
 
-      for (const es_id_key in PinesSalidaMap.map[ctrl_id_key]) {
-        if (es_id_key == es_id) {
-          is_es_id = true;
-        }
+        for (const es_id_key in PinesSalidaMap.map[ctrl_id_key]) {
+          // if (es_id_key == es_id) {
+          //   is_es_id = true;
+          //   // found_es_id = Number(es_id_key)
+          // }
 
-        for (const ps_id_key in PinesSalidaMap.map[ctrl_id_key][es_id_key].pines_salida) {
-          if (ps_id_key == ps_id) {
-            is_ps_id = true;
+          for (const ps_id_key in PinesSalidaMap.map[ctrl_id_key][es_id_key].pines_salida) {
+            if (ps_id_key == ps_id) {
+              // is_ps_id = true;
+              found_es_id = Number(es_id_key)
+              found_ps_id = Number(ps_id_key)
+            }
           }
+  
         }
-
       }
-    }
 
-    return is_ctrl_id && is_es_id && is_ps_id;
+      // for (const es_id_key in PinesSalidaMap.map[ctrl_id_key]) {
+      //   if (es_id_key == es_id) {
+      //     is_es_id = true;
+      //     found_es_id = Number(es_id_key)
+      //   }
+
+      //   for (const ps_id_key in PinesSalidaMap.map[ctrl_id_key][es_id_key].pines_salida) {
+      //     if (ps_id_key == ps_id) {
+      //       is_ps_id = true;
+      //       found_ps_id = Number(ps_id_key)
+      //     }
+      //   }
+
+      // }
+    }
+    const newResult = { exists:(found_ctrl_id > -1 && found_es_id > -1 && found_ps_id > -1 ) , data:{ ctrl_id : found_ctrl_id, es_id: found_es_id , ps_id : found_ps_id ,} }
+    return newResult;
+    // return is_ctrl_id && is_es_id && is_ps_id;
   }
 
   private static add(pinSal: PinesSalidaSocket) {
     const { ctrl_id, ps_id ,es_id} = pinSal.toJSON();
+    // let foundEquiSalida = PinesSalidaMap.equiposalida.find((equiSal)=> equiSal.es_id == es_id)
 
     if (!PinesSalidaMap.map.hasOwnProperty(ctrl_id)) {
       PinesSalidaMap.map[ctrl_id] = {};
@@ -379,20 +411,21 @@ export class PinesSalidaMap  {
     if (!PinesSalidaMap.map[ctrl_id][es_id].pines_salida.hasOwnProperty(ps_id)) {
       PinesSalidaMap.map[ctrl_id][es_id].pines_salida[ps_id] = pinSal;
       let newListPinSal = PinesSalidaMap.getListPinesSalida(String(ctrl_id),String(es_id))
-      PinesSalidaMap.notifyListPinesSalida(ctrl_id,newListPinSal)
+      let {pines_salida,...equisal} = PinesSalidaMap.map[ctrl_id][es_id]
+      PinesSalidaMap.notifyListPinesSalida(ctrl_id,equisal,newListPinSal)
     }
   }
 
-  private static update(pinSal: PinesSalidaSocket) {
+  private static update(pinSal: PinesSalidaSocket ) {
     const { ctrl_id, ps_id,es_id,activo,automatico,descripcion,estado,orden,pin } = pinSal.toJSON();
     if (PinesSalidaMap.map.hasOwnProperty(ctrl_id)) {
       if (PinesSalidaMap.map[ctrl_id].hasOwnProperty(es_id)) {
         if(PinesSalidaMap.map[ctrl_id][es_id].pines_salida.hasOwnProperty(ps_id)){
 
           const currentPinSal = PinesSalidaMap.map[ctrl_id][es_id].pines_salida[ps_id];
-          if (currentPinSal.ctrl_id != ctrl_id ) currentPinSal.setCtrlId(ctrl_id);
+          // if (currentPinSal.ctrl_id != ctrl_id ) currentPinSal.setCtrlId(ctrl_id);
           if (currentPinSal.ps_id != ps_id ) currentPinSal.setPsId(ps_id);
-          if (currentPinSal.es_id != es_id ) currentPinSal.setEsId(es_id);
+          // if (currentPinSal.es_id != es_id ) currentPinSal.setEsId(es_id);
           if (currentPinSal.automatico != automatico ) currentPinSal.setAutomatico(automatico);
           if (currentPinSal.descripcion != descripcion ) currentPinSal.setDescripcion(descripcion);
           if (currentPinSal.estado != estado ) currentPinSal.setEstado(estado);
@@ -401,8 +434,8 @@ export class PinesSalidaMap  {
           if (currentPinSal.activo != activo ) {
             currentPinSal.setActivo(activo);
             let newListPinSal = PinesSalidaMap.getListPinesSalida(String(ctrl_id),String(es_id))
-            PinesSalidaMap.notifyListPinesSalida(ctrl_id,newListPinSal)
-
+            let {pines_salida,...equisal} = PinesSalidaMap.map[ctrl_id][es_id]
+            PinesSalidaMap.notifyListPinesSalida(ctrl_id,equisal,newListPinSal)
           };
 
           PinesSalidaMap.notifyItemPinSalida(ctrl_id,pinSal.toJSON())
@@ -428,31 +461,42 @@ export class PinesSalidaMap  {
     }
   }
 
-  public static delete(pinSal: PinesSalidaSocket | PinesSalidaSocketBad) {
+  public static delete(pinSal: PinesSalidaSocket | PinesSalidaSocketBad, permanent:boolean = false) {
     if(pinSal instanceof PinesSalidaSocket){
       const { ctrl_id, ps_id, es_id} = pinSal.toJSON();
       if (PinesSalidaMap.map.hasOwnProperty(ctrl_id)) {
         if (PinesSalidaMap.map[ctrl_id].hasOwnProperty(es_id)) {
           if(PinesSalidaMap.map[ctrl_id][es_id].pines_salida.hasOwnProperty(ps_id)){
-            // delete PinesSalidaMap.map[ctrl_id][es_id].pines_salida[ps_id];
-            PinesSalidaMap.map[ctrl_id][es_id].pines_salida[ps_id].setActivo(0)
+            if(permanent){
+              delete PinesSalidaMap.map[ctrl_id][es_id].pines_salida[ps_id];
+            }else{
+              PinesSalidaMap.map[ctrl_id][es_id].pines_salida[ps_id].setActivo(0)
+            }
             let newListPinSal = PinesSalidaMap.getListPinesSalida(String(ctrl_id),String(es_id))
-            PinesSalidaMap.notifyListPinesSalida(ctrl_id,newListPinSal)
-  
+            let {pines_salida,...equisal} = PinesSalidaMap.map[ctrl_id][es_id]
+            PinesSalidaMap.notifyListPinesSalida(ctrl_id,equisal,newListPinSal)
           }
         }
       }
     }else{
-      const { ctrl_id, ps_id, es_id} = pinSal.toJSON();
+      const { ctrl_id, ps_id } = pinSal.toJSON();
       const newPinSalSocket = PinesSalidaMap.getEsId(pinSal)
       if(newPinSalSocket){
         if (PinesSalidaMap.map.hasOwnProperty(ctrl_id)) {
           if (PinesSalidaMap.map[ctrl_id].hasOwnProperty(newPinSalSocket.es_id)) {
             if(PinesSalidaMap.map[ctrl_id][newPinSalSocket.es_id].pines_salida.hasOwnProperty(ps_id)){
-              // delete PinesSalidaMap.map[ctrl_id][newPinSalSocket.es_id].pines_salida[ps_id];
-              PinesSalidaMap.map[ctrl_id][newPinSalSocket.es_id].pines_salida[ps_id].setActivo(0)
+
+              if(permanent){
+                delete PinesSalidaMap.map[ctrl_id][newPinSalSocket.es_id].pines_salida[ps_id];
+              }else{
+                PinesSalidaMap.map[ctrl_id][newPinSalSocket.es_id].pines_salida[ps_id].setActivo(0)
+              }
+
               let newListPinSal = PinesSalidaMap.getListPinesSalida(String(ctrl_id),String(newPinSalSocket.es_id))
-              PinesSalidaMap.notifyListPinesSalida(ctrl_id,newListPinSal)
+              
+              let {pines_salida,...equisal} = PinesSalidaMap.map[ctrl_id][newPinSalSocket.es_id]
+
+              PinesSalidaMap.notifyListPinesSalida(ctrl_id,equisal,newListPinSal)
             }
           }
         }       
@@ -461,44 +505,83 @@ export class PinesSalidaMap  {
   }
 
   public static add_update(pinSal: PinesSalidaSocket | PinesSalidaSocketBad ) {
+    // const { ps_id, ctrl_id } = pinSal.toJSON();
+    const existsInfo = PinesSalidaMap.exists({ctrl_id: String(pinSal.ctrl_id),ps_id: String(pinSal.ps_id)});
+
     if(pinSal instanceof PinesSalidaSocket){
-      const { ps_id, ctrl_id,es_id } = pinSal.toJSON();
-      const exists = PinesSalidaMap.exists({ctrl_id: String(ctrl_id),ps_id: String(ps_id),es_id:String(es_id)});
-  
-      if (!exists) {
+
+      if (!existsInfo.exists) {
         PinesSalidaMap.add(pinSal);
       } else {
-        PinesSalidaMap.update(pinSal);
-      }
-    }else{
-      const { ps_id, ctrl_id,es_id ,activo,automatico,descripcion,estado,orden,pin } = pinSal.toJSON();
-      if(ps_id !== null && ctrl_id != null){ 
-        const currentPinSalSocket = PinesSalidaMap.getEsId(pinSal)
-        if(currentPinSalSocket){ // existe pin salida
-          // actualizar
-          if (es_id !== null && currentPinSalSocket.es_id != es_id ) currentPinSalSocket.setEsId(es_id);
-          if (currentPinSalSocket.automatico != automatico ) currentPinSalSocket.setAutomatico(automatico);
-          if (descripcion !== null && currentPinSalSocket.descripcion != descripcion ) currentPinSalSocket.setDescripcion(descripcion);
-          if (estado !== null && currentPinSalSocket.estado != estado ) currentPinSalSocket.setEstado(estado);
-          if (orden !== null && currentPinSalSocket.orden != orden ) currentPinSalSocket.setOrden(orden);
-          if (currentPinSalSocket.pin != pin ) currentPinSalSocket.setPin(pin);
-          if (activo !== null && currentPinSalSocket.activo != activo ){
-            currentPinSalSocket.setActivo(activo);
-            let newListPinSal = PinesSalidaMap.getListPinesSalida(String(ctrl_id),String(es_id))
-            PinesSalidaMap.notifyListPinesSalida(ctrl_id,newListPinSal)
-          } 
-          
-          // PinesSalidaMap.update(currentPinSalSocket);
-          PinesSalidaMap.notifyItemPinSalida(ctrl_id,currentPinSalSocket)
-
-        } else {
-          // agregar 
-          if( es_id != null && activo != null && automatico != null && descripcion != null && estado != null && orden != null && pin != null ){
-            const newPinSalSocket = new PinesSalidaSocket({ ps_id, ctrl_id,es_id ,activo,automatico,descripcion,estado,orden,pin })
-            PinesSalidaMap.add(newPinSalSocket);
-          }
+        // console.log("actualizando",{ctrl_id,es_id , ps_id, },existsInfo)
+        if ( existsInfo.data.es_id != pinSal.es_id ){ // cambio equipo acceso
+          const currentPinSal = PinesSalidaMap.map[existsInfo.data.ctrl_id][existsInfo.data.es_id].pines_salida[existsInfo.data.ps_id];
+          PinesSalidaMap.delete(currentPinSal,true)
+          PinesSalidaMap.add(pinSal)
+        }else{
+          PinesSalidaMap.update(pinSal);
         }
       }
+
+    }else{
+      const { ps_id, ctrl_id,activo,automatico,descripcion,es_id,estado,orden,pin } = pinSal.toJSON();
+      if (!existsInfo.exists) {
+        if (es_id != null && activo != null && automatico != null && descripcion != null && estado != null && orden != null && pin != null) {
+          const newPinSalSocket = new PinesSalidaSocket({ps_id,ctrl_id,es_id,activo,automatico,descripcion,estado,orden,pin,});
+          PinesSalidaMap.add(newPinSalSocket);
+        }
+      }else{ // actualizar
+
+        const currentPinSal = PinesSalidaMap.map[existsInfo.data.ctrl_id][existsInfo.data.es_id].pines_salida[existsInfo.data.ps_id];
+
+        const newPinSalProps = {...currentPinSal}
+        
+        if (newPinSalProps.automatico != automatico ) newPinSalProps.automatico = automatico;
+        if (descripcion !== null && newPinSalProps.descripcion != descripcion ) newPinSalProps.descripcion = descripcion;
+        if (estado !== null && newPinSalProps.estado != estado ) newPinSalProps.estado = estado;
+        if (orden !== null && newPinSalProps.orden != orden ) newPinSalProps.orden = orden;
+        if (newPinSalProps.pin != pin ) newPinSalProps.pin = pin;
+        if (activo !== null && newPinSalProps.activo != activo ) newPinSalProps.activo = activo; 
+
+        if (es_id !== null && existsInfo.data.es_id != es_id ){
+          PinesSalidaMap.delete(currentPinSal,true)
+          const newPinSalSocket = new PinesSalidaSocket({...newPinSalProps,es_id: es_id});
+          PinesSalidaMap.add(newPinSalSocket)
+          return ;
+        }
+        
+        const newPinSalSocket = new PinesSalidaSocket({...newPinSalProps});
+        PinesSalidaMap.update(newPinSalSocket);
+
+      }
+      // const { ps_id, ctrl_id,es_id ,activo,automatico,descripcion,estado,orden,pin } = pinSal.toJSON();
+      // if(ps_id !== null && ctrl_id != null){ 
+      //   const currentPinSalSocket = PinesSalidaMap.getEsId(pinSal)
+      //   if(currentPinSalSocket){ // existe pin salida
+      //     // actualizar
+      //     if (es_id !== null && currentPinSalSocket.es_id != es_id ) currentPinSalSocket.setEsId(es_id);
+      //     if (currentPinSalSocket.automatico != automatico ) currentPinSalSocket.setAutomatico(automatico);
+      //     if (descripcion !== null && currentPinSalSocket.descripcion != descripcion ) currentPinSalSocket.setDescripcion(descripcion);
+      //     if (estado !== null && currentPinSalSocket.estado != estado ) currentPinSalSocket.setEstado(estado);
+      //     if (orden !== null && currentPinSalSocket.orden != orden ) currentPinSalSocket.setOrden(orden);
+      //     if (currentPinSalSocket.pin != pin ) currentPinSalSocket.setPin(pin);
+      //     if (activo !== null && currentPinSalSocket.activo != activo ){
+      //       currentPinSalSocket.setActivo(activo);
+      //       let newListPinSal = PinesSalidaMap.getListPinesSalida(String(ctrl_id),String(es_id))
+      //       PinesSalidaMap.notifyListPinesSalida(ctrl_id,currentPinSalSocket.es_id,newListPinSal)
+      //     }
+          
+      //     // PinesSalidaMap.update(currentPinSalSocket);
+      //     PinesSalidaMap.notifyItemPinSalida(ctrl_id,currentPinSalSocket)
+
+      //   } else {
+      //     // agregar 
+      //     if( es_id != null && activo != null && automatico != null && descripcion != null && estado != null && orden != null && pin != null ){
+      //       const newPinSalSocket = new PinesSalidaSocket({ ps_id, ctrl_id,es_id ,activo,automatico,descripcion,estado,orden,pin })
+      //       PinesSalidaMap.add(newPinSalSocket);
+      //     }
+      //   }
+      // }
     }
   }
 
@@ -609,16 +692,39 @@ export class PinesSalidaMap  {
   //   PinesSalidaMap.add_update(newSensorTemp)
   // },20000)
 
-  // setTimeout(()=>{
-  //   const randomNumber = Math.round(Math.random());
-  //   const newSensorTemp = new PinesSalidaSocket({ ps_id: 4, pin: 4, es_id: 5, descripcion: "Salida 4", estado: randomNumber, activo: 1,automatico:false,ctrl_id:27,orden:0 })
-  //   PinesSalidaMap.delete(newSensorTemp)
-  // },60000)
+  // let EsId : 1 | 2 = 2
+  // setInterval(()=>{
+
+  //   // console.log(JSON.stringify(PinesSalidaMap.map))
+  //   // console.log(PinesSalidaMap.map[1][1].pines_salida[2]) // { ps_id: 2, pin: 2, es_id: 1, descripcion: 'Salida 2', activo: 1, estado: 0, ctrl_id: 1, automatico: false, orden: 0 }
+
+  //   // const randomNumber = Math.round(Math.random());
+  //   const newSensorTemp = new PinesSalidaSocket({
+  //     ps_id: 2,
+  //     pin: 2,
+  //     es_id: EsId,
+  //     descripcion: 'Salida 2 Update',
+  //     activo: 1,
+  //     estado: 0,
+  //     ctrl_id: 1,
+  //     automatico: false,
+  //     orden: 0
+  //   })
+  //   console.log("==================Cambiando es_id===============")
+  //   PinesSalidaMap.add_update(newSensorTemp)
+  //   if(EsId == 2){
+  //     EsId = 1
+  //   }else{
+  //     EsId = 2
+  //   }
+  // },20000)
+
 
   // setInterval(()=>{
+  //   console.log("orden cambiando")
   //   const randomNumber = Math.floor(Math.random() * 3) - 1; // -1 0 1
-  //   const newSensorTemp = new PinesSalidaSocket({ ps_id: 2, pin: 2, es_id: 1, descripcion: "Descrip 2", estado: 1, activo: 1,automatico:false,ctrl_id:27,orden:randomNumber });
+  //   const newSensorTemp = new PinesSalidaSocket({ ps_id: 2, pin: 2, es_id: 1, descripcion: "Descrip 2", estado: 1, activo: 1,automatico:false,ctrl_id:1,orden:randomNumber });
   //   PinesSalidaMap.add_update(newSensorTemp)
-  // },5000)
+  // },10000)
 
 })();

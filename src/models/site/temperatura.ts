@@ -55,11 +55,10 @@ export class Temperatura {
     return null;
   }, "Temperatura.getSensorDataByCtrlIdAndStId");
 
-  static getRegistroTempByCtrlIdAndStIdAndDate = handleErrorWithArgument<RegistroTemperaturaInfo[] | [], { ctrl_id: number; st_id: number; date: string }>(async ({ ctrl_id, st_id, date }) => {
+  static getRegistroTempByCtrlIdAndStIdAndDate = handleErrorWithArgument<RegistroTemperaturaInfo[], { ctrl_id: number; st_id: number; date: string }>(async ({ ctrl_id, st_id, date }) => {
     const registrosTempData = await MySQL2.executeQuery<RegistroTemperaturaRowData[]>({
-      sql: `SELECT valor AS temperatura, CAST(CONCAT(DATE_FORMAT(fecha, '%H'), '.', DATE_FORMAT(fecha, '%i')) AS DECIMAL(10, 2) ) AS hora_min from ${"nodo" + ctrl_id}.registrotemperatura${dayjs(
-        date
-      ).format("YYYY")} WHERE st_id = ? AND DATE(fecha) = ? `,
+      sql: `SELECT valor AS temperatura, CAST(CONCAT(DATE_FORMAT(fecha, '%H'), '.', DATE_FORMAT(fecha, '%i')) AS DECIMAL(10, 2) ) AS hora_min from ${"nodo" + ctrl_id}.registrotemperatura${dayjs(date).format("YYYY")} WHERE st_id = ? AND DATE(fecha) = ? `,
+      // sql: `SELECT valor, fecha from ${"nodo" + ctrl_id}.registrotemperatura${dayjs(date).format("YYYY")} WHERE st_id = ? AND DATE(fecha) = ? `,
       values: [st_id, date],
     });
     // console.log(dayjs(date).format('YYYY'))
@@ -72,4 +71,23 @@ export class Temperatura {
     }
     return [];
   }, "Temperatura.getRegistroTempByCtrlIdAndStIdAndDate");
+
+  static getRegistroTempByDay = handleErrorWithArgument<RegistroTemperaturaInfo[], { ctrl_id: number; st_id: number; date: string }>(async ({ ctrl_id, st_id, date }) => {
+    const newDate = dayjs(date,"YYYY-MM-DD")
+    console.log(`SELECT valor, fecha from ${"nodo" + ctrl_id}.registrotemperatura${newDate.year()} WHERE st_id = ? AND fecha BETWEEN '${newDate.startOf("day").format("YYYY-MM-DD HH:mm:ss")}' AND '${newDate.endOf("day").format("YYYY-MM-DD HH:mm:ss")}' ORDER BY rtmp_id ASC`)
+    console.log(newDate.startOf("day").toISOString(),newDate.add(1,"day").startOf("day").toISOString())
+    const registrosTempData = await MySQL2.executeQuery<RegistroTemperaturaRowData[]>({
+      sql: `SELECT fecha AS x , valor AS y from ${"nodo" + ctrl_id}.registrotemperatura${newDate.year()} WHERE st_id = ? AND fecha BETWEEN '${newDate.startOf("day").format("YYYY-MM-DD HH:mm:ss")}' AND '${newDate.endOf("day").format("YYYY-MM-DD HH:mm:ss")}' ORDER BY rtmp_id ASC`,
+      values: [st_id, date],
+    });
+    // console.log(dayjs(date).format('YYYY'))
+
+    // Ejemplo
+    // AND fecha > '2023-05-06' AND fecha<'2023-05-07'
+
+    if (registrosTempData.length > 0) {
+      return registrosTempData;
+    }
+    return [];
+  }, "Temperatura.getRegistroTempByDay");
 }

@@ -81,16 +81,20 @@ export class Register {
       if(registerOption.has_yearly_tables){
 
         if(startDate.year() - endDate.year() == 0){
+
           let new_from_clause = `FROM ${"nodo" + ctrl_id}.${registerOption.base_table_name + startDate.year()}`;
           const general_query = select_clause.concat(" ",new_from_clause," ",where_clause," ",additional_where_clause," ",orderby_clause," ",limit_clause)
 
-          const registros = await MySQL2.executeQuery<RowDataPacket[]>({sql:general_query})
-          if(registros.length>0){
+          try {
+            const registros = await MySQL2.executeQuery<RowDataPacket[]>({sql:general_query})
             return {data: p_action == "prev" ? registros.reverse() : registros , order_by: registerOption.order_by};
+          } catch (error) {
+            return {data: [] , order_by: registerOption.order_by};
           }
+
         }else{ // dos años continuos
-          let new_from_clause1 = `FROM ${"nodo" + ctrl_id}.${registerOption.base_table_name + startDate.year()}`;
-          let new_from_clause2 = `FROM ${"nodo" + ctrl_id}.${registerOption.base_table_name + endDate.year()}`;
+          let new_from_clause1 = `FROM ${"nodo" + ctrl_id}.${registerOption.base_table_name + endDate.year()}`;
+          let new_from_clause2 = `FROM ${"nodo" + ctrl_id}.${registerOption.base_table_name + startDate.year()}`;
 
           let finalRegistrosData1 : RowDataPacket[] = []
           let finalRegistrosData2 : RowDataPacket[] = []
@@ -137,9 +141,11 @@ export class Register {
         const general_query = select_clause.concat(" ",from_clause," ",where_clause," ",additional_where_clause," ",orderby_clause," ",limit_clause)
         const registros = await MySQL2.executeQuery<RowDataPacket[]>({sql:general_query})
         // console.log(general_query)
-        if(registros.length>0){// dos años continuos
-          return {data: p_action == "prev" ? registros.reverse() : registros , order_by: registerOption.order_by};
-        }
+        // if(registros.length>0){// dos años continuos
+        //   return {data: p_action == "prev" ? registros.reverse() : registros , order_by: registerOption.order_by};
+        // }
+        return {data: p_action == "prev" ? registros.reverse() : registros , order_by: registerOption.order_by};
+
       }
 
 
@@ -150,7 +156,7 @@ export class Register {
       // if(registros.length>0){
       //   return {data: p_action == "prev" ? registros.reverse() : registros , order_by: registerOption.order_by};
       // }
-      return {data: [], order_by: registerOption.order_by}
+      // return {data: [], order_by: registerOption.order_by}
   } , "Register.getRegistros");
 
   static getRegistrosDownload = handleErrorWithArgument<{data: RowDataPacket[], columns: string[]},GetRegisterDownload> (

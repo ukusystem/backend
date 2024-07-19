@@ -68,8 +68,13 @@ export class MySQL2 {
     if(config){
       await connection.query<ResultSetHeader>(queries.setStatExpiry);
     }
-    const [result] = await connection.query<T>(queryOptions);
-    connection.release();
-    return result;
+    try {
+      const [result] = await connection.query<T>(queryOptions);
+      connection.release();
+      return result;
+    } catch (error) {
+      connection.release();
+      throw error
+    }
   }
 }
