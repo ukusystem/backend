@@ -47,7 +47,7 @@ export const idParse = [tupleID];
 export const pinStateParse = [tupleID, tupleInt];
 export const enablesParse = [tupleInt, tupleBig, tupleInt, tupleBig, tupleInt, tupleBig, tupleInt, tupleBig, tupleBig, tupleBig];
 
-export const pinParse = [tupleInt, tupleInt, tupleLong];
+export const pinParse = [tupleInt, tupleInt, tupleLong, tupleInt];
 export const cardReadParse = [tupleInt, tupleBig, tupleInt, tupleInt, tupleInt, tupleLong];
 export const powerParse = [tupleLong, tupleID, tupleFloat, tupleFloat, tupleFloat, tupleFloat, tupleFloat, tupleFloat];
 export const orderParse = [tupleInt, tupleInt, tupleLong]
@@ -92,7 +92,7 @@ export const createEnergyTable = `
 
 export const createInputRegistreTable = `
 				CREATE TABLE IF NOT EXISTS %s.registroentrada%s (
-						rentd_id int NOT NULL AUTO_INCREMENT,
+						rentd_id bigint NOT NULL AUTO_INCREMENT,
 						pin tinyint NOT NULL,
 						estado tinyint NOT NULL,
 						fecha timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -105,7 +105,7 @@ export const createInputRegistreTable = `
 
 export const createOutputRegistreTable = `
 				CREATE TABLE IF NOT EXISTS %s.registrosalida%s (
-						rs_id int NOT NULL AUTO_INCREMENT,
+						rs_id bigint NOT NULL AUTO_INCREMENT,
 						pin tinyint NOT NULL,
 						estado tinyint NOT NULL,
 						fecha timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -119,7 +119,7 @@ export const createOutputRegistreTable = `
 /* Events */
 
 export const insertPower = `
-                INSERT INTO %s.registroenergia (me_id, voltaje, amperaje, fdp, frecuencia, potenciaw, potenciakwh, fecha) 
+                INSERT INTO %s.registroenergia%s (me_id, voltaje, amperaje, fdp, frecuencia, potenciaw, potenciakwh, fecha) 
                 VALUES (?,?,?,?,?,?,?,?);
             `;
 
@@ -193,8 +193,8 @@ export const insertSecurity = `
 			`;
 
 export const insertTemperature = `
-				INSERT INTO %s.registrotemperatura%s (st_id, valor, fecha)
-				VALUES (?, ?, ?);
+				INSERT INTO %s.registrotemperatura%s (rtmp_id, st_id, valor, fecha)
+				VALUES (?, ?, ?, ?);
 			`;
 
 // export const setCurrentTemperature = `
@@ -209,8 +209,8 @@ export const insertInputChanged = `
 			`;
 
 export const insertOutputChanged = `
-				INSERT INTO %s.registrosalida%s (pin, estado, fecha, es_id)
-				VALUES (?, ?, ?, (SELECT es_id FROM %s.pinessalida WHERE pin=?));
+				INSERT INTO %s.registrosalida%s (pin, estado, fecha, es_id, alarma)
+				VALUES (?, ?, ?, (SELECT es_id FROM %s.pinessalida WHERE pin=?), ?);
 			`;
 
 export const updateInputState = `
@@ -753,6 +753,12 @@ export const cameraInsert = `
 export const cameraDisable = `
 				UPDATE %s.camara
 				SET activo=0
+				WHERE cmr_id=?;
+			`;
+
+export const cameraSetNet = `
+				UPDATE %s.camara
+				SET conectado=?
 				WHERE cmr_id=?;
 			`;
 

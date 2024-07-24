@@ -198,10 +198,10 @@ const DashboardConfig: {[key in RegisterType]: { has_yearly_tables: boolean };} 
     has_yearly_tables: false,
   },
   energia: {
-    has_yearly_tables: false, // true
+    has_yearly_tables: true, // true
   },
   entrada: {
-    has_yearly_tables: false,// true
+    has_yearly_tables: true,// true
   },
   estadocamara: {
     has_yearly_tables: false,
@@ -213,7 +213,7 @@ const DashboardConfig: {[key in RegisterType]: { has_yearly_tables: boolean };} 
     has_yearly_tables: false,
   },
   salida: {
-    has_yearly_tables: false, // true
+    has_yearly_tables: true, // true
   },
   seguridad: {
     has_yearly_tables: false,
