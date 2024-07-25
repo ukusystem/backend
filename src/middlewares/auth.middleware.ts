@@ -12,7 +12,6 @@ type permittedRoles = "Invitado" | "Usuario" | "Administrador"
 
 export const auth = asyncErrorHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
   const { token } = req.cookies as { token?: string };
-
   // Verificar si el token no está presente en la solicitud
   if (!token) {
     const errTokenNotProvided = new CustomError( `No se proporcionó un token de autenticación.`, 401, "Unauthorized" );
@@ -45,7 +44,6 @@ export const rolCheck = (allowedRoles:permittedRoles[]) => asyncErrorHandler(asy
        return next(accessDeniedError)
     }
   }
-
   next();
 })
 

@@ -5,10 +5,11 @@ import { CustomError } from "../../utils/CustomError";
 
 export const verifyToken = asyncErrorHandler(
   async (req: Request, res: Response, next: NextFunction) => {
-
+    
     const { token: tokenCookie } = req.cookies as { token?: string };
 
     const authorizationHeader = req.headers.authorization;
+
 
     if (!tokenCookie && !authorizationHeader) {
       const errTokenNotProvided = new CustomError(`No se proporcionó un token de autenticación.`,401,"Unauthorized");
