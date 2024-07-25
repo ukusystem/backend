@@ -355,13 +355,17 @@ export class Main {
       // Get current year.
       const year = useful.getYear();
       // Get auto increments from the tables for the current year.
-      const inputAI = await executeQuery<db2.ID[]>(util.format(queries.nextIDForNode, `registroentrada${year}`, BaseAttach.getNodeDBName(node.controllerID)), [], true);
-      const outputAI = await executeQuery<db2.ID[]>(util.format(queries.nextIDForNode, `registrosalida${year}`, BaseAttach.getNodeDBName(node.controllerID)), [], true);
-      const tempAI = await executeQuery<db2.ID[]>(util.format(queries.nextIDForNode, `registrotemperatura${year}`, BaseAttach.getNodeDBName(node.controllerID)), [], true);
-      const energyAI = await executeQuery<db2.ID[]>(util.format(queries.nextIDForNode, `registroenergia${year}`, BaseAttach.getNodeDBName(node.controllerID)), [], true);
+      const nodeName = BaseAttach.getNodeDBName(node.controllerID)
+      const inputAI = await executeQuery<db2.ID[]>(util.format(queries.nextIDForNode, `registroentrada${year}`, nodeName), [], true);
+      const outputAI = await executeQuery<db2.ID[]>(util.format(queries.nextIDForNode, `registrosalida${year}`, nodeName), [], true);
+      const tempAI = await executeQuery<db2.ID[]>(util.format(queries.nextIDForNode, `registrotemperatura${year}`, nodeName), [], true);
+      const energyAI = await executeQuery<db2.ID[]>(util.format(queries.nextIDForNode, `registroenergia${year}`, nodeName), [], true);
       // Set those as the next ids to be used.
-      if(tempAI && energyAI && inputAI && outputAI){
+      console.log(tempAI)
+      if((tempAI?.length === 1) && (energyAI?.length === 1) && (inputAI?.length === 1) && (outputAI?.length === 1)){
         node.setIncrements(inputAI[0].AUTO_INCREMENT, outputAI[0].AUTO_INCREMENT, tempAI[0].AUTO_INCREMENT, energyAI[0].AUTO_INCREMENT)
+      }else{
+        this.log(`Error getting auto increments`)
       }
     }
 

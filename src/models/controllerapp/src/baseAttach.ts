@@ -2479,7 +2479,7 @@ export class ManagerAttach extends BaseAttach {
     // Add end of workers
     if (nextID && nextID.length === 1) {
       this._addEnd(codes.VALUE_WORKER_END, endID, nextID[0].AUTO_INCREMENT);
-      this._log("Added end workers.");
+      // this._log("Added end workers.");
     }
   }
 

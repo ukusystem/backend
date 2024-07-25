@@ -13,12 +13,12 @@ import * as queries from "./queries";
  * @return The complete list of tuples
  */
 export function addPasswordTuple(parseList: IntTuple[]): IntTuple[] {
-	const newList:IntTuple[] = []
-	for(const item of parseList){
+	const newList: IntTuple[] = []
+	for (const item of parseList) {
 		newList.push(item)
 	}
 	newList.push(queries.tuplePassword)
-  return newList;
+	return newList;
 }
 
 export const DEFAULT_DATE = "2000-01-01 00:00:00";
@@ -58,62 +58,62 @@ export const createDatabase = `
 				CREATE DATABASE IF NOT EXISTS %s
 			`;
 
-/**
- * This script is the output of 'SHOW CREATE TABLE nodo.registrotemperatura' with format specifiers.	
- */
+/* Create tables. These scripts are the output of 'SHOW CREATE TABLE nodo.%s' with format specifiers. */
+
 export const createTemperatureTable = `
 				CREATE TABLE IF NOT EXISTS %s.registrotemperatura%s (
-						rtmp_id bigint NOT NULL AUTO_INCREMENT,
-						st_id int NOT NULL,
-						valor float NOT NULL,
-						fecha timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-					PRIMARY KEY (rtmp_id),
-					KEY fk_sensortemperatura_idx (st_id),
-					CONSTRAINT fk_sentemp%s FOREIGN KEY (st_id) REFERENCES %s.sensortemperatura (st_id)
-				) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+	rtmp_id bigint NOT NULL AUTO_INCREMENT,
+	st_id int NOT NULL,
+	valor float NOT NULL,
+	fecha timestamp NOT NULL,
+   PRIMARY KEY (rtmp_id),
+   KEY fk_registrotemperatura_sensortemperatura_st_id_idx (st_id),
+   CONSTRAINT fk_registrotemperatura_sensortemperatura_st_id%s FOREIGN KEY (st_id) REFERENCES %s.sensortemperatura (st_id)
+ ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb3;
 			`;
 
 export const createEnergyTable = `
 				CREATE TABLE IF NOT EXISTS %s.registroenergia%s (
-						re_id bigint NOT NULL AUTO_INCREMENT,
-						me_id int NOT NULL,
-						voltaje float NOT NULL,
-						amperaje float NOT NULL,
-						fdp float NOT NULL,
-						frecuencia float unsigned NOT NULL,
-						potenciaw float NOT NULL,
-						potenciakwh double unsigned NOT NULL,
-						fecha timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-					PRIMARY KEY (re_id),
-					KEY fk_medidor_idx (me_id),
-					CONSTRAINT fk_medidor%s FOREIGN KEY (me_id) REFERENCES %s.medidorenergia (me_id)
-				) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3
+		re_id bigint NOT NULL AUTO_INCREMENT,
+		me_id int NOT NULL,
+		voltaje float NOT NULL,
+		amperaje float NOT NULL,
+		fdp float NOT NULL,
+		frecuencia float unsigned NOT NULL,
+		potenciaw float NOT NULL,
+		potenciakwh double unsigned NOT NULL,
+		fecha timestamp NOT NULL,
+   PRIMARY KEY (re_id),
+   KEY fk_registroenergia_medidorenergia_me_id_idx (me_id),
+   CONSTRAINT fk_registroenergia_medidorenergia_me_id%s FOREIGN KEY (me_id) REFERENCES %s.medidorenergia (me_id)
+ ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb3;
 			`;
 
 export const createInputRegistreTable = `
 				CREATE TABLE IF NOT EXISTS %s.registroentrada%s (
-						rentd_id bigint NOT NULL AUTO_INCREMENT,
-						pin tinyint NOT NULL,
-						estado tinyint NOT NULL,
-						fecha timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-						ee_id int NOT NULL,
-					PRIMARY KEY (rentd_id),
-					KEY fk_equipoentrada_idx (ee_id),
-					CONSTRAINT fk_equipoentrada%s FOREIGN KEY (ee_id) REFERENCES general.equipoentrada (ee_id) ON DELETE RESTRICT ON UPDATE RESTRICT
-				) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+   rentd_id bigint NOT NULL AUTO_INCREMENT,
+   pin tinyint NOT NULL,
+   estado tinyint NOT NULL,
+   fecha timestamp NOT NULL,
+   ee_id int NOT NULL,
+   PRIMARY KEY (rentd_id),
+   KEY fk_registroentrada_equipoentrada_ee_id_idx (ee_id),
+   CONSTRAINT fk_registroentrada_equipoentrada_ee_id%s FOREIGN KEY (ee_id) REFERENCES general.equipoentrada (ee_id) ON DELETE RESTRICT ON UPDATE RESTRICT
+ ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb3;
 			`;
 
 export const createOutputRegistreTable = `
-				CREATE TABLE IF NOT EXISTS %s.registrosalida%s (
-						rs_id bigint NOT NULL AUTO_INCREMENT,
-						pin tinyint NOT NULL,
-						estado tinyint NOT NULL,
-						fecha timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-						es_id int NOT NULL,
-					PRIMARY KEY (rs_id),
-					KEY fk_equiposalida_idx (es_id),
-					CONSTRAINT fk_equiposalida%s FOREIGN KEY (es_id) REFERENCES general.equiposalida (es_id) ON DELETE RESTRICT ON UPDATE RESTRICT
-				) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3
+CREATE TABLE IF NOT EXISTS %s.registrosalida%s (
+   rs_id bigint NOT NULL AUTO_INCREMENT,
+   pin tinyint NOT NULL,
+   estado tinyint NOT NULL,
+   fecha timestamp NOT NULL,
+   es_id int NOT NULL,
+   alarma tinyint NOT NULL,
+   PRIMARY KEY (rs_id),
+   KEY fk_registrosalida_equiopsalida_es_id_idx (es_id),
+   CONSTRAINT fk_registrosalida_equiopsalida_es_id%s FOREIGN KEY (es_id) REFERENCES general.equiposalida (es_id) ON DELETE RESTRICT ON UPDATE RESTRICT
+ ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb3;
 			`;
 
 /* Events */
@@ -178,7 +178,7 @@ export const insertCtrlState = `
 			`;
 
 export const insertNet = `
-				INSERT INTO general.registrored ( co_id, fecha, estado )
+				INSERT INTO general.registrored ( ctrl_id, fecha, estado )
 				VALUE (?, ?, ?);
 			`;
 
@@ -811,19 +811,19 @@ export const cardReaderParse = [tupleInt, tupleTxt];
  * further processing and no node dependent.
  */
 export const tableTuples = [
-  new TableTuple(Codes.VALUE_GROUP, Codes.VALUE_GROUPS_END, queries.regionSelect, "region", false),
-  new TableTuple(Codes.VALUE_USER, Codes.VALUE_USER_END, queries.userSelect, "usuario", false),
-  new TableTuple(Codes.VALUE_COMPANY, Codes.VALUE_COMPANY_END, queries.companySelect, "contrata", false),
+	new TableTuple(Codes.VALUE_GROUP, Codes.VALUE_GROUPS_END, queries.regionSelect, "region", false),
+	new TableTuple(Codes.VALUE_USER, Codes.VALUE_USER_END, queries.userSelect, "usuario", false),
+	new TableTuple(Codes.VALUE_COMPANY, Codes.VALUE_COMPANY_END, queries.companySelect, "contrata", false),
 
-  new TableTuple(Codes.VALUE_ACCESS_TYPE, Codes.VALUE_ACCESS_TYPE_END, queries.accessSelect, "equipoacceso", false),
-  new TableTuple(Codes.VALUE_SECTOR, Codes.VALUE_SECTOR_END, queries.sectorSelect, "rubro", false),
-  new TableTuple(Codes.VALUE_ROLE, Codes.VALUE_ROLE_END, queries.roleSelect, "rol", false),
-  new TableTuple(Codes.VALUE_POST, Codes.VALUE_POST_END, queries.postSelect, "cargo", false),
+	new TableTuple(Codes.VALUE_ACCESS_TYPE, Codes.VALUE_ACCESS_TYPE_END, queries.accessSelect, "equipoacceso", false),
+	new TableTuple(Codes.VALUE_SECTOR, Codes.VALUE_SECTOR_END, queries.sectorSelect, "rubro", false),
+	new TableTuple(Codes.VALUE_ROLE, Codes.VALUE_ROLE_END, queries.roleSelect, "rol", false),
+	new TableTuple(Codes.VALUE_POST, Codes.VALUE_POST_END, queries.postSelect, "cargo", false),
 
-  new TableTuple(Codes.VALUE_CARD, Codes.VALUE_CARD_END, queries.cardSelect, "acceso", false),
+	new TableTuple(Codes.VALUE_CARD, Codes.VALUE_CARD_END, queries.cardSelect, "acceso", false),
 
-  new TableTuple(Codes.VALUE_DETECTOR, Codes.VALUE_DETECTOR_END, queries.detectorSelect, "equipoentrada", false),
-  new TableTuple(Codes.VALUE_ACTUATOR, Codes.VALUE_ACTUATOR_END, queries.actuatorSelect, "equiposalida", false),
-  new TableTuple(Codes.VALUE_CAMERA_TYPE, Codes.VALUE_CAMERA_TYPE_END, queries.cameraTypeSelect, "tipocamara", false),
-  new TableTuple(Codes.VALUE_CAMERA_BRAND, Codes.VALUE_CAMERA_BRAND_END, queries.camBrandSelect, "marca", false),
+	new TableTuple(Codes.VALUE_DETECTOR, Codes.VALUE_DETECTOR_END, queries.detectorSelect, "equipoentrada", false),
+	new TableTuple(Codes.VALUE_ACTUATOR, Codes.VALUE_ACTUATOR_END, queries.actuatorSelect, "equiposalida", false),
+	new TableTuple(Codes.VALUE_CAMERA_TYPE, Codes.VALUE_CAMERA_TYPE_END, queries.cameraTypeSelect, "tipocamara", false),
+	new TableTuple(Codes.VALUE_CAMERA_BRAND, Codes.VALUE_CAMERA_BRAND_END, queries.camBrandSelect, "marca", false),
 ];
