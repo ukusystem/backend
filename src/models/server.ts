@@ -24,8 +24,8 @@ import { MedidorEnergiaMap, PinesEntradaMap, PinesSalidaMap, RegistroAccesoMap, 
 import { ContrataMap, EquipoAccesoMap, EquipoEntradaMap, EquipoSalidaMap } from "./maps";
 import { dashboardRouter } from "../routes/dashboard.routes";
 
-// import { createServer as createServerHttps } from "https";
-// import fs from "fs";
+import { createServer as createServerHttps } from "https";
+import fs from "fs";
 
 export class ServerApp {
   #app: Application;
@@ -35,15 +35,15 @@ export class ServerApp {
   constructor() {
     this.#app = express();
     this.#port = PORT;
-    this.#httpServer = createServer(this.#app);
-    // this.#httpServer = createServerHttps(
-    //   {
-    //     key: fs.readFileSync("./crtssl/key.pem"),
-    //     cert: fs.readFileSync("./crtssl/crt.pem"),
-    //     passphrase: "test123.",
-    //   },
-    //   this.#app
-    // );
+    // this.#httpServer = createServer(this.#app);
+    this.#httpServer = createServerHttps(
+      {
+        key: fs.readFileSync(path.resolve( __dirname, '../../crtssl/key.pem')),
+        cert: fs.readFileSync(path.resolve( __dirname, '../../crtssl/crt.pem')),
+        passphrase: "test123",
+      },
+      this.#app
+    );
     this.middlewares();
     this.routes();
     this.listen();

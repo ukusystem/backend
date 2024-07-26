@@ -750,7 +750,7 @@ export class Main {
         monitor = States.DISCONNECTED;
         this.registerOrder(newOrder, monitor);
         // resolve(monitor)
-        resolve(new RequestResult(true, `El controlador ID = ${newOrder.ctrl_id} no está conectado.`));
+        resolve(new RequestResult(false, `El controlador ID = ${newOrder.ctrl_id} no está conectado.`));
       }
     });
     return myPromise;
