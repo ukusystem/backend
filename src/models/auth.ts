@@ -44,23 +44,49 @@ export class Auth {
     "Auth.findUserById"
   );
 
-  static generateAccessJWT = simpleErrorHandler<string | undefined,string | object | Buffer>((payload) => {
+  static generateAccessToken = simpleErrorHandler<string | undefined,string | object | Buffer>((payload) => {
     return new Promise((resolve, reject) => {
       jwt.sign(
         payload,
-        authConfigs.secretKey,
-        { expiresIn: "1d" },
+        authConfigs.ACCESS_TOKEN_SECRET,
+        { expiresIn: authConfigs.ACCESS_TOKEN_EXPIRE },
         (err, token) => {
           if (err) reject(err);
           resolve(token);
         }
       );
     });
-  }, "Auth.generateAccessJWT");
+  }, "Auth.generateAccessToken");
+  
+  static generateRefreshToken = simpleErrorHandler<string | undefined,string | object | Buffer>((payload) => {
+    return new Promise((resolve, reject) => {
+      jwt.sign(
+        payload,
+        authConfigs.REFRESH_TOKEN_SECRET,
+        { expiresIn: authConfigs.REFRESH_TOKEN_EXPIRE },
+        (err, token) => {
+          if (err) reject(err);
+          resolve(token);
+        }
+      );
+    });
+  }, "Auth.generateRefreshToken");
 
   static verifyAccessToken = simpleErrorHandler<JwtPayload | null, string>((token) => {
       return new Promise((resolve, _reject) => {
-        jwt.verify(token, authConfigs.secretKey, (err, user) => {
+        jwt.verify(token, authConfigs.ACCESS_TOKEN_SECRET, (err, user) => {
+          if (err) {
+            resolve(null);
+          }
+          resolve(user as JwtPayload);
+        });
+      });
+    },
+    "Auth.verifyAccessToken"
+  );
+  static verifyRefreshToken = simpleErrorHandler<JwtPayload | null, string>((token) => {
+      return new Promise((resolve, _reject) => {
+        jwt.verify(token, authConfigs.REFRESH_TOKEN_SECRET, (err, user) => {
           if (err) {
             resolve(null);
           }

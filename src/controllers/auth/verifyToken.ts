@@ -2,22 +2,25 @@ import { NextFunction, Request, Response } from "express";
 import { Auth } from "../../models/auth";
 import { asyncErrorHandler } from "../../utils/asynErrorHandler";
 import { CustomError } from "../../utils/CustomError";
+import { authConfigs } from "../../configs/auth.configs";
 
 export const verifyToken = asyncErrorHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     
-    const { token: tokenCookie } = req.cookies as { token?: string };
-
+    const accessToken: string | undefined = req.cookies[authConfigs.ACCESS_TOKEN_COOKIE_NAME];
+    const refreshToken: string | undefined = req.cookies[authConfigs.REFRESH_TOKEN_COOKIE_NAME];
+    console.log(accessToken, refreshToken)
+    // const { token: tokenCookie } = req.cookies as { token?: string };
     const authorizationHeader = req.headers.authorization;
 
 
-    if (!tokenCookie && !authorizationHeader) {
+    if (accessToken === undefined && authorizationHeader === undefined) {
       const errTokenNotProvided = new CustomError(`No se proporcionó un token de autenticación.`,401,"Unauthorized");
       return next(errTokenNotProvided);
     }
 
     const [, tokenBearerSplited] = authorizationHeader?.split(" ") ?? [];
-    const tokenClient: string = tokenBearerSplited ?? tokenCookie!;
+    const tokenClient: string = tokenBearerSplited ?? accessToken!;
 
     const tokenPayload = await Auth.verifyAccessToken(tokenClient);
     if (!tokenPayload) {

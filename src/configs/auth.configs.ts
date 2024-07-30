@@ -2,6 +2,12 @@ import "dotenv/config";
 
 export const authConfigs = {
   secretKey: process.env.TOKEN_SECRET_KEY || "ojfdajEkhfHE4326.>",
+  ACCESS_TOKEN_SECRET: process.env.ACCESS_TOKEN_SECRET || "",
+  ACCESS_TOKEN_EXPIRE: process.env.ACCESS_TOKEN_EXPIRE || "",
+  ACCESS_TOKEN_COOKIE_NAME: process.env.ACCESS_TOKEN_COOKIE_NAME || "",
+  REFRESH_TOKEN_SECRET: process.env.REFRESH_TOKEN_SECRET || "",
+  REFRESH_TOKEN_EXPIRE: process.env.REFRESH_TOKEN_EXPIRE || "",
+  REFRESH_TOKEN_COOKIE_NAME: process.env.REFRESH_TOKEN_COOKIE_NAME || "",
 };
 
 // Gmail

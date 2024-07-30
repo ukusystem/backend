@@ -1,56 +1,87 @@
 import { Request,Response, NextFunction } from "express";
 import { Auth, UserInfo } from "../models/auth";
-// import {CustomRequest} from '../controllers/init/init'
 import { asyncErrorHandler } from "../utils/asynErrorHandler";
 import { CustomError } from "../utils/CustomError";
 import { RequestWithUser } from "../types/requests";
+import { authConfigs } from "../configs/auth.configs";
 
 export interface CustomRequest extends Request {
-  user?: UserInfo; // Agrega la propiedad 'user' a la interfaz
+  user?: UserInfo;
 }
 type permittedRoles = "Invitado" | "Usuario" | "Administrador"
 
-export const auth = asyncErrorHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
-  const { token } = req.cookies as { token?: string };
-  // Verificar si el token no está presente en la solicitud
-  if (!token) {
-    const errTokenNotProvided = new CustomError( `No se proporcionó un token de autenticación.`, 401, "Unauthorized" );
+
+export const authenticate = asyncErrorHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
+
+  const accessToken: string | undefined = req.cookies[authConfigs.ACCESS_TOKEN_COOKIE_NAME];
+  const refreshToken: string | undefined = req.cookies[authConfigs.REFRESH_TOKEN_COOKIE_NAME];
+
+  if (accessToken === undefined && refreshToken === undefined) {
+    const errTokenNotProvided = new CustomError( `Token no proporcionado`, 401, "Unauthorized" );
     return next(errTokenNotProvided);
   }
 
-  // Verificar la validez del token usando la clave secreta
-  const tokenPayload = await Auth.verifyAccessToken(token);
-  if (!tokenPayload) {
-    const errTokenNotValid = new CustomError( `Token no válido. La autenticación ha fallado.`, 401, "Unauthorized" );
-    return next(errTokenNotValid);
-  }
+  const tokenPayload = await Auth.verifyAccessToken(accessToken);
 
-  const userFound = await Auth.findUserById({ u_id: tokenPayload.id });
-  if (!userFound) {
-    const errUserNotFound = new CustomError(`Usuario no encontrado.`,404,"Not Found");
-    return next(errUserNotFound);
-  }
-  req.user = userFound;
-  next();
-})
+  if (tokenPayload !== null) {
 
-
-export const rolCheck = (allowedRoles:permittedRoles[]) => asyncErrorHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
-  // Verificar si el usuario tiene un rol válido
-  const user = req.user;
-  if(user){
-    if (!allowedRoles.includes(user.rol as permittedRoles)) {
-      const accessDeniedError = new CustomError(`Acceso denegado: No tienes los permisos necesarios.`,403,"Forbidden");
-       return next(accessDeniedError)
+    const userFound = await Auth.findUserById({ u_id: tokenPayload.id });
+    if (!userFound) {
+      const errUserNotFound = new CustomError(`Usuario no encontrado.`,404,"Not Found");
+      return next(errUserNotFound);
     }
+    req.user = userFound;
+    next();
+
+  }else{ // tokenPayload === null
+
+    if(refreshToken === null){
+      const errRefresTokenNotProvided = new CustomError( `Refresh token no proporcionado`, 401, "Unauthorized" );
+      return next(errRefresTokenNotProvided);
+    }
+
+    const tokenPayload = await Auth.verifyRefreshToken(refreshToken);
+
+    if( tokenPayload !== null){
+      const userFound = await Auth.findUserById({ u_id: tokenPayload.id });
+
+      if (userFound === null) {
+        const errUserNotFound = new CustomError(`Usuario no encontrado.`,404,"Not Found");
+        return next(errUserNotFound);
+      }
+
+      req.user = userFound;
+
+      const newAccessToken = await Auth.generateAccessToken({ id: userFound.u_id, rol: userFound.rol, });
+      // console.log("generando nuevo acceso token",newAccessToken )
+
+      res.cookie(authConfigs.ACCESS_TOKEN_COOKIE_NAME, newAccessToken, {
+        httpOnly: true, // acceso solo del servidor
+        secure: process.env.NODE_ENV === "production", // acceso solo con https
+        sameSite: "strict", // acceso del mismo dominio
+        // maxAge: 1000*60*60 // expiracion 1h
+        maxAge: 1000 * 60, // expiracion 1m
+      });
+
+      next();
+    }else{
+      const errTokenNotProvided = new CustomError( `Token no proporcionado`, 401, "Unauthorized" );
+      return next(errTokenNotProvided);
+    }
+
   }
-  next();
+
 })
 
 
 export const userRolCheck = (allowedRoles:permittedRoles[]) => asyncErrorHandler(async (req: RequestWithUser, res: Response, next: NextFunction) => {
 
-  const user = req.user!; // ! usuario auntentificado
+  const user = req.user;
+  
+  if(user === undefined){
+    const userNotAuthenticaded = new CustomError(`Usuario no autentificado`,401,"Unauthorized");
+    throw userNotAuthenticaded
+  }
 
   if(!allowedRoles.some((rol)=> rol === user.rol)){
     const accessDeniedError = new CustomError(`No tienes los permisos necesarios para acceder al recurso.`,403,"Acceso denegado");
