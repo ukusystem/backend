@@ -29,7 +29,7 @@ export const login = asyncErrorHandler(
     const token = await Auth.generateAccessJWT({ id: userFound.u_id, rol: userFound.rol, });
     res.cookie("token", token,{
       httpOnly: true , // acceso solo del servidor
-      secure: process.env.NODE_ENV === "produccion", // acceso solo con https
+      secure: process.env.NODE_ENV === "production", // acceso solo con https
       sameSite: "strict", // acceso del mismo dominio
       maxAge: 1000*60*60 // expiracion 1h
     } );
