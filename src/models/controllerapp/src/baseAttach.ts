@@ -207,6 +207,15 @@ export class BaseAttach extends Mortal {
     return false;
   }
 
+  /**
+   * 
+   * @param nodeID 
+   * @param month 
+   * @param year 
+   * @param current 
+   * @returns 
+   * @deprecated
+   */
   static async _checkTablesStatic(nodeID: number, month: number, year: number, current: boolean): Promise<boolean> {
     const nodeDB = BaseAttach.getNodeDBName(nodeID);
     if (current) {
@@ -224,6 +233,13 @@ export class BaseAttach extends Mortal {
     return true;
   }
 
+  /**
+   * 
+   * @param name 
+   * @param year 
+   * @returns 
+   * @deprecated
+   */
   private static async createTables(name: string, year: number): Promise<boolean> {
     let result =
       !!(await executeQuery<ResultSetHeader>(util.format(queries.createTemperatureTable, name, year, year, name))) &&
@@ -893,9 +909,21 @@ export class NodeAttach extends BaseAttach {
   private user;
   private password;
 
+  /**
+   * @deprecated
+   */
   private inputAI = 0;
+  /**
+   * @deprecated
+   */
   private outputAI = 0;
+  /**
+   * @deprecated
+   */
   private tempAI = 0;
+  /**
+   * @deprecated
+   */
   private energyAI = 0;
 
   /**
@@ -974,9 +1002,9 @@ export class NodeAttach extends BaseAttach {
         const potenciaw = power[6].getInt();
         const potenciakwh = power[7].getInt();
         const fecha = useful.formatTimestamp(power[0].getInt());
-        const powerYear = useful.getYearFromTimestamp(power[0].getInt());
+        // const powerYear = useful.getYearFromTimestamp(power[0].getInt());
 
-        const powerQuery = util.format(queries.insertPower, BaseAttach.getNodeDBName(this.controllerID), powerYear)
+        const powerQuery = util.format(queries.insertPower, BaseAttach.getNodeDBName(this.controllerID))
 
         if (await executeQuery<ResultSetHeader>(powerQuery, [medidorID, voltaje, amperaje, fdp, frecuencia, potenciaw, potenciakwh, fecha])) {
           this._log(`Inserted power`);
@@ -1005,7 +1033,7 @@ export class NodeAttach extends BaseAttach {
         // Get time of the measure
         const tempStamp = this.fixDateNumber(oneTemp[0].getInt());
         const currDate = useful.formatTimestamp(tempStamp);
-        const tempYear = useful.getYearFromTimestamp(tempStamp);
+        // const tempYear = useful.getYearFromTimestamp(tempStamp);
         // Get individual measures
         const paramsForRegister: any[] = [];
         // const paramsForCurrent: any[] = [];
@@ -1017,15 +1045,14 @@ export class NodeAttach extends BaseAttach {
           const sensorID = oneTemp[0].getInt();
           const sensorRead = oneTemp[1].getInt();
 
-          paramsForRegister.push([this.tempAI, sensorID, sensorRead, currDate]);
-          this.tempAI++
+          paramsForRegister.push([ sensorID, sensorRead, currDate]);
 
           // Send the data to the web app
           this._notifyTemp(sensorID, this.controllerID, null, sensorRead, null, null);
         }
         // Save all the readings periodically
         if (tempStamp >= this.lastTempStamp + NodeAttach.TEMP_SAVE_INTERVAL_S) {
-          await executeBatchForNode(queries.insertTemperature, this.controllerID, paramsForRegister, tempYear);
+          await executeBatchForNode(queries.insertTemperature, this.controllerID, paramsForRegister);
           this.lastTempStamp = tempStamp;
         }
 
@@ -1195,10 +1222,10 @@ export class NodeAttach extends BaseAttach {
         const state = pinData[1].getInt() == codes.VALUE_TO_ACTIVE ? 1 : 0;
         const pinDate = pinData[2].getInt();
         
-        const ioYear = useful.getYearFromTimestamp(pinDate);
+        // const ioYear = useful.getYearFromTimestamp(pinDate);
         switch (cmdOrValue) {
           case codes.CMD_INPUT_CHANGED:
-            await this.insertInputOutput(this.controllerID, pinData, true, ioYear);
+            await this.insertInputOutput(this.controllerID, pinData, true);
             // Send to the other backend
             this._notifyInput(true, pin, this.controllerID, null, null, state, null, useful.formatTimestamp(pinDate));
             // sm.PinesEntradaMap.add_update(
@@ -1209,7 +1236,7 @@ export class NodeAttach extends BaseAttach {
             // );
             break;
           case codes.CMD_OUTPUT_CHANGED:
-            await this.insertInputOutput(this.controllerID, pinData, false, ioYear);
+            await this.insertInputOutput(this.controllerID, pinData, false);
             // This is not necessary here since real time output states are not shown in the web app
             // this._notifyOutput()
 
@@ -1242,7 +1269,7 @@ export class NodeAttach extends BaseAttach {
           this._log("Error getting card info from database.");
         } else {
           if (cardInfo.length === 1) {
-            co_id = params[4] = cardInfo[0].co_id;
+            co_id = params[4] = isAdmin?0: cardInfo[0].co_id;
             ea_id = params[5] = cardInfo[0].ea_id;
             if (!isAdmin) {
               // Since there is a company registered for that number
@@ -1342,12 +1369,12 @@ export class NodeAttach extends BaseAttach {
    * @param pinData Event data.
    * @param insertQuery Query to insert the event.
    */
-  private async insertInputOutput(nodeID: number, pinData: DataStruct[], isInput: boolean, year: string) {
+  private async insertInputOutput(nodeID: number, pinData: DataStruct[], isInput: boolean) {
     if (!pinData) return;
     const dbName = BaseAttach.getNodeDBName(nodeID);
     const name = isInput ? "input changed" : "output changed";
     // Format the query since this kind has three format specifiers
-    const fullQuery = util.format(isInput ? queries.insertInputChanged : queries.insertOutputChanged, dbName, year, dbName);
+    const fullQuery = util.format(isInput ? queries.insertInputChanged : queries.insertOutputChanged, dbName, dbName);
     const isAlarm = pinData[3].getInt();
     if (
       await executeQuery<ResultSetHeader>(fullQuery, [
@@ -2182,17 +2209,18 @@ export class ManagerAttach extends BaseAttach {
     /**
      * Ensure tables for temperatures AFTER the table for the node exists.
      */
-    const year = useful.getYear();
-    const month = useful.getMonth();
-    if (!month || !year) {
-      this._log(`ERROR: Could not get the month or year for node ${nodeID}.`);
-      return false;
-    }
-    if (!(await BaseAttach._checkTablesStatic(nodeID, month, year, true))) {
-      this._log(`ERROR: Could not create temperature table for node ID ${nodeID}`);
-      return false;
-    }
-    this._log(`Database created for node ID ${nodeID}.`);
+    // const year = useful.getYear();
+    // const month = useful.getMonth();
+    // if (!month || !year) {
+    //   this._log(`ERROR: Could not get the month or year for node ${nodeID}.`);
+    //   return false;
+    // }
+    // if (!(await BaseAttach._checkTablesStatic(nodeID, month, year, true))) {
+    //   this._log(`ERROR: Could not create temperature table for node ID ${nodeID}`);
+    //   return false;
+    // }
+    // this._log(`Database created for node ID ${nodeID}.`);
+    
     return true;
   }
 
