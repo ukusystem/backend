@@ -24,11 +24,7 @@ import * as codes from "./codes";
 import * as db2 from "./db2";
 import * as sm from "../../../controllers/socket";
 import { Main } from "./main";
-const DEF_TXT = "Texto random";
-const DEF_ACTIVE = 1;
-const DEF_ORDER = 0;
-const DEF_ID = 1;
-const DEF_NUM = 0
+import { dns_v1beta2 } from "googleapis";
 
 /**
  * Base attachment for the sockets
@@ -199,10 +195,13 @@ export class BaseAttach extends Mortal {
     } else {
       const nodeAttach = <NodeAttach>key;
       if (key instanceof NodeAttach) {
-      // Delay connection if was unreachable
-      setTimeout(() => {
-        nodeAttach.tryConnectNode(selector, true);
-      }, unreachable? this.UNREACHABLE_INTERVAL_MS:1);
+        // Delay connection if was unreachable
+        setTimeout(
+          () => {
+            nodeAttach.tryConnectNode(selector, true);
+          },
+          unreachable ? this.UNREACHABLE_INTERVAL_MS : 1
+        );
       }
     }
     return false;
@@ -212,17 +211,26 @@ export class BaseAttach extends Mortal {
     const nodeDB = BaseAttach.getNodeDBName(nodeID);
     if (current) {
       // Verify that a temperature table of the current year exists.
-      if (!(await executeQuery<ResultSetHeader>(util.format(queries.createTemperatureTable, nodeDB, year, year, nodeDB)))) {
+      if (!(await BaseAttach.createTables(nodeDB, year))) {
         return false;
       }
     }
     // Next year's table
     if (month >= 11) {
-      if (!(await executeQuery<ResultSetHeader>(util.format(queries.createTemperatureTable, nodeDB, year + 1, year + 1, nodeDB)))) {
+      if (!(await BaseAttach.createTables(nodeDB, year + 1))) {
         return false;
       }
     }
     return true;
+  }
+
+  private static async createTables(name: string, year: number): Promise<boolean> {
+    let result =
+      !!(await executeQuery<ResultSetHeader>(util.format(queries.createTemperatureTable, name, year, year, name))) &&
+      !!(await executeQuery<ResultSetHeader>(util.format(queries.createEnergyTable, name, year, year, name))) &&
+      !!(await executeQuery<ResultSetHeader>(util.format(queries.createInputRegistreTable, name, year, year))) &&
+      !!(await executeQuery<ResultSetHeader>(util.format(queries.createOutputRegistreTable, name, year, year)));
+    return result;
   }
 
   /**
@@ -487,7 +495,7 @@ export class BaseAttach extends Mortal {
       autoIncrement = nextID[0].AUTO_INCREMENT;
     }
     this._addEnd(valueEnd, endID, autoIncrement);
-    this._log(`Added end with value 0x${valueEnd.toString(16)}`);
+    // this._log(`Added end with value 0x${valueEnd.toString(16)}`);
   }
 
   /**
@@ -621,7 +629,7 @@ export class BaseAttach extends Mortal {
     meID: number,
     nodeID: number,
     active: number | null = null,
-    serie: string | null = null,
+    // serie: string | null = null,
     desc: string | null = null,
     voltaje: number | null = null,
     amperaje: number | null = null,
@@ -706,8 +714,8 @@ export class BaseAttach extends Mortal {
       sm.PinesEntradaMap.add_update(newInput);
     }
     // To show in the 'alerts' section
-    if (resgister) {
-      sm.RegistroEntradaMap.add(new sm.RegistroEntradaSocketBad({ pin: pin, estado: state ?? DEF_ACTIVE, fecha: date ?? useful.DUMMY_DATE, ctrl_id: nodeID }));
+    if (resgister && state && date) {
+      sm.RegistroEntradaMap.add(new sm.RegistroEntradaSocketBad({ pin: pin, estado: state, fecha: date, ctrl_id: nodeID }));
     }
   }
 
@@ -725,13 +733,13 @@ export class BaseAttach extends Mortal {
     const newOutput = new sm.PinesSalidaSocketBad({
       ps_id: pin,
       pin: pin,
-      es_id: es_id ,
-      descripcion: desc ,
-      estado: state ,
-      activo: active ,
+      es_id: es_id,
+      descripcion: desc,
+      estado: state,
+      activo: active,
       automatico: auto,
       ctrl_id: nodeID,
-      orden: order ,
+      orden: order,
     });
     // To disable the pin
     if (active === 0) {
@@ -876,7 +884,7 @@ export class NodeAttach extends BaseAttach {
    */
   private static readonly TEMP_SAVE_INTERVAL_S = 5 * 60;
   private lastTempStamp = 0;
-  private unreached = false
+  private unreached = false;
 
   readonly controllerID;
   private node = "";
@@ -884,6 +892,11 @@ export class NodeAttach extends BaseAttach {
   private ip;
   private user;
   private password;
+
+  private inputAI = 0;
+  private outputAI = 0;
+  private tempAI = 0;
+  private energyAI = 0;
 
   /**
    * Used to get the connection state of the socket for the manager. This is true
@@ -911,12 +924,22 @@ export class NodeAttach extends BaseAttach {
     return this.port;
   }
 
+  setIncrements(input:number, output:number, temp:number, energy:number){
+    if(this.inputAI===0 && this.outputAI===0 && this.tempAI=== 0 && this.energyAI===0){
+      this.inputAI = input
+      this.outputAI = output
+      this.tempAI = temp
+      this.energyAI = energy
+    }
+    this._log(`${this.inputAI} ${this.outputAI} ${this.tempAI} ${this.energyAI}`);
+  }
+
   static getInstanceFromPacket(data: db2.Controlador2, logger: Logger): NodeAttach {
     return new NodeAttach(data.ctrl_id, data.nodo, data.ip, data.puerto, data.usuario, data.contraseña, logger);
   }
 
   /**
-   * 
+   *
    * @param date Original timetamp in seconds.
    * @returns A valid value accepted by the database.
    */
@@ -951,18 +974,18 @@ export class NodeAttach extends BaseAttach {
         const potenciaw = power[6].getInt();
         const potenciakwh = power[7].getInt();
         const fecha = useful.formatTimestamp(power[0].getInt());
-        this.insertSilent("power measure", [medidorID, voltaje, amperaje, fdp, frecuencia, potenciaw, potenciakwh, fecha], queries.insertPower, this.controllerID, false);
-        // This is not necessary any more
-        // this.insertSilent(
-        //   "current power",
-        //   [voltaje, amperaje, fdp, frecuencia, potenciaw, potenciakwh, medidorID],
-        //   queries.updatePower,
-        //   this.controllerID,
-        //   false
-        // );
+        const powerYear = useful.getYearFromTimestamp(power[0].getInt());
+
+        const powerQuery = util.format(queries.insertPower, BaseAttach.getNodeDBName(this.controllerID), powerYear)
+
+        if (await executeQuery<ResultSetHeader>(powerQuery, [medidorID, voltaje, amperaje, fdp, frecuencia, potenciaw, potenciakwh, fecha])) {
+          this._log(`Inserted power`);
+        } else {
+          this._log(`Error saving power`);
+        }
 
         // Notify web about the energy
-        this._notifyEnergy(medidorID, this.controllerID, null, null, null, voltaje, amperaje, fdp, frecuencia, potenciaw, potenciakwh);
+        this._notifyEnergy(medidorID, this.controllerID, null, null, voltaje, amperaje, fdp, frecuencia, potenciaw, potenciakwh);
 
         break;
       case codes.CMD_TEMP:
@@ -993,21 +1016,9 @@ export class NodeAttach extends BaseAttach {
           oneTemp = oneTempOptional;
           const sensorID = oneTemp[0].getInt();
           const sensorRead = oneTemp[1].getInt();
-          // sb.append(oneTemp[0].getInt())
-          // sb.append("=")
-          // sb.append(oneTemp[1].getInt())
-          // sb.append(";")
-          //this._log\("%d",big.longValue())
-          paramsForRegister.push([sensorID, sensorRead, currDate]);
-          // paramsForCurrent.push([sensorRead, sensorID]);
 
-          // insertSilent("temperature",
-          // new Object[] { oneTemp[0].getInt(), oneTemp[1].getInt(),
-          // useful.formatTimestamp(big) },
-          // queries.insertTemperature, this.controllerID, false)
-          // insertSilent("current temperture", new Object[] { oneTemp[1].getInt(),
-          // oneTemp[0].getInt() },
-          // queries.setCurrentTemperature, this.controllerID, false)
+          paramsForRegister.push([this.tempAI, sensorID, sensorRead, currDate]);
+          this.tempAI++
 
           // Send the data to the web app
           this._notifyTemp(sensorID, this.controllerID, null, sensorRead, null, null);
@@ -1078,14 +1089,14 @@ export class NodeAttach extends BaseAttach {
           this._notifyTemp(temp[1], this.controllerID, temp[0], null, null, null);
         }
         for (let energy of paramsForEnergy) {
-          this._notifyEnergy(energy[1], this.controllerID, energy[0], null, null, null, null, null, null, null, null);
+          this._notifyEnergy(energy[1], this.controllerID, energy[0], null, null, null, null, null, null, null);
         }
         break;
       case codes.VALUE_ENERGY_ENABLE_ONE:
         this._log(`Received energy enable changed '${command}'`);
         const energyRes = await this.updatePeriferalEnable(parts, queries.updateEnergyEnable);
         if (energyRes) {
-          this._notifyEnergy(energyRes.pinID, this.controllerID, energyRes.enable, null, null, null, null, null, null, null, null);
+          this._notifyEnergy(energyRes.pinID, this.controllerID, energyRes.enable, null, null, null, null, null, null, null);
         }
         break;
       case codes.VALUE_INPUT_ENABLE_ONE:
@@ -1183,9 +1194,11 @@ export class NodeAttach extends BaseAttach {
         const pin = pinData[0].getInt();
         const state = pinData[1].getInt() == codes.VALUE_TO_ACTIVE ? 1 : 0;
         const pinDate = pinData[2].getInt();
+        
+        const ioYear = useful.getYearFromTimestamp(pinDate);
         switch (cmdOrValue) {
           case codes.CMD_INPUT_CHANGED:
-            await this.insertInputOutput("input changed", this.controllerID, pinData, queries.insertInputChanged);
+            await this.insertInputOutput(this.controllerID, pinData, true, ioYear);
             // Send to the other backend
             this._notifyInput(true, pin, this.controllerID, null, null, state, null, useful.formatTimestamp(pinDate));
             // sm.PinesEntradaMap.add_update(
@@ -1196,7 +1209,7 @@ export class NodeAttach extends BaseAttach {
             // );
             break;
           case codes.CMD_OUTPUT_CHANGED:
-            await this.insertInputOutput("output changed", this.controllerID, pinData, queries.insertOutputChanged);
+            await this.insertInputOutput(this.controllerID, pinData, false, ioYear);
             // This is not necessary here since real time output states are not shown in the web app
             // this._notifyOutput()
 
@@ -1221,22 +1234,34 @@ export class NodeAttach extends BaseAttach {
         // The subnode id is still being designed, so a trivial value us used. This
         // value must exist in the table 'nodo'.'subnodo'
         const params = [serial, isAdmin, autorizado, date, 0, 0, isEntrance, 1];
-        this._log(`(${date}) Card read. Number = ${serial} result = ${autorizado} admin = ${isAdmin} reader type = ${isEntrance>0?'Entrance':'Exit'}`);
+        this._log(`(${date}) Card read. ID = ${cardID} Number = ${serial} result = ${autorizado} admin = ${isAdmin} reader type = ${isEntrance > 0 ? "Entrance" : "Exit"}`);
         const cardInfo = await executeQuery<db2.CardInfo[]>(queries.getCardInfo, [cardID]);
-        let co_id = 0
-        let ea_id = 0
-        if (!cardInfo || cardInfo?.length!==1) {
+        let co_id = 0;
+        let ea_id = 0;
+        if (!cardInfo || cardInfo?.length !== 1) {
           this._log("Error getting card info from database.");
         } else {
           if (cardInfo.length === 1) {
             co_id = params[4] = cardInfo[0].co_id;
             ea_id = params[5] = cardInfo[0].ea_id;
+            if (!isAdmin) {
+              // Since there is a company registered for that number
+              const tickets = await executeQuery<db2.GeneralNumber[]>(BaseAttach.formatQueryWithNode(queries.selectUnattendedTicket, this.controllerID), [co_id, date, date]);
+              if (tickets) {
+                for (const ticket of tickets) {
+                  const updateRes = await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.updateAttendance, this.controllerID), [ticket.entero]);
+                  if (updateRes) {
+                    this._log(`Ticket ID = ${ticket.entero} set to attended.`);
+                  }
+                }
+              }
+            }
           } else {
             this._log(`No rows returned for card ID = ${cardID}.`);
           }
         }
         this.insertSilent("card", params, queries.insertCard, this.controllerID, true);
-        this._notifyCard(serial,isAdmin,autorizado?1:0,date,co_id,ea_id,isEntrance,this.controllerID)
+        this._notifyCard(serial, isAdmin, autorizado ? 1 : 0, date, co_id, ea_id, isEntrance, this.controllerID);
         break;
       case codes.CMD_ERR:
         this._log(`Received internal error '${command}'`);
@@ -1277,6 +1302,7 @@ export class NodeAttach extends BaseAttach {
           }
         }
         this.removePendingMessageByID(id, codes.AIO_OK);
+        this.insertNet(true)
         this._log("Logged in to controller");
         break;
       case codes.VALUE_ORDER_RESULT:
@@ -1301,7 +1327,7 @@ export class NodeAttach extends BaseAttach {
             this._log(`Wrong order result received from controller ${originalOrder}`);
             break;
         }
-        this._notifyOutput(orderData[0].getInt(),false,this.controllerID,null,null,null,null,newOrder);
+        this._notifyOutput(orderData[0].getInt(), false, this.controllerID, null, null, null, null, newOrder);
         break;
       default:
         return false;
@@ -1316,18 +1342,26 @@ export class NodeAttach extends BaseAttach {
    * @param pinData Event data.
    * @param insertQuery Query to insert the event.
    */
-  private async insertInputOutput(name: string, nodeID: number, pinData: DataStruct[], insertQuery: string) {
-    // Pre-format the query since this kind has two format specifiers
-    const middleQuery = BaseAttach.formatQueryWithNode(insertQuery, nodeID);
-    await this.insertSilent(
-      name,
-      [pinData[0].getInt(), pinData[1].getInt() == codes.VALUE_TO_ACTIVE ? 1 : 0, useful.formatTimestamp(this.fixDateNumber(pinData[2].getInt())), pinData[0].getInt()],
-      middleQuery,
-      nodeID,
-      true
-    );
-    // This is no longer needed
-    // await this.insertSilent(name, [pinData[1].getInt() == codes.VALUE_TO_ACTIVE ? 1 : 0, pinData[0].getInt()], updateQuery, nodeID, true);
+  private async insertInputOutput(nodeID: number, pinData: DataStruct[], isInput: boolean, year: string) {
+    if (!pinData) return;
+    const dbName = BaseAttach.getNodeDBName(nodeID);
+    const name = isInput ? "input changed" : "output changed";
+    // Format the query since this kind has three format specifiers
+    const fullQuery = util.format(isInput ? queries.insertInputChanged : queries.insertOutputChanged, dbName, year, dbName);
+    const isAlarm = pinData[3].getInt();
+    if (
+      await executeQuery<ResultSetHeader>(fullQuery, [
+        pinData[0].getInt(),
+        pinData[1].getInt() == codes.VALUE_TO_ACTIVE ? 1 : 0,
+        useful.formatTimestamp(this.fixDateNumber(pinData[2].getInt())),
+        pinData[0].getInt(),
+        isAlarm
+      ])
+    ) {
+      this._log(`Inserted: ${name}`);
+    } else {
+      this._log(`Error saving silent: ${name}`);
+    }
   }
 
   private mirrorMessage(command: string, logOnSend: boolean) {
@@ -1436,7 +1470,7 @@ export class NodeAttach extends BaseAttach {
    * @param body
    * @param logOnSend Whether to log this message when sending it.
    * @param logOnResponse
-   * @param action 
+   * @param action
    * @returns
    * @see {@linkcode addCommandForController}
    */
@@ -1452,7 +1486,8 @@ export class NodeAttach extends BaseAttach {
   addLogin() {
     const pwd = Encryption.decrypt(this.password, true);
     if (pwd) {
-      this._addOne(new Message(codes.CMD_LOGIN, -1, [this.user, pwd]));
+      this._addOne(new Message(codes.CMD_LOGIN, -1, [this.user, pwd]).setLogOnSend(false));
+      this._log(`Added login`);
     }
   }
 
@@ -1462,12 +1497,12 @@ export class NodeAttach extends BaseAttach {
    * @param log Whether to log when the socket is connected.
    * @param push Whether to add the new attachment to the list.
    */
-  tryConnectNode(selector: Selector, log: boolean, push:boolean = true) {
+  tryConnectNode(selector: Selector, log: boolean, push: boolean = true) {
     const controllerSocket = net.createConnection(this.port, this.ip, () => {
       if (log) {
         this._log("Socket connect callback");
       }
-      this.unreached = false
+      this.unreached = false;
       this.addLogin();
       this.addHello(0, 0);
     });
@@ -1491,7 +1526,7 @@ export class NodeAttach extends BaseAttach {
 
     // Triggers 'end' and 'close' events
     controllerSocket.on("error", (err: any) => {
-      this.unreached = false
+      this.unreached = false;
       // this._log(`Error on controller ${err.code}`);
       if (err.code == "ENOTFOUND") {
         // this._log(`No device found at '${this.ip}'`)
@@ -1502,11 +1537,11 @@ export class NodeAttach extends BaseAttach {
         // this._log(`Connection reseted`)
       } else if (err.code == "ECONNREFUSED") {
         // this._log(`Connection refused`)
-      }else if (err.code == "EHOSTUNREACH"){
+      } else if (err.code == "EHOSTUNREACH") {
         // When pulling the server wire, all attempts to connect are rejected immediately. This emits 'error' and that emits 'close'.
         // If the code tries to reconnect a controller, this results in a fast loop of connect and close.
         // this._log(`Unreachable ${this.ip}.`)
-        this.unreached = true
+        this.unreached = true;
       }
     });
 
@@ -1859,7 +1894,7 @@ export class ManagerAttach extends BaseAttach {
                   switch (valueToSet) {
                     case codes.VALUE_COMPANY:
                       await this._updateItem("company", companyData, queries.companyUpdate, id);
-                      this.printKeyCount(selector)
+                      this.printKeyCount(selector);
                       break;
                     case codes.VALUE_COMPANY_ADD:
                       await this._insertItem("company", companyData, queries.companyInsert, id);
@@ -2055,7 +2090,7 @@ export class ManagerAttach extends BaseAttach {
                       const energyData = this._parseMessage(parts, queries.energyParse, id);
                       await this._updateItem("energy reader", energyData, queries.energyUpdate, id, targetNodeID);
                       if (energyData) {
-                        this._notifyEnergy(energyData[0].getInt(), targetNodeID, null, null, energyData[1].getString(), null, null, null, null, null, null);
+                        this._notifyEnergy(energyData[0].getInt(), targetNodeID, null, energyData[1].getString(), null, null, null, null, null, null);
                       }
                       break;
                     case codes.VALUE_TEMP_SENSOR:
@@ -2222,9 +2257,9 @@ export class ManagerAttach extends BaseAttach {
        */
       if (!currentAttach.loggedToController || forceReconnect) {
         this._log(`About to cancel and reconnect node ID ${currentAttach.controllerID}.`);
-        
+
         // Save all the data that was received and update attachment
-        
+
         await this._updateItem("node", this.completeNodeData, updateQuery, id);
         const newData = await this.getOneControllerData(nodeID);
         if (!newData) {
@@ -2234,7 +2269,7 @@ export class ManagerAttach extends BaseAttach {
 
         // Reset node attachment data and connect with the new data
 
-        BaseAttach.simpleReconnect(selector,currentAttach)
+        BaseAttach.simpleReconnect(selector, currentAttach);
 
         // selector.cancelChannel(currentAttach);
         // currentAttach.tryConnectNode(selector, true);
@@ -2440,11 +2475,11 @@ export class ManagerAttach extends BaseAttach {
         count++;
       }
     }
-    this._log(`Added ${count} workers with value 0x${codes.VALUE_WORKER.toString(16)}`);
+    // this._log(`Added ${count} workers with value 0x${codes.VALUE_WORKER.toString(16)}`);
     // Add end of workers
     if (nextID && nextID.length === 1) {
       this._addEnd(codes.VALUE_WORKER_END, endID, nextID[0].AUTO_INCREMENT);
-      this._log("Added end workers.");
+      // this._log("Added end workers.");
     }
   }
 
@@ -2473,11 +2508,11 @@ export class ManagerAttach extends BaseAttach {
       // this._log(`${count}`)
       count++;
     }
-    this._log(`Added ${count} nodes with value 0x${codes.VALUE_NODE.toString(16)}.`);
+    // this._log(`Added ${count} nodes with value 0x${codes.VALUE_NODE.toString(16)}.`);
     // Add end of nodes
     if (nextID && nextID.length === 1) {
       this._addEnd(codes.VALUE_NODES_END, endID, nextID[0].AUTO_INCREMENT);
-      this._log("Added end nodes.");
+      // this._log("Added end nodes.");
     }
   }
 }
@@ -2549,19 +2584,19 @@ export class Selector {
     if (attach instanceof NodeAttach) {
       // Remove node attachment
       const idx = this.nodeAttachments.indexOf(attach);
-      if(idx>=0){
+      if (idx >= 0) {
         this.nodeAttachments.splice(idx, 1);
       }
       // console.log('Was a NodeAttach.')
-    } else if (attach instanceof ManagerAttach){
+    } else if (attach instanceof ManagerAttach) {
       // Remove manager attachment
       const index = this.managerConnections.indexOf(attach);
-      if(index>=0){
+      if (index >= 0) {
         this.managerConnections.splice(index, 1);
       }
       console.log("Was a ManagerAttach.");
-    }else{
-      console.log('Unknown instance.')
+    } else {
+      console.log("Unknown instance.");
     }
   }
 

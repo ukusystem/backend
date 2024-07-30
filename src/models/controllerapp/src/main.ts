@@ -27,6 +27,7 @@ import * as util from "util";
 import * as net from "net";
 import { CameraMotionMap } from "../../camera/CameraMotion";
 import * as cp from "child_process";
+import { sql } from "googleapis/build/src/apis/sql";
 
 export class Main {
   /**
@@ -348,6 +349,24 @@ export class Main {
     // Verify temperature tables before the communication with the nodes start
     if (!(await this.checkTablesForNodes(true))) {
       return false;
+    }
+
+    for (const node of this.selector.nodeAttachments){
+      // Get current year.
+      const year = useful.getYear();
+      // Get auto increments from the tables for the current year.
+      const nodeName = BaseAttach.getNodeDBName(node.controllerID)
+      const inputAI = await executeQuery<db2.ID[]>(util.format(queries.nextIDForNode, `registroentrada${year}`, nodeName), [], true);
+      const outputAI = await executeQuery<db2.ID[]>(util.format(queries.nextIDForNode, `registrosalida${year}`, nodeName), [], true);
+      const tempAI = await executeQuery<db2.ID[]>(util.format(queries.nextIDForNode, `registrotemperatura${year}`, nodeName), [], true);
+      const energyAI = await executeQuery<db2.ID[]>(util.format(queries.nextIDForNode, `registroenergia${year}`, nodeName), [], true);
+      // Set those as the next ids to be used.
+      console.log(tempAI)
+      if((tempAI?.length === 1) && (energyAI?.length === 1) && (inputAI?.length === 1) && (outputAI?.length === 1)){
+        node.setIncrements(inputAI[0].AUTO_INCREMENT, outputAI[0].AUTO_INCREMENT, tempAI[0].AUTO_INCREMENT, energyAI[0].AUTO_INCREMENT)
+      }else{
+        this.log(`Error getting auto increments`)
+      }
     }
 
     // Set a monthly timer to create tables for the following years if the month>=11
@@ -959,7 +978,10 @@ export class Main {
         const change = cam.getChange();
         if (change !== Changes.NONE) {
           this.log(`Camera ID = ${cam.cameraID} in node ID = ${cam.nodeID} changed state to ${change === Changes.TO_ACTIVE ? "ACTIVO" : "INACTIVO"}`);
-          await executeQuery(BaseAttach.formatQueryWithNode(queries.insertCameraState, cam.nodeID), [cam.cameraID, useful.getCurrentDate(), change === Changes.TO_ACTIVE]);
+          await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.insertCameraState, cam.nodeID), [cam.cameraID, useful.getCurrentDate(), change === Changes.TO_ACTIVE]);
+          // Update instant state
+          const changeBool = change === Changes.TO_ACTIVE;
+          await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.cameraSetNet, cam.nodeID),[changeBool, cam.cameraID])
           if (change === Changes.TO_ACTIVE) {
             this.log(`Reconnecting camera ${cam.cameraIP}`);
             CameraMotionMap.reconnect(cam.cameraID, cam.nodeID);

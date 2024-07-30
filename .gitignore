@@ -1,6 +1,7 @@
 node_modules
 logs
 photos
+!photos/registered/foto1.png
 crtssl
 build
 deteccionmovimiento
