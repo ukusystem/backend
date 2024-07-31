@@ -8,6 +8,7 @@ export const getFotoActividadPersonal = asyncErrorHandler(
   async (req: Request, res: Response, next: NextFunction) => {
 
     const {imgPath} =req.query as {imgPath: string} // imgPath is encodedURIComponent
+    console.log("get", imgPath)
     const imgPathFinal = path.resolve("./", decodeURIComponent(imgPath));
 
     res.sendFile(imgPathFinal,(err)=>{

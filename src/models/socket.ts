@@ -1,6 +1,6 @@
 import { Server as HttpServer } from "http";
 import { Server } from "socket.io";
-import {  energiaSocket, pinesEntradaSocket, sensorTemperaturaSocket, ticketSocket , streamRecordSocket, lastSnapshotSocket, sensorTemperaturaSocketFinal, moduloEnergiaSocket, pinesEntradaSocketFinal, registroEntradaSocket, SensorTemperaturaMap, registroAccesoSocket } from "../controllers/socket";
+import {  energiaSocket, pinesEntradaSocket, sensorTemperaturaSocket, ticketSocket , streamRecordSocket, lastSnapshotSocket, sensorTemperaturaSocketFinal, moduloEnergiaSocket, pinesEntradaSocketFinal, registroEntradaSocket, SensorTemperaturaMap, registroAccesoSocket, voiceStreamSocket } from "../controllers/socket";
 import { streamSocketFinal } from "../controllers/socket/streamFinal";
 import { Auth } from "./auth";
 import { pinesSalidaSocket } from "../controllers/socket/pinesSalida";
@@ -128,6 +128,10 @@ export class Sockets {
 
     // Namespace : "/lastsnapshot/ctrl_id"
     this.#io.of(/^\/lastsnapshot\/\d+$/).on("connection", (socket) => { lastSnapshotSocket(this.#io, socket); });
+
+    // Namespace: "/voice_stream/ctrl_id/ip"
+    this.#io.of(/^\/voice_stream\/(\d+)\/([\d\.]+)$/).on("connection", (socket) => { voiceStreamSocket(this.#io, socket);});
+
   }
 
   static #parserCookie(cookies: string | undefined) {

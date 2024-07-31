@@ -10,3 +10,5 @@ export * from "./recordStream"
 export * from "./lastSnapshot"
 export * from "./pinesSalida"
 
+export * from "./voicestream"
+

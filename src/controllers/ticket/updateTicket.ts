@@ -63,18 +63,6 @@ export const upadateTicket = asyncErrorHandler(
               return res.status(500).json({ success: false, message: "Internal Server Error, Backend-Technician", });
             }
             
-
-            // const response = await fetch( `http://${TECHNICIAN_SERVER_IP}:${TECHNICIAN_PORT}/servlets/ticketaction`, { method: "POST", body: JSON.stringify({ action, ctrl_id, rt_id }) } );
-            // const responseJson = await response.json()
-            
-            // if (response.ok) {
-            //   return res.json({success: true,message: "Accion realizada con éxito",});
-            // } else {
-            //   const statusCode = response.status;
-            //   console.log(responseJson)
-            //   return res.status(statusCode).json({ success: false, message: "Ocurrrio un error al ejecutar la acción.", });
-            // }
-
           }
         }
 
@@ -99,18 +87,6 @@ export const upadateTicket = asyncErrorHandler(
               } catch (error) {
                 return res.status(500).json({ success: false, message: "Internal Server Error, Backend-Technician", });
               }
-
-              // const response = await fetch( `http://${TECHNICIAN_SERVER_IP}:${TECHNICIAN_PORT}/servlets/ticketaction`, { method: "POST", body: JSON.stringify({ action, ctrl_id, rt_id }) } );
-              // const responseJson = await response.json()
-              
-              // if (response.ok) {
-                
-              //   return res.json({success: true,message: "Accion realizada con éxito",});
-              // } else {
-              //   const statusCode = response.status;
-              //   console.log(responseJson)
-              //   return res.status(statusCode).json({ success: false, message: "Ocurrrio un error al ejecutar la acción.", });
-              // }
   
             }
           }

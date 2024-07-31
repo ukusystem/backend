@@ -1,6 +1,5 @@
 import express, { Application } from "express";
 import cookieParser from "cookie-parser";
-import { PORT } from "../configs/server.configs";
 import { MySQL2 } from "../database/mysql";
 import cors from "cors";
 import { authRoutes } from "../routes/auth.routes";
@@ -23,6 +22,7 @@ import { main } from "./controllerapp/controller";
 import { MedidorEnergiaMap, PinesEntradaMap, PinesSalidaMap, RegistroAccesoMap, RegistroEntradaMap, SensorTemperaturaMap } from "../controllers/socket";
 import { ContrataMap, EquipoAccesoMap, EquipoEntradaMap, EquipoSalidaMap } from "./maps";
 import { dashboardRouter } from "../routes/dashboard.routes";
+import { appConfig } from "../configs";
 
 // import { createServer as createServerHttps } from "https";
 // import fs from "fs";
@@ -34,7 +34,7 @@ export class ServerApp {
   
   constructor() {
     this.#app = express();
-    this.#port = PORT;
+    this.#port = appConfig.server.port;
     this.#httpServer = createServer(this.#app);
     // this.#httpServer = createServerHttps(
     //   {

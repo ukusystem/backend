@@ -3,18 +3,19 @@ import { Auth, UserInfo } from "../models/auth";
 import { asyncErrorHandler } from "../utils/asynErrorHandler";
 import { CustomError } from "../utils/CustomError";
 import { RequestWithUser } from "../types/requests";
-import { authConfigs } from "../configs/auth.configs";
+import { appConfig } from "../configs";
 
 export interface CustomRequest extends Request {
   user?: UserInfo;
 }
+
 type permittedRoles = "Invitado" | "Usuario" | "Administrador"
 
 
 export const authenticate = asyncErrorHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
 
-  const accessToken: string | undefined = req.cookies[authConfigs.ACCESS_TOKEN_COOKIE_NAME];
-  const refreshToken: string | undefined = req.cookies[authConfigs.REFRESH_TOKEN_COOKIE_NAME];
+  const accessToken: string | undefined = req.cookies[appConfig.cookie.access_token.name];
+  const refreshToken: string | undefined = req.cookies[appConfig.cookie.refresh_token.name];
 
   if (accessToken === undefined && refreshToken === undefined) {
     const errTokenNotProvided = new CustomError( `Token no proporcionado`, 401, "Unauthorized" );
@@ -55,12 +56,12 @@ export const authenticate = asyncErrorHandler(async (req: CustomRequest, res: Re
       const newAccessToken = await Auth.generateAccessToken({ id: userFound.u_id, rol: userFound.rol, });
       // console.log("generando nuevo acceso token",newAccessToken )
 
-      res.cookie(authConfigs.ACCESS_TOKEN_COOKIE_NAME, newAccessToken, {
+      res.cookie(appConfig.cookie.access_token.name, newAccessToken, {
         httpOnly: true, // acceso solo del servidor
         secure: process.env.NODE_ENV === "production", // acceso solo con https
         sameSite: "strict", // acceso del mismo dominio
         // maxAge: 1000*60*60 // expiracion 1h
-        maxAge: 1000 * 60, // expiracion 1m
+        maxAge: appConfig.cookie.access_token.max_age, // expiracion 1m
       });
 
       next();

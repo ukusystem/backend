@@ -1,17 +1,16 @@
 import { MySQL2 } from "../database/mysql";
-import { authConfigs } from "../configs/auth.configs";
 import jwt from "jsonwebtoken";
 import { RowDataPacket } from "mysql2";
 import { simpleErrorHandler } from "../utils/simpleErrorHandler";
 
 import {Contrata, Personal, Rol, Rubro, Usuario} from '../types/db'
+import { appConfig } from "../configs";
 
 interface JwtPayload {
   sub: string;
   exp: number;
   id: number;
   rol: string;
-  // Otros campos personalizados
 }
 
 export type UserInfo = Pick<Usuario,"u_id"|"usuario"|"contraseña"|"rl_id"|"fecha"|"p_id"> & Pick<Personal,"nombre"|"apellido"|"dni"|"telefono"|"correo"|"c_id"> & Pick<Contrata,"contrata"|"co_id"> & Pick<Rubro,"rubro"> & Pick<Rol,"rl_id"|"rol"|"descripcion">
@@ -48,8 +47,8 @@ export class Auth {
     return new Promise((resolve, reject) => {
       jwt.sign(
         payload,
-        authConfigs.ACCESS_TOKEN_SECRET,
-        { expiresIn: authConfigs.ACCESS_TOKEN_EXPIRE },
+        appConfig.jwt.access_token.secret,
+        { expiresIn: appConfig.jwt.access_token.expire },
         (err, token) => {
           if (err) reject(err);
           resolve(token);
@@ -62,8 +61,8 @@ export class Auth {
     return new Promise((resolve, reject) => {
       jwt.sign(
         payload,
-        authConfigs.REFRESH_TOKEN_SECRET,
-        { expiresIn: authConfigs.REFRESH_TOKEN_EXPIRE },
+        appConfig.jwt.refresh_token.secret,
+        { expiresIn: appConfig.jwt.refresh_token.expire },
         (err, token) => {
           if (err) reject(err);
           resolve(token);
@@ -74,7 +73,7 @@ export class Auth {
 
   static verifyAccessToken = simpleErrorHandler<JwtPayload | null, string>((token) => {
       return new Promise((resolve, _reject) => {
-        jwt.verify(token, authConfigs.ACCESS_TOKEN_SECRET, (err, user) => {
+        jwt.verify(token, appConfig.jwt.access_token.secret, (err, user) => {
           if (err) {
             resolve(null);
           }
@@ -86,7 +85,7 @@ export class Auth {
   );
   static verifyRefreshToken = simpleErrorHandler<JwtPayload | null, string>((token) => {
       return new Promise((resolve, _reject) => {
-        jwt.verify(token, authConfigs.REFRESH_TOKEN_SECRET, (err, user) => {
+        jwt.verify(token, appConfig.jwt.refresh_token.secret, (err, user) => {
           if (err) {
             resolve(null);
           }

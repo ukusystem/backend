@@ -15,7 +15,7 @@ import { Bundle } from "./bundle";
 import { Logger } from "./logger";
 import { Mortal } from "./mortal";
 import util from "util";
-import * as config from "./../../../configs/server.configs";
+import { appConfig } from "../../../configs";
 import * as cp from "child_process";
 import * as queries from "./queries";
 import * as useful from "./useful";
@@ -2166,7 +2166,7 @@ export class ManagerAttach extends BaseAttach {
       // The timeout generates an error in the callback?
       try {
         cp.execSync(
-          `cmd.exe /c mysqldump -u ${config.DB_USER} -p${config.DB_PWD} nodo | mysql -u ${config.DB_USER} -p${config.DB_PWD} ${newNode}`,
+          `cmd.exe /c mysqldump -u ${appConfig.db.user} -p${appConfig.db.password} nodo | mysql -u ${appConfig.db.user} -p${appConfig.db.password} ${newNode}`,
           // `cmd.exe /c mysqldump -u root -padmin nodo | mysql -u root -padmin ${newNode}`,
           { timeout: BaseAttach.PROCESS_TIMEOUT }
         );

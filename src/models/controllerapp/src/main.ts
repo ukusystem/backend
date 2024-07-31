@@ -18,7 +18,7 @@ import { Mortal } from "./mortal";
 import { Ticket ,type  Personal, type Solicitante } from "./ticket";
 import { PinOrder } from "./types";
 import fs from "fs";
-import * as config from "./../../../configs/server.configs";
+import { appConfig } from "../../../configs";
 import * as queries from "./queries";
 import * as useful from "./useful";
 import * as codes from "./codes";
@@ -323,8 +323,8 @@ export class Main {
       this.log(`ERROR listening to managers. Code ${e.code}`);
     });
 
-    this.managerServer.listen(config.MANAGER_PORT, config.SERVER_IP, 16, () => {
-      this.log(`Server for managers listening on ${config.MANAGER_PORT}`);
+    this.managerServer.listen( appConfig.server.manager_port , appConfig.server.ip , 16, () => {
+      this.log(`Server for managers listening on ${appConfig.server.manager_port}`);
     });
   }
 
