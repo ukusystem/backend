@@ -4,6 +4,7 @@ import {  energiaSocket, pinesEntradaSocket, sensorTemperaturaSocket, ticketSock
 import { streamSocketFinal } from "../controllers/socket/streamFinal";
 import { Auth } from "./auth";
 import { pinesSalidaSocket } from "../controllers/socket/pinesSalida";
+import { voiceStreamSocketTest } from "../controllers/socket/voicestreamTest";
 
 function parserCookie(cookies: string | undefined) {
   if (cookies === undefined) {
