@@ -7,9 +7,7 @@ import { PoolOptions } from "mysql2";
 import { encryptEnv ,IEncryptEnv  } from "./encrypt.configs";
 import { cookieEnv ,ICookieEnv} from "./cookie.config";
 
-
 const zodEnv = jwtEnv.merge(dbEnv).merge(emailEnv).merge(serverEnv).merge(encryptEnv).merge(cookieEnv)
-
 
 declare global {
   namespace NodeJS {
@@ -17,10 +15,10 @@ declare global {
   }
 }
 
-const {success,data : validatedEnv,error} = zodEnv.safeParse(process.env,{})
+const result = zodEnv.safeParse(process.env)
 
-if (!success) {
-  console.log(error.errors.map(
+if (!result.success) {
+  console.log(result.error.errors.map(
     (errorDetail) => ({
       message: errorDetail.message,
       status: errorDetail.code,
@@ -33,6 +31,8 @@ if (!success) {
 
 }
 
+const validatedEnv = result.data ; 
+
 interface IAppConfig {
   node_env: "development" | "production" | "test";
   server: {
@@ -44,12 +44,10 @@ interface IAppConfig {
     access_token: {
       secret: string;
       expire: string;
-      // cookie_name: string;
     };
     refresh_token: {
       secret: string;
       expire: string;
-      // cookie_name: string;
     };
   };
   cookie: {
@@ -86,12 +84,10 @@ const appConfig: IAppConfig = {
     access_token: {
       secret: validatedEnv.ACCESS_TOKEN_SECRET,
       expire: validatedEnv.ACCESS_TOKEN_EXPIRE,
-      // cookie_name: validatedEnv.ACCESS_TOKEN_COOKIE_NAME,
     },
     refresh_token: {
       secret: validatedEnv.REFRESH_TOKEN_SECRET,
       expire: validatedEnv.REFRESH_TOKEN_EXPIRE,
-      // cookie_name: validatedEnv.REFRESH_TOKEN_COOKIE_NAME,
     },
   },
   cookie: {
@@ -129,21 +125,6 @@ const appConfig: IAppConfig = {
     refresh_token: validatedEnv.EMAIL_REFRESH_TOKEN,
   },
 };
-
-  // email: {
-  //   smtp: {
-  //     host: validatedEnv.SMTP_HOST,
-  //     port: validatedEnv.SMTP_PORT,
-  //     auth: {
-  //       username: validatedEnv.SMTP_USERNAME,
-  //       password: validatedEnv.SMTP_PASSWORD
-  //     }
-  //   },
-  //   from: validatedEnv.EMAIL_FROM
-  // },
-  // cors: {
-  //   cors_origin: validatedEnv.CORS_ORIGIN
-  // },
 
 console.log(appConfig);
 export { appConfig };

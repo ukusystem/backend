@@ -2,7 +2,7 @@ import path from "path";
 import { Server, Socket } from "socket.io";
 import fs from 'fs'
 import { PassThrough } from "stream";
-import ffmpeg from 'fluent-ffmpeg'
+import ffmpeg from 'fluent-ffmpeg';
 // import http from 'http'
 export const voiceStreamSocket = async (io: Server, socket: Socket) => {
 
