@@ -74,10 +74,10 @@ export class Temperatura {
 
   static getRegistroTempByDay = handleErrorWithArgument<RegistroTemperaturaInfo[], { ctrl_id: number; st_id: number; date: string }>(async ({ ctrl_id, st_id, date }) => {
     const newDate = dayjs(date,"YYYY-MM-DD")
-    console.log(`SELECT valor, fecha from ${"nodo" + ctrl_id}.registrotemperatura${newDate.year()} WHERE st_id = ? AND fecha BETWEEN '${newDate.startOf("day").format("YYYY-MM-DD HH:mm:ss")}' AND '${newDate.endOf("day").format("YYYY-MM-DD HH:mm:ss")}' ORDER BY rtmp_id ASC`)
+    console.log(`SELECT valor, fecha from ${"nodo" + ctrl_id}.registrotemperatura WHERE st_id = ? AND fecha BETWEEN '${newDate.startOf("day").format("YYYY-MM-DD HH:mm:ss")}' AND '${newDate.endOf("day").format("YYYY-MM-DD HH:mm:ss")}' ORDER BY rtmp_id ASC`)
     console.log(newDate.startOf("day").toISOString(),newDate.add(1,"day").startOf("day").toISOString())
     const registrosTempData = await MySQL2.executeQuery<RegistroTemperaturaRowData[]>({
-      sql: `SELECT fecha AS x , valor AS y from ${"nodo" + ctrl_id}.registrotemperatura${newDate.year()} WHERE st_id = ? AND fecha BETWEEN '${newDate.startOf("day").format("YYYY-MM-DD HH:mm:ss")}' AND '${newDate.endOf("day").format("YYYY-MM-DD HH:mm:ss")}' ORDER BY rtmp_id ASC`,
+      sql: `SELECT fecha AS x , valor AS y from ${"nodo" + ctrl_id}.registrotemperatura WHERE st_id = ? AND fecha BETWEEN '${newDate.startOf("day").format("YYYY-MM-DD HH:mm:ss")}' AND '${newDate.endOf("day").format("YYYY-MM-DD HH:mm:ss")}' ORDER BY rtmp_id ASC`,
       values: [st_id, date],
     });
     // console.log(dayjs(date).format('YYYY'))

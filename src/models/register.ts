@@ -316,14 +316,14 @@ export const RegisterConfigOptions: {[key in RegisterType]: { has_yearly_tables:
     datetime_compare: "fecha"
   },
   energia: {
-    has_yearly_tables: true,
+    has_yearly_tables: false,
     base_table_name: "registroenergia",
     table_columns: ["re_id", "me_id", "voltaje", "amperaje", "fdp", "frecuencia", "potenciaw", "potenciakwh", "fecha"],
     order_by: "re_id",
     datetime_compare: "fecha"
   },
   entrada: {
-    has_yearly_tables: true,
+    has_yearly_tables: false,
     base_table_name: "registroentrada",
     table_columns: ["rentd_id", "pin", "estado", "fecha", "ee_id"],
     order_by: "rentd_id",
@@ -351,7 +351,7 @@ export const RegisterConfigOptions: {[key in RegisterType]: { has_yearly_tables:
     datetime_compare: "fecha"
   },
   salida: {
-    has_yearly_tables: true,
+    has_yearly_tables: false,
     base_table_name: "registrosalida",
     table_columns: ["rs_id", "pin", "estado", "fecha", "es_id"],
     order_by: "rs_id",
@@ -365,7 +365,7 @@ export const RegisterConfigOptions: {[key in RegisterType]: { has_yearly_tables:
     datetime_compare: "fecha"
   },
   temperatura: {
-    has_yearly_tables: true,
+    has_yearly_tables: false,
     base_table_name: "registrotemperatura",
     table_columns: ["rtmp_id", "st_id", "valor", "fecha"],
     order_by: "rtmp_id",

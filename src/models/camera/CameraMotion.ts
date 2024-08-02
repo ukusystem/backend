@@ -595,7 +595,7 @@ const insertPathToDB = (newPath: string, ctrl_id: number, cmr_id: number, tipo: 
       const finalPath = newPath.split(path.sep).join(path.posix.sep);
       const fecha = dayjs().format("YYYY-MM-DD HH:mm:ss")
 
-      await MySQL2.executeQuery({ sql: `INSERT INTO ${"nodo" + ctrl_id}.registroarchivocamara (cmr_id,tipo,ruta,fecha) VALUES ( ? , ?, ?)`, values: [cmr_id, tipo, finalPath,fecha] });
+      await MySQL2.executeQuery({ sql: `INSERT INTO ${"nodo" + ctrl_id}.registroarchivocamara (cmr_id,tipo,ruta,fecha) VALUES ( ? , ?, ?, ?)`, values: [cmr_id, tipo, finalPath,fecha] });
     } catch (error) {
       console.error("Error al insertar path a la db:\n", error);
     }
