@@ -347,32 +347,33 @@ export class Main {
     }
 
     // Verify temperature tables before the communication with the nodes start
-    if (!(await this.checkTablesForNodes(true))) {
-      return false;
-    }
+    // if (!(await this.checkTablesForNodes(true))) {
+    //   return false;
+    // }
 
-    for (const node of this.selector.nodeAttachments){
-      // Get current year.
-      const year = useful.getYear();
-      // Get auto increments from the tables for the current year.
-      const nodeName = BaseAttach.getNodeDBName(node.controllerID)
-      const inputAI = await executeQuery<db2.ID[]>(util.format(queries.nextIDForNode, `registroentrada${year}`, nodeName), [], true);
-      const outputAI = await executeQuery<db2.ID[]>(util.format(queries.nextIDForNode, `registrosalida${year}`, nodeName), [], true);
-      const tempAI = await executeQuery<db2.ID[]>(util.format(queries.nextIDForNode, `registrotemperatura${year}`, nodeName), [], true);
-      const energyAI = await executeQuery<db2.ID[]>(util.format(queries.nextIDForNode, `registroenergia${year}`, nodeName), [], true);
-      // Set those as the next ids to be used.
-      console.log(tempAI)
-      if((tempAI?.length === 1) && (energyAI?.length === 1) && (inputAI?.length === 1) && (outputAI?.length === 1)){
-        node.setIncrements(inputAI[0].AUTO_INCREMENT, outputAI[0].AUTO_INCREMENT, tempAI[0].AUTO_INCREMENT, energyAI[0].AUTO_INCREMENT)
-      }else{
-        this.log(`Error getting auto increments`)
-      }
-    }
+    // Get next increments for tables that work by year.
+    // for (const node of this.selector.nodeAttachments){
+    //   // Get current year.
+    //   const year = useful.getYear();
+    //   // Get auto increments from the tables for the current year.
+    //   const nodeName = BaseAttach.getNodeDBName(node.controllerID)
+    //   const inputAI = await executeQuery<db2.ID[]>(util.format(queries.nextIDForNode, `registroentrada${year}`, nodeName), [], true);
+    //   const outputAI = await executeQuery<db2.ID[]>(util.format(queries.nextIDForNode, `registrosalida${year}`, nodeName), [], true);
+    //   const tempAI = await executeQuery<db2.ID[]>(util.format(queries.nextIDForNode, `registrotemperatura${year}`, nodeName), [], true);
+    //   const energyAI = await executeQuery<db2.ID[]>(util.format(queries.nextIDForNode, `registroenergia${year}`, nodeName), [], true);
+    //   // Set those as the next ids to be used.
+    //   console.log(tempAI)
+    //   if((tempAI?.length === 1) && (energyAI?.length === 1) && (inputAI?.length === 1) && (outputAI?.length === 1)){
+    //     node.setIncrements(inputAI[0].AUTO_INCREMENT, outputAI[0].AUTO_INCREMENT, tempAI[0].AUTO_INCREMENT, energyAI[0].AUTO_INCREMENT)
+    //   }else{
+    //     this.log(`Error getting auto increments`)
+    //   }
+    // }
 
     // Set a monthly timer to create tables for the following years if the month>=11
-    this.tablesInterval = setInterval(async () => {
-      await this.checkTablesForNodes(false);
-    }, Main.TABLES_INTERVAL);
+    // this.tablesInterval = setInterval(async () => {
+    //   await this.checkTablesForNodes(false);
+    // }, Main.TABLES_INTERVAL);
 
     this.log(`Loaded ${this.selector.nodeAttachments.length} nodes.`);
 
@@ -383,6 +384,7 @@ export class Main {
    * Create tables for temperatures.
    * @param current Whether to create a table for the current year.
    * @returns False if a table could not be created.
+   * @deprecated
    */
   private async checkTablesForNodes(current: boolean): Promise<boolean> {
     // Get year, month

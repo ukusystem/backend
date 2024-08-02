@@ -60,6 +60,9 @@ export const createDatabase = `
 
 /* Create tables. These scripts are the output of 'SHOW CREATE TABLE nodo.%s' with format specifiers. */
 
+/**
+ * @deprecated
+ */
 export const createTemperatureTable = `
 				CREATE TABLE IF NOT EXISTS %s.registrotemperatura%s (
 	rtmp_id bigint NOT NULL AUTO_INCREMENT,
@@ -70,8 +73,12 @@ export const createTemperatureTable = `
    KEY fk_registrotemperatura_sensortemperatura_st_id_idx (st_id),
    CONSTRAINT fk_registrotemperatura_sensortemperatura_st_id%s FOREIGN KEY (st_id) REFERENCES %s.sensortemperatura (st_id)
  ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb3;
+  
 			`;
 
+/**
+ * @deprecated
+ */
 export const createEnergyTable = `
 				CREATE TABLE IF NOT EXISTS %s.registroenergia%s (
 		re_id bigint NOT NULL AUTO_INCREMENT,
@@ -89,6 +96,9 @@ export const createEnergyTable = `
  ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb3;
 			`;
 
+/**
+ * @deprecated
+ */
 export const createInputRegistreTable = `
 				CREATE TABLE IF NOT EXISTS %s.registroentrada%s (
    rentd_id bigint NOT NULL AUTO_INCREMENT,
@@ -102,6 +112,9 @@ export const createInputRegistreTable = `
  ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb3;
 			`;
 
+/**
+ * @deprecated
+ */
 export const createOutputRegistreTable = `
 CREATE TABLE IF NOT EXISTS %s.registrosalida%s (
    rs_id bigint NOT NULL AUTO_INCREMENT,
@@ -119,7 +132,7 @@ CREATE TABLE IF NOT EXISTS %s.registrosalida%s (
 /* Events */
 
 export const insertPower = `
-                INSERT INTO %s.registroenergia%s (me_id, voltaje, amperaje, fdp, frecuencia, potenciaw, potenciakwh, fecha) 
+                INSERT INTO %s.registroenergia (me_id, voltaje, amperaje, fdp, frecuencia, potenciaw, potenciakwh, fecha) 
                 VALUES (?,?,?,?,?,?,?,?);
             `;
 
@@ -193,8 +206,8 @@ export const insertSecurity = `
 			`;
 
 export const insertTemperature = `
-				INSERT INTO %s.registrotemperatura%s (rtmp_id, st_id, valor, fecha)
-				VALUES (?, ?, ?, ?);
+				INSERT INTO %s.registrotemperatura (st_id, valor, fecha)
+				VALUES (?, ?, ?);
 			`;
 
 // export const setCurrentTemperature = `
@@ -204,12 +217,12 @@ export const insertTemperature = `
 // 			`;
 
 export const insertInputChanged = `
-				INSERT INTO %s.registroentrada%s (pin, estado, fecha, ee_id)
+				INSERT INTO %s.registroentrada (pin, estado, fecha, ee_id)
 				VALUES (?, ?, ?, (SELECT ee_id FROM %s.pinesentrada WHERE pin=?));
 			`;
 
 export const insertOutputChanged = `
-				INSERT INTO %s.registrosalida%s (pin, estado, fecha, es_id, alarma)
+				INSERT INTO %s.registrosalida (pin, estado, fecha, es_id, alarma)
 				VALUES (?, ?, ?, (SELECT es_id FROM %s.pinessalida WHERE pin=?), ?);
 			`;
 
@@ -273,11 +286,11 @@ export const insertTicket = `
 				INSERT INTO %s.registroticket
 				(telefono, correo, descripcion, fechacomienzo, fechatermino,
 				estd_id, fechacreacion, prioridad, p_id, tt_id,
-				sn_id, co_id, enviado)
+				sn_id, co_id, enviado, asistencia)
 				VALUE
 				(?, ?, ?, ?, ?,
 				?, ?, ?, ?,	?,
-				?, ?, 0 );
+				?, ?, 0 , 0);
 			`;
 
 export const getCompanyID = `

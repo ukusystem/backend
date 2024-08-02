@@ -818,11 +818,11 @@ CREATE TABLE `registroenergia` (
   `frecuencia` float unsigned NOT NULL,
   `potenciaw` float NOT NULL,
   `potenciakwh` double unsigned NOT NULL,
-  `fecha` timestamp NOT NULL,
-  PRIMARY KEY (`re_id`),
-  KEY `fk_registroenergia_medidorenergia_me_id_idx` (`me_id`),
-  CONSTRAINT `fk_registroenergia_medidorenergia_me_id` FOREIGN KEY (`me_id`) REFERENCES `medidorenergia` (`me_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+  `fecha` datetime NOT NULL,
+  PRIMARY KEY (`re_id`,`fecha`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3
+/*!50100 PARTITION BY HASH (year(`fecha`))
+PARTITIONS 50 */;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -845,12 +845,12 @@ CREATE TABLE `registroentrada` (
   `rentd_id` bigint NOT NULL AUTO_INCREMENT,
   `pin` tinyint NOT NULL,
   `estado` tinyint NOT NULL,
-  `fecha` timestamp NOT NULL,
+  `fecha` datetime NOT NULL,
   `ee_id` int NOT NULL,
-  PRIMARY KEY (`rentd_id`),
-  KEY `fk_registroentrada_equipoentrada_ee_id_idx` (`ee_id`),
-  CONSTRAINT `fk_registroentrada_equipoentrada_ee_id` FOREIGN KEY (`ee_id`) REFERENCES `general`.`equipoentrada` (`ee_id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+  PRIMARY KEY (`rentd_id`,`fecha`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3
+/*!50100 PARTITION BY HASH (year(`fecha`))
+PARTITIONS 50 */;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -954,13 +954,13 @@ CREATE TABLE `registrosalida` (
   `rs_id` bigint NOT NULL AUTO_INCREMENT,
   `pin` tinyint NOT NULL,
   `estado` tinyint NOT NULL,
-  `fecha` timestamp NOT NULL,
+  `fecha` datetime NOT NULL,
   `es_id` int NOT NULL,
   `alarma` tinyint NOT NULL,
-  PRIMARY KEY (`rs_id`),
-  KEY `fk_registrosalida_equiopsalida_es_id_idx` (`es_id`),
-  CONSTRAINT `fk_registrosalida_equiopsalida_es_id` FOREIGN KEY (`es_id`) REFERENCES `general`.`equiposalida` (`es_id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+  PRIMARY KEY (`rs_id`,`fecha`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3
+/*!50100 PARTITION BY HASH (year(`fecha`))
+PARTITIONS 50 */;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1007,11 +1007,11 @@ CREATE TABLE `registrotemperatura` (
   `rtmp_id` bigint NOT NULL AUTO_INCREMENT,
   `st_id` int NOT NULL,
   `valor` float NOT NULL,
-  `fecha` timestamp NOT NULL,
-  PRIMARY KEY (`rtmp_id`),
-  KEY `fk_registrotemperatura_sensortemperatura_st_id_idx` (`st_id`),
-  CONSTRAINT `fk_registrotemperatura_sensortemperatura_st_id` FOREIGN KEY (`st_id`) REFERENCES `sensortemperatura` (`st_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+  `fecha` datetime NOT NULL,
+  PRIMARY KEY (`rtmp_id`,`fecha`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3
+/*!50100 PARTITION BY HASH (year(`fecha`))
+PARTITIONS 50 */;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1129,4 +1129,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-07-25  9:45:15
+-- Dump completed on 2024-07-30 12:13:47
