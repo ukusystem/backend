@@ -644,7 +644,7 @@ export const cardSelectForController = `
 /* Energy */
 
 export const energySelect = `
-			SELECT me_id, serie, descripcion
+			SELECT me_id, descripcion
 			FROM %s.medidorenergia;
 			`;
 
