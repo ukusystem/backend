@@ -11,7 +11,7 @@ const zodEnv = jwtEnv.merge(dbEnv).merge(emailEnv).merge(serverEnv).merge(encryp
 
 declare global {
   namespace NodeJS {
-    interface ProcessEnv extends IJwtEnv , IDbEnv , IEmailEnv , IServerEnv, IEncryptEnv ,ICookieEnv {}
+    // interface ProcessEnv extends IJwtEnv , IDbEnv , IEmailEnv , IServerEnv, IEncryptEnv ,ICookieEnv {}
   }
 }
 

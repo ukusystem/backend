@@ -13,6 +13,7 @@ import { decrypt } from "../../utils/decrypt";
 import { CameraForFront } from "../controllerapp/src/frontend/camaraForFront";
 import { Socket } from "socket.io";
 import dayjs from "dayjs";
+import { AppConfig } from "../config";
 
 interface CameraMotionProps {
   ip: string;
@@ -111,7 +112,7 @@ export class CameraMotion implements CameraMotionProps, CameraMotionMethods {
   snapshotMotion(rtspUrl: string) {
     if (!this.ffmpegProcessImage) {
       try {
-        const argsImageProcces = getImageFfmpegArgs(rtspUrl);
+        const argsImageProcces = getImageFfmpegArgs(rtspUrl,this.ctrl_id);
         this.ffmpegProcessImage = spawn("ffmpeg", argsImageProcces);
         this.ffmpegProcessImage.stdout.on("data", (data: Buffer) => {
           // Verificar marcadores
@@ -203,7 +204,7 @@ export class CameraMotion implements CameraMotionProps, CameraMotionMethods {
       try {
         const pathFolderVid = createMotionDetectionFolders(`./deteccionmovimiento/vid/${"nodo" + this.ctrl_id}/${this.ip}`);
         const videoPath = path.join(pathFolderVid, `grabacion_${Date.now()}.mp4`);
-        const argsVideoProcces = getVideoFfmpegArgs(rtspUrl, videoPath);
+        const argsVideoProcces = getVideoFfmpegArgs(rtspUrl, videoPath , this.ctrl_id);
 
         this.ffmpegProcessVideo = spawn("ffmpeg", argsVideoProcces);
 
@@ -544,11 +545,13 @@ export class CameraMotion implements CameraMotionProps, CameraMotionMethods {
   }
 }
 
-const getImageFfmpegArgs = (rtspUrl: string): string[] => {
-  return ["-rtsp_transport", "tcp", "-i", `${rtspUrl}`, "-vf", "select='gte(t\\,0)',fps=1/5", "-an", "-t", "30", "-c:v", "mjpeg", "-f", "image2pipe", "-"];
+const getImageFfmpegArgs = (rtspUrl: string, ctrl_id: number): string[] => {
+  const ctrlConfig = AppConfig.getController(ctrl_id)
+  return ["-rtsp_transport", "tcp", "-i", `${rtspUrl}`, "-vf", `select='gte(t\\,0)',fps=1/${ctrlConfig.MOTION_SNAPSHOT_INTERVAL}`, "-an", "-t", `${ctrlConfig.MOTION_SNAPSHOT_SECONDS}`, "-c:v", "mjpeg", "-f", "image2pipe", "-"];
 };
 
-const getVideoFfmpegArgs = (rtspUrl: string, outputPath: string): string[] => {
+const getVideoFfmpegArgs = (rtspUrl: string, outputPath: string, ctrl_id: number): string[] => {
+  const ctrlConfig = AppConfig.getController(ctrl_id)
   return [
     "-rtsp_transport",
     "tcp",
@@ -558,7 +561,7 @@ const getVideoFfmpegArgs = (rtspUrl: string, outputPath: string): string[] => {
     "-c:v",
     "copy",
     "-t",
-    "30",
+    `${ctrlConfig.MOTION_RECORD_SECONDS}`,
     // "pipe:1",  // Salida de FFMPEG a stdout
     `${outputPath}`,
   ];

@@ -1,10 +1,12 @@
 
+import { AppConfig } from "../../models/config";
 import { getRstpLinksByCtrlIdAndIp } from "../getCameraRtspLinks";
 
 type Calidad = "q1" | "q2" | "q3";
 
 export const getFfmpegArgs = async (ctrl_id: number, ip: string, q: Calidad) => {
     try {
+      const ctrlConfig = AppConfig.getController(ctrl_id)
       const [rtspUrl, rtspUrlsub] = await getRstpLinksByCtrlIdAndIp(ctrl_id,ip);
       let ffmpegArg;
       if (q === "q1") {
@@ -18,7 +20,7 @@ export const getFfmpegArgs = async (ctrl_id: number, ip: string, q: Calidad) => 
           "h264_nvenc",
           "-vf",
           // "scale=1920:1080",
-          "scale=1600:900",
+          `scale=${ctrlConfig.STREAM_PRIMARY_RESOLUTION_WIDTH, ctrlConfig.STREAM_PRIMARY_RESOLUTION_HEIGHT}`,
           "-c:v",
           "mjpeg",
           "-f",
@@ -37,7 +39,7 @@ export const getFfmpegArgs = async (ctrl_id: number, ip: string, q: Calidad) => 
           "h264_nvenc",
           "-vf",
           // "scale=1280:720",
-          "scale=960:540",
+          `scale=${ctrlConfig.STREAM_SECONDARY_RESOLUTION_WIDTH, ctrlConfig.STREAM_SECONDARY_RESOLUTION_HEIGHT}`,
           "-c:v",
           "mjpeg",
           "-b:v",

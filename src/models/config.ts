@@ -1,45 +1,5 @@
-
-interface IAppConfig {
-    node_env: "development" | "production" | "test";
-    server: {
-      ip: string;
-      port: number;
-      manager_port: number;
-    };
-    jwt: {
-      access_token: {
-        secret: string;
-        expire: string;
-      };
-      refresh_token: {
-        secret: string;
-        expire: string;
-      };
-    };
-    cookie: {
-      access_token: {
-        max_age: number;
-        name: string;
-      };
-      refresh_token: {
-        max_age: number;
-        name: string;
-      };
-    };
-    encrypt: {
-      secret: string;
-      salt: string;
-    };
-    // db: PoolOptions;
-    // email: {
-    //   client_id: string;
-    //   client_secret: string;
-    //   redirect_uris: string;
-    //   refresh_token: string;
-    // };
-  }
-
-// type SYSMTEM_MODE = "seguridad" | "libre"
+import { RowDataPacket } from "mysql2";
+import { MySQL2 } from "../database/mysql";
 
 enum CONTROLLER_MODE {
   Libre = 0,
@@ -52,22 +12,6 @@ enum CONTROLLER_SECURITY {
 }
 
 interface CONTROLLER_MOTION {
-  //   record: {
-  //     seconds: number;
-  //     resolution: {
-  //       width: number;
-  //       height: number;
-  //     };
-  //     fps: number;
-  //   };
-  //   snapshot: {
-  //     seconds: number;
-  //     resolution: {
-  //       width: number;
-  //       height: number;
-  //     };
-  //     interval: number;
-  //   };
   MOTION_RECORD_SECONDS: number;
   MOTION_RECORD_RESOLUTION_WIDTH: number;
   MOTION_RECORD_RESOLUTION_HEIGHT: number;
@@ -80,52 +24,264 @@ interface CONTROLLER_MOTION {
 }
 
 interface CONTROLLER_STREAM {
-  //   primary: {
-  //     resolution: {
-  //       width: number;
-  //       height: number;
-  //     };
-  //     fps: number;
-  //   };
-  //   secondary: {
-  //     resolution: {
-  //       width: number;
-  //       height: number;
-  //     };
-  //     fps: number;
-  //   };
-  //   auxiliary: {
-  //     resolution: {
-  //       width: number;
-  //       height: number;
-  //     };
-  //     fps: number;
-  //   };
   STREAM_PRIMARY_RESOLUTION_WIDTH: number;
   STREAM_PRIMARY_RESOLUTION_HEIGHT: number;
-  STREAM_PRIMARY_RESOLUTION_FPS: number;
+  STREAM_PRIMARY_FPS: number;
 
   STREAM_SECONDARY_RESOLUTION_WIDTH: number;
   STREAM_SECONDARY_RESOLUTION_HEIGHT: number;
-  STREAM_SECONDARY_RESOLUTION_FPS: number;
+  STREAM_SECONDARY_FPS: number;
 
   STREAM_AUXILIARY_RESOLUTION_WIDTH: number;
   STREAM_AUXILIARY_RESOLUTION_HEIGHT: number;
-  STREAM_AUXILIARY_RESOLUTION_FPS: number;
+  STREAM_AUXILIARY_FPS: number;
 }
 
 interface CONTROLLER_CONFIG extends CONTROLLER_MOTION, CONTROLLER_STREAM {
-//   CONTROLLER_MODE: CONTROLLER_MODE;
-//   CONTROLLER_SECURITY: CONTROLLER_SECURITY;
+  CONTROLLER_MODE: CONTROLLER_MODE;
+  CONTROLLER_SECURITY: CONTROLLER_SECURITY;
 }
 
+interface GENERAL_CONFIG {
+  COMPANY_NAME: string,
+  EMAIL_ADMIN: string
+}
+
+interface ControllerConfigRowData extends RowDataPacket, CONTROLLER_CONFIG {
+  ctrl_id:number
+}
+
+interface GeneralConfigRowData extends RowDataPacket, GENERAL_CONFIG { }
+
 export class AppConfig {
-  readonly controller: { [ctrl_id: string]: CONTROLLER_CONFIG } = {};
 
+  static general: GENERAL_CONFIG 
+  static #controller: { [ctrl_id: number]: CONTROLLER_CONFIG } = {};
 
-  public static update_controller(newConfig: { [Property in keyof CONTROLLER_CONFIG]: CONTROLLER_CONFIG[Property] }) {
+  static updateGeneral(fieldsToUpdate: Partial<GENERAL_CONFIG>){
+    const fieldsFiltered = AppConfig.#filterUndefinedProperties(fieldsToUpdate);
+    AppConfig.#updateGeneralConfig(fieldsFiltered)
+  }
+
+  static getController(ctrl_id:number){
+    if(!AppConfig.#controller[ctrl_id]){
+      throw new Error("Configuracion del controlador no encontrado")
+    }
+    return AppConfig.#controller[ctrl_id]
+  }
+
+  static #updateGeneralConfig(fieldsToUpdate: Partial<GENERAL_CONFIG>){
+    const currentGeneralConfig = AppConfig.general;
+    if (currentGeneralConfig) {
+      for (const key in fieldsToUpdate) {
+        if (key in currentGeneralConfig) {
+          const keyConfig = key as keyof GENERAL_CONFIG;
+          const keyValue = fieldsToUpdate[keyConfig]
+          if ( keyValue !== undefined) {
+            const updateFunction = AppConfig.#getUpdateGeneralFunction(keyConfig);
+            updateFunction(currentGeneralConfig, keyValue);
+          }
+        }
+      }
+    }
+  }
+
+  static updateController(ctrl_id: number, fieldsToUpdate: Partial<CONTROLLER_CONFIG> ) {
+    const fieldsFiltered = AppConfig.#filterUndefinedProperties(fieldsToUpdate);
+    AppConfig.#updateControllerConfig(ctrl_id,fieldsFiltered)
+  }
+
+  static addController(ctrl_id: number, configs: CONTROLLER_CONFIG){
+    if(!AppConfig.#controller[ctrl_id]){
+      AppConfig.#controller[ctrl_id] = configs
+    }
+  }
+
+  static #filterUndefinedProperties<T extends CONTROLLER_CONFIG | GENERAL_CONFIG>( obj: Partial<T> ): Partial<T> {
+    const result: Partial<T> = {};
+    for (const key in obj) {
+      if (obj[key] !== undefined) {
+        result[key] = obj[key];
+      }
+    }
+    return result;
+  }
+
+  static #updateControllerConfig( ctrl_id: number, fieldsToUpdate: Partial<CONTROLLER_CONFIG> ) {
+    const currentControllerConfig = AppConfig.#controller[ctrl_id];
+    if (currentControllerConfig) {
+      for (const key in fieldsToUpdate) {
+        if (key in currentControllerConfig) {
+          const keyConfig = key as keyof CONTROLLER_CONFIG;
+          const keyValue = fieldsToUpdate[keyConfig]
+          if ( keyValue !== undefined) {
+            const updateFunction = AppConfig.#getUpdateControllerFunction(keyConfig);
+            updateFunction(currentControllerConfig, keyValue);
+          }
+        }
+      }
+    }
+  }
+
+  static #getUpdateGeneralFunction<T extends keyof GENERAL_CONFIG>( keyConfig: T ) : ( currentConfig: GENERAL_CONFIG, newValue: GENERAL_CONFIG[T] ) => void {
+    type UpdateFunction<T extends keyof GENERAL_CONFIG> = ( currentConfig: GENERAL_CONFIG, newValue: GENERAL_CONFIG[T] ) => void;
+    const updateGeneralFunctions: { [P in keyof GENERAL_CONFIG]: UpdateFunction<P> } = {
+      COMPANY_NAME : (currentConfig, newValue) => {
+        if (currentConfig.COMPANY_NAME !== newValue) {
+          currentConfig.COMPANY_NAME = newValue
+        }
+      },
+      EMAIL_ADMIN: (currentConfig, newValue) => {
+        if (currentConfig.EMAIL_ADMIN !== newValue) {
+          currentConfig.EMAIL_ADMIN = newValue
+        }
+      },
+    }
+
+    return updateGeneralFunctions[keyConfig]
 
   }
-  
+
+  static #getUpdateControllerFunction<T extends keyof CONTROLLER_CONFIG>( keyConfig: T ): ( currentConfig: CONTROLLER_CONFIG, newValue: CONTROLLER_CONFIG[T] ) => void {
+
+    type UpdateFunction<T extends keyof CONTROLLER_CONFIG> = ( currentConfig: CONTROLLER_CONFIG, newValue: CONTROLLER_CONFIG[T] ) => void;
+
+    const updateControllerFunctions: { [P in keyof CONTROLLER_CONFIG]: UpdateFunction<P> } = {
+      CONTROLLER_MODE: (currentConfig, newValue) => {
+        if (currentConfig.CONTROLLER_MODE !== newValue) {
+          //update
+          currentConfig.CONTROLLER_MODE = newValue
+        }
+      },
+      CONTROLLER_SECURITY: (currentConfig, newValue) => {
+        if (currentConfig.CONTROLLER_SECURITY !== newValue) {
+          //update
+          currentConfig.CONTROLLER_SECURITY = newValue
+        }
+      },
+      MOTION_RECORD_SECONDS: (currentConfig, newValue) => {
+        if (currentConfig.MOTION_RECORD_SECONDS !== newValue) {
+          //update
+          currentConfig.MOTION_RECORD_SECONDS = newValue
+        }
+      },
+      MOTION_RECORD_RESOLUTION_WIDTH: (currentConfig, newValue) => {
+        if (currentConfig.MOTION_RECORD_RESOLUTION_WIDTH !== newValue) {
+          //update
+          currentConfig.MOTION_RECORD_RESOLUTION_WIDTH = newValue
+        }          
+      },
+      MOTION_RECORD_RESOLUTION_HEIGHT: (currentConfig, newValue) => {
+        if (currentConfig.MOTION_RECORD_RESOLUTION_HEIGHT !== newValue) {
+          //update
+          currentConfig.MOTION_RECORD_RESOLUTION_HEIGHT = newValue
+        }         
+      },
+      MOTION_RECORD_FPS: (currentConfig, newValue) => {
+        if (currentConfig.MOTION_RECORD_FPS !== newValue) {
+          //update
+          currentConfig.MOTION_RECORD_FPS = newValue
+        }      
+      },
+      MOTION_SNAPSHOT_SECONDS: (currentConfig, newValue) => {
+        if (currentConfig.MOTION_SNAPSHOT_SECONDS !== newValue) {
+          //update
+          currentConfig.MOTION_SNAPSHOT_SECONDS = newValue
+        }  
+      },
+      MOTION_SNAPSHOT_RESOLUTION_WIDTH: (currentConfig, newValue) => {
+        if (currentConfig.MOTION_SNAPSHOT_RESOLUTION_WIDTH !== newValue) {
+          //update
+          currentConfig.MOTION_SNAPSHOT_RESOLUTION_WIDTH = newValue
+        }    
+      },
+      MOTION_SNAPSHOT_RESOLUTION_HEIGHT: (currentConfig, newValue) => {
+        if (currentConfig.MOTION_SNAPSHOT_RESOLUTION_HEIGHT !== newValue) {
+          //update
+          currentConfig.MOTION_SNAPSHOT_RESOLUTION_HEIGHT = newValue
+        }     
+      },
+      MOTION_SNAPSHOT_INTERVAL: (currentConfig, newValue) => {
+        if (currentConfig.MOTION_SNAPSHOT_INTERVAL !== newValue) {
+          //update
+          currentConfig.MOTION_SNAPSHOT_INTERVAL = newValue
+        } 
+      },
+      STREAM_PRIMARY_RESOLUTION_WIDTH: (currentConfig, newValue) => {
+        if (currentConfig.STREAM_PRIMARY_RESOLUTION_WIDTH !== newValue) {
+          //update
+          currentConfig.STREAM_PRIMARY_RESOLUTION_WIDTH = newValue
+        }  
+      },
+      STREAM_PRIMARY_RESOLUTION_HEIGHT: (currentConfig, newValue) => {
+        if (currentConfig.STREAM_PRIMARY_RESOLUTION_HEIGHT !== newValue) {
+          //update
+          currentConfig.STREAM_PRIMARY_RESOLUTION_HEIGHT = newValue
+        }  
+      },
+      STREAM_PRIMARY_FPS: (currentConfig, newValue) => {
+        if (currentConfig.STREAM_PRIMARY_FPS !== newValue) {
+          //update
+          currentConfig.STREAM_PRIMARY_FPS = newValue
+        } 
+      },
+      STREAM_SECONDARY_RESOLUTION_WIDTH: (currentConfig, newValue) => {
+        if (currentConfig.STREAM_SECONDARY_RESOLUTION_WIDTH !== newValue) {
+          //update
+          currentConfig.STREAM_SECONDARY_RESOLUTION_WIDTH = newValue
+        }  
+      },
+      STREAM_SECONDARY_RESOLUTION_HEIGHT: (currentConfig, newValue) => {
+        if (currentConfig.STREAM_SECONDARY_RESOLUTION_HEIGHT !== newValue) {
+          //update
+          currentConfig.STREAM_SECONDARY_RESOLUTION_HEIGHT = newValue
+        }  
+      },
+      STREAM_SECONDARY_FPS: (currentConfig, newValue) => {
+        if (currentConfig.STREAM_SECONDARY_FPS !== newValue) {
+          //update
+          currentConfig.STREAM_SECONDARY_FPS = newValue
+        }   
+      },
+      STREAM_AUXILIARY_RESOLUTION_WIDTH: (currentConfig, newValue) => {
+        if (currentConfig.STREAM_AUXILIARY_RESOLUTION_WIDTH !== newValue) {
+          //update
+          currentConfig.STREAM_AUXILIARY_RESOLUTION_WIDTH = newValue
+        }  
+      },
+      STREAM_AUXILIARY_RESOLUTION_HEIGHT: (currentConfig, newValue) => {
+        if (currentConfig.STREAM_AUXILIARY_RESOLUTION_HEIGHT !== newValue) {
+          //update
+          currentConfig.STREAM_AUXILIARY_RESOLUTION_HEIGHT = newValue
+        }  
+      },
+      STREAM_AUXILIARY_FPS: (currentConfig, newValue) => {
+        if (currentConfig.STREAM_AUXILIARY_FPS !== newValue) {
+          //update
+          currentConfig.STREAM_AUXILIARY_FPS = newValue
+        }  
+      },
+
+    };
+
+    return updateControllerFunctions[keyConfig];
+  }
+
+  static async init() {
+    try {
+      const generalConfigs = await MySQL2.executeQuery<GeneralConfigRowData[]>({ sql: `SELECT nombreempresa AS COMPANY_NAME , correoadministrador AS EMAIL_ADMIN FROM general.configuracion LIMIT 1 OFFSET 0` });
+      if(generalConfigs.length > 0){
+        AppConfig.general= generalConfigs[0]
+      }
+      const controllerConfigs = await MySQL2.executeQuery<ControllerConfigRowData[]>({ sql: `select c.ctrl_id, c.modo as CONTROLLER_MODE, c.seguridad as CONTROLLER_SECURITY, c.motionrecordseconds as MOTION_RECORD_SECONDS, mrr.ancho as MOTION_RECORD_RESOLUTION_WIDTH, mrr.altura as MOTION_RECORD_RESOLUTION_HEIGHT, c.motionrecordfps as MOTION_RECORD_FPS, c.motionsnapshotseconds as MOTION_SNAPSHOT_SECONDS, msr.ancho as MOTION_SNAPSHOT_RESOLUTION_WIDTH, msr.altura as MOTION_SNAPSHOT_RESOLUTION_HEIGHT, c.motionsnapshotinterval as MOTION_SNAPSHOT_INTERVAL, spr.ancho as STREAM_PRIMARY_RESOLUTION_WIDTH, spr.altura as STREAM_PRIMARY_RESOLUTION_HEIGHT, c.streamprimaryfps as STREAM_PRIMARY_FPS, ssr.ancho as STREAM_SECONDARY_RESOLUTION_WIDTH, ssr.altura as STREAM_SECONDARY_RESOLUTION_HEIGHT, c.streamsecondaryfps as STREAM_SECONDARY_FPS, sar.ancho as STREAM_AUXILIARY_RESOLUTION_WIDTH, sar.altura as STREAM_AUXILIARY_RESOLUTION_HEIGHT, c.streamauxiliaryfps as STREAM_AUXILIARY_FPS from general.controlador c inner join general.resolucion mrr on c.res_id_motionrecord = mrr.res_id inner join general.resolucion msr on c.res_id_motionsnapshot = msr.res_id inner join general.resolucion spr on c.res_id_streamprimary = spr.res_id inner join general.resolucion ssr on c.res_id_streamsecondary = ssr.res_id inner join general.resolucion sar on c.res_id_streamauxiliary = sar.res_id` });
+      controllerConfigs.forEach((ctrlConfig) => {
+        const {ctrl_id , ...rest} = ctrlConfig
+        AppConfig.addController(ctrl_id, rest)
+      })
+    } catch (error) {
+      console.log(`AppConfig | Init | Error al inicializar configuración`);
+      console.error(error);   
+    }
+  }
 
 }

@@ -1,3 +1,4 @@
+import { AppConfig } from "./models/config";
 import { ServerApp } from "./models/server";
 import { TicketMap } from "./models/ticketschedule";
 
@@ -6,6 +7,8 @@ import { TicketMap } from "./models/ticketschedule";
     // Conectar a la base de datos:
     await ServerApp.connectDataBase();
 
+    await AppConfig.init()
+    
     // Crear un servidor
     const server = new ServerApp();
     // Inicializar websockets
