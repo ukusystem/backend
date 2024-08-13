@@ -1,12 +1,13 @@
 import { RowDataPacket } from "mysql2";
 import { MySQL2 } from "../database/mysql";
+import { PinesEntradaMap } from "../controllers/socket";
 
-enum CONTROLLER_MODE {
+export enum CONTROLLER_MODE {
   Libre = 0,
   Seguridad = 1,
 }
 
-enum CONTROLLER_SECURITY {
+export enum CONTROLLER_SECURITY {
   Desarmado = 0,
   Armado = 1,
 }
@@ -116,7 +117,7 @@ export class AppConfig {
           const keyValue = fieldsToUpdate[keyConfig]
           if ( keyValue !== undefined) {
             const updateFunction = AppConfig.#getUpdateControllerFunction(keyConfig);
-            updateFunction(currentControllerConfig, keyValue);
+            updateFunction(currentControllerConfig, keyValue , ctrl_id);
           }
         }
       }
@@ -142,120 +143,124 @@ export class AppConfig {
 
   }
 
-  static #getUpdateControllerFunction<T extends keyof CONTROLLER_CONFIG>( keyConfig: T ): ( currentConfig: CONTROLLER_CONFIG, newValue: CONTROLLER_CONFIG[T] ) => void {
+  static #getUpdateControllerFunction<T extends keyof CONTROLLER_CONFIG>( keyConfig: T ): ( currentConfig: CONTROLLER_CONFIG, newValue: CONTROLLER_CONFIG[T] , ctrl_id: number ) => void {
 
-    type UpdateFunction<T extends keyof CONTROLLER_CONFIG> = ( currentConfig: CONTROLLER_CONFIG, newValue: CONTROLLER_CONFIG[T] ) => void;
+    type UpdateFunction<T extends keyof CONTROLLER_CONFIG> = ( currentConfig: CONTROLLER_CONFIG, newValue: CONTROLLER_CONFIG[T] , ctrl_id: number ) => void;
 
     const updateControllerFunctions: { [P in keyof CONTROLLER_CONFIG]: UpdateFunction<P> } = {
-      CONTROLLER_MODE: (currentConfig, newValue) => {
+      CONTROLLER_MODE: (currentConfig, newValue , ctrl_id) => {
         if (currentConfig.CONTROLLER_MODE !== newValue) {
           //update
           currentConfig.CONTROLLER_MODE = newValue
+          // notify
+          PinesEntradaMap.notifyControllerMode(ctrl_id,newValue)
         }
       },
-      CONTROLLER_SECURITY: (currentConfig, newValue) => {
+      CONTROLLER_SECURITY: (currentConfig, newValue , ctrl_id) => {
         if (currentConfig.CONTROLLER_SECURITY !== newValue) {
           //update
           currentConfig.CONTROLLER_SECURITY = newValue
+          // notify
+          PinesEntradaMap.notifyControllerSecurity(ctrl_id,newValue)
         }
       },
-      MOTION_RECORD_SECONDS: (currentConfig, newValue) => {
+      MOTION_RECORD_SECONDS: (currentConfig, newValue , ctrl_id) => {
         if (currentConfig.MOTION_RECORD_SECONDS !== newValue) {
           //update
           currentConfig.MOTION_RECORD_SECONDS = newValue
         }
       },
-      MOTION_RECORD_RESOLUTION_WIDTH: (currentConfig, newValue) => {
+      MOTION_RECORD_RESOLUTION_WIDTH: (currentConfig, newValue , ctrl_id) => {
         if (currentConfig.MOTION_RECORD_RESOLUTION_WIDTH !== newValue) {
           //update
           currentConfig.MOTION_RECORD_RESOLUTION_WIDTH = newValue
         }          
       },
-      MOTION_RECORD_RESOLUTION_HEIGHT: (currentConfig, newValue) => {
+      MOTION_RECORD_RESOLUTION_HEIGHT: (currentConfig, newValue , ctrl_id) => {
         if (currentConfig.MOTION_RECORD_RESOLUTION_HEIGHT !== newValue) {
           //update
           currentConfig.MOTION_RECORD_RESOLUTION_HEIGHT = newValue
         }         
       },
-      MOTION_RECORD_FPS: (currentConfig, newValue) => {
+      MOTION_RECORD_FPS: (currentConfig, newValue , ctrl_id) => {
         if (currentConfig.MOTION_RECORD_FPS !== newValue) {
           //update
           currentConfig.MOTION_RECORD_FPS = newValue
         }      
       },
-      MOTION_SNAPSHOT_SECONDS: (currentConfig, newValue) => {
+      MOTION_SNAPSHOT_SECONDS: (currentConfig, newValue , ctrl_id) => {
         if (currentConfig.MOTION_SNAPSHOT_SECONDS !== newValue) {
           //update
           currentConfig.MOTION_SNAPSHOT_SECONDS = newValue
         }  
       },
-      MOTION_SNAPSHOT_RESOLUTION_WIDTH: (currentConfig, newValue) => {
+      MOTION_SNAPSHOT_RESOLUTION_WIDTH: (currentConfig, newValue , ctrl_id) => {
         if (currentConfig.MOTION_SNAPSHOT_RESOLUTION_WIDTH !== newValue) {
           //update
           currentConfig.MOTION_SNAPSHOT_RESOLUTION_WIDTH = newValue
         }    
       },
-      MOTION_SNAPSHOT_RESOLUTION_HEIGHT: (currentConfig, newValue) => {
+      MOTION_SNAPSHOT_RESOLUTION_HEIGHT: (currentConfig, newValue , ctrl_id) => {
         if (currentConfig.MOTION_SNAPSHOT_RESOLUTION_HEIGHT !== newValue) {
           //update
           currentConfig.MOTION_SNAPSHOT_RESOLUTION_HEIGHT = newValue
         }     
       },
-      MOTION_SNAPSHOT_INTERVAL: (currentConfig, newValue) => {
+      MOTION_SNAPSHOT_INTERVAL: (currentConfig, newValue , ctrl_id) => {
         if (currentConfig.MOTION_SNAPSHOT_INTERVAL !== newValue) {
           //update
           currentConfig.MOTION_SNAPSHOT_INTERVAL = newValue
         } 
       },
-      STREAM_PRIMARY_RESOLUTION_WIDTH: (currentConfig, newValue) => {
+      STREAM_PRIMARY_RESOLUTION_WIDTH: (currentConfig, newValue , ctrl_id) => {
         if (currentConfig.STREAM_PRIMARY_RESOLUTION_WIDTH !== newValue) {
           //update
           currentConfig.STREAM_PRIMARY_RESOLUTION_WIDTH = newValue
         }  
       },
-      STREAM_PRIMARY_RESOLUTION_HEIGHT: (currentConfig, newValue) => {
+      STREAM_PRIMARY_RESOLUTION_HEIGHT: (currentConfig, newValue , ctrl_id) => {
         if (currentConfig.STREAM_PRIMARY_RESOLUTION_HEIGHT !== newValue) {
           //update
           currentConfig.STREAM_PRIMARY_RESOLUTION_HEIGHT = newValue
         }  
       },
-      STREAM_PRIMARY_FPS: (currentConfig, newValue) => {
+      STREAM_PRIMARY_FPS: (currentConfig, newValue , ctrl_id) => {
         if (currentConfig.STREAM_PRIMARY_FPS !== newValue) {
           //update
           currentConfig.STREAM_PRIMARY_FPS = newValue
         } 
       },
-      STREAM_SECONDARY_RESOLUTION_WIDTH: (currentConfig, newValue) => {
+      STREAM_SECONDARY_RESOLUTION_WIDTH: (currentConfig, newValue , ctrl_id) => {
         if (currentConfig.STREAM_SECONDARY_RESOLUTION_WIDTH !== newValue) {
           //update
           currentConfig.STREAM_SECONDARY_RESOLUTION_WIDTH = newValue
         }  
       },
-      STREAM_SECONDARY_RESOLUTION_HEIGHT: (currentConfig, newValue) => {
+      STREAM_SECONDARY_RESOLUTION_HEIGHT: (currentConfig, newValue , ctrl_id) => {
         if (currentConfig.STREAM_SECONDARY_RESOLUTION_HEIGHT !== newValue) {
           //update
           currentConfig.STREAM_SECONDARY_RESOLUTION_HEIGHT = newValue
         }  
       },
-      STREAM_SECONDARY_FPS: (currentConfig, newValue) => {
+      STREAM_SECONDARY_FPS: (currentConfig, newValue , ctrl_id) => {
         if (currentConfig.STREAM_SECONDARY_FPS !== newValue) {
           //update
           currentConfig.STREAM_SECONDARY_FPS = newValue
         }   
       },
-      STREAM_AUXILIARY_RESOLUTION_WIDTH: (currentConfig, newValue) => {
+      STREAM_AUXILIARY_RESOLUTION_WIDTH: (currentConfig, newValue , ctrl_id) => {
         if (currentConfig.STREAM_AUXILIARY_RESOLUTION_WIDTH !== newValue) {
           //update
           currentConfig.STREAM_AUXILIARY_RESOLUTION_WIDTH = newValue
         }  
       },
-      STREAM_AUXILIARY_RESOLUTION_HEIGHT: (currentConfig, newValue) => {
+      STREAM_AUXILIARY_RESOLUTION_HEIGHT: (currentConfig, newValue , ctrl_id) => {
         if (currentConfig.STREAM_AUXILIARY_RESOLUTION_HEIGHT !== newValue) {
           //update
           currentConfig.STREAM_AUXILIARY_RESOLUTION_HEIGHT = newValue
         }  
       },
-      STREAM_AUXILIARY_FPS: (currentConfig, newValue) => {
+      STREAM_AUXILIARY_FPS: (currentConfig, newValue , ctrl_id) => {
         if (currentConfig.STREAM_AUXILIARY_FPS !== newValue) {
           //update
           currentConfig.STREAM_AUXILIARY_FPS = newValue
@@ -285,3 +290,12 @@ export class AppConfig {
   }
 
 }
+
+// (async ()=>{
+//   setInterval(()=>{
+//     const ramdomMode = Math.round(Math.random())
+//     const ramdomSecurity = Math.round(Math.random())
+//     console.log({CONTROLLER_MODE: ramdomMode , CONTROLLER_SECURITY: ramdomSecurity})
+//     AppConfig.updateController(1,{CONTROLLER_MODE: ramdomMode , CONTROLLER_SECURITY: ramdomSecurity})
+//   },20000)
+// })()

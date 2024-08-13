@@ -3,6 +3,8 @@ import { Controlador, EquipoEntrada, PinesEntrada } from "../../types/db";
 import { RowDataPacket } from "mysql2";
 import { MySQL2 } from "../../database/mysql";
 import { PinEntrada } from "../../models/site";
+import { AppConfig } from "../../models/config";
+// import { CONTROLLER_MODE , CONTROLLER_SECURITY } from "../../models/config";
 
 type PinesEntradaData = PinesEntrada & Pick<EquipoEntrada, "detector">
 interface PinesEntradaRowsData extends PinesEntradaData ,RowDataPacket {}
@@ -53,7 +55,13 @@ export const pinesEntradaSocketFinal =async (io:Server, socket: Socket) => {
   //emit initial data:
   const data = PinesEntradaMap.getListPinesSalida(ctrl_id)
   socket.emit("list_pines_entrada", data);
-  if(data){
+  try {
+    const {CONTROLLER_MODE, CONTROLLER_SECURITY} = AppConfig.getController(Number(ctrl_id))
+    socket.emit("controller_mode",CONTROLLER_MODE);
+    socket.emit("controller_security",CONTROLLER_SECURITY);
+  } catch (error) {
+    console.log(`Socket Pines Entrada | Error al obtener modo y seguridad | ctrl_id = ${ctrl_id}`)
+    console.error(error)
   }
 
   socket.on("disconnect", () => {
@@ -202,6 +210,9 @@ interface PinesEntradaObserver {
   // updateEquiposEntrada(data:EquipoEntrada[]): void;
   updateListPinesEntrada(data: PinesEntrada[]): void;
   updateItemPinEntrada(data: IPinesEntradaSocket): void;
+  updateControllerMode(data: 0 | 1) : void
+  updateControllerSecurity(data: 0 | 1) : void
+  
 }
 
 // interface PinesSalidaSubject {
@@ -217,6 +228,12 @@ class PinesSalidaSocketObserver implements PinesEntradaObserver {
 
   constructor(socket: Socket) {
       this.socket = socket;
+  }
+  updateControllerMode(data: 0 | 1): void {
+    this.socket.nsp.emit("controller_mode", data);
+  }
+  updateControllerSecurity(data: 0 | 1): void {
+    this.socket.nsp.emit("controller_security", data);
   }
   updateListPinesEntrada(data: PinesEntrada[]): void {
     this.socket.nsp.emit("list_pines_entrada", data);
@@ -253,6 +270,19 @@ export class PinesEntradaMap {
       PinesEntradaMap.observers[data.ctrl_id].updateItemPinEntrada(data.toJSON())
     }
   }
+
+  public static notifyControllerMode( ctrl_id: number, data: 0 | 1 ): void {
+    if(PinesEntradaMap.observers[ctrl_id]){
+      PinesEntradaMap.observers[ctrl_id].updateControllerMode(data)
+    }
+  }
+  public static notifyControllerSecurity( ctrl_id: number, data: 0 | 1): void {
+    if(PinesEntradaMap.observers[ctrl_id]){
+      PinesEntradaMap.observers[ctrl_id].updateControllerSecurity(data)
+    }
+  }
+
+  
 
   private static exists(args: { ctrl_id: string; pe_id: string }) {
     const { ctrl_id, pe_id } = args;

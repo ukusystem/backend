@@ -72,9 +72,6 @@ export const streamSocketFinal = async (io: Server, socket: Socket) => {
       }
     }
 
-    // console.log(`Procesos Ffmpeg en ejecución:`);
-    // console.log(JSON.stringify(ffmpegProccessLogs))
-
     // Redirigir la salida de ffmpeg al cliente Socket.IO
     ffmpegProcess[ctrl_id][ip][q][0].stdout.on("data", (data: Buffer) => {
 
