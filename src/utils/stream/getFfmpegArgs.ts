@@ -8,7 +8,7 @@ export const getFfmpegArgs = async (ctrl_id: number, ip: string, q: Calidad) => 
     try {
       const ctrlConfig = AppConfig.getController(ctrl_id)
       const [rtspUrl, rtspUrlsub] = await getRstpLinksByCtrlIdAndIp(ctrl_id,ip);
-      let ffmpegArg;
+      let ffmpegArg : string[] = [];
       if (q === "q1") {
         ffmpegArg = [
           "-rtsp_transport",

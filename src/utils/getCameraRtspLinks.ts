@@ -97,61 +97,6 @@ export const getRstpLinksByCtrlIdAndIp = async (ctrl_id: number, ip: string ) : 
               throw errorRtspUrl;
             }
             const mulRstp = await getMulticastRtspStreamAndSubStream(onvifRtspUrl,usuario,contraseñaDecrypt,manufacturer)
-            // if (manufacturer == "HIKVISION") {
-            //   // Eliminar "?transportmode=unicast&profile=Profile_1" de rtsp://<ip>/Streaming/Channels/101?transportmode=unicast&profile=Profile_1
-            //   let rtspMain = onvifRtspUrl.split("?")[0];
-            //   // console.log(rtspMain)
-
-            //   // Cambiar 101 --> 102
-            //   // let rtspSub= cambiarUltimoNumero(rtspMain)
-            //   let rtspSub = rtspMain.replace(/1(?=[^1]*$)/, "2");
-            //   // console.log(rtspSub)
-
-            //   // Agregar credenciales al main rtsp
-            //   let rtspMainWihtCredentials = addCredentialToRtsp(
-            //     rtspMain,
-            //     usuario,
-            //     contraseñaDecrypt
-            //   );
-            //   rtspURL.push(rtspMainWihtCredentials);
-            //   // console.log(rtspMainWihtCredentials)
-
-            //   // Agregar credenciales al sub rstp
-            //   let rtspSubWithCredentials = addCredentialToRtsp(
-            //     rtspSub,
-            //     usuario,
-            //     contraseñaDecrypt
-            //   );
-            //   rtspURL.push(rtspSubWithCredentials);
-            //   // console.log(rtspSubWithCredentials)
-            // }
-
-            // if (manufacturer == "Dahua") {
-            //   // Eliminar "&unicast=true&proto=Onvif" de "rtsp://<ip>/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif"
-            //   let rtspMain = onvifRtspUrl.replace(
-            //     /&unicast=true&proto=Onvif/,
-            //     ""
-            //   );
-
-            //   //Cambiar 0 --> 1
-            //   let rtspSub = rtspMain.replace(/0(?=[^0]*$)/, "1");
-
-            //   // Agregar credenciales al main rtsp
-            //   let rtspMainWihtCredentials = addCredentialToRtsp(
-            //     rtspMain,
-            //     usuario,
-            //     contraseñaDecrypt
-            //   );
-            //   rtspURL.push(rtspMainWihtCredentials);
-
-            //   // Agregar credenciales al sub rstp
-            //   let rtspSubWithCredentials = addCredentialToRtsp(
-            //     rtspSub,
-            //     usuario,
-            //     contraseñaDecrypt
-            //   );
-            //   rtspURL.push(rtspSubWithCredentials);
-            // }
 
             resolve(mulRstp);
           } catch (error) {

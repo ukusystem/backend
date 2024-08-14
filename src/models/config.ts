@@ -1,6 +1,7 @@
 import { RowDataPacket } from "mysql2";
 import { MySQL2 } from "../database/mysql";
 import { PinesEntradaMap } from "../controllers/socket";
+import { StreamQuality, StreamSocketManager } from "../controllers/socket/streamFinal";
 
 export enum CONTROLLER_MODE {
   Libre = 0,
@@ -216,54 +217,72 @@ export class AppConfig {
         if (currentConfig.STREAM_PRIMARY_RESOLUTION_WIDTH !== newValue) {
           //update
           currentConfig.STREAM_PRIMARY_RESOLUTION_WIDTH = newValue
+          // notify
+          StreamSocketManager.notifyChangeConfig(ctrl_id,StreamQuality.Primary)
         }  
       },
       STREAM_PRIMARY_RESOLUTION_HEIGHT: (currentConfig, newValue , ctrl_id) => {
         if (currentConfig.STREAM_PRIMARY_RESOLUTION_HEIGHT !== newValue) {
           //update
           currentConfig.STREAM_PRIMARY_RESOLUTION_HEIGHT = newValue
+          // notify
+          StreamSocketManager.notifyChangeConfig(ctrl_id,StreamQuality.Primary)
         }  
       },
       STREAM_PRIMARY_FPS: (currentConfig, newValue , ctrl_id) => {
         if (currentConfig.STREAM_PRIMARY_FPS !== newValue) {
           //update
           currentConfig.STREAM_PRIMARY_FPS = newValue
+          // notify
+          StreamSocketManager.notifyChangeConfig(ctrl_id,StreamQuality.Primary)
         } 
       },
       STREAM_SECONDARY_RESOLUTION_WIDTH: (currentConfig, newValue , ctrl_id) => {
         if (currentConfig.STREAM_SECONDARY_RESOLUTION_WIDTH !== newValue) {
           //update
           currentConfig.STREAM_SECONDARY_RESOLUTION_WIDTH = newValue
+          // notify
+          StreamSocketManager.notifyChangeConfig(ctrl_id,StreamQuality.Secondary)
         }  
       },
       STREAM_SECONDARY_RESOLUTION_HEIGHT: (currentConfig, newValue , ctrl_id) => {
         if (currentConfig.STREAM_SECONDARY_RESOLUTION_HEIGHT !== newValue) {
           //update
           currentConfig.STREAM_SECONDARY_RESOLUTION_HEIGHT = newValue
+          // notify
+          StreamSocketManager.notifyChangeConfig(ctrl_id,StreamQuality.Secondary)
         }  
       },
       STREAM_SECONDARY_FPS: (currentConfig, newValue , ctrl_id) => {
         if (currentConfig.STREAM_SECONDARY_FPS !== newValue) {
           //update
           currentConfig.STREAM_SECONDARY_FPS = newValue
+          // notify
+          StreamSocketManager.notifyChangeConfig(ctrl_id,StreamQuality.Secondary)
         }   
       },
       STREAM_AUXILIARY_RESOLUTION_WIDTH: (currentConfig, newValue , ctrl_id) => {
         if (currentConfig.STREAM_AUXILIARY_RESOLUTION_WIDTH !== newValue) {
           //update
           currentConfig.STREAM_AUXILIARY_RESOLUTION_WIDTH = newValue
+          // notify
+          StreamSocketManager.notifyChangeConfig(ctrl_id,StreamQuality.Auxiliary)
         }  
       },
       STREAM_AUXILIARY_RESOLUTION_HEIGHT: (currentConfig, newValue , ctrl_id) => {
         if (currentConfig.STREAM_AUXILIARY_RESOLUTION_HEIGHT !== newValue) {
           //update
           currentConfig.STREAM_AUXILIARY_RESOLUTION_HEIGHT = newValue
+          // notify
+          StreamSocketManager.notifyChangeConfig(ctrl_id,StreamQuality.Auxiliary)
         }  
       },
       STREAM_AUXILIARY_FPS: (currentConfig, newValue , ctrl_id) => {
         if (currentConfig.STREAM_AUXILIARY_FPS !== newValue) {
           //update
           currentConfig.STREAM_AUXILIARY_FPS = newValue
+          // notify
+          StreamSocketManager.notifyChangeConfig(ctrl_id,StreamQuality.Auxiliary)
         }  
       },
 
