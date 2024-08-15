@@ -1,8 +1,9 @@
 import { ChildProcessByStdio, spawn} from "child_process";
-import { Server, Socket } from "socket.io";
+import { Server, Socket, } from "socket.io";
 import { createImageBase64, getFfmpegArgs, verifyImageMarkers, } from "../../utils/stream";
 import { CustomError } from "../../utils/CustomError";
 import { vmsLogger } from "../../services/loggers";
+import { TypeOf, z } from "zod";
 
 interface IFmmpegProcess {
   [ctrl_id: string]: {
@@ -143,6 +144,11 @@ export const streamSocketFinal = async (io: Server, socket: Socket) => {
   });
 };
 
+const streamSchema = z.object({
+  ctrl_id: z.coerce.number().int().nonnegative(),
+  ip: z.string().ip(),
+  q : z.enum(['q1', 'q2','q3']),
+});
 
 
 export enum StreamQuality {
@@ -170,6 +176,19 @@ interface IStreamFfmpegProcess {
   };
 }
 
+type QTest = "q1"|"q2"|"q3"
+interface IStreamFfmpegProcessX {
+  [ctrl_id: number]: {
+    [ip: string]: {
+      [q in QTest]: {
+        ffmpegProcess: ChildProcessByStdio<null, any, null>;
+        isChunkInFrame: boolean;
+        bufferFrame: Buffer;
+      };
+    };
+  };
+}
+
 interface IStreamProccesObserver {
   [ctrl_id: number]: {
     [ip: string]: Partial<{
@@ -180,8 +199,16 @@ interface IStreamProccesObserver {
     }>;
   };
 }
+interface IStreamProccesObserverFinal {
+  [ctrl_id: number]: {
+    [ip: string]: Partial<{
+      [q in StreamQuality]: Map<string,{observer: StreamObserver,canDelete: boolean}>
+    }>;
+  };
+}
 
 interface StreamObserver {
+  id: string;
   updateState(state: boolean , typeState : keyof StreamState): void ;
   updateFlux(frameBase64: string):void
   updateError(message: string):void
@@ -198,10 +225,12 @@ interface StreamSubject {
 }
 
 class StreamSocketObserver implements StreamObserver {
+  id :string
   #socket: Socket;
-  
+
   constructor(socket: Socket) {
     this.#socket = socket;
+    this.id = socket.id
   }
 
   updateState(state: boolean, typeState: keyof StreamState): void {
@@ -220,6 +249,7 @@ export class StreamSocketManager  {
   
   static process : IStreamFfmpegProcess = {}
   static observer : IStreamProccesObserver  = {}
+  static observerFinal : IStreamProccesObserverFinal  = {}
 
   static registerObserver(direction: StreamDirection, observer: StreamObserver): void {
     const {ctrl_id,ip,q} = direction
@@ -236,6 +266,26 @@ export class StreamSocketManager  {
       StreamSocketManager.observer[ctrl_id][ip][q] = {observer, canDelete: true}
     }
 
+  }
+  static registerObserverFinal(direction: StreamDirection, observer: StreamObserver): void {
+    const {ctrl_id,ip,q} = direction
+
+    if (!StreamSocketManager.observerFinal.hasOwnProperty(ctrl_id)) {
+      StreamSocketManager.observerFinal[ctrl_id] = {}
+    }
+
+    if (!StreamSocketManager.observerFinal[ctrl_id].hasOwnProperty(ip)) {
+      StreamSocketManager.observerFinal[ctrl_id][ip] = {}
+    }
+
+    if (!StreamSocketManager.observerFinal[ctrl_id][ip].hasOwnProperty(q) || StreamSocketManager.observerFinal[ctrl_id][ip][q] === undefined ) {
+      StreamSocketManager.observerFinal[ctrl_id][ip][q] = new Map()
+    }
+    
+    const currentMap = StreamSocketManager.observerFinal[ctrl_id][ip][q]
+    if(currentMap){
+      currentMap.set(observer.id,{observer, canDelete:true})
+    }
   }
 
   static unregisterObserver(direction: StreamDirection): void {
@@ -283,7 +333,7 @@ export class StreamSocketManager  {
             StreamSocketManager.killProcess({ctrl_id,ip,q})
 
             // crear nuevo proceso
-            StreamSocketManager.createProccess({ctrl_id,ip,q})
+            // StreamSocketManager.createProccess({ctrl_id,ip,q})
             // cambiar estado observador
             StreamSocketManager.#setObserverState({ctrl_id,ip,q},true)
             // cambiar estado 
@@ -317,7 +367,7 @@ export class StreamSocketManager  {
     return undefined
   }
 
-  static async createProccess(direction: StreamDirection){
+  static async createProccess(direction: StreamDirection , socket : Socket){
 
     const {ctrl_id,ip,q} = direction
 
@@ -338,6 +388,7 @@ export class StreamSocketManager  {
           const newFfmpegArg = await getFfmpegArgs(ctrl_id, ip, q);
 
           StreamSocketManager.notifyState(direction,true,"isLoading");
+          StreamSocketManager.notifyState(direction,false,"isSuccess");
 
           const newFfmpegProcess = spawn("ffmpeg", newFfmpegArg,{stdio:["ignore","pipe", "ignore"]});
   
@@ -371,6 +422,7 @@ export class StreamSocketManager  {
           currentProcess.ffmpegProcess.stdout.on("data", (data: Buffer) => {
     
             StreamSocketManager.notifyState(direction,false,"isLoading");
+            StreamSocketManager.notifyState(direction,true,"isSuccess");
   
             if( StreamSocketManager.process[ctrl_id][ip].hasOwnProperty(q)){
               const currentProcess = StreamSocketManager.process[ctrl_id][ip][q];
@@ -392,7 +444,9 @@ export class StreamSocketManager  {
                   if (verifyImageMarkers(currentProcess.bufferFrame, "complete")) {
                     //Imagen completa
                     const imageBase64 = createImageBase64(currentProcess.bufferFrame);
-                    StreamSocketManager.notifyFlux(direction, imageBase64) ; // Emitir datos al cliente a través de Socket.IO
+                    // StreamSocketManager.notifyFlux(direction, imageBase64) ; // Emitir datos al cliente a través de Socket.IO
+                     ; // Emitir datos al cliente a través de Socket.IO
+                     socket.emit("stream_flux", imageBase64);
                   }
                 }
         

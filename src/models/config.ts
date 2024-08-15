@@ -1,7 +1,8 @@
 import { RowDataPacket } from "mysql2";
 import { MySQL2 } from "../database/mysql";
 import { PinesEntradaMap } from "../controllers/socket";
-import { StreamQuality, StreamSocketManager } from "../controllers/socket/streamFinal";
+import { StreamQuality} from "../controllers/socket/streamFinal";
+import { StreamSocketManager } from "../controllers/socket/fluxStream";
 
 export enum CONTROLLER_MODE {
   Libre = 0,
@@ -311,10 +312,16 @@ export class AppConfig {
 }
 
 // (async ()=>{
-//   setInterval(()=>{
-//     const ramdomMode = Math.round(Math.random())
-//     const ramdomSecurity = Math.round(Math.random())
-//     console.log({CONTROLLER_MODE: ramdomMode , CONTROLLER_SECURITY: ramdomSecurity})
-//     AppConfig.updateController(1,{CONTROLLER_MODE: ramdomMode , CONTROLLER_SECURITY: ramdomSecurity})
-//   },20000)
+//   // setInterval(()=>{
+//   //   const ramdomMode = Math.round(Math.random())
+//   //   const ramdomSecurity = Math.round(Math.random())
+//   //   console.log({CONTROLLER_MODE: ramdomMode , CONTROLLER_SECURITY: ramdomSecurity})
+//   //   AppConfig.updateController(1,{CONTROLLER_MODE: ramdomMode , CONTROLLER_SECURITY: ramdomSecurity})
+//   // },20000)
+
+//   // setInterval(() => {
+//   //   console.log("============= New fps stream primary =============")
+//   //   const randomNumber = Math.floor(Math.random() * (30 - 20 + 1)) + 20;
+//   //   AppConfig.updateController(1,{STREAM_PRIMARY_FPS:randomNumber})
+//   // }, 30000);
 // })()

@@ -4,6 +4,7 @@ import {  energiaSocket, pinesEntradaSocket, sensorTemperaturaSocket, ticketSock
 import { streamSocketFinal } from "../controllers/socket/streamFinal";
 import { Auth } from "./auth";
 import { pinesSalidaSocket } from "../controllers/socket/pinesSalida";
+import { streamSocket } from "../controllers/socket/fluxStream";
 
 
 function parserCookie(cookies: string | undefined) {
@@ -88,7 +89,8 @@ export class Sockets {
         }
       })
       .on("connection", (socket) => {
-        streamSocketFinal(this.#io, socket);
+        // streamSocketFinal(this.#io, socket);
+        streamSocket(this.#io, socket);
       });
 
     // Namespace : "/sensor/tipo_sensor/region/nodo/id"
