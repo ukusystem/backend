@@ -6,7 +6,7 @@ type Calidad = "q1" | "q2" | "q3";
 
 export const getFfmpegArgs = async (ctrl_id: number, ip: string, q: Calidad) => {
     try {
-      const ctrlConfig = AppConfig.getController(ctrl_id)
+      const {STREAM_PRIMARY_RESOLUTION,STREAM_SECONDARY_RESOLUTION} = AppConfig.getController(ctrl_id)
       const [rtspUrl, rtspUrlsub] = await getRstpLinksByCtrlIdAndIp(ctrl_id,ip);
       let ffmpegArg : string[] = [];
       if (q === "q1") {
@@ -20,7 +20,7 @@ export const getFfmpegArgs = async (ctrl_id: number, ip: string, q: Calidad) => 
           "h264_nvenc",
           "-vf",
           // "scale=1920:1080",
-          `scale=${ctrlConfig.STREAM_PRIMARY_RESOLUTION_WIDTH}:${ctrlConfig.STREAM_PRIMARY_RESOLUTION_HEIGHT}`,
+          `scale=${STREAM_PRIMARY_RESOLUTION.ancho}:${STREAM_PRIMARY_RESOLUTION.altura}`,
           "-c:v",
           "mjpeg",
           "-f",
@@ -39,7 +39,7 @@ export const getFfmpegArgs = async (ctrl_id: number, ip: string, q: Calidad) => 
           "h264_nvenc",
           "-vf",
           // "scale=1280:720",
-          `scale=${ctrlConfig.STREAM_SECONDARY_RESOLUTION_WIDTH}:${ctrlConfig.STREAM_SECONDARY_RESOLUTION_HEIGHT}`,
+          `scale=${STREAM_SECONDARY_RESOLUTION.ancho}:${STREAM_SECONDARY_RESOLUTION.altura}`,
           "-c:v",
           "mjpeg",
           "-b:v",

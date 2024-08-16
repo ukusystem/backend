@@ -1,3 +1,12 @@
+export interface Resolucion {
+  res_id: number,
+  nombre: string,
+  relacionaspecto: string,
+  ancho: number,
+  altura: number,
+  activo: 0 | 1
+}
+
 export interface PreferenciasVms {
   prfvms_id: number;
   preferencia: string;

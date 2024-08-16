@@ -1,7 +1,6 @@
 import { Server as HttpServer } from "http";
 import { Server } from "socket.io";
 import {  energiaSocket, pinesEntradaSocket, sensorTemperaturaSocket, ticketSocket , streamRecordSocket, lastSnapshotSocket, sensorTemperaturaSocketFinal, moduloEnergiaSocket, pinesEntradaSocketFinal, registroEntradaSocket, SensorTemperaturaMap, registroAccesoSocket, voiceStreamSocket } from "../controllers/socket";
-import { streamSocketFinal } from "../controllers/socket/streamFinal";
 import { Auth } from "./auth";
 import { pinesSalidaSocket } from "../controllers/socket/pinesSalida";
 import { streamSocket } from "../controllers/socket/fluxStream";
@@ -89,7 +88,6 @@ export class Sockets {
         }
       })
       .on("connection", (socket) => {
-        // streamSocketFinal(this.#io, socket);
         streamSocket(this.#io, socket);
       });
 
