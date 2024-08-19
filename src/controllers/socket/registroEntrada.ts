@@ -3,7 +3,7 @@ import { Server, Socket } from "socket.io";
 import { Controlador, EquipoEntrada, RegistroEntrada } from "../../types/db";
 import { EquipoEntradaMap } from "../../models/maps";
 import { RegistroEntradaSite } from "../../models/site";
-import { PinesEntradaMap } from "./pinesEntrada";
+import { PinEntradaManager } from "./pinentrada";
 
 export const registroEntradaSocket = async (io: Server, socket: Socket) => {
   const nspEnergia = socket.nsp;
@@ -37,7 +37,7 @@ type IRegistroEntradaSocket = Omit<RegistroEntrada,"rentd_id"> & Pick<Controlado
 export class RegistroEntradaSocket implements IRegistroEntradaSocket {
 
   ctrl_id: number;
-  pin: number; // --> pe_id // PinesEntradaMap -- obtener ee_id
+  pin: number; // --> pe_id // PinesEntradaManager -- obtener ee_id
   estado: number;
   fecha: string;
   ee_id: number;
@@ -72,7 +72,7 @@ type IRegistroEntradaSocketBad = Omit<RegistroEntrada,"rentd_id" | "ee_id"> & Pi
 export class RegistroEntradaSocketBad implements IRegistroEntradaSocketBad {
 
   ctrl_id: number;
-  pin: number; // --> pe_id // PinesEntradaMap -- obtener ee_id
+  pin: number; // --> pe_id // PinesEntradaManager -- obtener ee_id
   estado: number;
   fecha: string;
 
@@ -151,7 +151,7 @@ export class RegistroEntradaMap  {
       // notificar
       RegistroEntradaMap.notifyRegistroAcceso(regEnt)
     }else{
-      const currentPinEntrada = PinesEntradaMap.getPinSalida(String(ctrl_id),String(pin));
+      const currentPinEntrada = PinEntradaManager.getPinSalida(String(ctrl_id),String(pin));
       if(currentPinEntrada){
         if(EquipoEntradaMap.map[currentPinEntrada.ee_id]){
           let newRegEnt = new RegistroEntradaSocket({...regEnt,ee_id:currentPinEntrada.ee_id,detector:EquipoEntradaMap.map[currentPinEntrada.ee_id].detector})

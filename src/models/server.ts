@@ -19,7 +19,7 @@ import { vmsRoutes } from "../routes/vms.routes";
 import { frontEndRoutes } from "../routes/frontend.routes";
 import { DeteccionMovimiento } from "./camera/CameraMotion";
 import { main } from "./controllerapp/controller";
-import { MedidorEnergiaMap, PinesEntradaMap, PinesSalidaMap, RegistroAccesoMap, RegistroEntradaMap, SensorTemperaturaMap } from "../controllers/socket";
+import { MedidorEnergiaMap, PinEntradaManager, PinesSalidaMap, RegistroAccesoMap, RegistroEntradaMap, SensorTemperaturaMap } from "../controllers/socket";
 import { ContrataMap, EquipoAccesoMap, EquipoEntradaMap, EquipoSalidaMap } from "./maps";
 import { dashboardRouter } from "../routes/dashboard.routes";
 import { appConfig } from "../configs";
@@ -137,7 +137,7 @@ export class ServerApp {
       await SensorTemperaturaMap.init()
       await MedidorEnergiaMap.init()
       await PinesSalidaMap.init()
-      await PinesEntradaMap.init()
+      await PinEntradaManager.init()
       await RegistroAccesoMap.init()
       await RegistroEntradaMap.init()
       // await TicketMap.init() // iniciar despues de controller

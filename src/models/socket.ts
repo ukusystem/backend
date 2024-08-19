@@ -1,9 +1,9 @@
 import { Server as HttpServer } from "http";
-import { Server } from "socket.io";
-import {  energiaSocket, pinesEntradaSocket, sensorTemperaturaSocket, ticketSocket , streamRecordSocket, lastSnapshotSocket, sensorTemperaturaSocketFinal, moduloEnergiaSocket, pinesEntradaSocketFinal, registroEntradaSocket, SensorTemperaturaMap, registroAccesoSocket, voiceStreamSocket } from "../controllers/socket";
+import { Server, Socket } from "socket.io";
+import {  energiaSocket, sensorTemperaturaSocket, ticketSocket , streamRecordSocket, lastSnapshotSocket, sensorTemperaturaSocketFinal, moduloEnergiaSocket, pinEntradaSocket, registroEntradaSocket, SensorTemperaturaMap, registroAccesoSocket, voiceStreamSocket, NamespaceControllerState, contollerStateSocket } from "../controllers/socket";
 import { Auth } from "./auth";
 import { pinesSalidaSocket } from "../controllers/socket/pinesSalida";
-import { streamSocket } from "../controllers/socket/fluxStream";
+import { camStreamSocket } from "../controllers/socket/stream/camera.stream.socket";
 
 
 function parserCookie(cookies: string | undefined) {
@@ -88,7 +88,7 @@ export class Sockets {
         }
       })
       .on("connection", (socket) => {
-        streamSocket(this.#io, socket);
+        camStreamSocket(this.#io, socket);
       });
 
     // Namespace : "/sensor/tipo_sensor/region/nodo/id"
@@ -117,10 +117,14 @@ export class Sockets {
     // Namespace: "/tickets/ctrl_id/"
     this.#io.of(/^\/tickets\/\d+$/).on("connection", (socket) => { ticketSocket(this.#io, socket); });
 
-    // Namespace: "/pines_entrada/ctrl_id"
-    this.#io.of(/^\/pines_entrada\/\d+$/).on("connection", (socket) => { pinesEntradaSocket(this.#io, socket); });
-    // Namespace: "/pines_entradafinal/ctrl_id"
-    this.#io.of(/^\/pines_entradafinal\/\d+$/).on("connection", (socket) => { pinesEntradaSocketFinal(this.#io, socket); });
+    // Namespace: "/pin_entrada/ctrl_id"
+    this.#io.of(/^\/pin_entrada\/\d+$/).on("connection", (socket) => { pinEntradaSocket(this.#io, socket); });
+
+    // Namespace: "/controller_state/ctrl_id"    
+    const ControllerStateNSP: NamespaceControllerState = this.#io.of(/^\/controller_state\/\d+$/);
+    ControllerStateNSP.on("connect",(socket)=>{
+      contollerStateSocket(this.#io,socket) 
+    })
 
     // Namespace: "/pines_salida/ctrl_id"
     this.#io.of(/^\/pines_salida\/\d+$/).on("connection", (socket) => { pinesSalidaSocket(this.#io, socket); }); // nuevo

@@ -723,11 +723,11 @@ export class BaseAttach extends Mortal {
     });
     // To disable the pin
     if (active === 0) {
-      sm.PinesEntradaMap.delete(newInput);
+      sm.PinEntradaManager.delete(newInput);
     }
     // To enable or update data
     else {
-      sm.PinesEntradaMap.add_update(newInput);
+      sm.PinEntradaManager.add_update(newInput);
     }
     // To show in the 'alerts' section
     if (resgister && state && date) {
@@ -1228,7 +1228,7 @@ export class NodeAttach extends BaseAttach {
             await this.insertInputOutput(this.controllerID, pinData, true);
             // Send to the other backend
             this._notifyInput(true, pin, this.controllerID, null, null, state, null, useful.formatTimestamp(pinDate));
-            // sm.PinesEntradaMap.add_update(
+            // sm.PinEntradaManager.add_update(
             //   new sm.PinesEntradaSocketBad({ pe_id: pin, pin: pin, ee_id: DEF_ID, descripcion: DEF_TXT, estado: state, activo: DEF_ACTIVE, ctrl_id: this.controllerID })
             // );
             // sm.RegistroEntradaMap.add(
