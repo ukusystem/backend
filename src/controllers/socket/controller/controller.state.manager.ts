@@ -40,14 +40,12 @@ export class ControllerStateManager {
     if (ControllerStateManager.observer.hasOwnProperty(ctrl_id)) {
       ControllerStateManager.observer[ctrl_id].updateMode(mode);
     }
-    // otros
   }
   
   static notifySecurity(ctrl_id: number, security: CONTROLLER_SECURITY): void {
     if (ControllerStateManager.observer.hasOwnProperty(ctrl_id)) {
       ControllerStateManager.observer[ctrl_id].updateSecurity(security);
     }
-    // otros
   }
 
   static update( ctrl_id: number, fieldsToUpdate: Partial<ControllerState>): void {
@@ -81,6 +79,15 @@ export class ControllerStateManager {
       }
     }
     return result;
+  }
+
+  static getPropertyValue(ctrl_id:number ,field: keyof ControllerState){
+    if(ControllerStateManager.state.hasOwnProperty(ctrl_id)){
+      if(ControllerStateManager.state[ctrl_id].hasOwnProperty(field)){
+        return ControllerStateManager.state[ctrl_id][field]
+      }
+    }
+    return undefined
   }
 
 }

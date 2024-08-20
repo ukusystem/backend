@@ -121,6 +121,7 @@ export interface Controlador {
   personalimplementador: string;
   seguridad: number;
   conectado: number;
+  modo: 0 | 1 
 }
 
 export interface EquipoEntrada {

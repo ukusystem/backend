@@ -1,21 +1,25 @@
 import { Socket , Namespace } from 'socket.io';
-import { CONTROLLER_MODE, CONTROLLER_SECURITY, } from "../../../models/config/config.types";
+import { CONTROLLER_MODE, CONTROLLER_SECURITY } from "../../../models/config/config.types";
 
 export interface ControllerState {
 //   mode: CONTROLLER_MODE;   // Controlado ConfigManager
 //   security: CONTROLLER_SECURITY; // Controlado ConfigManager
 }
 
+type ControllerStateOmit = {mode: CONTROLLER_MODE , security: CONTROLLER_SECURITY}
+
+type FieldInfo = keyof ControllerState | keyof ControllerStateOmit
 
 interface ClientToServerEvents {
   setMode: (newMode: CONTROLLER_MODE) => void;
   setSecurity: (newSecurity: CONTROLLER_SECURITY) => void;
-  initialInfo: (fields: (keyof ControllerState)[]) => void
+  getInfo: (fields: FieldInfo[]) => void
 }
 
 interface ServerToClientEvents {
     mode : (mode: CONTROLLER_MODE) => void;
     security : (security: CONTROLLER_SECURITY) => void;
+    data : (ctrl_id:number,data: Partial<ControllerState & ControllerStateOmit>) => void ;
     //   basicEmit: (a: number, b: string, c: Buffer) => void;
     //   withAck: (d: string, callback: (e: number) => void) => void;
 }

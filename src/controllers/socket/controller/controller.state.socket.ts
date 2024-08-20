@@ -7,7 +7,7 @@ import { ControllerStateManager, ControllerStateSocketObserver } from "./control
 export const contollerStateSocket = async (io: Server, socket: SocketControllerState) => {
 
     const nspControllerState = socket.nsp;
-    const [, , xctrl_id] = nspControllerState.name.split("/"); // Namespace: "/controller_state/ctrl_id" 
+    const [, , xctrl_id] = nspControllerState.name.split("/"); // Namespace: "/controller_state/ctrl_id"
 
      // Validar
     const result = controllerStateSocketSchema.safeParse({ ctrl_id: xctrl_id });
@@ -29,10 +29,6 @@ export const contollerStateSocket = async (io: Server, socket: SocketControllerS
     const observer = new ControllerStateSocketObserver(socket)
     ControllerStateManager.registerObserver(ctrl_id,observer)
 
-    const ctrlConfig  = ConfigManager.getController(ctrl_id)
-    socket.nsp.emit("mode", ctrlConfig.CONTROLLER_MODE)
-    socket.nsp.emit("security", ctrlConfig.CONTROLLER_SECURITY)
-
     socket.on("setMode", (newMode) => {
         ConfigManager.updateController(ctrl_id,{CONTROLLER_MODE: newMode})
     });
@@ -42,9 +38,30 @@ export const contollerStateSocket = async (io: Server, socket: SocketControllerS
         ConfigManager.updateController(ctrl_id,{CONTROLLER_SECURITY: newSecurity})
     });
 
-    socket.on("initialInfo", (fields)=>{
-        // const test = fields[0]
-        // ControllerStateManager.state[1][test]
+    socket.on("getInfo", (fields) => {
 
+        fields.forEach((field) => {
+          if (field === "mode") {
+            try {
+              const ctrlConfig = ConfigManager.getController(ctrl_id);
+              socket.nsp.emit(field, ctrlConfig.CONTROLLER_MODE);
+            } catch (error) {
+              console.log(error);
+            }
+          } else if (field === "security") {
+            try {
+              const ctrlConfig = ConfigManager.getController(ctrl_id);
+              socket.nsp.emit(field, ctrlConfig.CONTROLLER_SECURITY);
+            } catch (error) {
+              console.log(error);
+            }
+          } else {
+            const value = ControllerStateManager.getPropertyValue(ctrl_id,field);
+            if (value !== undefined) {
+              const emitData = { [field]: value };
+              socket.nsp.emit("data", ctrl_id, emitData);
+            }
+          }
+        });
     })
 };
