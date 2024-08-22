@@ -1,4 +1,4 @@
-import { CamStreamQuality, CamStreamSocketManager, ControllerStateManager, PinEntradaManager } from "../../controllers/socket";
+import { CamStreamQuality, CamStreamSocketManager, ControllerStateManager, PinEntradaManager, PinSalidaManager } from "../../controllers/socket";
 import { Resolution } from "./config.resolution";
 import { CONTROLLER_CONFIG, UpdateControllerFunction } from "./config.types";
 
@@ -12,6 +12,8 @@ export class ControllerUpdate {
         // notify
         PinEntradaManager.notifyControllerMode(ctrl_id, newValue);
         ControllerStateManager.notifyMode(ctrl_id, newValue);
+        ControllerStateManager.notifyAnyChange(ctrl_id,{mode: newValue});
+         
       }
     },
     CONTROLLER_SECURITY: (currentConfig, newValue, ctrl_id) => {
@@ -19,9 +21,10 @@ export class ControllerUpdate {
         //update
         currentConfig.CONTROLLER_SECURITY = newValue;
         // notify
-        console.log("update controller security" ,newValue)
         PinEntradaManager.notifyControllerSecurity(ctrl_id, newValue);
         ControllerStateManager.notifySecurity(ctrl_id, newValue);
+        ControllerStateManager.notifyAnyChange(ctrl_id,{security: newValue});
+        PinSalidaManager.updateArmado(ctrl_id,newValue);
       }
     },
     MOTION_RECORD_SECONDS: (currentConfig, newValue, ctrl_id) => {

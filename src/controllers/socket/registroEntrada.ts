@@ -180,6 +180,7 @@ export class RegistroEntradaMap  {
     } catch (error) {
       console.log(`Socket Registro Entrada | RegistroEntradaMap | Error al inicializar registros entrada`);
       console.error(error);  
+      throw error
     }
   }
 

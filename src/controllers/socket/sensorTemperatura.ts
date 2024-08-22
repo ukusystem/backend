@@ -326,6 +326,7 @@ export class SensorTemperaturaMap {
     } catch (error) {
       console.log(`Socket Sensor Temperatura Map | SensorTemperaturaMap | Error al inicilizar sensores`)
       console.error(error)
+      throw error
     }
   }
 

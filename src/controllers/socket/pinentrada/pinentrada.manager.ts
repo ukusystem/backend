@@ -252,6 +252,7 @@ export class PinEntradaManager {
         `Socket Pines Entrada | PinEntradaManager | Error al inicilizar equipos de entrada`
       );
       console.error(error);
+      throw error
     }
   }
 

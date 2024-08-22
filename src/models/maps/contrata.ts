@@ -87,7 +87,8 @@ export class ContrataMap {
         }
     } catch (error) {
         console.log(`ContrataMap | Error al inicilizar contratas`);
-        console.error(error);  
+        console.error(error);
+        throw error
     }
   }
 

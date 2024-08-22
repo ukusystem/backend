@@ -33,30 +33,35 @@ export const streamRecordSocket = async (io: Server, socket: Socket) => {
     }
 
     if (!ffmpegRecordProcess[ctrl_id].hasOwnProperty(ip)) {
-      const [mainRtsp] = await getRstpLinksByCtrlIdAndIp(Number(ctrl_id), ip);
-      const args = [
-        "-rtsp_transport",
-        "tcp",
-        "-i",
-        `${mainRtsp}`,
-        "-c:v",
-        "libx264",
-        "-t",
-        `${t * 60}`,
-        "-preset",
-        "ultrafast",
-        "-tune",
-        "zerolatency",
-        "-f",
-        "mpegts",
-        "pipe:1",
-      ];
-      const pathFolderVidRecord = createMotionDetectionFolders(`./deteccionmovimiento/vid/${ctrl_id}/${ip}`);
-      const videoRecordPath = path.join(pathFolderVidRecord,`grabacion_${Date.now()}.mp4`);
-      const newFfmpegProcess = spawn("ffmpeg", args);
-
-      const videoRecordStream = fs.createWriteStream(videoRecordPath);
-      ffmpegRecordProcess[ctrl_id][ip] = [newFfmpegProcess, videoRecordStream];
+      try {
+        const [mainRtsp] = await getRstpLinksByCtrlIdAndIp(Number(ctrl_id), ip);
+        const args = [
+          "-rtsp_transport",
+          "tcp",
+          "-i",
+          `${mainRtsp}`,
+          "-c:v",
+          "libx264",
+          "-t",
+          `${t * 60}`,
+          "-preset",
+          "ultrafast",
+          "-tune",
+          "zerolatency",
+          "-f",
+          "mpegts",
+          "pipe:1",
+        ];
+        const pathFolderVidRecord = createMotionDetectionFolders(`./deteccionmovimiento/vid/${ctrl_id}/${ip}`);
+        const videoRecordPath = path.join(pathFolderVidRecord,`grabacion_${Date.now()}.mp4`);
+        const newFfmpegProcess = spawn("ffmpeg", args);
+  
+        const videoRecordStream = fs.createWriteStream(videoRecordPath);
+        ffmpegRecordProcess[ctrl_id][ip] = [newFfmpegProcess, videoRecordStream];
+      } catch (error) {
+        console.log(error)
+        return 
+      }
     }
 
     ffmpegRecordProcess[xctrl_id][xip][0].stdout.on("data", (data) => {

@@ -203,6 +203,7 @@ export class TicketMap {
     } catch (error) {
       console.log(`Socket Tickets | TicketMap | Error al inicializar tickets`);
       console.error(error);  
+      throw error
     }
   }
 }

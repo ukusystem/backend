@@ -6,7 +6,7 @@ export interface ControllerState {
 //   security: CONTROLLER_SECURITY; // Controlado ConfigManager
 }
 
-type ControllerStateOmit = {mode: CONTROLLER_MODE , security: CONTROLLER_SECURITY}
+export type ControllerStateOmit = {mode: CONTROLLER_MODE , security: CONTROLLER_SECURITY}
 
 type FieldInfo = keyof ControllerState | keyof ControllerStateOmit
 
@@ -52,6 +52,7 @@ export type SocketControllerState = Socket<
 export interface ControllerStateObserver {
   updateMode(newMode: CONTROLLER_MODE): void;
   updateSecurity(newSecurity: CONTROLLER_SECURITY): void;
+  updateAnyState(ctrl_id: number,data: Partial<ControllerState & ControllerStateOmit>): void;
 }
 
 export interface ControllerStateSubject {
@@ -59,6 +60,7 @@ export interface ControllerStateSubject {
   unregisterObserver(ctrl_id: number): void;
   notifyMode(ctrl_id: number, mode: CONTROLLER_MODE): void;
   notifySecurity(ctrl_id: number, security: CONTROLLER_SECURITY): void;
+  notifyAnyChange(ctrl_id:number,data: Partial<ControllerState & ControllerStateOmit>): void
 }
 
 //

@@ -78,6 +78,7 @@ export class EquipoSalidaMap {
     } catch (error) {
       console.log(`EquipoSalidaMap | Error al inicilizar equipos de salida`);
       console.error(error);
+      throw error
     }
   }
 }

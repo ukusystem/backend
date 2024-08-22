@@ -377,6 +377,7 @@ export class MedidorEnergiaMap {
     } catch (error) {
       console.log(`Socket Medidor Energia | MedidorEnergiaMap | Error al inicilizar modulos`);
       console.error(error);
+      throw error
     }
   }
 

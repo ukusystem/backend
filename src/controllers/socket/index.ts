@@ -8,7 +8,6 @@ export * from "./sensorTemperatura";
 export * from "./ticket";
 export * from "./recordStream"
 export * from "./lastSnapshot"
-export * from "./pinesSalida"
 
 export * from "./voicestream"
 
@@ -19,4 +18,5 @@ export * from "./stream"
 export * from "./pinentrada"
 
 export * from "./controller"
+export * from "./pinsalida"
 

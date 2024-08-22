@@ -27,6 +27,7 @@ import { TicketMap } from "./models/ticketschedule";
     // test()
   } catch (error) {
     console.log(error);
+    process.exit(1)
   }
 })();
 

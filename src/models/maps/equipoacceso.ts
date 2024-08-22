@@ -64,6 +64,7 @@ export class EquipoAccesoMap {
     } catch (error) {
       console.log(`EquipoAccesoMap | Error al inicilizar equipos de acceso`);
       console.error(error);  
+      throw error
     }
   }
 

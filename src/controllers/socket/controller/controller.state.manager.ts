@@ -1,4 +1,4 @@
-import { ControllerState, ControllerStateObserver, SocketControllerState} from "./controller.state.types";
+import { ControllerState, ControllerStateObserver, ControllerStateOmit, SocketControllerState} from "./controller.state.types";
 import { CONTROLLER_MODE, CONTROLLER_SECURITY, } from "../../../models/config/config.types";
 import { ControllerStateUpdate } from "./controller.state.update";
 
@@ -7,6 +7,10 @@ export class ControllerStateSocketObserver implements ControllerStateObserver {
 
   constructor(socket: SocketControllerState) {
     this.#socket = socket;
+  }
+
+  updateAnyState(ctrl_id: number, data: Partial<ControllerState & ControllerStateOmit>): void {
+    this.#socket.nsp.emit("data",ctrl_id,data)
   }
 
   updateMode(newMode: CONTROLLER_MODE): void {
@@ -45,6 +49,16 @@ export class ControllerStateManager {
   static notifySecurity(ctrl_id: number, security: CONTROLLER_SECURITY): void {
     if (ControllerStateManager.observer.hasOwnProperty(ctrl_id)) {
       ControllerStateManager.observer[ctrl_id].updateSecurity(security);
+    }
+  }
+
+  static notifyAnyChange(ctrl_id:number, data: Partial<ControllerState & ControllerStateOmit>): void {
+    if (ControllerStateManager.observer.hasOwnProperty(ctrl_id)) {
+      ControllerStateManager.observer[ctrl_id].updateAnyState(ctrl_id,data);
+    }
+
+    if(ControllerStateManager.observer.hasOwnProperty(0)){
+      ControllerStateManager.observer[0].updateAnyState(ctrl_id,data);
     }
   }
 
