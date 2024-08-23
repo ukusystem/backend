@@ -1,6 +1,6 @@
-import { ControllerState, ControllerStateObserver, ControllerStateOmit, SocketControllerState} from "./controller.state.types";
-import { CONTROLLER_MODE, CONTROLLER_SECURITY, } from "../../../models/config/config.types";
-import { ControllerStateUpdate } from "./controller.state.update";
+import { ControllerStateObserver, KeyControllerConfig, SocketControllerState} from "./controller.state.types";
+
+import { ControllerConfig, ControllerMode, ControllerSecurity, GeneralConfig, SystemManager } from "../../../models/system";
 
 export class ControllerStateSocketObserver implements ControllerStateObserver {
   #socket: SocketControllerState;
@@ -9,15 +9,15 @@ export class ControllerStateSocketObserver implements ControllerStateObserver {
     this.#socket = socket;
   }
 
-  updateAnyState(ctrl_id: number, data: Partial<ControllerState & ControllerStateOmit>): void {
+  updateAnyState(ctrl_id: number, data: Partial<ControllerConfig>): void {
     this.#socket.nsp.emit("data",ctrl_id,data)
   }
 
-  updateMode(newMode: CONTROLLER_MODE): void {
+  updateMode(newMode: ControllerMode): void {
     this.#socket.nsp.emit("mode",newMode)
   }
   
-  updateSecurity(newSecurity: CONTROLLER_SECURITY): void {
+  updateSecurity(newSecurity: ControllerSecurity): void {
     this.#socket.nsp.emit("security", newSecurity)
   }
 
@@ -25,7 +25,6 @@ export class ControllerStateSocketObserver implements ControllerStateObserver {
 
 export class ControllerStateManager {
 
-  static state: { [ctrl_id: number]: ControllerState } = {};
   static observer: { [ctrl_id: number]: ControllerStateObserver } = {};
 
   static registerObserver( ctrl_id: number, observer: ControllerStateObserver ): void {
@@ -40,19 +39,19 @@ export class ControllerStateManager {
     }
   }
 
-  static notifyMode(ctrl_id: number, mode: CONTROLLER_MODE): void {
+  static notifyMode(ctrl_id: number, mode: ControllerMode): void {
     if (ControllerStateManager.observer.hasOwnProperty(ctrl_id)) {
       ControllerStateManager.observer[ctrl_id].updateMode(mode);
     }
   }
   
-  static notifySecurity(ctrl_id: number, security: CONTROLLER_SECURITY): void {
+  static notifySecurity(ctrl_id: number, security: ControllerSecurity): void {
     if (ControllerStateManager.observer.hasOwnProperty(ctrl_id)) {
       ControllerStateManager.observer[ctrl_id].updateSecurity(security);
     }
   }
 
-  static notifyAnyChange(ctrl_id:number, data: Partial<ControllerState & ControllerStateOmit>): void {
+  static notifyAnyChange(ctrl_id:number, data: Partial<ControllerConfig>): void {
     if (ControllerStateManager.observer.hasOwnProperty(ctrl_id)) {
       ControllerStateManager.observer[ctrl_id].updateAnyState(ctrl_id,data);
     }
@@ -62,46 +61,12 @@ export class ControllerStateManager {
     }
   }
 
-  static update( ctrl_id: number, fieldsToUpdate: Partial<ControllerState>): void {
-    const fieldsFiltered = ControllerStateManager.#filterUndefinedProperties(fieldsToUpdate);
-    ControllerStateManager.#updateControllerConfig(ctrl_id,fieldsFiltered)
-  }
 
-  static #updateControllerConfig( ctrl_id: number, fieldsToUpdate: Partial<ControllerState> ) {
-    const currentControllerConfig = ControllerStateManager.state[ctrl_id];
-    if (currentControllerConfig) {
-      for (const key in fieldsToUpdate) {
-        if (key in currentControllerConfig) {
-          const keyConfig = key as keyof ControllerState;
-          const keyValue = fieldsToUpdate[keyConfig]
-          if ( keyValue !== undefined) {
-            const updateFunction = ControllerStateUpdate.getFunction(keyConfig);
-            updateFunction(currentControllerConfig, keyValue , ctrl_id);
-          }
-        }
-      }
-    }
-  }
+  static getPropertyValues(ctrl_id:number ,keys: KeyControllerConfig[]){
 
-
-
-  static #filterUndefinedProperties<T extends ControllerState>( obj: Partial<T> ): Partial<T> {
-    const result: Partial<T> = {};
-    for (const key in obj) {
-      if (obj[key] !== undefined) {
-        result[key] = obj[key];
-      }
-    }
-    return result;
-  }
-
-  static getPropertyValue(ctrl_id:number ,field: keyof ControllerState){
-    if(ControllerStateManager.state.hasOwnProperty(ctrl_id)){
-      if(ControllerStateManager.state[ctrl_id].hasOwnProperty(field)){
-        return ControllerStateManager.state[ctrl_id][field]
-      }
-    }
-    return undefined
+    const propValues = SystemManager.getControllerProperties(ctrl_id,keys);
+    
+    return propValues
   }
 
 }

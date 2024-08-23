@@ -1,10 +1,13 @@
-import { CamStreamQuality, CamStreamSocketManager, ControllerStateManager, PinEntradaManager, PinSalidaManager } from "../../controllers/socket";
-import { Resolution } from "./config.resolution";
-import { CONTROLLER_CONFIG, UpdateControllerFunction } from "./config.types";
+
+import { ControllerStateManager } from "../../controllers/socket/controller";
+import { PinEntradaManager } from "../../controllers/socket/pinentrada";
+import { CamStreamQuality, CamStreamSocketManager } from "../../controllers/socket/stream";
+import { Resolution } from "./system.resolution";
+import { ControllerConfig, ControllerUpdateFunction } from "./system.state.types";
 
 export class ControllerUpdate {
     
-  static #functions: { [P in keyof CONTROLLER_CONFIG]: UpdateControllerFunction<P>  } = {
+  static #functions: { [P in keyof ControllerConfig]: ControllerUpdateFunction<P>  } = {
     CONTROLLER_MODE: (currentConfig, newValue, ctrl_id) => {
       if (currentConfig.CONTROLLER_MODE !== newValue) {
         //update
@@ -12,7 +15,7 @@ export class ControllerUpdate {
         // notify
         PinEntradaManager.notifyControllerMode(ctrl_id, newValue);
         ControllerStateManager.notifyMode(ctrl_id, newValue);
-        ControllerStateManager.notifyAnyChange(ctrl_id,{mode: newValue});
+        ControllerStateManager.notifyAnyChange(ctrl_id,{CONTROLLER_MODE: newValue});
          
       }
     },
@@ -23,8 +26,16 @@ export class ControllerUpdate {
         // notify
         PinEntradaManager.notifyControllerSecurity(ctrl_id, newValue);
         ControllerStateManager.notifySecurity(ctrl_id, newValue);
-        ControllerStateManager.notifyAnyChange(ctrl_id,{security: newValue});
-        PinSalidaManager.updateArmado(ctrl_id,newValue);
+        ControllerStateManager.notifyAnyChange(ctrl_id,{CONTROLLER_SECURITY: newValue});
+
+      }
+    },
+    CONTROLLER_CONNECT: (currentConfig, newValue, ctrl_id) => {
+      if (currentConfig.CONTROLLER_CONNECT !== newValue) {
+        // update
+        currentConfig.CONTROLLER_CONNECT = newValue;
+        // notify
+        
       }
     },
     MOTION_RECORD_SECONDS: (currentConfig, newValue, ctrl_id) => {
@@ -123,15 +134,12 @@ export class ControllerUpdate {
         //update
         currentConfig.STREAM_AUXILIARY_FPS = newValue;
         // notify
-        CamStreamSocketManager.notifyChangeConfig(
-          ctrl_id,
-          CamStreamQuality.Auxiliary
-        );
+        CamStreamSocketManager.notifyChangeConfig(ctrl_id,CamStreamQuality.Auxiliary);
       }
     },
   };
 
-  static getFunction<T extends keyof CONTROLLER_CONFIG>( keyConfig: T ): ( currentConfig: CONTROLLER_CONFIG, newValue: CONTROLLER_CONFIG[T], ctrl_id: number ) => void {
+  static getFunction<T extends keyof ControllerConfig>( keyConfig: T ): ( currentConfig: ControllerConfig, newValue: ControllerConfig[T], ctrl_id: number ) => void {
     return ControllerUpdate.#functions[keyConfig];
   }
 }

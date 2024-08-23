@@ -1,6 +1,5 @@
-import { Socket } from "socket.io";
 import { ActionPinSal, EquSalPinSalida, IPinSalidaSocket, IPinSalidaSocketBad, IPinSalObject, PinSalidaObserver, SocketPinSalida } from "./pinsalida.types";
-import { EquipoSalida, PinesSalida } from "../../../types/db";
+import { EquipoSalida } from "../../../types/db";
 import { PinSalida } from "../../../models/site";
 
 export class PinSalidaSocket implements IPinSalObject {
@@ -171,6 +170,7 @@ export class PinSalidaManager {
   static map: { [ctrl_id: number]: { [es_id: number]: EquSalPinSalida } } = {};
   private static equiposalida: EquipoSalida[] = [];
   static observers: { [ctrl_id: string]: PinSalidaObserver } = {};
+  static readonly ES_ID_ARMADO : number = 21
 
   public static registerObserver( ctrl_id: number, observer: PinSalidaObserver ): void {
     if (!PinSalidaManager.observers[ctrl_id]) {
@@ -186,19 +186,24 @@ export class PinSalidaManager {
   
   public static notifyEquiposSalida( ctrl_id: number, data: EquipoSalida[] ): void {
     if (PinSalidaManager.observers[ctrl_id]) {
-      PinSalidaManager.observers[ctrl_id].updateEquiposSalida(data);
+      const equiSalFiltered = data.filter((equiSal)=> equiSal.es_id !== PinSalidaManager.ES_ID_ARMADO)
+      PinSalidaManager.observers[ctrl_id].updateEquiposSalida(equiSalFiltered);
     }
   }
 
   public static notifyListPinesSalida( ctrl_id: number, equipo_salida: EquipoSalida, data: IPinSalidaSocket[] ): void {
     if (PinSalidaManager.observers[ctrl_id]) {
-      PinSalidaManager.observers[ctrl_id].updateListPinesSalida( data, equipo_salida );
+      if(equipo_salida.es_id !== PinSalidaManager.ES_ID_ARMADO){
+        PinSalidaManager.observers[ctrl_id].updateListPinesSalida( data, equipo_salida );
+      }
     }
   }
 
   public static notifyItemPinSalida( ctrl_id: number, data: IPinSalidaSocket ): void {
     if (PinSalidaManager.observers[ctrl_id]) {
-      PinSalidaManager.observers[ctrl_id].updateItemPinSalida(data);
+      if(data.es_id !== PinSalidaManager.ES_ID_ARMADO){
+        PinSalidaManager.observers[ctrl_id].updateItemPinSalida(data);
+      }
     }
   }
 
@@ -274,8 +279,7 @@ export class PinSalidaManager {
           if (currentPinSal.activo != activo) {
             currentPinSal.setActivo(activo);
             const newListPinSal = PinSalidaManager.getListPinesSalida( ctrl_id, es_id );
-            const { pines_salida, ...equisal } =
-            PinSalidaManager.map[ctrl_id][es_id];
+            const { pines_salida, ...equisal } = PinSalidaManager.map[ctrl_id][es_id];
             PinSalidaManager.notifyListPinesSalida( ctrl_id, equisal, newListPinSal );
           }
           PinSalidaManager.notifyItemPinSalida(ctrl_id, pinSal.toJSON());
@@ -330,11 +334,9 @@ export class PinSalidaManager {
               } else {
                 PinSalidaManager.map[ctrl_id][newPinSalSocket.es_id].pines_salida[ps_id].setActivo(0);
               }
-
               const newListPinSal = PinSalidaManager.getListPinesSalida(ctrl_id,newPinSalSocket.es_id);
               const { pines_salida, ...equisal } = PinSalidaManager.map[ctrl_id][newPinSalSocket.es_id];
               PinSalidaManager.notifyListPinesSalida(ctrl_id,equisal,newListPinSal);
-
             }
           }
         }
@@ -392,10 +394,10 @@ export class PinSalidaManager {
   }
 
   public static updateArmado(ctrl_id:number, newState: 0 | 1){
-    const es_id_armado = 21
+
     if (PinSalidaManager.map.hasOwnProperty(ctrl_id)) {
-      if (PinSalidaManager.map[ctrl_id].hasOwnProperty(es_id_armado)) {
-        const currPinSalArmado = PinSalidaManager.map[ctrl_id][es_id_armado].pines_salida
+      if (PinSalidaManager.map[ctrl_id].hasOwnProperty(PinSalidaManager.ES_ID_ARMADO)) {
+        const currPinSalArmado = PinSalidaManager.map[ctrl_id][PinSalidaManager.ES_ID_ARMADO].pines_salida
         Object.values(currPinSalArmado).forEach((pinSal)=>{
             if(pinSal.estado !== newState){
                 pinSal.setEstado(newState);

@@ -1,8 +1,8 @@
-import { GENERAL_CONFIG, UpdateGeneralFunction } from "./config.types";
+import { GeneralConfig, GeneralUpdateFunction } from "./system.state.types";
 
 export class GeneralUpdate {
 
-  static #functions: { [P in keyof GENERAL_CONFIG]: UpdateGeneralFunction<P> } = {
+  static #functions: { [P in keyof GeneralConfig]: GeneralUpdateFunction<P> } = {
       COMPANY_NAME: (currentConfig, newValue) => {
         if (currentConfig.COMPANY_NAME !== newValue) {
           currentConfig.COMPANY_NAME = newValue;
@@ -15,7 +15,7 @@ export class GeneralUpdate {
       },
     };
 
-  static getFunction<T extends keyof GENERAL_CONFIG>(keyConfig: T): (currentConfig: GENERAL_CONFIG, newValue: GENERAL_CONFIG[T]) => void {
+  static getFunction<T extends keyof GeneralConfig>(keyConfig: T): (currentConfig: GeneralConfig, newValue: GeneralConfig[T]) => void {
     return GeneralUpdate.#functions[keyConfig];
   }
 }

@@ -1,8 +1,8 @@
 import { Server } from "socket.io";
 import { SocketControllerState } from "./controller.state.types";
-import { ConfigManager } from "../../../models/config/config.manager";
 import { controllerStateSocketSchema } from "./controller.state.schema";
 import { ControllerStateManager, ControllerStateSocketObserver } from "./controller.state.manager";
+import { SystemManager } from "../../../models/system";
 
 export const contollerStateSocket = async ( io: Server, socket: SocketControllerState ) => {
   const nspControllerState = socket.nsp;
@@ -29,40 +29,16 @@ export const contollerStateSocket = async ( io: Server, socket: SocketController
   ControllerStateManager.registerObserver(ctrl_id, observer);
 
   socket.on("setMode", (newMode) => {
-    ConfigManager.updateController(ctrl_id, { CONTROLLER_MODE: newMode });
+    SystemManager.updateController(ctrl_id, { CONTROLLER_MODE: newMode });
   });
 
   socket.on("setSecurity", (newSecurity) => {
-    // console.log("setSecurity",ctrl_id, newSecurity)
-    ConfigManager.updateController(ctrl_id, {
-      CONTROLLER_SECURITY: newSecurity,
-    });
+    SystemManager.updateController(ctrl_id, {CONTROLLER_SECURITY: newSecurity,});
   });
 
   socket.on("getInfo", (fields) => {
-    fields.forEach((field) => {
-      if (field === "mode") {
-        try {
-          const ctrlConfig = ConfigManager.getController(ctrl_id);
-          socket.nsp.emit(field, ctrlConfig.CONTROLLER_MODE);
-        } catch (error) {
-          console.log(error);
-        }
-      } else if (field === "security") {
-        try {
-          const ctrlConfig = ConfigManager.getController(ctrl_id);
-          socket.nsp.emit(field, ctrlConfig.CONTROLLER_SECURITY);
-        } catch (error) {
-          console.log(error);
-        }
-      } else {
-        const value = ControllerStateManager.getPropertyValue(ctrl_id, field);
-        if (value !== undefined) {
-          const emitData = { [field]: value };
-          socket.nsp.emit("data", ctrl_id, emitData);
-        }
-      }
-    });
+    const partialProps = ControllerStateManager.getPropertyValues(ctrl_id,fields);
+    socket.nsp.emit("data",ctrl_id,partialProps);
   });
 
   socket.on("disconnect", () => {

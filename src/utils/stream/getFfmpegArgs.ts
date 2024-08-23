@@ -1,12 +1,11 @@
-
-import { ConfigManager } from "../../models/config/config.manager";
+import { SystemManager } from "../../models/system";
 import { getRstpLinksByCtrlIdAndIp } from "../getCameraRtspLinks";
 
 type Calidad = "q1" | "q2" | "q3";
 
 export const getFfmpegArgs = async (ctrl_id: number, ip: string, q: Calidad) => {
     try {
-      const {STREAM_PRIMARY_RESOLUTION,STREAM_SECONDARY_RESOLUTION} = ConfigManager.getController(ctrl_id)
+      const {STREAM_PRIMARY_RESOLUTION,STREAM_SECONDARY_RESOLUTION} = SystemManager.getController(ctrl_id)
       const [rtspUrl, rtspUrlsub] = await getRstpLinksByCtrlIdAndIp(ctrl_id,ip);
       let ffmpegArg : string[] = [];
       if (q === "q1") {

@@ -1,32 +1,45 @@
 import { MySQL2 } from "../../database/mysql";
-import { CONTROLLER_CONFIG, ControllerConfigRowData, GENERAL_CONFIG, GeneralConfigRowData } from "./config.types";
-import { Resolution } from "./config.resolution";
-import { GeneralUpdate } from "./config.general.update";
-import { ControllerUpdate } from "./config.cotroller.update";
+import { ControllerUpdate } from "./system.controller.update";
+import { GeneralUpdate } from "./system.general.update";
+import { Resolution } from "./system.resolution";
+import { ControllerConfig, ControllerConfigRowData, GeneralConfig, GeneralConfigRowData } from "./system.state.types";
 
-export class ConfigManager {
+export class SystemManager {
 
-  static general: GENERAL_CONFIG 
-  static #controller: { [ctrl_id: number]: CONTROLLER_CONFIG } = {};
+  static general: GeneralConfig 
+  static #controller: { [ctrl_id: number]: ControllerConfig } = {};
 
-  static updateGeneral(fieldsToUpdate: Partial<GENERAL_CONFIG>){
-    const fieldsFiltered = ConfigManager.#filterUndefinedProperties(fieldsToUpdate);
-    ConfigManager.#updateGeneralConfig(fieldsFiltered)
+  static updateGeneral(fieldsToUpdate: Partial<GeneralConfig>){
+    const fieldsFiltered = SystemManager.#filterUndefinedProperties(fieldsToUpdate);
+    SystemManager.#updateGeneralConfig(fieldsFiltered)
   }
 
   static getController(ctrl_id:number){
-    if(!ConfigManager.#controller[ctrl_id]){
+    if(!SystemManager.#controller[ctrl_id]){
       throw new Error("Configuracion del controlador no encontrado")
     }
-    return ConfigManager.#controller[ctrl_id]
+    return SystemManager.#controller[ctrl_id]
   }
 
-  static #updateGeneralConfig(fieldsToUpdate: Partial<GENERAL_CONFIG>){
-    const currentGeneralConfig = ConfigManager.general;
+  static getControllerProperties(ctrl_id:number, keys: (keyof ControllerConfig)[]) : Partial<ControllerConfig> {
+    const result : Record<any,any> = {}
+    if(SystemManager.#controller.hasOwnProperty(ctrl_id)){
+      const currCtrlConf = SystemManager.#controller[ctrl_id];
+      keys.forEach((key) => {
+        if(currCtrlConf[key] !== undefined){
+          result[key] = currCtrlConf[key];
+        }
+      });
+    }
+    return result
+  }
+
+  static #updateGeneralConfig(fieldsToUpdate: Partial<GeneralConfig>){
+    const currentGeneralConfig = SystemManager.general;
     if (currentGeneralConfig) {
       for (const key in fieldsToUpdate) {
         if (key in currentGeneralConfig) {
-          const keyConfig = key as keyof GENERAL_CONFIG;
+          const keyConfig = key as keyof GeneralConfig;
           const keyValue = fieldsToUpdate[keyConfig]
           if ( keyValue !== undefined) {
             const updateFunction = GeneralUpdate.getFunction(keyConfig);
@@ -37,18 +50,18 @@ export class ConfigManager {
     }
   }
 
-  static updateController(ctrl_id: number, fieldsToUpdate: Partial<CONTROLLER_CONFIG> ) {
-    const fieldsFiltered = ConfigManager.#filterUndefinedProperties(fieldsToUpdate);
-    ConfigManager.#updateControllerConfig(ctrl_id,fieldsFiltered)
+  static updateController(ctrl_id: number, fieldsToUpdate: Partial<ControllerConfig> ) {
+    const fieldsFiltered = SystemManager.#filterUndefinedProperties(fieldsToUpdate);
+    SystemManager.#updateControllerConfig(ctrl_id,fieldsFiltered)
   }
 
-  static addController(ctrl_id: number, configs: CONTROLLER_CONFIG){
-    if(!ConfigManager.#controller[ctrl_id]){
-      ConfigManager.#controller[ctrl_id] = configs
+  static addController(ctrl_id: number, configs: ControllerConfig){
+    if(!SystemManager.#controller[ctrl_id]){
+      SystemManager.#controller[ctrl_id] = configs
     }
   }
 
-  static #filterUndefinedProperties<T extends CONTROLLER_CONFIG | GENERAL_CONFIG>( obj: Partial<T> ): Partial<T> {
+  static #filterUndefinedProperties<T extends ControllerConfig | GeneralConfig>( obj: Partial<T> ): Partial<T> {
     const result: Partial<T> = {};
     for (const key in obj) {
       if (obj[key] !== undefined) {
@@ -58,12 +71,12 @@ export class ConfigManager {
     return result;
   }
 
-  static #updateControllerConfig( ctrl_id: number, fieldsToUpdate: Partial<CONTROLLER_CONFIG> ) {
-    const currentControllerConfig = ConfigManager.#controller[ctrl_id];
+  static #updateControllerConfig( ctrl_id: number, fieldsToUpdate: Partial<ControllerConfig> ) {
+    const currentControllerConfig = SystemManager.#controller[ctrl_id];
     if (currentControllerConfig) {
       for (const key in fieldsToUpdate) {
         if (key in currentControllerConfig) {
-          const keyConfig = key as keyof CONTROLLER_CONFIG;
+          const keyConfig = key as keyof ControllerConfig;
           const keyValue = fieldsToUpdate[keyConfig]
           if ( keyValue !== undefined) {
             const updateFunction = ControllerUpdate.getFunction(keyConfig);
@@ -81,9 +94,8 @@ export class ConfigManager {
 
       const generalConfigs = await MySQL2.executeQuery<GeneralConfigRowData[]>({ sql: `SELECT nombreempresa AS COMPANY_NAME , correoadministrador AS EMAIL_ADMIN FROM general.configuracion LIMIT 1 OFFSET 0` });
       if(generalConfigs.length > 0){
-        ConfigManager.general= generalConfigs[0]
+        SystemManager.general= generalConfigs[0]
       }
-      // const controllerConfigs = await MySQL2.executeQuery<ControllerConfigRowData[]>({ sql: `select c.ctrl_id, c.modo as CONTROLLER_MODE, c.seguridad as CONTROLLER_SECURITY, c.motionrecordseconds as MOTION_RECORD_SECONDS, mrr.ancho as MOTION_RECORD_RESOLUTION_WIDTH, mrr.altura as MOTION_RECORD_RESOLUTION_HEIGHT, c.motionrecordfps as MOTION_RECORD_FPS, c.motionsnapshotseconds as MOTION_SNAPSHOT_SECONDS, msr.ancho as MOTION_SNAPSHOT_RESOLUTION_WIDTH, msr.altura as MOTION_SNAPSHOT_RESOLUTION_HEIGHT, c.motionsnapshotinterval as MOTION_SNAPSHOT_INTERVAL, spr.ancho as STREAM_PRIMARY_RESOLUTION_WIDTH, spr.altura as STREAM_PRIMARY_RESOLUTION_HEIGHT, c.streamprimaryfps as STREAM_PRIMARY_FPS, ssr.ancho as STREAM_SECONDARY_RESOLUTION_WIDTH, ssr.altura as STREAM_SECONDARY_RESOLUTION_HEIGHT, c.streamsecondaryfps as STREAM_SECONDARY_FPS, sar.ancho as STREAM_AUXILIARY_RESOLUTION_WIDTH, sar.altura as STREAM_AUXILIARY_RESOLUTION_HEIGHT, c.streamauxiliaryfps as STREAM_AUXILIARY_FPS from general.controlador c inner join general.resolucion mrr on c.res_id_motionrecord = mrr.res_id inner join general.resolucion msr on c.res_id_motionsnapshot = msr.res_id inner join general.resolucion spr on c.res_id_streamprimary = spr.res_id inner join general.resolucion ssr on c.res_id_streamsecondary = ssr.res_id inner join general.resolucion sar on c.res_id_streamauxiliary = sar.res_id` });
       const controllerConfigs = await MySQL2.executeQuery<ControllerConfigRowData[]>({ sql: `select c.ctrl_id, c.modo as CONTROLLER_MODE, c.seguridad as CONTROLLER_SECURITY, c.motionrecordseconds as MOTION_RECORD_SECONDS, c.res_id_motionrecord, c.motionrecordfps as MOTION_RECORD_FPS, c.motionsnapshotseconds as MOTION_SNAPSHOT_SECONDS, c.res_id_motionsnapshot, c.motionsnapshotinterval as MOTION_SNAPSHOT_INTERVAL, c.streamprimaryfps as STREAM_PRIMARY_FPS, c.res_id_streamprimary, c.streamsecondaryfps as STREAM_SECONDARY_FPS, c.res_id_streamsecondary, c.streamauxiliaryfps as STREAM_AUXILIARY_FPS, c.res_id_streamauxiliary from general.controlador c` });
 
       controllerConfigs.forEach((ctrlConfig) => {
@@ -97,7 +109,7 @@ export class ConfigManager {
 
         const allRosolutionsFound =  resolution_motionrecord !== undefined && resolution_motionsnapshot !== undefined && resolution_streamauxiliary !== undefined && resolution_streamprimary !== undefined && resolution_streamsecondary !== undefined ;
         if(allRosolutionsFound){
-          const newControllerConfig : CONTROLLER_CONFIG = {
+          const newControllerConfig : ControllerConfig = {
             ...rest,
             MOTION_RECORD_RESOLUTION:resolution_motionrecord,
             MOTION_SNAPSHOT_RESOLUTION: resolution_motionsnapshot,
@@ -105,7 +117,7 @@ export class ConfigManager {
             STREAM_PRIMARY_RESOLUTION: resolution_streamprimary,
             STREAM_SECONDARY_RESOLUTION: resolution_streamsecondary
           }
-          ConfigManager.addController(ctrl_id,newControllerConfig)
+          SystemManager.addController(ctrl_id,newControllerConfig)
         }else{
           throw new Error("No se encontraron todas las resoluciones")
         }       

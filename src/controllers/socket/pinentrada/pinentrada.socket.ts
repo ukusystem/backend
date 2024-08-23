@@ -1,6 +1,7 @@
 import { Server, Socket } from "socket.io";
 import { PinEntradaManager, PinesSalidaSocketObserver } from "./pinentrada.manager";
-import { ConfigManager } from "../../../models/config/config.manager";
+import { SystemManager } from "../../../models/system";
+
 
 export const pinEntradaSocket = async (io:Server, socket: Socket) => {
 
@@ -14,7 +15,7 @@ export const pinEntradaSocket = async (io:Server, socket: Socket) => {
     const data = PinEntradaManager.getListPinesSalida(ctrl_id)
     socket.emit("list_pines_entrada", data);
     try {
-      const {CONTROLLER_MODE, CONTROLLER_SECURITY} = ConfigManager.getController(Number(ctrl_id))
+      const {CONTROLLER_MODE, CONTROLLER_SECURITY} = SystemManager.getController(Number(ctrl_id))
       socket.emit("controller_mode",CONTROLLER_MODE);
       socket.emit("controller_security",CONTROLLER_SECURITY);
     } catch (error) {

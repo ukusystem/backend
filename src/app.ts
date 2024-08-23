@@ -1,5 +1,6 @@
-import { ConfigManager } from "./models/config/config.manager";
+
 import { ServerApp } from "./models/server";
+import { SystemManager } from "./models/system";
 import { TicketMap } from "./models/ticketschedule";
 
 (async () => {
@@ -7,7 +8,7 @@ import { TicketMap } from "./models/ticketschedule";
     // Conectar a la base de datos:
     await ServerApp.connectDataBase();
 
-    await ConfigManager.init()
+    await SystemManager.init()
     
     // Crear un servidor
     const server = new ServerApp();

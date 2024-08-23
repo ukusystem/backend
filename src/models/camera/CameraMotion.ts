@@ -13,7 +13,8 @@ import { decrypt } from "../../utils/decrypt";
 import { CameraForFront } from "../controllerapp/src/frontend/camaraForFront";
 import { Socket } from "socket.io";
 import dayjs from "dayjs";
-import { ConfigManager } from "../config/config.manager";
+import { SystemManager } from "../system";
+
 
 interface CameraMotionProps {
   ip: string;
@@ -546,12 +547,12 @@ export class CameraMotion implements CameraMotionProps, CameraMotionMethods {
 }
 
 const getImageFfmpegArgs = (rtspUrl: string, ctrl_id: number): string[] => {
-  const ctrlConfig = ConfigManager.getController(ctrl_id)
+  const ctrlConfig = SystemManager.getController(ctrl_id)
   return ["-rtsp_transport", "tcp", "-i", `${rtspUrl}`, "-vf", `select='gte(t\\,0)',fps=1/${ctrlConfig.MOTION_SNAPSHOT_INTERVAL}`, "-an", "-t", `${ctrlConfig.MOTION_SNAPSHOT_SECONDS}`, "-c:v", "mjpeg", "-f", "image2pipe", "-"];
 };
 
 const getVideoFfmpegArgs = (rtspUrl: string, outputPath: string, ctrl_id: number): string[] => {
-  const ctrlConfig = ConfigManager.getController(ctrl_id)
+  const ctrlConfig = SystemManager.getController(ctrl_id)
   return [
     "-rtsp_transport",
     "tcp",

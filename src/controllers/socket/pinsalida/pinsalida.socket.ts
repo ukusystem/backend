@@ -30,21 +30,26 @@ export const pinSalidaSocket = async ( io: Server, socket: SocketPinSalida ) => 
   PinSalidaManager.registerObserver(Number(ctrl_id),observer);
 
   let newEquipSal = PinSalidaManager.getEquiposSalida(ctrl_id);
-  socket.emit("equipos_salida",newEquipSal)
+  const equiSalFiltered = newEquipSal.filter((equiSal)=> equiSal.es_id !== PinSalidaManager.ES_ID_ARMADO);
+  socket.emit("equipos_salida",equiSalFiltered);
   
   socket.on("initial_list_pines_salida",(es_id: number)=>{
     let newListPinSal = PinSalidaManager.getListPinesSalida(ctrl_id,es_id);
     if (PinSalidaManager.map.hasOwnProperty(ctrl_id)){
       if(PinSalidaManager.map[ctrl_id].hasOwnProperty(es_id)){
-        let {pines_salida,...equisal} = PinSalidaManager.map[ctrl_id][es_id]
-        socket.emit("list_pines_salida",newListPinSal,equisal)
+        let {pines_salida,...equisal} = PinSalidaManager.map[ctrl_id][es_id];
+        if(equisal.es_id !== PinSalidaManager.ES_ID_ARMADO){
+          socket.emit("list_pines_salida",newListPinSal,equisal);
+        }
       }}
   })
 
   socket.on("initial_item_pin_salida",(es_id: number, ps_id:number)=>{
     let newItemPinSal = PinSalidaManager.getItemPinSalida(ctrl_id,es_id,ps_id)
     if(newItemPinSal){
-      socket.emit("item_pin_salida",newItemPinSal)
+      if(newItemPinSal.es_id !== PinSalidaManager.ES_ID_ARMADO){
+        socket.emit("item_pin_salida",newItemPinSal)
+      }
     }
   })
 
