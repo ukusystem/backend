@@ -35,7 +35,8 @@ export class ControllerUpdate {
         // update
         currentConfig.CONTROLLER_CONNECT = newValue;
         // notify
-        
+        ControllerStateManager.notifyAnyChange(ctrl_id,{CONTROLLER_CONNECT: newValue});
+  
       }
     },
     MOTION_RECORD_SECONDS: (currentConfig, newValue, ctrl_id) => {

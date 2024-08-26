@@ -96,7 +96,7 @@ export class SystemManager {
       if(generalConfigs.length > 0){
         SystemManager.general= generalConfigs[0]
       }
-      const controllerConfigs = await MySQL2.executeQuery<ControllerConfigRowData[]>({ sql: `select c.ctrl_id, c.modo as CONTROLLER_MODE, c.seguridad as CONTROLLER_SECURITY, c.motionrecordseconds as MOTION_RECORD_SECONDS, c.res_id_motionrecord, c.motionrecordfps as MOTION_RECORD_FPS, c.motionsnapshotseconds as MOTION_SNAPSHOT_SECONDS, c.res_id_motionsnapshot, c.motionsnapshotinterval as MOTION_SNAPSHOT_INTERVAL, c.streamprimaryfps as STREAM_PRIMARY_FPS, c.res_id_streamprimary, c.streamsecondaryfps as STREAM_SECONDARY_FPS, c.res_id_streamsecondary, c.streamauxiliaryfps as STREAM_AUXILIARY_FPS, c.res_id_streamauxiliary from general.controlador c` });
+      const controllerConfigs = await MySQL2.executeQuery<ControllerConfigRowData[]>({ sql: `select c.ctrl_id, c.modo as CONTROLLER_MODE, c.seguridad as CONTROLLER_SECURITY, c.conectado as CONTROLLER_CONNECT, c.motionrecordseconds as MOTION_RECORD_SECONDS, c.res_id_motionrecord, c.motionrecordfps as MOTION_RECORD_FPS, c.motionsnapshotseconds as MOTION_SNAPSHOT_SECONDS, c.res_id_motionsnapshot, c.motionsnapshotinterval as MOTION_SNAPSHOT_INTERVAL, c.streamprimaryfps as STREAM_PRIMARY_FPS, c.res_id_streamprimary, c.streamsecondaryfps as STREAM_SECONDARY_FPS, c.res_id_streamsecondary, c.streamauxiliaryfps as STREAM_AUXILIARY_FPS, c.res_id_streamauxiliary from general.controlador c` });
 
       controllerConfigs.forEach((ctrlConfig) => {
         const {ctrl_id, res_id_motionrecord,res_id_motionsnapshot,res_id_streamauxiliary, res_id_streamprimary, res_id_streamsecondary , ...rest} = ctrlConfig
