@@ -150,4 +150,11 @@ export class SystemManager {
 //   //   AppConfig.updateController(1,{STREAM_PRIMARY_RESOLUTION:{res_id: 1, activo:0,altura:0,ancho:0,nombre:"",relacionaspecto:""}})
 //   // }, 30000);
 
+//   // setInterval(() => {
+//   //   const ramdomConnect = Math.round(Math.random());
+//   //   console.log("=========== Update conexion state =============", ramdomConnect)
+//   //   SystemManager.updateController(1,{CONTROLLER_CONNECT:ramdomConnect})  
+//   //   SystemManager.updateController(9,{CONTROLLER_CONNECT:ramdomConnect})  
+//   // }, 2000);
+
 // })()

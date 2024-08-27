@@ -1,8 +1,6 @@
 import { Server as HttpServer } from "http";
-import { Server, Socket } from "socket.io";
-import {  energiaSocket, sensorTemperaturaSocket, ticketSocket , streamRecordSocket, lastSnapshotSocket, sensorTemperaturaSocketFinal, moduloEnergiaSocket, pinEntradaSocket, registroEntradaSocket, SensorTemperaturaMap, registroAccesoSocket, voiceStreamSocket, NamespaceControllerState, contollerStateSocket, NamespacePinSalida, pinSalidaSocket } from "../controllers/socket";
-import { Auth } from "./auth";
-// import { pinesSalidaSocket } from "../controllers/socket/pinesSalida";
+import { Server } from "socket.io";
+import {  ticketSocket , streamRecordSocket, lastSnapshotSocket, pinEntradaSocket, registroEntradaSocket, SensorTemperaturaManager, registroAccesoSocket, voiceStreamSocket, NamespaceControllerState, contollerStateSocket, NamespacePinSalida, pinSalidaSocket, NamespaceModEnergia, modEnergiaSocket, senTemperaturaSocket, NamespaceSenTemperature } from "../controllers/socket";
 import { camStreamSocket } from "../controllers/socket/stream/camera.stream.socket";
 
 
@@ -91,26 +89,18 @@ export class Sockets {
         camStreamSocket(this.#io, socket);
       });
 
-    // Namespace : "/sensor/tipo_sensor/region/nodo/id"
-    // this.#io.of(/^\/sensor\/[a-zA-Z0-9]+\/[a-zA-Z0-9]+\/[a-zA-Z0-9]+\/\d+$/).on("connection", (socket)=>{sensorTemperaturaSocket(this.#io, socket)})
 
     // Namespace : "/sensor_temperatura/ctrl_id/id"
-    this.#io.of(/^\/sensor_temperatura\/\d+\/\d+$/).on("connection", (socket) => {  sensorTemperaturaSocket(this.#io, socket);});
-    // Namespace : "/sensor_temperaturafinal/ctrl_id"
-    this.#io.of(/^\/sensor_temperaturafinal\/\d+$/).on("connection", (socket) => {  sensorTemperaturaSocketFinal(this.#io, socket);});
+    const SenTempNSP: NamespaceSenTemperature = this.#io.of(/^\/sensor_temperatura\/\d+$/);
+    SenTempNSP.on("connection", (socket)=>{senTemperaturaSocket(this.#io,socket)})
 
-    // Namespace : "/energia/ctrl_id/me_id"
-    this.#io.of(/^\/energia\/\d+\/\d+$/).on("connection", (socket) => { energiaSocket(this.#io, socket); });
-    // Namespace : "/list_energia/ctrl_id"
-    this.#io.of(/^\/list_energia\/\d+$/).on("connection", (socket) => { moduloEnergiaSocket(this.#io, socket); });
+    // Namespace : "/modulo_energia/ctrl_id"
+    const ModEnergiaNSP: NamespaceModEnergia = this.#io.of(/^\/modulo_energia\/\d+$/);
+    ModEnergiaNSP.on("connection", (socket) => { modEnergiaSocket(this.#io, socket); });
 
-    // Namespace :  "/accesos/nodo_id"
-    // this.#io.of(/^\/accesos\/\d+$/).on("connection", (socket)=>{accesoSocket(this.#io, socket)})
     // Namespace :  "/registro_acceso/ctrl_id"
     this.#io.of(/^\/registro_acceso\/\d+$/).on("connection", (socket) => { registroAccesoSocket(this.#io, socket); });
 
-    // Namespace: "/alarmas/nodo_id/"
-    // this.#io.of(/^\/alarmas\/\d+$/).on("connection", (socket)=>{alarmaSocket(this.#io, socket)})
     // Namespace :  "/registro_entrada/ctrl_id"
     this.#io.of(/^\/registro_entrada\/\d+$/).on("connection", (socket) => { registroEntradaSocket(this.#io, socket); });
 
@@ -160,7 +150,7 @@ export class Sockets {
 
   async initMaps() {
     try {
-      await SensorTemperaturaMap.init();
+      await SensorTemperaturaManager.init();
     } catch (error) {
       console.log("Socket Model | Error init maps");
       console.log(error);

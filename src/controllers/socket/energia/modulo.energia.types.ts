@@ -2,6 +2,12 @@ import { Namespace, Socket } from "socket.io";
 import { Controlador, MedidorEnergia } from "../../../types/db";
 
 export type MedidorEnergiaSocket = Omit<MedidorEnergia, "serie"> & Pick<Controlador, "ctrl_id">;
+export type MedEneListAction = "add" | "delete" | "update"
+
+export enum MedEneState {
+  Activo = 1,
+  Desactivado = 0,
+}
 
 // export interface IMedEnergiaDTO extends MedidorEnergiaSocket {
 //   setCtrlId(ctrl_id: MedidorEnergiaSocket["ctrl_id"]): void;
@@ -49,8 +55,9 @@ interface ClientToServerEvents {
 }
   
 interface ServerToClientEvents {
-  list_energia: (listEn: MedidorEnergiaSocket[]) => void;
-  enegia: (modEn: MedidorEnergiaSocket) => void;
+  initial_list_energia: (list: MedidorEnergiaSocket[]) => void;
+  list_energia: (modEn: MedidorEnergiaSocket, action: MedEneListAction) => void;
+  energia: (modEn: MedidorEnergiaSocket) => void;
 }
 
 interface InterServerEvents {}
@@ -75,14 +82,14 @@ export type SocketModEnergia = Socket<
 // Observer:
 
 export interface ModEnergiaObserver {
-  updateListModEnergia(data: MedidorEnergiaSocket[]): void;
+  updateListModEnergia(data: MedidorEnergiaSocket , action: MedEneListAction ): void;
   updateModEnergia(data: MedidorEnergiaSocket): void;
 }
 
 export interface ModEnergiaSubject {
-  registerObserver(ctrl_id: number,me_id: number,observer: ModEnergiaObserver): void;
-  unregisterObserver(ctrl_id: number, me_id: number): void;
-  notifyListModEnergia(ctrl_id: number,me_id: number, data: MedidorEnergiaSocket[]): void;
-  notifyModEnergia(ctrl_id: number,me_id: number, data: MedidorEnergiaSocket): void;
+  registerObserver(ctrl_id: number,observer: ModEnergiaObserver): void;
+  unregisterObserver(ctrl_id: number): void;
+  notifyListModEnergia(ctrl_id: number,data: MedidorEnergiaSocket, action: MedEneListAction): void;
+  notifyModEnergia(ctrl_id: number, data: MedidorEnergiaSocket): void;
 }
 

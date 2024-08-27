@@ -6,8 +6,8 @@ import { onOrder } from "../../../models/controllerapp/controller";
 
 export const pinSalidaSocket = async ( io: Server, socket: SocketPinSalida ) => {
       
-  const nspEnergia = socket.nsp;
-  const [, , xctrl_id] = nspEnergia.name.split("/"); // Namespace : "/pines_salida/ctrl_id"
+  const nspPinSal = socket.nsp;
+  const [, , xctrl_id] = nspPinSal.name.split("/"); // Namespace : "/pines_salida/ctrl_id"
 
   const result = pinSalNamespaceSchema.safeParse({ ctrl_id: xctrl_id });
 

@@ -2,9 +2,8 @@
 export * from "./registroAcceso"
 // export * from "./alarma";
 export * from "./registroEntrada"
-export * from "./energia";
 // export * from "./pinesEntrada";
-export * from "./sensorTemperatura";
+// export * from "./sensorTemperatura";
 export * from "./ticket";
 export * from "./recordStream"
 export * from "./lastSnapshot"
@@ -19,4 +18,7 @@ export * from "./pinentrada"
 
 export * from "./controller"
 export * from "./pinsalida"
+
+export * from "./energia";
+export * from "./temperatura"
 

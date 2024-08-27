@@ -654,7 +654,7 @@ export class BaseAttach extends Mortal {
     potenciaw: number | null = null,
     potenciakwh: number | null = null
   ) {
-    const newEnergy = new sm.MedidorEnergiaSocketBad({
+    const newEnergy = new sm.MedEnergiaBadVO({
       me_id: meID,
       descripcion: desc,
       voltaje: voltaje,
@@ -667,14 +667,14 @@ export class BaseAttach extends Mortal {
       ctrl_id: nodeID,
     });
     if (active === 0) {
-      sm.MedidorEnergiaMap.delete(newEnergy);
+      sm.ModuloEnergiaManager.delete(newEnergy);
     } else {
-      sm.MedidorEnergiaMap.add_update(newEnergy);
+      sm.ModuloEnergiaManager.add_update(newEnergy);
     }
   }
 
   _notifyTemp(stID: number, nodeID: number, active: number | null = null, current: number | null = null, serie: string | null = null, desc: string | null = null) {
-    const newTemp = new sm.SensorTemperaturaSocketBad({
+    const newTemp = new sm.SenTemperaturaBadVO({
       activo: active,
       actual: current,
       ctrl_id: nodeID,
@@ -684,9 +684,9 @@ export class BaseAttach extends Mortal {
     });
     // this._log('Notifying web about tempertaure.')
     if (active === 0) {
-      sm.SensorTemperaturaMap.delete(newTemp);
+      sm.SensorTemperaturaManager.delete(newTemp);
     } else {
-      sm.SensorTemperaturaMap.add_update(newTemp);
+      sm.SensorTemperaturaManager.add_update(newTemp);
     }
   }
 
