@@ -1,6 +1,6 @@
 import { Server as HttpServer } from "http";
 import { Server } from "socket.io";
-import {  ticketSocket , streamRecordSocket, lastSnapshotSocket, pinEntradaSocket, registroEntradaSocket, SensorTemperaturaManager, registroAccesoSocket, voiceStreamSocket, NamespaceControllerState, contollerStateSocket, NamespacePinSalida, pinSalidaSocket, NamespaceModEnergia, modEnergiaSocket, senTemperaturaSocket, NamespaceSenTemperature } from "../controllers/socket";
+import {  ticketSocket , streamRecordSocket, lastSnapshotSocket, pinEntradaSocket, registroEntradaSocket, SensorTemperaturaManager, registroAccesoSocket, voiceStreamSocket, NamespaceControllerState, contollerStateSocket, NamespacePinSalida, pinSalidaSocket, NamespaceModEnergia, modEnergiaSocket, senTemperaturaSocket, NamespaceSenTemperature, NamespaceSidebarNav, navbarNavSocket } from "../controllers/socket";
 import { camStreamSocket } from "../controllers/socket/stream/camera.stream.socket";
 
 
@@ -98,6 +98,10 @@ export class Sockets {
     const ModEnergiaNSP: NamespaceModEnergia = this.#io.of(/^\/modulo_energia\/\d+$/);
     ModEnergiaNSP.on("connection", (socket) => { modEnergiaSocket(this.#io, socket); });
 
+    // Namespace: /sidebar_nav
+    const SidebarNavNSP: NamespaceSidebarNav = this.#io.of("/sidebar_nav");
+    SidebarNavNSP.on("connection",(socket)=>{navbarNavSocket(this.#io, socket)})
+
     // Namespace :  "/registro_acceso/ctrl_id"
     this.#io.of(/^\/registro_acceso\/\d+$/).on("connection", (socket) => { registroAccesoSocket(this.#io, socket); });
 
@@ -148,14 +152,14 @@ export class Sockets {
     return cookieObject;
   }
 
-  async initMaps() {
-    try {
-      await SensorTemperaturaManager.init();
-    } catch (error) {
-      console.log("Socket Model | Error init maps");
-      console.log(error);
-    }
-  }
+  // async initMaps() {
+  //   try {
+  //     await SensorTemperaturaManager.init();
+  //   } catch (error) {
+  //     console.log("Socket Model | Error init maps");
+  //     console.log(error);
+  //   }
+  // }
 }
 
 

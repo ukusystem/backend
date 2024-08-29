@@ -152,9 +152,12 @@ export class SystemManager {
 
 //   // setInterval(() => {
 //   //   const ramdomConnect = Math.round(Math.random());
-//   //   console.log("=========== Update conexion state =============", ramdomConnect)
+//   //   const ramdomConnect2 = Math.round(Math.random());
+//   //   console.log("=========== Update conexion state =============")
+//   //   console.log(1,ramdomConnect)
+//   //   console.log(1,ramdomConnect2)
 //   //   SystemManager.updateController(1,{CONTROLLER_CONNECT:ramdomConnect})  
-//   //   SystemManager.updateController(9,{CONTROLLER_CONNECT:ramdomConnect})  
+//   //   SystemManager.updateController(4,{CONTROLLER_CONNECT:ramdomConnect2})  
 //   // }, 2000);
 
 // })()

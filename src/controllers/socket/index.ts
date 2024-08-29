@@ -22,3 +22,5 @@ export * from "./pinsalida"
 export * from "./energia";
 export * from "./temperatura"
 
+export * from "./sidebar"
+

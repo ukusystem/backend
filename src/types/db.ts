@@ -121,7 +121,20 @@ export interface Controlador {
   personalimplementador: string;
   seguridad: number;
   conectado: number;
-  modo: 0 | 1 
+  modo: 0 | 1;
+  activo: 0 | 1;
+  motionrecordseconds: number;
+  res_id_motionrecord: number;
+  motionrecordfps: number;
+  motionsnapshotseconds: number;
+  res_id_motionsnapshot: number;
+  motionsnapshotinterval: number;
+  res_id_streamprimary: number;
+  streamprimaryfps: number;
+  res_id_streamsecondary: number;
+  streamsecondaryfps: number;
+  res_id_streamauxiliary: number;
+  streamauxiliaryfps: number;
 }
 
 export interface EquipoEntrada {

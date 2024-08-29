@@ -28,7 +28,7 @@ export const modEnergiaSocket = async ( io: Server, socket: SocketModEnergia ) =
     ModuloEnergiaManager.registerObserver(ctrl_id,observer);
 
     const data = ModuloEnergiaManager.getDataByCtrlID(ctrl_id);
-    socket.nsp.emit("initial_list_energia",data);
+    socket.emit("initial_list_energia",data);
 
     socket.on("disconnect", () => {
       const clientsCount = io.of(`/modulo_enegia/${ctrl_id}`).sockets.size;

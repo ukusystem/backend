@@ -20,10 +20,27 @@ export const contollerStateSocket = async ( io: Server, socket: SocketController
       }))
     );
 
+    socket.emit("error_message",{message:`Ocurrio un error al validar el controlador`});
+    socket.disconnect(true);
     return;
   }
 
   const { ctrl_id } = result.data;
+
+  // if(ctrl_id === 0){
+  //   const controllers = ControllerStateManager.getAllControllers()
+  //   socket.emit("all_controllers",controllers)
+  // }
+
+  const controller = ControllerStateManager.getController(ctrl_id);
+
+  if(controller === undefined){
+    socket.emit("error_message",{message:`Controlador no disponible`});
+    socket.disconnect(true);
+    return;
+  }
+
+  socket.emit("controller_info", controller);
 
   const observer = new ControllerStateSocketObserver(socket);
   ControllerStateManager.registerObserver(ctrl_id, observer);
@@ -38,7 +55,7 @@ export const contollerStateSocket = async ( io: Server, socket: SocketController
 
   socket.on("getInfo", (fields) => {
     const partialProps = ControllerStateManager.getPropertyValues(ctrl_id,fields);
-    socket.nsp.emit("data",ctrl_id,partialProps);
+    socket.emit("data",ctrl_id,partialProps);
   });
 
   socket.on("disconnect", () => {

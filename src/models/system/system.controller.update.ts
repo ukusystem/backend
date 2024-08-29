@@ -2,6 +2,7 @@
 import { ControllerStateManager } from "../../controllers/socket/controller";
 import { PinEntradaManager } from "../../controllers/socket/pinentrada";
 import { CamStreamQuality, CamStreamSocketManager } from "../../controllers/socket/stream";
+import { ControllerMapManager } from "../maps";
 import { Resolution } from "./system.resolution";
 import { ControllerConfig, ControllerUpdateFunction } from "./system.state.types";
 
@@ -16,6 +17,7 @@ export class ControllerUpdate {
         PinEntradaManager.notifyControllerMode(ctrl_id, newValue);
         ControllerStateManager.notifyMode(ctrl_id, newValue);
         ControllerStateManager.notifyAnyChange(ctrl_id,{CONTROLLER_MODE: newValue});
+        ControllerMapManager.updateController(ctrl_id,{modo:newValue});
          
       }
     },
@@ -27,6 +29,8 @@ export class ControllerUpdate {
         PinEntradaManager.notifyControllerSecurity(ctrl_id, newValue);
         ControllerStateManager.notifySecurity(ctrl_id, newValue);
         ControllerStateManager.notifyAnyChange(ctrl_id,{CONTROLLER_SECURITY: newValue});
+        ControllerMapManager.updateController(ctrl_id,{seguridad:newValue});
+
 
       }
     },
@@ -36,6 +40,7 @@ export class ControllerUpdate {
         currentConfig.CONTROLLER_CONNECT = newValue;
         // notify
         ControllerStateManager.notifyAnyChange(ctrl_id,{CONTROLLER_CONNECT: newValue});
+        ControllerMapManager.updateController(ctrl_id,{conectado: newValue});
   
       }
     },

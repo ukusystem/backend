@@ -29,7 +29,7 @@ export const senTemperaturaSocket = async ( io: Server, socket: SocketSenTempera
     SensorTemperaturaManager.registerObserver(ctrl_id,observer);
 
     const data = SensorTemperaturaManager.getDataByCtrlID(ctrl_id);
-    socket.nsp.emit("initial_list_temperature",data);
+    socket.emit("initial_list_temperature",data);
 
     socket.on("disconnect", () => {
       const clientsCount = io.of(`/sensor_temperatura/${ctrl_id}`).sockets.size;

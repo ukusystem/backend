@@ -15,6 +15,8 @@ export interface CameraMotionProps {
   isActiveProccesVideo: boolean;
 }
 
+export type CameraProps = Pick<CameraMotionProps, "ip" | "usuario" | "contraseña" | "cmr_id" | "ctrl_id" >
+
 export interface CameraMotionMethods {
   receivedEvent: (camMessage: any, xml: any, rtspUrl: string) => void;
   stripNamespaces: (topic: any) => string;
