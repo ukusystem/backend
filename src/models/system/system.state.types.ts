@@ -1,5 +1,5 @@
 import { RowDataPacket } from "mysql2";
-import { Resolucion } from "../../types/db";
+import { Controlador, Resolucion } from "../../types/db";
 
 // ==================== CONTROLLER ====================
 export enum ControllerMode {
@@ -15,6 +15,11 @@ export enum ControllerSecurity {
 export enum ControllerConnect {
   Desconectado = 0,
   Conectado = 1,
+}
+
+export enum ControllerActive {
+  Desactivado = 0,
+  Activo = 1,
 }
 
 export interface ControllerMotion {
@@ -66,7 +71,7 @@ export interface ControllerResolucionRowData extends RowDataPacket, Resolucion {
 
 export type ControllerUpdateFunction<T extends keyof ControllerConfig> = ( currentConfig: ControllerConfig, newValue: ControllerConfig[T], ctrl_id: number ) => void;
 
-
+export interface ControllerRowData extends RowDataPacket , Controlador {}
 // ==================== CONTROLLER END ====================
 
 

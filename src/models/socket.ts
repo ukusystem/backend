@@ -116,9 +116,7 @@ export class Sockets {
 
     // Namespace: "/controller_state/ctrl_id"    
     const ControllerStateNSP: NamespaceControllerState = this.#io.of(/^\/controller_state\/\d+$/);
-    ControllerStateNSP.on("connect",(socket)=>{
-      contollerStateSocket(this.#io,socket) 
-    })
+    ControllerStateNSP.on("connection",(socket)=>{contollerStateSocket(this.#io,socket);});
 
     // Namespace: "/pines_salida/ctrl_id"
     const PinSalidaNSP: NamespacePinSalida = this.#io.of(/^\/pines_salida\/\d+$/);

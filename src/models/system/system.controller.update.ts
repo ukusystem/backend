@@ -1,23 +1,20 @@
 
-import { ControllerStateManager } from "../../controllers/socket/controller";
-import { PinEntradaManager } from "../../controllers/socket/pinentrada";
-import { CamStreamQuality, CamStreamSocketManager } from "../../controllers/socket/stream";
-import { ControllerMapManager } from "../maps";
 import { Resolution } from "./system.resolution";
 import { ControllerConfig, ControllerUpdateFunction } from "./system.state.types";
 
 export class ControllerUpdate {
-    
+
   static #functions: { [P in keyof ControllerConfig]: ControllerUpdateFunction<P>  } = {
     CONTROLLER_MODE: (currentConfig, newValue, ctrl_id) => {
       if (currentConfig.CONTROLLER_MODE !== newValue) {
         //update
         currentConfig.CONTROLLER_MODE = newValue;
         // notify
-        PinEntradaManager.notifyControllerMode(ctrl_id, newValue);
-        ControllerStateManager.notifyMode(ctrl_id, newValue);
-        ControllerStateManager.notifyAnyChange(ctrl_id,{CONTROLLER_MODE: newValue});
-        ControllerMapManager.updateController(ctrl_id,{modo:newValue});
+        // PinEntradaManager.notifyControllerMode(ctrl_id, newValue);
+        // ControllerStateManager.notifyMode(ctrl_id, newValue);
+        // ControllerStateManager.notifyAnyChange(ctrl_id,{CONTROLLER_MODE: newValue});
+        // ControllerMapManager.updateController(ctrl_id,{modo:newValue});
+        // SidebarNavManager.notifyUpdateController(ctrl_id)
          
       }
     },
@@ -26,10 +23,11 @@ export class ControllerUpdate {
         //update
         currentConfig.CONTROLLER_SECURITY = newValue;
         // notify
-        PinEntradaManager.notifyControllerSecurity(ctrl_id, newValue);
-        ControllerStateManager.notifySecurity(ctrl_id, newValue);
-        ControllerStateManager.notifyAnyChange(ctrl_id,{CONTROLLER_SECURITY: newValue});
-        ControllerMapManager.updateController(ctrl_id,{seguridad:newValue});
+        // PinEntradaManager.notifyControllerSecurity(ctrl_id, newValue);
+        // ControllerStateManager.notifySecurity(ctrl_id, newValue);
+        // ControllerStateManager.notifyAnyChange(ctrl_id,{CONTROLLER_SECURITY: newValue});
+        // ControllerMapManager.updateController(ctrl_id,{seguridad:newValue});
+        // SidebarNavManager.notifyUpdateController(ctrl_id);
 
 
       }
@@ -39,8 +37,9 @@ export class ControllerUpdate {
         // update
         currentConfig.CONTROLLER_CONNECT = newValue;
         // notify
-        ControllerStateManager.notifyAnyChange(ctrl_id,{CONTROLLER_CONNECT: newValue});
-        ControllerMapManager.updateController(ctrl_id,{conectado: newValue});
+        // ControllerStateManager.notifyAnyChange(ctrl_id,{CONTROLLER_CONNECT: newValue});
+        // ControllerMapManager.updateController(ctrl_id,{conectado: newValue});
+        // SidebarNavManager.notifyUpdateController(ctrl_id);
   
       }
     },
@@ -93,7 +92,7 @@ export class ControllerUpdate {
           //update
           currentConfig.STREAM_PRIMARY_RESOLUTION = newResolution;
           // notify
-          CamStreamSocketManager.notifyChangeConfig(ctrl_id,CamStreamQuality.Primary);
+          // CamStreamSocketManager.notifyChangeConfig(ctrl_id,CamStreamQuality.Primary);
         }
       }
     },
@@ -102,7 +101,7 @@ export class ControllerUpdate {
         //update
         currentConfig.STREAM_PRIMARY_FPS = newValue;
         // notify
-        CamStreamSocketManager.notifyChangeConfig( ctrl_id, CamStreamQuality.Primary );
+        // CamStreamSocketManager.notifyChangeConfig( ctrl_id, CamStreamQuality.Primary );
       }
     },
     STREAM_SECONDARY_RESOLUTION: (currentConfig, newValue, ctrl_id) => {
@@ -112,7 +111,7 @@ export class ControllerUpdate {
           //update
           currentConfig.STREAM_SECONDARY_RESOLUTION = newResolution;
           // notify
-          CamStreamSocketManager.notifyChangeConfig( ctrl_id, CamStreamQuality.Secondary );
+          // CamStreamSocketManager.notifyChangeConfig( ctrl_id, CamStreamQuality.Secondary );
         }
       }
     },
@@ -121,7 +120,7 @@ export class ControllerUpdate {
         //update
         currentConfig.STREAM_SECONDARY_FPS = newValue;
         // notify
-        CamStreamSocketManager.notifyChangeConfig( ctrl_id, CamStreamQuality.Secondary );
+        // CamStreamSocketManager.notifyChangeConfig( ctrl_id, CamStreamQuality.Secondary );
       }
     },
     STREAM_AUXILIARY_RESOLUTION: (currentConfig, newValue, ctrl_id) => {
@@ -131,7 +130,7 @@ export class ControllerUpdate {
           // update
           currentConfig.STREAM_AUXILIARY_RESOLUTION = newResolution;
           // notify
-          CamStreamSocketManager.notifyChangeConfig( ctrl_id, CamStreamQuality.Auxiliary );
+          // CamStreamSocketManager.notifyChangeConfig( ctrl_id, CamStreamQuality.Auxiliary );
         }
       }
     },
@@ -140,7 +139,7 @@ export class ControllerUpdate {
         //update
         currentConfig.STREAM_AUXILIARY_FPS = newValue;
         // notify
-        CamStreamSocketManager.notifyChangeConfig(ctrl_id,CamStreamQuality.Auxiliary);
+        // CamStreamSocketManager.notifyChangeConfig(ctrl_id,CamStreamQuality.Auxiliary);
       }
     },
   };

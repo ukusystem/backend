@@ -130,34 +130,46 @@ export class SystemManager {
 
 }
 
-// (async ()=>{
-//   // setInterval(()=>{
-//   //   const ramdomMode = Math.round(Math.random())
-//   //   const ramdomSecurity = Math.round(Math.random())
-//   //   console.log({CONTROLLER_MODE: ramdomMode , CONTROLLER_SECURITY: ramdomSecurity})
-//   //   AppConfig.updateController(1,{CONTROLLER_MODE: ramdomMode , CONTROLLER_SECURITY: ramdomSecurity})
-//   // },20000)
+(async ()=>{
+  // setInterval(()=>{
+  //   const ramdomMode = Math.round(Math.random())
+  //   const ramdomSecurity = Math.round(Math.random())
+  //   console.log({CONTROLLER_MODE: ramdomMode , CONTROLLER_SECURITY: ramdomSecurity})
+  //   AppConfig.updateController(1,{CONTROLLER_MODE: ramdomMode , CONTROLLER_SECURITY: ramdomSecurity})
+  // },20000)
 
-//   // setInterval(() => {
-//   //   console.log("============= New fps stream primary =============")
-//   //   const randomNumber = Math.floor(Math.random() * (30 - 20 + 1)) + 20;
-//   //   AppConfig.updateController(1,{STREAM_PRIMARY_FPS:randomNumber})
-//   // }, 30000);
+  // setInterval(() => {
+  //   console.log("============= New fps stream primary =============")
+  //   const randomNumber = Math.floor(Math.random() * (30 - 20 + 1)) + 20;
+  //   AppConfig.updateController(1,{STREAM_PRIMARY_FPS:randomNumber})
+  // }, 30000);
 
-//   // setInterval(() => {
-//   //   console.log("============= New Resolution =============")
-//   //   const randomNumber = Math.floor(Math.random() * (30 - 20 + 1)) + 20;
-//   //   AppConfig.updateController(1,{STREAM_PRIMARY_RESOLUTION:{res_id: 1, activo:0,altura:0,ancho:0,nombre:"",relacionaspecto:""}})
-//   // }, 30000);
+  // setInterval(() => {
+  //   console.log("============= New Resolution =============")
+  //   const randomNumber = Math.floor(Math.random() * (30 - 20 + 1)) + 20;
+  //   AppConfig.updateController(1,{STREAM_PRIMARY_RESOLUTION:{res_id: 1, activo:0,altura:0,ancho:0,nombre:"",relacionaspecto:""}})
+  // }, 30000);
 
-//   // setInterval(() => {
-//   //   const ramdomConnect = Math.round(Math.random());
-//   //   const ramdomConnect2 = Math.round(Math.random());
-//   //   console.log("=========== Update conexion state =============")
-//   //   console.log(1,ramdomConnect)
-//   //   console.log(1,ramdomConnect2)
-//   //   SystemManager.updateController(1,{CONTROLLER_CONNECT:ramdomConnect})  
-//   //   SystemManager.updateController(4,{CONTROLLER_CONNECT:ramdomConnect2})  
-//   // }, 2000);
+  // setInterval(() => {
+  //   const ramdomConnect = Math.round(Math.random());
+  //   const ramdomConnect2 = Math.round(Math.random());
+  //   console.log("=========== Update conexion state =============")
+  //   console.log(1,ramdomConnect)
+  //   console.log(1,ramdomConnect2)
+  //   SystemManager.updateController(1,{CONTROLLER_CONNECT:ramdomConnect})  
+  //   SystemManager.updateController(4,{CONTROLLER_CONNECT:ramdomConnect2})  
+  // }, 2000);
 
-// })()
+  // setInterval(() => {
+  //   const ramdomConnect = Math.round(Math.random());
+  //   const ramdomConnect2 = Math.round(Math.random());
+  //   const randomNumber = Math.floor(Math.random() * (30 - 20 + 1)) + 20;
+  //   console.log("=========== Update conexion state =============")
+  //   console.log(1,ramdomConnect)
+  //   console.log(1,ramdomConnect2)
+  //   ControllerMapManager.updateController(1,{nodo:`Nodo1-${randomNumber}`})
+  //   SystemManager.updateController(1,{CONTROLLER_CONNECT:ramdomConnect})  
+  //   SystemManager.updateController(4,{CONTROLLER_CONNECT:ramdomConnect2})  
+  // }, 2000);
+
+})()

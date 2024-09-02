@@ -119,7 +119,7 @@ export interface Controlador {
   puerto: number;
   personalgestion: string;
   personalimplementador: string;
-  seguridad: number;
+  seguridad: 0 | 1;
   conectado: number;
   modo: 0 | 1;
   activo: 0 | 1;

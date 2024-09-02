@@ -1,6 +1,6 @@
 import {  ControladorInfo, ControllerStateObserver, KeyControllerConfig, SocketControllerState} from "./controller.state.types";
 
-import { ControllerConfig, ControllerMode, ControllerSecurity, GeneralConfig, SystemManager } from "../../../models/system";
+import { SystemManager } from "../../../models/system";
 import { ControllerMapManager, RegionMapManager } from "../../../models/maps";
 
 export class ControllerStateSocketObserver implements ControllerStateObserver {
@@ -10,18 +10,10 @@ export class ControllerStateSocketObserver implements ControllerStateObserver {
     this.#socket = socket;
   }
 
-  updateAnyState(ctrl_id: number, data: Partial<ControllerConfig>): void {
-    this.#socket.nsp.emit("data",ctrl_id,data);
-  }
-
-  updateMode(newMode: ControllerMode): void {
-    this.#socket.nsp.emit("mode",newMode)
+  updateController(newCtrl: ControladorInfo): void {
+    this.#socket.nsp.emit("update_controller",newCtrl);
   }
   
-  updateSecurity(newSecurity: ControllerSecurity): void {
-    this.#socket.nsp.emit("security", newSecurity)
-  }
-
 }
 
 export class ControllerStateManager {
@@ -40,25 +32,12 @@ export class ControllerStateManager {
     }
   }
 
-  static notifyMode(ctrl_id: number, mode: ControllerMode): void {
+  static notifyUpdateController(ctrl_id:number):void{
     if (ControllerStateManager.observer.hasOwnProperty(ctrl_id)) {
-      ControllerStateManager.observer[ctrl_id].updateMode(mode);
-    }
-  }
-  
-  static notifySecurity(ctrl_id: number, security: ControllerSecurity): void {
-    if (ControllerStateManager.observer.hasOwnProperty(ctrl_id)) {
-      ControllerStateManager.observer[ctrl_id].updateSecurity(security);
-    }
-  }
-
-  static notifyAnyChange(ctrl_id:number, data: Partial<ControllerConfig>): void {
-    if (ControllerStateManager.observer.hasOwnProperty(ctrl_id)) {
-      ControllerStateManager.observer[ctrl_id].updateAnyState(ctrl_id,data);
-    }
-
-    if(ControllerStateManager.observer.hasOwnProperty(0)){
-      ControllerStateManager.observer[0].updateAnyState(ctrl_id,data);
+      const controller = ControllerStateManager.getController(ctrl_id);
+      if(controller !== undefined){
+        ControllerStateManager.observer[ctrl_id].updateController(controller);
+      }
     }
   }
 

@@ -57,6 +57,6 @@ export interface SidebarNavObserver {
 export interface SidebarNavSubject {
   registerObserver(observer: SidebarNavObserver): void;
   unregisterObserver(): void;
-  notifyAddController(newController:SidebarNavControllerData ): void;
-  notifyUpdateController(controller: SidebarNavControllerData ): void;
+  notifyAddController(ctrl_id: number): void;
+  notifyUpdateController(ctrl_id: number): void;
 }

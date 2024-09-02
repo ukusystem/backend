@@ -25,18 +25,39 @@ export class SidebarNavManager   {
   }
 
   static unregisterObserver(): void {
-    SidebarNavManager.#observer = null;
-  }
-
-  static notifyAddController(newController: SidebarNavControllerData): void {
     if(SidebarNavManager.#observer !== null){
-      SidebarNavManager.#observer.addController(newController)
+      SidebarNavManager.#observer = null;
     }
   }
 
-  static notifyUpdateController(controller: SidebarNavControllerData): void {
+  static notifyAddController(new_ctrl_id: number): void {
     if(SidebarNavManager.#observer !== null){
-      SidebarNavManager.#observer.updateController(controller)
+      const addController = ControllerMapManager.getController(new_ctrl_id);
+      if(addController !== undefined){
+        const {rgn_id,ctrl_id,nodo,activo,conectado,seguridad,modo,descripcion} = addController;
+        const region = RegionMapManager.getRegion(rgn_id);
+        if(region !== undefined){
+          const sidebarController: SidebarNavControllerData = { rgn_id, ctrl_id, nodo, activo, conectado, seguridad, modo, descripcion, region: region.region, }; 
+          console.log("notifyAddController");
+          SidebarNavManager.#observer.addController(sidebarController);
+        }
+      }
+    }
+  }
+
+  static notifyUpdateController(ctrl_id: number): void {
+    if(SidebarNavManager.#observer !== null){
+      const updateController = ControllerMapManager.getController(ctrl_id);
+      if(updateController !== undefined){
+        const {rgn_id,ctrl_id,nodo,activo,conectado,seguridad,modo,descripcion} = updateController;
+        const region = RegionMapManager.getRegion(rgn_id);
+        if(region !== undefined){
+          const sidebarController: SidebarNavControllerData = { rgn_id, ctrl_id, nodo, activo, conectado, seguridad, modo, descripcion, region: region.region, }; 
+          console.log("notifyUpdateController");
+          SidebarNavManager.#observer.updateController(sidebarController);
+        }
+      }
+
     }
   }
 

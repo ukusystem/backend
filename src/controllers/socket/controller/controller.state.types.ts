@@ -32,16 +32,13 @@ export interface ErrorControllerState {
 interface ClientToServerEvents {
   setMode: (newMode: ControllerMode) => void;
   setSecurity: (newSecurity: ControllerSecurity) => void;
-  getInfo: (fields: KeyControllerConfig[]) => void;
 }
 
 interface ServerToClientEvents {
-  mode: (mode: ControllerMode) => void;
-  security: (security: ControllerSecurity) => void;
-  data: (ctrl_id: number, data: Partial<ControllerConfig>) => void;
   all_controllers: (data: ControladorInfo[]) => void;
   controller_info: (data: ControladorInfo) => void;
   error_message: (data: ErrorControllerState) => void;
+  update_controller: (data: ControladorInfo) => void;
 }
 
 interface InterServerEvents {}
@@ -64,15 +61,11 @@ export type SocketControllerState = Socket<
 
 // Observer
 export interface ControllerStateObserver {
-  updateMode(newMode: ControllerMode): void;
-  updateSecurity(newSecurity: ControllerSecurity): void;
-  updateAnyState(ctrl_id: number, data: Partial<ControllerConfig>): void;
+  updateController(newCtrl:ControladorInfo ):void;
 }
 
 export interface ControllerStateSubject {
   registerObserver(ctrl_id: number, observer: ControllerStateObserver): void;
   unregisterObserver(ctrl_id: number): void;
-  notifyMode(ctrl_id: number, mode: ControllerMode): void;
-  notifySecurity(ctrl_id: number, security: ControllerSecurity): void;
-  notifyAnyChange(ctrl_id: number, data: Partial<ControllerConfig>): void;
+  notifyUpdateController(ctrl_id: number): void;
 }

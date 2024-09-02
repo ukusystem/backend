@@ -1,4 +1,5 @@
 import { MySQL2 } from "../../../database/mysql";
+import { ControllerNotifyManager } from "../../system";
 import { ControllerData, ControllerRowData, ControllerState } from "./controller.map.types";
 
 export class ControllerMapManager {
@@ -54,8 +55,10 @@ export class ControllerMapManager {
   static updateController(ctrl_id: number,fieldsUpdate: Partial<ControllerData>): void {
     const currController = ControllerMapManager.#controllers.get(ctrl_id);
     if (currController) {
+      const curControllerCopy = {...currController}
       const fieldsFiltered = ControllerMapManager.#filterUndefined(fieldsUpdate);
       Object.assign(currController, fieldsFiltered);
+      ControllerNotifyManager.update(curControllerCopy,fieldsFiltered);
     }
   }
 
@@ -80,3 +83,16 @@ export class ControllerMapManager {
     }
   }
 }
+
+
+// (async ()=>{
+//     setInterval(() => {
+//     const ramdomConnect = Math.round(Math.random());
+//     const ramdomConnect2 = Math.round(Math.random());
+//     console.log("=========== Update conexion state =============")
+//     console.log(1,ramdomConnect)
+//     console.log(4,ramdomConnect2)
+//     ControllerMapManager.updateController(1,{conectado:ramdomConnect})  
+//     ControllerMapManager.updateController(4,{conectado:ramdomConnect2})  
+//   }, 10000);
+// })()

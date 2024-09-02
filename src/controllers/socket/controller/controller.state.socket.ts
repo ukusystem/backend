@@ -2,7 +2,7 @@ import { Server } from "socket.io";
 import { SocketControllerState } from "./controller.state.types";
 import { controllerStateSocketSchema } from "./controller.state.schema";
 import { ControllerStateManager, ControllerStateSocketObserver } from "./controller.state.manager";
-import { SystemManager } from "../../../models/system";
+import { ControllerMapManager } from "../../../models/maps";
 
 export const contollerStateSocket = async ( io: Server, socket: SocketControllerState ) => {
   const nspControllerState = socket.nsp;
@@ -27,11 +27,6 @@ export const contollerStateSocket = async ( io: Server, socket: SocketController
 
   const { ctrl_id } = result.data;
 
-  // if(ctrl_id === 0){
-  //   const controllers = ControllerStateManager.getAllControllers()
-  //   socket.emit("all_controllers",controllers)
-  // }
-
   const controller = ControllerStateManager.getController(ctrl_id);
 
   if(controller === undefined){
@@ -46,16 +41,12 @@ export const contollerStateSocket = async ( io: Server, socket: SocketController
   ControllerStateManager.registerObserver(ctrl_id, observer);
 
   socket.on("setMode", (newMode) => {
-    SystemManager.updateController(ctrl_id, { CONTROLLER_MODE: newMode });
+    ControllerMapManager.updateController(ctrl_id,{modo: newMode})
+
   });
 
   socket.on("setSecurity", (newSecurity) => {
-    SystemManager.updateController(ctrl_id, {CONTROLLER_SECURITY: newSecurity,});
-  });
-
-  socket.on("getInfo", (fields) => {
-    const partialProps = ControllerStateManager.getPropertyValues(ctrl_id,fields);
-    socket.emit("data",ctrl_id,partialProps);
+    ControllerMapManager.updateController(ctrl_id,{seguridad: newSecurity});
   });
 
   socket.on("disconnect", () => {
