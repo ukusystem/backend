@@ -5,7 +5,7 @@ export interface LastSnapshotObserver {
   updateLastSnapshot(data: string): void;
 }
 
-export interface SensorTemperatureSubject {
+export interface LastSnapshotSubject {
   registerObserver(ctrl_id: number, observer: LastSnapshotObserver): void;
   unregisterObserver(ctrl_id: number): void;
   notifyLastSnapshot(ctrl_id: number, data: string): void;

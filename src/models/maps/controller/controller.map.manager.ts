@@ -1,6 +1,9 @@
 import { MySQL2 } from "../../../database/mysql";
+import { Controlador } from "../../../types/db";
 import { ControllerNotifyManager } from "../../system";
-import { ControllerData, ControllerRowData, ControllerState } from "./controller.map.types";
+import { RegionMapManager } from "../region";
+import { Resolution } from "../resolucion";
+import { ControllerAndResolution, ControllerData, ControllerRowData, ControllerState, UpdateControllerResolution } from "./controller.map.types";
 
 export class ControllerMapManager {
   
@@ -16,6 +19,23 @@ export class ControllerMapManager {
     }
     return filteredData;
   }
+
+  static #updateResolution(resUpdates: UpdateControllerResolution , curController: Controlador): UpdateControllerResolution {
+    const updateResolution: Record<any, any> = {};
+    for (const key in resUpdates) {
+      const key_assert = key as keyof UpdateControllerResolution;
+      if (resUpdates[key_assert] !== undefined) {
+        const new_res_id = resUpdates[key_assert]
+        const resulucion = Resolution.getResolution(new_res_id as number);
+        if(resulucion !== undefined){
+          Object.assign(curController,{[key_assert]: resUpdates[key_assert]});
+          updateResolution[key_assert] = resUpdates[key_assert]
+        }
+      }
+    }
+    return updateResolution
+  }
+
 
   static getAllControllers(active: boolean = false): ControllerData[] {
     const controllers = Array.from(ControllerMapManager.#controllers.values());
@@ -45,6 +65,32 @@ export class ControllerMapManager {
     return undefined;
   }
 
+  static getControllerAndResolution(ctrl_id:number) : ControllerAndResolution | undefined{
+    const controller = ControllerMapManager.#controllers.get(ctrl_id);
+    if(controller === undefined){
+      return undefined
+    }
+    const resMotionRecord = Resolution.getResolution(controller.res_id_motionrecord);
+    const resMotionSnapshot = Resolution.getResolution(controller.res_id_motionsnapshot);
+    const resStreamAux = Resolution.getResolution(controller.res_id_streamauxiliary);
+    const resStreamPri = Resolution.getResolution(controller.res_id_streamprimary);
+    const resStreamSec = Resolution.getResolution(controller.res_id_streamsecondary);
+
+    if(resMotionRecord !== undefined && resMotionSnapshot !== undefined && resStreamAux !== undefined && resStreamPri !== undefined && resStreamSec !== undefined){
+
+      const result : ControllerAndResolution = {controller, resolution: {
+        motion_record: resMotionRecord,
+        motion_snapshot: resMotionSnapshot,
+        stream_aux: resStreamAux,
+        stream_pri: resStreamPri,
+        stream_sec: resStreamSec
+      }}
+      return result
+    }
+
+    return undefined
+  }
+
   static addController(ctrl_id: number, newController: ControllerData): void {
     const existController = ControllerMapManager.#controllers.has(ctrl_id);
     if (!existController) {
@@ -57,8 +103,20 @@ export class ControllerMapManager {
     if (currController) {
       const curControllerCopy = {...currController}
       const fieldsFiltered = ControllerMapManager.#filterUndefined(fieldsUpdate);
-      Object.assign(currController, fieldsFiltered);
-      ControllerNotifyManager.update(curControllerCopy,fieldsFiltered);
+      // ctrl_id no se esta actulizando!
+      const {res_id_motionrecord,res_id_motionsnapshot,res_id_streamauxiliary,res_id_streamprimary,res_id_streamsecondary,ctrl_id,rgn_id, ...rest} = fieldsFiltered;
+      const resolutionFieldsUpdate = ControllerMapManager.#updateResolution({res_id_motionrecord,res_id_motionsnapshot,res_id_streamauxiliary,res_id_streamprimary,res_id_streamsecondary},currController);
+
+      const regFieldUpdate  : {rgn_id?: number | undefined} = {}
+      if(rgn_id !== undefined){
+        const region = RegionMapManager.getRegion(rgn_id);
+        if(region !== undefined){
+          regFieldUpdate.rgn_id = rgn_id;
+        }
+      }
+      const finalFieldsUpdate = {...rest, ...regFieldUpdate,...resolutionFieldsUpdate} 
+      Object.assign(currController, finalFieldsUpdate);
+      ControllerNotifyManager.update(curControllerCopy,finalFieldsUpdate);
     }
   }
 
@@ -86,13 +144,16 @@ export class ControllerMapManager {
 
 
 // (async ()=>{
-//     setInterval(() => {
-//     const ramdomConnect = Math.round(Math.random());
-//     const ramdomConnect2 = Math.round(Math.random());
-//     console.log("=========== Update conexion state =============")
-//     console.log(1,ramdomConnect)
-//     console.log(4,ramdomConnect2)
-//     ControllerMapManager.updateController(1,{conectado:ramdomConnect})  
-//     ControllerMapManager.updateController(4,{conectado:ramdomConnect2})  
-//   }, 10000);
+//   //   setInterval(() => {
+//   //   const ramdomConnect = Math.round(Math.random());
+//   //   const ramdomConnect2 = Math.round(Math.random());
+//   //   console.log("=========== Update conexion state =============")
+//   //   console.log(1,ramdomConnect)
+//   //   console.log(4,ramdomConnect2)
+//   //   ControllerMapManager.updateController(1,{conectado:ramdomConnect})  
+//   //   ControllerMapManager.updateController(4,{conectado:ramdomConnect2})  
+//   // }, 10000);
+//   setTimeout(() => {
+//     ControllerMapManager.updateController(1,{rgn_id: 3})
+//   }, 30000);
 // })()

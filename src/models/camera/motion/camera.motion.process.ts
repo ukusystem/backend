@@ -11,9 +11,9 @@ import { getMulticastRtspStreamAndSubStream } from "../../../utils/getCameraRtsp
 import { Init } from "../../init";
 import { decrypt } from "../../../utils/decrypt";
 import dayjs from "dayjs";
-import { SystemManager } from "../../system";
 import { CameraMotionMethods, CameraMotionProps, CameraProps } from "./camera.motion.types";
 import { CameraMotionManager } from "./camera.motion.manager";
+import { ControllerMapManager } from "../../maps";
 
 
 export class CameraMotionProcess implements CameraMotionProps, CameraMotionMethods {
@@ -524,12 +524,21 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
 }
 
 const getImageFfmpegArgs = (rtspUrl: string, ctrl_id: number): string[] => {
-  const ctrlConfig = SystemManager.getController(ctrl_id)
-  return ["-rtsp_transport", "tcp", "-i", `${rtspUrl}`, "-vf", `select='gte(t\\,0)',fps=1/${ctrlConfig.MOTION_SNAPSHOT_INTERVAL}`, "-an", "-t", `${ctrlConfig.MOTION_SNAPSHOT_SECONDS}`, "-c:v", "mjpeg", "-f", "image2pipe", "-"];
+  const ctrlConfig = ControllerMapManager.getControllerAndResolution(ctrl_id);
+  if(ctrlConfig === undefined){
+    throw new Error(`Error getImageFfmpegArgs | Controlador ${ctrl_id} no encontrado getControllerAndResolution`);
+  }
+  const {controller} = ctrlConfig
+  return ["-rtsp_transport", "tcp", "-i", `${rtspUrl}`, "-vf", `select='gte(t\\,0)',fps=1/${controller.motionsnapshotinterval}`, "-an", "-t", `${controller.motionsnapshotseconds}`, "-c:v", "mjpeg", "-f", "image2pipe", "-"];
 };
 
 const getVideoFfmpegArgs = (rtspUrl: string, outputPath: string, ctrl_id: number): string[] => {
-  const ctrlConfig = SystemManager.getController(ctrl_id)
+  const ctrlConfig = ControllerMapManager.getControllerAndResolution(ctrl_id);
+  if(ctrlConfig === undefined){
+    throw new Error(`Error getVideoFfmpegArgs | Controlador ${ctrl_id} no encontrado getControllerAndResolution`);
+  }
+  const {controller} = ctrlConfig
+
   return [
     "-rtsp_transport",
     "tcp",
@@ -539,7 +548,7 @@ const getVideoFfmpegArgs = (rtspUrl: string, outputPath: string, ctrl_id: number
     "-c:v",
     "copy",
     "-t",
-    `${ctrlConfig.MOTION_RECORD_SECONDS}`,
+    `${controller.motionrecordseconds}`,
     // "pipe:1",  // Salida de FFMPEG a stdout
     `${outputPath}`,
   ];

@@ -1,11 +1,15 @@
-import { SystemManager } from "../../models/system";
+import { ControllerMapManager } from "../../models/maps";
 import { getRstpLinksByCtrlIdAndIp } from "../getCameraRtspLinks";
 
 type Calidad = "q1" | "q2" | "q3";
 
 export const getFfmpegArgs = async (ctrl_id: number, ip: string, q: Calidad) => {
     try {
-      const {STREAM_PRIMARY_RESOLUTION,STREAM_SECONDARY_RESOLUTION} = SystemManager.getController(ctrl_id)
+      const ctrlConfig = ControllerMapManager.getControllerAndResolution(ctrl_id);
+      if(ctrlConfig === undefined){
+        throw new Error(`Error getFfmpegArgs | Controlador ${ctrl_id} no encontrado getControllerAndResolution`);
+      }
+      const {resolution} = ctrlConfig
       const [rtspUrl, rtspUrlsub] = await getRstpLinksByCtrlIdAndIp(ctrl_id,ip);
       let ffmpegArg : string[] = [];
       if (q === "q1") {
@@ -19,7 +23,7 @@ export const getFfmpegArgs = async (ctrl_id: number, ip: string, q: Calidad) => 
           "h264_nvenc",
           "-vf",
           // "scale=1920:1080",
-          `scale=${STREAM_PRIMARY_RESOLUTION.ancho}:${STREAM_PRIMARY_RESOLUTION.altura}`,
+          `scale=${resolution.stream_pri.ancho}:${resolution.stream_pri.altura}`,
           "-c:v",
           "mjpeg",
           "-f",
@@ -38,7 +42,7 @@ export const getFfmpegArgs = async (ctrl_id: number, ip: string, q: Calidad) => 
           "h264_nvenc",
           "-vf",
           // "scale=1280:720",
-          `scale=${STREAM_SECONDARY_RESOLUTION.ancho}:${STREAM_SECONDARY_RESOLUTION.altura}`,
+          `scale=${resolution.stream_sec.ancho}:${resolution.stream_sec.altura}`,
           "-c:v",
           "mjpeg",
           "-b:v",

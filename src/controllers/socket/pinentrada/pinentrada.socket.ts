@@ -1,6 +1,6 @@
 import { Server, Socket } from "socket.io";
 import { PinEntradaManager, PinesSalidaSocketObserver } from "./pinentrada.manager";
-import { SystemManager } from "../../../models/system";
+import { ControllerMapManager } from "../../../models/maps";
 
 
 export const pinEntradaSocket = async (io:Server, socket: Socket) => {
@@ -15,16 +15,19 @@ export const pinEntradaSocket = async (io:Server, socket: Socket) => {
     const data = PinEntradaManager.getListPinesSalida(ctrl_id)
     socket.emit("list_pines_entrada", data);
     try {
-      const {CONTROLLER_MODE, CONTROLLER_SECURITY} = SystemManager.getController(Number(ctrl_id))
-      socket.emit("controller_mode",CONTROLLER_MODE);
-      socket.emit("controller_security",CONTROLLER_SECURITY);
+      const controller = ControllerMapManager.getController(Number(ctrl_id));
+      if(controller === undefined){
+        throw new Error(`Controlador ${ctrl_id} no encontrado.`);
+      };
+      socket.emit("controller_mode",controller.modo);
+      socket.emit("controller_security",controller.seguridad);
     } catch (error) {
       console.log(`Socket Pines Entrada | Error al obtener modo y seguridad | ctrl_id = ${ctrl_id}`)
       console.error(error)
     }
   
     socket.on("disconnect", () => {
-      const clientsCount = io.of(`/pines_entradafinal/${ctrl_id}`).sockets.size;
+      const clientsCount = io.of(`/pin_entrada/${ctrl_id}`).sockets.size;
       console.log(`Socket Pines Entrada | clientes_conectados = ${clientsCount} | ctrl_id = ${ctrl_id}`);
       if (clientsCount == 0 ) {
         console.log(`Socket Pines Entrada | Eliminado Observer | ctrl_id = ${ctrl_id}`)

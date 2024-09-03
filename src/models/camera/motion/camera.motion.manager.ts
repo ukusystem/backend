@@ -186,7 +186,7 @@ export class CameraMotionManager {
           currentCamMot.ffmpegProcessImage.kill();
         if (currentCamMot.ffmpegProcessVideo != null)
           currentCamMot.ffmpegProcessVideo.kill();
-        // delete CameraMotionMap.map[ctrl_id][cmr_id];
+        // delete CameraMotionManager.map[ctrl_id][cmr_id];
       }
     }
   }

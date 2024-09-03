@@ -1,6 +1,6 @@
 import { Server as HttpServer } from "http";
 import { Server } from "socket.io";
-import {  ticketSocket , streamRecordSocket, lastSnapshotSocket, pinEntradaSocket, registroEntradaSocket, SensorTemperaturaManager, registroAccesoSocket, voiceStreamSocket, NamespaceControllerState, contollerStateSocket, NamespacePinSalida, pinSalidaSocket, NamespaceModEnergia, modEnergiaSocket, senTemperaturaSocket, NamespaceSenTemperature, NamespaceSidebarNav, navbarNavSocket } from "../controllers/socket";
+import {  ticketSocket , streamRecordSocket, lastSnapshotSocket, pinEntradaSocket, registroEntradaSocket, SensorTemperaturaManager, registroAccesoSocket, voiceStreamSocket, NamespaceControllerState, contollerStateSocket, NamespacePinSalida, pinSalidaSocket, NamespaceModEnergia, modEnergiaSocket, senTemperaturaSocket, NamespaceSenTemperature, NamespaceSidebarNav, navbarNavSocket, NamespaceLastSnapshot } from "../controllers/socket";
 import { camStreamSocket } from "../controllers/socket/stream/camera.stream.socket";
 
 
@@ -125,8 +125,9 @@ export class Sockets {
     // Namespace: "/record_stream/ctrl_id/ip"
     this.#io.of(/^\/record_stream\/(\d+)\/([\d\.]+)$/).on("connection", (socket) => {  streamRecordSocket(this.#io, socket);});
 
-    // Namespace : "/lastsnapshot/ctrl_id"
-    this.#io.of(/^\/lastsnapshot\/\d+$/).on("connection", (socket) => { lastSnapshotSocket(this.#io, socket); });
+    // Namespace : "/last_snapshot/ctrl_id"
+    const LastSnapshotNSP : NamespaceLastSnapshot  = this.#io.of(/^\/last_snapshot\/\d+$/);
+    LastSnapshotNSP.on("connection", (socket)=>{ lastSnapshotSocket(this.#io, socket)})
 
     // Namespace: "/voice_stream/ctrl_id/ip"
     this.#io.of(/^\/voice_stream\/(\d+)\/([\d\.]+)$/).on("connection", (socket) => { voiceStreamSocket(this.#io, socket);});

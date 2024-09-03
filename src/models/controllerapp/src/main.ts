@@ -25,7 +25,7 @@ import * as codes from "./codes";
 import * as db2 from "./db2";
 import * as util from "util";
 import * as net from "net";
-import { CameraMotionMap } from "../../camera/CameraMotion";
+import { CameraMotionManager } from "../../camera";
 import * as cp from "child_process";
 import { sql } from "googleapis/build/src/apis/sql";
 
@@ -986,9 +986,9 @@ export class Main {
           await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.cameraSetNet, cam.nodeID),[changeBool, cam.cameraID])
           if (change === Changes.TO_ACTIVE) {
             this.log(`Reconnecting camera ${cam.cameraIP}`);
-            CameraMotionMap.reconnect(cam.cameraID, cam.nodeID);
+            CameraMotionManager.reconnect(cam.cameraID, cam.nodeID);
           }else if(change === Changes.TO_INACTIVE){
-            CameraMotionMap.deleteFfmpegProccess(cam.cameraID, cam.nodeID)
+            CameraMotionManager.deleteFfmpegProccess(cam.cameraID, cam.nodeID)
           }
         }
         cam.errorNotified = false;

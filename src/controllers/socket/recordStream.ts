@@ -4,7 +4,7 @@ import { getRstpLinksByCtrlIdAndIp } from "../../utils/getCameraRtspLinks";
 
 import path from "path";
 import fs from "fs";
-import { createMotionDetectionFolders } from "../../models/camera/CameraMotion";
+import { createMotionDetectionFolders } from "../../models/camera";
 
 interface IFmmpegRecordProcess {
   [ctrl_id: string]: {

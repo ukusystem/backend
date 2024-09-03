@@ -6,7 +6,7 @@ export * from "./registroEntrada"
 // export * from "./sensorTemperatura";
 export * from "./ticket";
 export * from "./recordStream"
-export * from "./lastSnapshot"
+// export * from "./lastSnapshot"
 
 export * from "./voicestream"
 
@@ -23,4 +23,5 @@ export * from "./energia";
 export * from "./temperatura"
 
 export * from "./sidebar"
+export * from "./snapshot"
 

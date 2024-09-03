@@ -17,12 +17,13 @@ import { siteRoutes } from "../routes/site.routes";
 
 import { vmsRoutes } from "../routes/vms.routes";
 import { frontEndRoutes } from "../routes/frontend.routes";
-import { DeteccionMovimiento } from "./camera/CameraMotion";
+// import { DeteccionMovimiento } from "./camera/CameraMotion";
 import { main } from "./controllerapp/controller";
 import { ModuloEnergiaManager, PinEntradaManager, PinSalidaManager, RegistroAccesoMap, RegistroEntradaMap, SensorTemperaturaManager } from "../controllers/socket";
-import { ContrataMap, ControllerMapManager, EquipoAccesoMap, EquipoEntradaMap, EquipoSalidaMap, RegionMapManager } from "./maps";
+import { ContrataMap, ControllerMapManager, EquipoAccesoMap, EquipoEntradaMap, EquipoSalidaMap, RegionMapManager, Resolution } from "./maps";
 import { dashboardRouter } from "../routes/dashboard.routes";
 import { appConfig } from "../configs";
+import { DeteccionMovimiento } from "./camera";
 
 // import { createServer as createServerHttps } from "https";
 // import fs from "fs";
@@ -134,6 +135,7 @@ export class ServerApp {
       await EquipoEntradaMap.init()
       await EquipoSalidaMap.init()
 
+      await Resolution.init()
       await RegionMapManager.init();
       await ControllerMapManager.init();
 

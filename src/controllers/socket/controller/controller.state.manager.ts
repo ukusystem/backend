@@ -41,10 +41,10 @@ export class ControllerStateManager {
     }
   }
 
-  static getPropertyValues(ctrl_id:number ,keys: KeyControllerConfig[]){
-    const propValues = SystemManager.getControllerProperties(ctrl_id,keys);
-    return propValues
-  }
+  // static getPropertyValues(ctrl_id:number ,keys: KeyControllerConfig[]){
+  //   const propValues = SystemManager.getControllerProperties(ctrl_id,keys);
+  //   return propValues
+  // }
 
   static getController(ctrl_id:number) : ControladorInfo | undefined {
 

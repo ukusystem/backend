@@ -38,7 +38,6 @@ export class SidebarNavManager   {
         const region = RegionMapManager.getRegion(rgn_id);
         if(region !== undefined){
           const sidebarController: SidebarNavControllerData = { rgn_id, ctrl_id, nodo, activo, conectado, seguridad, modo, descripcion, region: region.region, }; 
-          console.log("notifyAddController");
           SidebarNavManager.#observer.addController(sidebarController);
         }
       }
@@ -53,7 +52,6 @@ export class SidebarNavManager   {
         const region = RegionMapManager.getRegion(rgn_id);
         if(region !== undefined){
           const sidebarController: SidebarNavControllerData = { rgn_id, ctrl_id, nodo, activo, conectado, seguridad, modo, descripcion, region: region.region, }; 
-          console.log("notifyUpdateController");
           SidebarNavManager.#observer.updateController(sidebarController);
         }
       }
