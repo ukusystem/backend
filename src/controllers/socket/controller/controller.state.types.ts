@@ -4,20 +4,14 @@ import { Controlador, Region } from "../../../types/db";
 
 export type KeyControllerConfig = keyof ControllerConfig;
 
-export type ControladorInfo = Pick<
+export type ControllerStateInfo = Pick<
   Controlador,
   | "ctrl_id"
   | "nodo"
   | "rgn_id"
-  | "direccion"
   | "descripcion"
-  | "latitud"
-  | "longitud"
-  | "serie"
-  | "personalgestion"
-  | "personalimplementador"
-  | "modo"
   | "seguridad"
+  | "modo"
   | "conectado"
   | "activo"
 > &
@@ -35,10 +29,12 @@ interface ClientToServerEvents {
 }
 
 interface ServerToClientEvents {
-  all_controllers: (data: ControladorInfo[]) => void;
-  controller_info: (data: ControladorInfo) => void;
+  // all_controllers: (data: ControllerStateInfo[]) => void;
+  controller_info: (data: ControllerStateInfo) => void;
   error_message: (data: ErrorControllerState) => void;
-  update_controller: (data: ControladorInfo) => void;
+  update_controller: (data: ControllerStateInfo) => void;
+  update_region: (data: Region) => void;
+
 }
 
 interface InterServerEvents {}
@@ -61,11 +57,13 @@ export type SocketControllerState = Socket<
 
 // Observer
 export interface ControllerStateObserver {
-  updateController(newCtrl:ControladorInfo ):void;
+  updateController(newCtrl: ControllerStateInfo): void;
+  updateRegion(region: Region): void;
 }
 
 export interface ControllerStateSubject {
   registerObserver(ctrl_id: number, observer: ControllerStateObserver): void;
   unregisterObserver(ctrl_id: number): void;
   notifyUpdateController(ctrl_id: number): void;
+  notifyUpdateRegion(rgn_id:number): void;
 }

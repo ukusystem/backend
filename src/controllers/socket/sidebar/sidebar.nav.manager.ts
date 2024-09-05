@@ -1,10 +1,15 @@
 import { ControllerMapManager, RegionMapManager } from "../../../models/maps";
+import { ControllerActive } from "../../../models/system";
+import { Region } from "../../../types/db";
 import { SidebarNavControllerData, SidebarNavObserver, SocketSidebarNav } from "./sidebar.nav.types";
 
 export class SidebarNavSocketObserver implements SidebarNavObserver {
   #socket: SocketSidebarNav;
   constructor(socket: SocketSidebarNav) {
     this.#socket = socket;
+  }
+  updateRegion(region: Region): void {
+    this.#socket.nsp.emit("update_region", region);
   }
   updateController(controller: SidebarNavControllerData): void {
     this.#socket.nsp.emit("update_controller", controller);
@@ -35,10 +40,12 @@ export class SidebarNavManager   {
       const addController = ControllerMapManager.getController(new_ctrl_id);
       if(addController !== undefined){
         const {rgn_id,ctrl_id,nodo,activo,conectado,seguridad,modo,descripcion} = addController;
-        const region = RegionMapManager.getRegion(rgn_id);
-        if(region !== undefined){
-          const sidebarController: SidebarNavControllerData = { rgn_id, ctrl_id, nodo, activo, conectado, seguridad, modo, descripcion, region: region.region, }; 
-          SidebarNavManager.#observer.addController(sidebarController);
+        if(activo === ControllerActive.Activo){
+          const region = RegionMapManager.getRegion(rgn_id);
+          if(region !== undefined){
+            const sidebarController: SidebarNavControllerData = { rgn_id, ctrl_id, nodo, activo, conectado, seguridad, modo, descripcion, region: region.region, }; 
+            SidebarNavManager.#observer.addController(sidebarController);
+          }
         }
       }
     }
@@ -56,6 +63,15 @@ export class SidebarNavManager   {
         }
       }
 
+    }
+  }
+
+  static notifyUpdateRegion(rgn_id:number):void {
+    if(SidebarNavManager.#observer !== null){
+      const region = RegionMapManager.getRegion(rgn_id);
+      if(region !== undefined){
+        SidebarNavManager.#observer.updateRegion(region);
+      }
     }
   }
 

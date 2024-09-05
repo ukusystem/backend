@@ -95,6 +95,7 @@ export class ControllerMapManager {
     const existController = ControllerMapManager.#controllers.has(ctrl_id);
     if (!existController) {
       ControllerMapManager.#controllers.set(ctrl_id, newController);
+      ControllerNotifyManager.add(newController);
     }
   }
 
@@ -128,9 +129,8 @@ export class ControllerMapManager {
   static async init() {
     try {
       const controllers = await MySQL2.executeQuery<ControllerRowData[]>({
-        sql: `SELECT c.* , r.region FROM general.controlador c INNER JOIN general.region r ON c.rgn_id = r.rgn_id ORDER BY c.ctrl_id ASC`,
+        sql: `SELECT * FROM general.controlador`,
       });
-
       controllers.forEach((controller) => {
         ControllerMapManager.addController(controller.ctrl_id, controller);
       });
@@ -156,4 +156,42 @@ export class ControllerMapManager {
 //   setTimeout(() => {
 //     ControllerMapManager.updateController(1,{rgn_id: 3})
 //   }, 30000);
+
+//   setTimeout(() => {
+//     const newController : ControllerData = {
+//       ctrl_id: 10,
+//       nodo: 'Nodo10',
+//       rgn_id: 1,
+//       direccion: 'Manuel Fuentes',
+//       descripcion: 'Nuevo Nodo 10',
+//       latitud: '-12.0000000',
+//       longitud: '-72.0000000',
+//       usuario: 'admin',
+//       'contraseña': 'AIOEOm+Zy8UJF5O3efJ7VV7zkJAJGeVDVWwPlvB+z14=',
+//       serie: 'SERIE1',
+//       ip: '172.16.3.180',
+//       mascara: '255.255.0.0',
+//       puertaenlace: '172.16.0.1',
+//       puerto: 3333,
+//       personalgestion: 'Juan',
+//       personalimplementador: 'Juan',
+//       seguridad: 1,
+//       conectado: 0,
+//       activo: 1,
+//       modo: 1,
+//       motionrecordseconds: 30,
+//       res_id_motionrecord: 3,
+//       motionrecordfps: 30,
+//       motionsnapshotseconds: 30,
+//       res_id_motionsnapshot: 3,
+//       motionsnapshotinterval: 5,
+//       res_id_streamprimary: 3,
+//       streamprimaryfps: 30,
+//       res_id_streamsecondary: 2,
+//       streamsecondaryfps: 30,
+//       res_id_streamauxiliary: 1,
+//       streamauxiliaryfps: 30,
+//     }
+//     ControllerMapManager.addController(10,newController)
+//   }, 60000);
 // })()

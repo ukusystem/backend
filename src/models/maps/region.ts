@@ -1,6 +1,7 @@
 import { RowDataPacket } from "mysql2";
 import { MySQL2 } from "../../database/mysql";
 import { Region } from "../../types/db";
+import { RegionNotifyManager } from "../system";
 
 interface RegionRowData extends RowDataPacket, Region {}
 
@@ -19,17 +20,19 @@ export class RegionMapManager {
   }
 
   static add(rgn_id: number, newRegion: Region) {
-    const existController = RegionMapManager.#regions.has(rgn_id);
-    if (!existController) {
+    const existRegion = RegionMapManager.#regions.has(rgn_id);
+    if (!existRegion) {
       RegionMapManager.#regions.set(rgn_id, newRegion);
     }
   }
 
   static update(rgn_id: number, fieldsUpdate: Partial<Region>) {
-    const currController = RegionMapManager.#regions.get(rgn_id);
-    if (currController !== undefined) {
-      const fieldsFiltered = RegionMapManager.#filterUndefined(fieldsUpdate);
-      Object.assign(currController, fieldsFiltered);
+    const currRegion = RegionMapManager.#regions.get(rgn_id);
+    if (currRegion !== undefined) {
+      const curRegionCopy = {...currRegion}
+      const {rgn_id,...fieldsFiltered} = RegionMapManager.#filterUndefined(fieldsUpdate);
+      Object.assign(currRegion, fieldsFiltered);
+      RegionNotifyManager.update(curRegionCopy,fieldsFiltered);
     }
   }
 
@@ -53,3 +56,11 @@ export class RegionMapManager {
     }
   }
 }
+
+
+// (async () => {
+//   setTimeout(() => {
+//     console.log("============Update Region==========")
+//     RegionMapManager.update(1,{region: "Ancash"})
+//   }, 30000);
+// })();

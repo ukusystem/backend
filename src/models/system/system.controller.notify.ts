@@ -3,7 +3,7 @@ import { Controlador } from "../../types/db";
 
 export class ControllerNotifyManager {
 
-  static #notifyStream(curController: Controlador,fieldsUpdate: Partial<Controlador>) {
+  static #notifyUpdateStream(curController: Controlador,fieldsUpdate: Partial<Controlador>) {
     const {res_id_streamprimary,res_id_streamsecondary,res_id_streamauxiliary,} = fieldsUpdate;
     const { streamprimaryfps, streamsecondaryfps, streamauxiliaryfps } = fieldsUpdate;
 
@@ -33,7 +33,7 @@ export class ControllerNotifyManager {
     
   };
 
-  static #notifySidebarNav(curController: Controlador,fieldsUpdate: Partial<Controlador>){
+  static #notifyUpdateSidebarNav(curController: Controlador,fieldsUpdate: Partial<Controlador>){
     const { activo, rgn_id, nodo, conectado, seguridad, modo, descripcion } = fieldsUpdate;
     const hasChangesSidebarNav =
       (activo !== undefined && curController.activo !== activo) ||
@@ -49,7 +49,7 @@ export class ControllerNotifyManager {
       }
   };
 
-  static #notifyPinEntrada(curController: Controlador,fieldsUpdate: Partial<Controlador>){
+  static #notifyUpdatePinEntrada(curController: Controlador,fieldsUpdate: Partial<Controlador>){
     const { seguridad, modo } = fieldsUpdate;
     if(modo !== undefined && curController.modo !== modo){
       PinEntradaManager.notifyControllerMode(curController.ctrl_id, modo);
@@ -60,12 +60,16 @@ export class ControllerNotifyManager {
     }
   };
 
-  static #notifyControllerState(curController: Controlador,fieldsUpdate: Partial<Controlador>){
-    const { seguridad, modo , conectado} = fieldsUpdate;
+  static #notifyUpdateControllerState(curController: Controlador,fieldsUpdate: Partial<Controlador>){
+    const { seguridad, modo , conectado , rgn_id, nodo, descripcion , activo} = fieldsUpdate;
     const hasChanges =
-      (modo !== undefined && curController.modo !== modo) ||
-      (seguridad !== undefined && curController.seguridad !== seguridad) || 
-      (conectado !== undefined && curController.conectado !== conectado) ;
+    (nodo !== undefined && curController.nodo !== nodo) || 
+    (rgn_id !== undefined && curController.rgn_id !== rgn_id) || 
+    (descripcion !== undefined && curController.descripcion !== descripcion) || 
+    (seguridad !== undefined && curController.seguridad !== seguridad) || 
+    (modo !== undefined && curController.modo !== modo) ||
+    (conectado !== undefined && curController.conectado !== conectado) ||
+    (activo !== undefined && curController.activo !== activo);
     
     if(hasChanges){
       ControllerStateManager.notifyUpdateController(curController.ctrl_id);
@@ -75,16 +79,19 @@ export class ControllerNotifyManager {
 
   static update(curController: Controlador,fieldsUpdate: Partial<Controlador>) {
     // stream
-    ControllerNotifyManager.#notifyStream(curController,fieldsUpdate);
+    ControllerNotifyManager.#notifyUpdateStream(curController,fieldsUpdate);
     // sidebar_nav
-    ControllerNotifyManager.#notifySidebarNav(curController,fieldsUpdate);
+    ControllerNotifyManager.#notifyUpdateSidebarNav(curController,fieldsUpdate);
     // pin entrada
-    ControllerNotifyManager.#notifyPinEntrada(curController,fieldsUpdate);
+    ControllerNotifyManager.#notifyUpdatePinEntrada(curController,fieldsUpdate);
     // ControllerState
-    ControllerNotifyManager.#notifyControllerState(curController,fieldsUpdate);
+    ControllerNotifyManager.#notifyUpdateControllerState(curController,fieldsUpdate);
   }
 
-  static add() {}
+  static add(newController: Controlador) {
+    // sidebar_nav
+    SidebarNavManager.notifyAddController(newController.ctrl_id);
+  }
 }
 
 // export class ControllerMap {

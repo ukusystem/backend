@@ -1,7 +1,7 @@
-import {  ControladorInfo, ControllerStateObserver, KeyControllerConfig, SocketControllerState} from "./controller.state.types";
+import {  ControllerStateInfo, ControllerStateObserver, SocketControllerState} from "./controller.state.types";
 
-import { SystemManager } from "../../../models/system";
 import { ControllerMapManager, RegionMapManager } from "../../../models/maps";
+import { Region } from "../../../types/db";
 
 export class ControllerStateSocketObserver implements ControllerStateObserver {
   #socket: SocketControllerState;
@@ -10,7 +10,11 @@ export class ControllerStateSocketObserver implements ControllerStateObserver {
     this.#socket = socket;
   }
 
-  updateController(newCtrl: ControladorInfo): void {
+  updateRegion(region: Region): void {
+    this.#socket.nsp.emit("update_region",region);
+  }
+
+  updateController(newCtrl: ControllerStateInfo): void {
     this.#socket.nsp.emit("update_controller",newCtrl);
   }
   
@@ -41,12 +45,21 @@ export class ControllerStateManager {
     }
   }
 
-  // static getPropertyValues(ctrl_id:number ,keys: KeyControllerConfig[]){
-  //   const propValues = SystemManager.getControllerProperties(ctrl_id,keys);
-  //   return propValues
-  // }
+  static notifyUpdateRegion(rgn_id:number): void {
+    const activeControllers = ControllerMapManager.getAllControllers(true);
+    const controllersFiltered = activeControllers.filter((controller) => controller.rgn_id === rgn_id);
+    for (const controller of controllersFiltered) {
+      const {ctrl_id} = controller;
+      if (ControllerStateManager.observer.hasOwnProperty(ctrl_id)) {
+        const region = RegionMapManager.getRegion(rgn_id);
+        if(region !== undefined){
+          ControllerStateManager.observer[ctrl_id].updateRegion(region);
+        }
+      }
+    }
+  }
 
-  static getController(ctrl_id:number) : ControladorInfo | undefined {
+  static getController(ctrl_id:number) : ControllerStateInfo | undefined {
 
     const controller = ControllerMapManager.getController(ctrl_id, true);
     if (controller === undefined) {
@@ -58,22 +71,22 @@ export class ControllerStateManager {
       return undefined;
     }
 
-    const controllerInfo: ControladorInfo = {
+    const controllerInfo: ControllerStateInfo = {
       activo: controller.activo,
       conectado: controller.conectado,
       ctrl_id: controller.ctrl_id,
       descripcion: controller.descripcion,
-      direccion: controller.direccion,
-      latitud: controller.latitud,
-      longitud: controller.longitud,
+      // direccion: controller.direccion,
+      // latitud: controller.latitud,
+      // longitud: controller.longitud,
       modo: controller.modo,
       nodo: controller.nodo,
-      personalgestion: controller.personalgestion,
-      personalimplementador: controller.personalimplementador,
+      // personalgestion: controller.personalgestion,
+      // personalimplementador: controller.personalimplementador,
       region: region.region,
       rgn_id: controller.rgn_id,
       seguridad: controller.seguridad,
-      serie: controller.serie,
+      // serie: controller.serie,
     };
 
     return controllerInfo;

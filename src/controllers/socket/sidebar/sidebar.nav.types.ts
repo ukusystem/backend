@@ -28,6 +28,7 @@ interface ServerToClientEvents {
   update_controller: (controller: SidebarNavControllerData) => void;
   add_controller: (newController: SidebarNavControllerData) => void;
   message_error: (data: ErrorSidebarNav) => void;
+  update_region: (region: Region) => void;
 }
 
 interface InterServerEvents {}
@@ -52,6 +53,7 @@ export type SocketSidebarNav = Socket<
 export interface SidebarNavObserver {
   updateController(controller: SidebarNavControllerData): void;
   addController(newController: SidebarNavControllerData): void;
+  updateRegion(region: Region): void;
 }
 
 export interface SidebarNavSubject {
@@ -59,4 +61,5 @@ export interface SidebarNavSubject {
   unregisterObserver(): void;
   notifyAddController(ctrl_id: number): void;
   notifyUpdateController(ctrl_id: number): void;
+  notifyUpdateRegion(rgn_id: number): void;
 }
