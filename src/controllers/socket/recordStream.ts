@@ -21,7 +21,7 @@ export const streamRecordSocket = async (io: Server, socket: Socket) => {
    const nspStream = socket.nsp;
    const [, , xctrl_id,xip] = nspStream.name.split("/"); // Namespace : "/record_stream/:ctrl_id/:ip"
    
-   console.log("Llego peticion record_stream",xctrl_id,xip)
+  //  console.log("Llego peticion record_stream",xctrl_id,xip);
 
   
 

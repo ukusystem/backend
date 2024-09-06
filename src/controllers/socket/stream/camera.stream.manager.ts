@@ -142,6 +142,8 @@ export class CamStreamSocketManager {
           CamStreamSocketManager.notifyState(direction, false, "isConfiguring");
           CamStreamSocketManager.notifyState(direction, true, "isLoading");
           CamStreamSocketManager.notifyState(direction, false, "isSuccess");
+          CamStreamSocketManager.notifyState(direction, false, "isError");
+          
 
           const newFfmpegArg = await getFfmpegArgs(ctrl_id, ip, q);
 
@@ -211,12 +213,19 @@ export class CamStreamSocketManager {
 
       CamStreamSocketManager.process[ctrl_id][ip][q].ffmpegProcess.on( "close", (code, signal) => {
           console.log( `Proceso ffmpeg cerrado con código ${code} y señal ${signal}` );
-          if (CamStreamSocketManager.process[ctrl_id][ip][q]) {
+          const currentProcess = CamStreamSocketManager.process[ctrl_id][ip][q];
+          if (currentProcess) {
             // delete observer
             // CamStreamSocketManager.unregisterObserver({ctrl_id,ip,q})
 
             console.log("Delete proccess stream ", direction);
+            currentProcess.ffmpegProcess.kill();
             delete CamStreamSocketManager.process[ctrl_id][ip][q];
+            if(code !== null){
+              CamStreamSocketManager.notifyState(direction, false, "isLoading");
+              CamStreamSocketManager.notifyState(direction, true, "isError");
+              CamStreamSocketManager.notifyError(direction, `${ip} : Proceso cerrado, error al consumir flujo.`);
+            }
           }
         }
       );
