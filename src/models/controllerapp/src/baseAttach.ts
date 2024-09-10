@@ -900,6 +900,10 @@ export class NodeAttach extends BaseAttach {
    */
   private static readonly TEMP_SAVE_INTERVAL_S = 5 * 60;
   private lastTempStamp = 0;
+
+  private static readonly POWER_SAVE_INTERVAL_S = 5 * 60;
+  private lastPowerStamp = 0;
+
   private unreached = false;
 
   readonly controllerID;
@@ -1004,12 +1008,17 @@ export class NodeAttach extends BaseAttach {
         const fecha = useful.formatTimestamp(power[0].getInt());
         // const powerYear = useful.getYearFromTimestamp(power[0].getInt());
 
-        const powerQuery = util.format(queries.insertPower, BaseAttach.getNodeDBName(this.controllerID))
-
-        if (await executeQuery<ResultSetHeader>(powerQuery, [medidorID, voltaje, amperaje, fdp, frecuencia, potenciaw, potenciakwh, fecha])) {
-          this._log(`Inserted power`);
-        } else {
-          this._log(`Error saving power`);
+        // Save all the readings periodically
+        const powerStamp = this.fixDateNumber(power[0].getInt());
+        if (powerStamp >= this.lastPowerStamp + NodeAttach.POWER_SAVE_INTERVAL_S) {
+          const powerQuery = util.format(queries.insertPower, BaseAttach.getNodeDBName(this.controllerID))
+          if (await executeQuery<ResultSetHeader>(powerQuery, [medidorID, voltaje, amperaje, fdp, frecuencia, potenciaw, potenciakwh, fecha])) {
+            this._log(`Inserted power`);
+          } else {
+            this._log(`Error saving power`);
+          }
+          
+          this.lastPowerStamp = powerStamp;
         }
 
         // Notify web about the energy
@@ -1050,6 +1059,7 @@ export class NodeAttach extends BaseAttach {
           // Send the data to the web app
           this._notifyTemp(sensorID, this.controllerID, null, sensorRead, null, null);
         }
+
         // Save all the readings periodically
         if (tempStamp >= this.lastTempStamp + NodeAttach.TEMP_SAVE_INTERVAL_S) {
           await executeBatchForNode(queries.insertTemperature, this.controllerID, paramsForRegister);
@@ -2220,7 +2230,7 @@ export class ManagerAttach extends BaseAttach {
     //   return false;
     // }
     // this._log(`Database created for node ID ${nodeID}.`);
-    
+
     return true;
   }
 
@@ -2622,7 +2632,7 @@ export class Selector {
       if (index >= 0) {
         this.managerConnections.splice(index, 1);
       }
-      console.log("Was a ManagerAttach.");
+      // console.log("Was a ManagerAttach.");
     } else {
       console.log("Unknown instance.");
     }
