@@ -2,6 +2,7 @@ import { Socket } from "socket.io";
 import { IPinesEntradaSocket, IPinesEntradaSocketBad, PinesEntradaObserver } from "./pinentrada.types";
 import { EquipoEntrada, PinesEntrada } from "../../../types/db";
 import { PinEntrada } from "../../../models/site";
+import { AlarmManager } from "../alarm";
 
 export class PinesEntradaSocket implements IPinesEntradaSocket {
   ctrl_id: number;
@@ -211,6 +212,7 @@ export class PinEntradaManager {
     if (!PinEntradaManager.map[ctrl_id].hasOwnProperty(pe_id)) {
       PinEntradaManager.map[ctrl_id][pe_id] = pinEnt;
       PinEntradaManager.notifyListPinesEntrada(pinEnt);
+      AlarmManager.notifyPinEntrada(ctrl_id,pe_id,"add");
     }
   }
 
@@ -233,6 +235,7 @@ export class PinEntradaManager {
         }
 
         PinEntradaManager.notifyItemPinEntrada(pinEnt);
+        AlarmManager.notifyPinEntrada(ctrl_id,pe_id,"update");
       }
     }
   }
@@ -264,6 +267,7 @@ export class PinEntradaManager {
           PinEntradaManager.map[ctrl_id][pe_id].setActivo(0);
           // Notificar observer
           PinEntradaManager.notifyListPinesEntrada(pinEnt);
+          AlarmManager.notifyPinEntrada(ctrl_id,pe_id,"delete");
         }
       }
     } else {
@@ -277,6 +281,7 @@ export class PinEntradaManager {
           currentPinEntrada.setActivo(0);
           // Notificar observer
           PinEntradaManager.notifyListPinesEntrada(currentPinEntrada);
+          AlarmManager.notifyPinEntrada(ctrl_id,pe_id,"delete");
         }
       }
     }
@@ -313,11 +318,14 @@ export class PinEntradaManager {
 
           // Notificar observer
           PinEntradaManager.notifyItemPinEntrada(currentPinEntrada);
+          AlarmManager.notifyPinEntrada(ctrl_id,pe_id,"update");
+
         } else {
           // agregar
           if ( activo != null && descripcion != null && ee_id != null && estado != null && pin != null ) {
             const newPinEntrada = new PinesEntradaSocket({ pe_id, ctrl_id, activo, descripcion, ee_id, estado, pin, });
             PinEntradaManager.add(newPinEntrada);
+            AlarmManager.notifyPinEntrada(ctrl_id,pe_id,"add");
           }
         }
       }

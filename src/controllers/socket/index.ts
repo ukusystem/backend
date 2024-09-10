@@ -24,4 +24,5 @@ export * from "./temperatura"
 
 export * from "./sidebar"
 export * from "./snapshot"
+export * from "./alarm"
 

@@ -1,4 +1,4 @@
-import { CamStreamQuality, CamStreamSocketManager, ControllerStateManager, PinEntradaManager, SidebarNavManager } from "../../controllers/socket";
+import { AlarmManager, CamStreamQuality, CamStreamSocketManager, ControllerStateManager, PinEntradaManager, SidebarNavManager } from "../../controllers/socket";
 import { Controlador } from "../../types/db";
 
 export class ControllerNotifyManager {
@@ -77,6 +77,23 @@ export class ControllerNotifyManager {
 
   }
 
+  static #notifyUpdateAlarm(curController: Controlador,fieldsUpdate: Partial<Controlador>){
+
+    const { nodo, seguridad, conectado, modo , activo} = fieldsUpdate;
+
+    const hasChanges =
+    (nodo !== undefined && curController.nodo !== nodo) || 
+    // (descripcion !== undefined && curController.descripcion !== descripcion) || 
+    (seguridad !== undefined && curController.seguridad !== seguridad) || 
+    (modo !== undefined && curController.modo !== modo) ||
+    (conectado !== undefined && curController.conectado !== conectado) ||
+    (activo !== undefined && curController.activo !== activo);
+
+    if(hasChanges){
+      AlarmManager.notifyController(curController.ctrl_id,"update");
+    }
+  }
+
   static update(curController: Controlador,fieldsUpdate: Partial<Controlador>) {
     // stream
     ControllerNotifyManager.#notifyUpdateStream(curController,fieldsUpdate);
@@ -86,6 +103,8 @@ export class ControllerNotifyManager {
     ControllerNotifyManager.#notifyUpdatePinEntrada(curController,fieldsUpdate);
     // ControllerState
     ControllerNotifyManager.#notifyUpdateControllerState(curController,fieldsUpdate);
+    // Alarm
+    ControllerNotifyManager.#notifyUpdateAlarm(curController,fieldsUpdate);
   }
 
   static add(newController: Controlador) {
