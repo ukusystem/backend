@@ -1,6 +1,5 @@
 import { MySQL2 } from "../../database/mysql";
 import { GeneralUpdate } from "./system.general.update";
-import { Resolution } from "./system.resolution";
 import { ControllerConfig, GeneralConfig, GeneralConfigRowData } from "./system.state.types";
 
 export class SystemManager {
@@ -40,7 +39,6 @@ export class SystemManager {
 
   static async init() {
     try {
-      await Resolution.init()
       const generalConfigs = await MySQL2.executeQuery<GeneralConfigRowData[]>({ sql: `SELECT nombreempresa AS COMPANY_NAME , correoadministrador AS EMAIL_ADMIN FROM general.configuracion LIMIT 1 OFFSET 0` });
       if(generalConfigs.length > 0){
         SystemManager.general= generalConfigs[0]
