@@ -198,10 +198,10 @@ const DashboardConfig: {[key in RegisterType]: { has_yearly_tables: boolean };} 
     has_yearly_tables: false,
   },
   energia: {
-    has_yearly_tables: true, // true
+    has_yearly_tables: false, // true
   },
   entrada: {
-    has_yearly_tables: true,// true
+    has_yearly_tables: false,// true
   },
   estadocamara: {
     has_yearly_tables: false,
@@ -213,13 +213,13 @@ const DashboardConfig: {[key in RegisterType]: { has_yearly_tables: boolean };} 
     has_yearly_tables: false,
   },
   salida: {
-    has_yearly_tables: true, // true
+    has_yearly_tables: false, // true
   },
   seguridad: {
     has_yearly_tables: false,
   },
   temperatura: {
-    has_yearly_tables: true,
+    has_yearly_tables: false,
   },
   ticket: {
     has_yearly_tables: false,

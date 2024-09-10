@@ -1,4 +1,6 @@
+
 import { ServerApp } from "./models/server";
+import { SystemManager } from "./models/system";
 import { TicketMap } from "./models/ticketschedule";
 
 (async () => {
@@ -6,6 +8,8 @@ import { TicketMap } from "./models/ticketschedule";
     // Conectar a la base de datos:
     await ServerApp.connectDataBase();
 
+    await SystemManager.init()
+    
     // Crear un servidor
     const server = new ServerApp();
     // Inicializar websockets
@@ -24,6 +28,7 @@ import { TicketMap } from "./models/ticketschedule";
     // test()
   } catch (error) {
     console.log(error);
+    process.exit(1)
   }
 })();
 

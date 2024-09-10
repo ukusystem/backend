@@ -81,13 +81,17 @@ export class Register {
       if(registerOption.has_yearly_tables){
 
         if(startDate.year() - endDate.year() == 0){
+
           let new_from_clause = `FROM ${"nodo" + ctrl_id}.${registerOption.base_table_name + startDate.year()}`;
           const general_query = select_clause.concat(" ",new_from_clause," ",where_clause," ",additional_where_clause," ",orderby_clause," ",limit_clause)
 
-          const registros = await MySQL2.executeQuery<RowDataPacket[]>({sql:general_query})
-          if(registros.length>0){
+          try {
+            const registros = await MySQL2.executeQuery<RowDataPacket[]>({sql:general_query})
             return {data: p_action == "prev" ? registros.reverse() : registros , order_by: registerOption.order_by};
+          } catch (error) {
+            return {data: [] , order_by: registerOption.order_by};
           }
+
         }else{ // dos años continuos
           let new_from_clause2 = `FROM ${"nodo" + ctrl_id}.${registerOption.base_table_name + startDate.year()}`;
           let new_from_clause1 = `FROM ${"nodo" + ctrl_id}.${registerOption.base_table_name + endDate.year()}`;
@@ -137,9 +141,11 @@ export class Register {
         const general_query = select_clause.concat(" ",from_clause," ",where_clause," ",additional_where_clause," ",orderby_clause," ",limit_clause)
         const registros = await MySQL2.executeQuery<RowDataPacket[]>({sql:general_query})
         // console.log(general_query)
-        if(registros.length>0){// dos años continuos
-          return {data: p_action == "prev" ? registros.reverse() : registros , order_by: registerOption.order_by};
-        }
+        // if(registros.length>0){// dos años continuos
+        //   return {data: p_action == "prev" ? registros.reverse() : registros , order_by: registerOption.order_by};
+        // }
+        return {data: p_action == "prev" ? registros.reverse() : registros , order_by: registerOption.order_by};
+
       }
 
 
@@ -150,7 +156,7 @@ export class Register {
       // if(registros.length>0){
       //   return {data: p_action == "prev" ? registros.reverse() : registros , order_by: registerOption.order_by};
       // }
-      return {data: [], order_by: registerOption.order_by}
+      // return {data: [], order_by: registerOption.order_by}
   } , "Register.getRegistros");
 
   static getRegistrosDownload = handleErrorWithArgument<{data: RowDataPacket[], columns: string[]},GetRegisterDownload> (
@@ -310,14 +316,14 @@ export const RegisterConfigOptions: {[key in RegisterType]: { has_yearly_tables:
     datetime_compare: "fecha"
   },
   energia: {
-    has_yearly_tables: true,
+    has_yearly_tables: false,
     base_table_name: "registroenergia",
     table_columns: ["re_id", "me_id", "voltaje", "amperaje", "fdp", "frecuencia", "potenciaw", "potenciakwh", "fecha"],
     order_by: "re_id",
     datetime_compare: "fecha"
   },
   entrada: {
-    has_yearly_tables: true,
+    has_yearly_tables: false,
     base_table_name: "registroentrada",
     table_columns: ["rentd_id", "pin", "estado", "fecha", "ee_id"],
     order_by: "rentd_id",
@@ -345,7 +351,7 @@ export const RegisterConfigOptions: {[key in RegisterType]: { has_yearly_tables:
     datetime_compare: "fecha"
   },
   salida: {
-    has_yearly_tables: true,
+    has_yearly_tables: false,
     base_table_name: "registrosalida",
     table_columns: ["rs_id", "pin", "estado", "fecha", "es_id"],
     order_by: "rs_id",
@@ -359,7 +365,7 @@ export const RegisterConfigOptions: {[key in RegisterType]: { has_yearly_tables:
     datetime_compare: "fecha"
   },
   temperatura: {
-    has_yearly_tables: true,
+    has_yearly_tables: false,
     base_table_name: "registrotemperatura",
     table_columns: ["rtmp_id", "st_id", "valor", "fecha"],
     order_by: "rtmp_id",

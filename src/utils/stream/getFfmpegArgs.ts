@@ -1,12 +1,17 @@
-
+import { ControllerMapManager } from "../../models/maps";
 import { getRstpLinksByCtrlIdAndIp } from "../getCameraRtspLinks";
 
 type Calidad = "q1" | "q2" | "q3";
 
 export const getFfmpegArgs = async (ctrl_id: number, ip: string, q: Calidad) => {
     try {
+      const ctrlConfig = ControllerMapManager.getControllerAndResolution(ctrl_id);
+      if(ctrlConfig === undefined){
+        throw new Error(`Error getFfmpegArgs | Controlador ${ctrl_id} no encontrado getControllerAndResolution`);
+      }
+      const {resolution} = ctrlConfig
       const [rtspUrl, rtspUrlsub] = await getRstpLinksByCtrlIdAndIp(ctrl_id,ip);
-      let ffmpegArg;
+      let ffmpegArg : string[] = [];
       if (q === "q1") {
         ffmpegArg = [
           "-rtsp_transport",
@@ -18,7 +23,7 @@ export const getFfmpegArgs = async (ctrl_id: number, ip: string, q: Calidad) => 
           "h264_nvenc",
           "-vf",
           // "scale=1920:1080",
-          "scale=1600:900",
+          `scale=${resolution.stream_pri.ancho}:${resolution.stream_pri.altura}`,
           "-c:v",
           "mjpeg",
           "-f",
@@ -37,7 +42,7 @@ export const getFfmpegArgs = async (ctrl_id: number, ip: string, q: Calidad) => 
           "h264_nvenc",
           "-vf",
           // "scale=1280:720",
-          "scale=960:540",
+          `scale=${resolution.stream_sec.ancho}:${resolution.stream_sec.altura}`,
           "-c:v",
           "mjpeg",
           "-b:v",

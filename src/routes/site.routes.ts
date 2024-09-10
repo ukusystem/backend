@@ -23,8 +23,8 @@ siteRoutes.patch("/site/control/update",requestDataValidator({bodySchema:updateC
 
 
 // ====================== TEMPERATURA ======================
-siteRoutes.get("/site/sensortemperatura/:xctrl_id",requestDataValidator({paramSchema: getSensoresTemperaturaSchema},{hasParam:true}) , getSensoresTemperatura)
-siteRoutes.get("/site/sensortemperatura/registros/:xctrl_id/:xst_id/:xdate",requestDataValidator({paramSchema: getRegistroTemperaturaSchema},{hasParam:true})  , getRegistroTemperartura) // se puede mejorar date --> POST
+siteRoutes.get("/site/sensortemperatura",requestDataValidator({querySchema: getSensoresTemperaturaSchema},{hasQuery:true}) , getSensoresTemperatura)
+siteRoutes.get("/site/sensortemperatura/registros",requestDataValidator({querySchema: getRegistroTemperaturaSchema},{hasQuery:true})  , getRegistroTemperartura)
 
 // ====================== MULTIMEDIA ======================
 

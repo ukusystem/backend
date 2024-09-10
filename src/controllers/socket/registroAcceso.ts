@@ -276,6 +276,7 @@ export class RegistroAccesoMap  {
     } catch (error) {
       console.log(`Socket Registro Acceso | RegistroAccesoMap | Error al inicializar registros`);
       console.error(error);  
+      throw error
     }
   }
 

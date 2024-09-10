@@ -13,7 +13,7 @@ authRoutes.post("/auth/login", requestDataValidator({bodySchema:loginSchema},{ha
 authRoutes.post("/auth/logout", authController.logout )
 
 // VerifyToken GET /api/v1/auth/verify
-authRoutes.get("/auth/verify", authController.verifyToken)
+authRoutes.get("/auth/verify", authController.refreshToken)
 
 // ResetPassword POST "/auth/resetpassword"
 authRoutes.post("/auth/resetpassword", authController.forgotPassword)

@@ -18,14 +18,14 @@ import { Mortal } from "./mortal";
 import { Ticket ,type  Personal, type Solicitante } from "./ticket";
 import { PinOrder } from "./types";
 import fs from "fs";
-import * as config from "./../../../configs/server.configs";
+import { appConfig } from "../../../configs";
 import * as queries from "./queries";
 import * as useful from "./useful";
 import * as codes from "./codes";
 import * as db2 from "./db2";
 import * as util from "util";
 import * as net from "net";
-import { CameraMotionMap } from "../../camera/CameraMotion";
+import { CameraMotionManager } from "../../camera";
 import * as cp from "child_process";
 import { sql } from "googleapis/build/src/apis/sql";
 
@@ -323,8 +323,8 @@ export class Main {
       this.log(`ERROR listening to managers. Code ${e.code}`);
     });
 
-    this.managerServer.listen(config.MANAGER_PORT, config.SERVER_IP, 16, () => {
-      this.log(`Server for managers listening on ${config.MANAGER_PORT}`);
+    this.managerServer.listen( appConfig.server.manager_port , appConfig.server.ip , 16, () => {
+      this.log(`Server for managers listening on ${appConfig.server.manager_port}`);
     });
   }
 
@@ -771,7 +771,7 @@ export class Main {
         monitor = States.DISCONNECTED;
         this.registerOrder(newOrder, monitor);
         // resolve(monitor)
-        resolve(new RequestResult(true, `El controlador ID = ${newOrder.ctrl_id} no está conectado.`));
+        resolve(new RequestResult(false, `El controlador ID = ${newOrder.ctrl_id} no está conectado.`));
       }
     });
     return myPromise;
@@ -986,9 +986,9 @@ export class Main {
           await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.cameraSetNet, cam.nodeID),[changeBool, cam.cameraID])
           if (change === Changes.TO_ACTIVE) {
             this.log(`Reconnecting camera ${cam.cameraIP}`);
-            CameraMotionMap.reconnect(cam.cameraID, cam.nodeID);
+            CameraMotionManager.reconnect(cam.cameraID, cam.nodeID);
           }else if(change === Changes.TO_INACTIVE){
-            CameraMotionMap.deleteFfmpegProccess(cam.cameraID, cam.nodeID)
+            CameraMotionManager.deleteFfmpegProccess(cam.cameraID, cam.nodeID)
           }
         }
         cam.errorNotified = false;

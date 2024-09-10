@@ -1,6 +1,6 @@
 import { RowDataPacket, ResultSetHeader } from "mysql2";
 import { executeQuery, executeBatchForNode, userExist } from "./dbManager";
-import { CameraMotionMap } from "../../camera/CameraMotion";
+import { CameraMotionManager } from "../../camera";
 import { CameraForFront } from "./frontend/camaraForFront";
 import { ResultCode } from "./resultCode";
 import { AtomicNumber } from "./atomicNumber";
@@ -15,7 +15,7 @@ import { Bundle } from "./bundle";
 import { Logger } from "./logger";
 import { Mortal } from "./mortal";
 import util from "util";
-import * as config from "./../../../configs/server.configs";
+import { appConfig } from "../../../configs";
 import * as cp from "child_process";
 import * as queries from "./queries";
 import * as useful from "./useful";
@@ -654,7 +654,7 @@ export class BaseAttach extends Mortal {
     potenciaw: number | null = null,
     potenciakwh: number | null = null
   ) {
-    const newEnergy = new sm.MedidorEnergiaSocketBad({
+    const newEnergy = new sm.MedEnergiaBadVO({
       me_id: meID,
       descripcion: desc,
       voltaje: voltaje,
@@ -667,14 +667,14 @@ export class BaseAttach extends Mortal {
       ctrl_id: nodeID,
     });
     if (active === 0) {
-      sm.MedidorEnergiaMap.delete(newEnergy);
+      sm.ModuloEnergiaManager.delete(newEnergy);
     } else {
-      sm.MedidorEnergiaMap.add_update(newEnergy);
+      sm.ModuloEnergiaManager.add_update(newEnergy);
     }
   }
 
   _notifyTemp(stID: number, nodeID: number, active: number | null = null, current: number | null = null, serie: string | null = null, desc: string | null = null) {
-    const newTemp = new sm.SensorTemperaturaSocketBad({
+    const newTemp = new sm.SenTemperaturaBadVO({
       activo: active,
       actual: current,
       ctrl_id: nodeID,
@@ -684,9 +684,9 @@ export class BaseAttach extends Mortal {
     });
     // this._log('Notifying web about tempertaure.')
     if (active === 0) {
-      sm.SensorTemperaturaMap.delete(newTemp);
+      sm.SensorTemperaturaManager.delete(newTemp);
     } else {
-      sm.SensorTemperaturaMap.add_update(newTemp);
+      sm.SensorTemperaturaManager.add_update(newTemp);
     }
   }
 
@@ -723,11 +723,11 @@ export class BaseAttach extends Mortal {
     });
     // To disable the pin
     if (active === 0) {
-      sm.PinesEntradaMap.delete(newInput);
+      sm.PinEntradaManager.delete(newInput);
     }
     // To enable or update data
     else {
-      sm.PinesEntradaMap.add_update(newInput);
+      sm.PinEntradaManager.add_update(newInput);
     }
     // To show in the 'alerts' section
     if (resgister && state && date) {
@@ -746,7 +746,7 @@ export class BaseAttach extends Mortal {
     order: number | null = null
   ) {
     // this._log(`Notifying web about output.`);
-    const newOutput = new sm.PinesSalidaSocketBad({
+    const newOutput = new sm.PinSalidaSocketBad({
       ps_id: pin,
       pin: pin,
       es_id: es_id,
@@ -759,11 +759,11 @@ export class BaseAttach extends Mortal {
     });
     // To disable the pin
     if (active === 0) {
-      sm.PinesSalidaMap.delete(newOutput);
+      sm.PinSalidaManager.delete(newOutput);
     }
     // To enable or update data
     else {
-      sm.PinesSalidaMap.add_update(newOutput);
+      sm.PinSalidaManager.add_update(newOutput);
     }
 
     // Curently there is not a real time resgister for the outputs
@@ -1238,7 +1238,7 @@ export class NodeAttach extends BaseAttach {
             await this.insertInputOutput(this.controllerID, pinData, true);
             // Send to the other backend
             this._notifyInput(true, pin, this.controllerID, null, null, state, null, useful.formatTimestamp(pinDate));
-            // sm.PinesEntradaMap.add_update(
+            // sm.PinEntradaManager.add_update(
             //   new sm.PinesEntradaSocketBad({ pe_id: pin, pin: pin, ee_id: DEF_ID, descripcion: DEF_TXT, estado: state, activo: DEF_ACTIVE, ctrl_id: this.controllerID })
             // );
             // sm.RegistroEntradaMap.add(
@@ -2120,7 +2120,7 @@ export class ManagerAttach extends BaseAttach {
                           this._logFeelThroughHex(valueToSet);
                           break;
                       }
-                      CameraMotionMap.add_update(newCameraItem);
+                      CameraMotionManager.add_update(newCameraItem);
                       break;
                     case codes.VALUE_ENERGY:
                       // id, desc
@@ -2161,7 +2161,7 @@ export class ManagerAttach extends BaseAttach {
                     case codes.VALUE_CAMERA_DISABLE:
                       const disabledCamera = await this.disableItem("camera", parts, queries.cameraDisable, id, targetNodeID);
                       bundle.targetCamera = new Camera(disabledCamera, targetNodeID);
-                      CameraMotionMap.delete(new CameraForFront(disabledCamera, targetNodeID));
+                      CameraMotionManager.delete(new CameraForFront(disabledCamera, targetNodeID));
                       code.code = Result.CAMERA_DISABLE;
                       break;
                     default:
@@ -2203,7 +2203,7 @@ export class ManagerAttach extends BaseAttach {
       // The timeout generates an error in the callback?
       try {
         cp.execSync(
-          `cmd.exe /c mysqldump -u ${config.DB_USER} -p${config.DB_PWD} nodo | mysql -u ${config.DB_USER} -p${config.DB_PWD} ${newNode}`,
+          `cmd.exe /c mysqldump -u ${appConfig.db.user} -p${appConfig.db.password} nodo | mysql -u ${appConfig.db.user} -p${appConfig.db.password} ${newNode}`,
           // `cmd.exe /c mysqldump -u root -padmin nodo | mysql -u root -padmin ${newNode}`,
           { timeout: BaseAttach.PROCESS_TIMEOUT }
         );

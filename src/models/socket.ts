@@ -1,15 +1,27 @@
 import { Server as HttpServer } from "http";
 import { Server } from "socket.io";
-import {  energiaSocket, pinesEntradaSocket, sensorTemperaturaSocket, ticketSocket , streamRecordSocket, lastSnapshotSocket, sensorTemperaturaSocketFinal, moduloEnergiaSocket, pinesEntradaSocketFinal, registroEntradaSocket, SensorTemperaturaMap, registroAccesoSocket } from "../controllers/socket";
-import { streamSocketFinal } from "../controllers/socket/streamFinal";
-import { Auth } from "./auth";
-import { pinesSalidaSocket } from "../controllers/socket/pinesSalida";
+import {  ticketSocket , streamRecordSocket, lastSnapshotSocket, pinEntradaSocket, registroEntradaSocket, SensorTemperaturaManager, registroAccesoSocket, voiceStreamSocket, NamespaceControllerState, contollerStateSocket, NamespacePinSalida, pinSalidaSocket, NamespaceModEnergia, modEnergiaSocket, senTemperaturaSocket, NamespaceSenTemperature, NamespaceSidebarNav, navbarNavSocket, NamespaceLastSnapshot } from "../controllers/socket";
+import { camStreamSocket } from "../controllers/socket/stream/camera.stream.socket";
+
+
+function parserCookie(cookies: string | undefined) {
+  if (cookies === undefined) {
+    return {};
+  }
+  const cookieSplit = cookies.split("; ");
+  const cookieObject = cookieSplit.reduce<Record<any, string>>((acc, curr) => {
+    const result = acc;
+    const tokenSplit = curr.split("=");
+    result[tokenSplit[0]] = tokenSplit[1] ? tokenSplit[1] : "";
+    return result;
+  }, {});
+  return cookieObject;
+}
 
 export class Sockets {
   #io: Server;
-  
-  constructor(httpServer: HttpServer) {
 
+  constructor(httpServer: HttpServer) {
     this.#io = new Server(httpServer, {
       cors: {
         origin: [
@@ -17,14 +29,15 @@ export class Sockets {
           "http://localhost:5174",
           "http://172.16.4.53:3005",
           "http://172.16.4.53:3000",
-          "http://172.16.4.3:3000"
+          "http://172.16.4.3:3000",
         ],
         methods: ["GET", "POST"],
+        credentials: true,
       },
       transports: ["websocket", "polling"],
     });
 
-    this.initEvents()
+    this.initEvents();
   }
 
   initEvents() {
@@ -49,78 +62,103 @@ export class Sockets {
     });
 
     // Namespace "/stream/nodo_id/camp_ip/calidad"
-    this.#io.of(/^\/stream\/(\d+)\/([^\/]+)\/(q\d+)$/).use(async (socket, next)=>{
-      try {
-        const tokenClient = socket.handshake.auth.token;
-        const tokenPayload = await Auth.verifyAccessToken(tokenClient);
-        if (!tokenPayload) {
-          console.log("Error de token")
-          return next(new Error("Token no valido"));
+    this.#io.of(/^\/stream\/(\d+)\/([^\/]+)\/(q\d+)$/).use(async (socket, next) => {
+        try {
+          // const cookiesHeader = socket.handshake.headers.cookie; // "token=fsddfjs"
+          // console.log(cookiesHeader)
+          // const cookies = parserCookie(cookiesHeader)
+          // console.log(cookies)
+          // if (cookies["token"] === undefined) {
+          //   return next(new Error("Token no proporcionado"));
+          // }
+          // console.log(cookies)
+          // const tokenPayload = await Auth.verifyAccessToken(cookies["token"]);
+          // if (!tokenPayload) {
+          //   console.log("Error de token");
+          //   return next(new Error("Token no valido"));
+          // }
+          // console.log(
+          //   `Stream Socket |Host: ${socket.handshake.headers.host} | Address: ${socket.handshake.address} | UserID: ${tokenPayload.id} | Time: ${socket.handshake.time}`
+          // );
+          next();
+        } catch (error) {
+          return next(new Error("Error de autentificacion"));
         }
-        console.log(`Stream Socket |Host: ${socket.handshake.headers.host} | Address: ${socket.handshake.address} | Time: ${socket.handshake.time}`)
-        next()
-      } catch (error) {
-        return next(new Error("Error de autentificacion"));
-      }
-
-    }).on("connection", (socket)=>{streamSocketFinal(this.#io, socket)});
-
-    // Namespace : "/sensor/tipo_sensor/region/nodo/id"
-    // this.#io.of(/^\/sensor\/[a-zA-Z0-9]+\/[a-zA-Z0-9]+\/[a-zA-Z0-9]+\/\d+$/).on("connection", (socket)=>{sensorTemperaturaSocket(this.#io, socket)})
-
-    // Namespace : "/sensor_temperatura/ctrl_id/id" 
-    this.#io.of(/^\/sensor_temperatura\/\d+\/\d+$/).on("connection", (socket)=>{sensorTemperaturaSocket(this.#io, socket)})
-    // Namespace : "/sensor_temperaturafinal/ctrl_id" 
-    this.#io.of(/^\/sensor_temperaturafinal\/\d+$/).on("connection", (socket)=>{sensorTemperaturaSocketFinal(this.#io, socket)})
-
-    
-    // Namespace : "/energia/ctrl_id/me_id"
-    this.#io.of(/^\/energia\/\d+\/\d+$/).on("connection", (socket)=>{energiaSocket(this.#io, socket)})
-    // Namespace : "/list_energia/ctrl_id"
-    this.#io.of(/^\/list_energia\/\d+$/).on("connection", (socket)=>{moduloEnergiaSocket(this.#io, socket)})
+      })
+      .on("connection", (socket) => {
+        camStreamSocket(this.#io, socket);
+      });
 
 
-    // Namespace :  "/accesos/nodo_id"
-    // this.#io.of(/^\/accesos\/\d+$/).on("connection", (socket)=>{accesoSocket(this.#io, socket)})
+    // Namespace : "/sensor_temperatura/ctrl_id/id"
+    const SenTempNSP: NamespaceSenTemperature = this.#io.of(/^\/sensor_temperatura\/\d+$/);
+    SenTempNSP.on("connection", (socket)=>{senTemperaturaSocket(this.#io,socket)})
+
+    // Namespace : "/modulo_energia/ctrl_id"
+    const ModEnergiaNSP: NamespaceModEnergia = this.#io.of(/^\/modulo_energia\/\d+$/);
+    ModEnergiaNSP.on("connection", (socket) => { modEnergiaSocket(this.#io, socket); });
+
+    // Namespace: /sidebar_nav
+    const SidebarNavNSP: NamespaceSidebarNav = this.#io.of("/sidebar_nav");
+    SidebarNavNSP.on("connection",(socket)=>{navbarNavSocket(this.#io, socket)})
+
     // Namespace :  "/registro_acceso/ctrl_id"
-    this.#io.of(/^\/registro_acceso\/\d+$/).on("connection", (socket)=>{registroAccesoSocket(this.#io, socket)})
+    this.#io.of(/^\/registro_acceso\/\d+$/).on("connection", (socket) => { registroAccesoSocket(this.#io, socket); });
 
-    // Namespace: "/alarmas/nodo_id/"
-    // this.#io.of(/^\/alarmas\/\d+$/).on("connection", (socket)=>{alarmaSocket(this.#io, socket)})
     // Namespace :  "/registro_entrada/ctrl_id"
-    this.#io.of(/^\/registro_entrada\/\d+$/).on("connection", (socket)=>{registroEntradaSocket(this.#io, socket)})
-
+    this.#io.of(/^\/registro_entrada\/\d+$/).on("connection", (socket) => { registroEntradaSocket(this.#io, socket); });
 
     // Namespace: "/tickets/ctrl_id/"
-    this.#io.of(/^\/tickets\/\d+$/).on("connection", (socket)=>{ticketSocket(this.#io, socket)})
+    this.#io.of(/^\/tickets\/\d+$/).on("connection", (socket) => { ticketSocket(this.#io, socket); });
 
-    // Namespace: "/pines_entrada/ctrl_id"
-    this.#io.of(/^\/pines_entrada\/\d+$/).on("connection", (socket)=>{pinesEntradaSocket(this.#io, socket)})
-    // Namespace: "/pines_entradafinal/ctrl_id"
-    this.#io.of(/^\/pines_entradafinal\/\d+$/).on("connection", (socket)=>{pinesEntradaSocketFinal(this.#io, socket)})
+    // Namespace: "/pin_entrada/ctrl_id"
+    this.#io.of(/^\/pin_entrada\/\d+$/).on("connection", (socket) => { pinEntradaSocket(this.#io, socket); });
 
+    // Namespace: "/controller_state/ctrl_id"    
+    const ControllerStateNSP: NamespaceControllerState = this.#io.of(/^\/controller_state\/\d+$/);
+    ControllerStateNSP.on("connection",(socket)=>{contollerStateSocket(this.#io,socket);});
 
     // Namespace: "/pines_salida/ctrl_id"
-    this.#io.of(/^\/pines_salida\/\d+$/).on("connection", (socket)=>{pinesSalidaSocket(this.#io, socket)}) // nuevo
+    const PinSalidaNSP: NamespacePinSalida = this.#io.of(/^\/pines_salida\/\d+$/);
+    PinSalidaNSP.on("connection", (socket) => { pinSalidaSocket(this.#io, socket); });
 
     // Namespace: "/record_stream/ctrl_id/ip"
-    this.#io.of(/^\/record_stream\/(\d+)\/([\d\.]+)$/).on("connection", (socket)=>{streamRecordSocket(this.#io, socket)})
+    this.#io.of(/^\/record_stream\/(\d+)\/([\d\.]+)$/).on("connection", (socket) => {  streamRecordSocket(this.#io, socket);});
 
-    // Namespace : "/lastsnapshot/ctrl_id"
-    this.#io.of(/^\/lastsnapshot\/\d+$/).on("connection", (socket)=>{lastSnapshotSocket(this.#io, socket)})
+    // Namespace : "/last_snapshot/ctrl_id"
+    const LastSnapshotNSP : NamespaceLastSnapshot  = this.#io.of(/^\/last_snapshot\/\d+$/);
+    LastSnapshotNSP.on("connection", (socket)=>{ lastSnapshotSocket(this.#io, socket)})
 
+    // Namespace: "/voice_stream/ctrl_id/ip"
+    this.#io.of(/^\/voice_stream\/(\d+)\/([\d\.]+)$/).on("connection", (socket) => { voiceStreamSocket(this.#io, socket);});
 
   }
 
-  async initMaps(){
-    try {
-      await SensorTemperaturaMap.init()
-    } catch (error) {
-      console.log("Socket Model | Error init maps")
-      console.log(error)
+  static #parserCookie(cookies: string | undefined) {
+    if(cookies === undefined){
+      return {}
     }
+    const cookieSplit = cookies.split("; ");
+    const cookieObject = cookieSplit.reduce<Record<any, string>>(
+      (acc, curr) => {
+        const result = acc;
+        const tokenSplit = curr.split("=");
+        result[tokenSplit[0]] = tokenSplit[1] ? tokenSplit[1] : "";
+        return result;
+      },
+      {}
+    );
+    return cookieObject;
   }
 
+  // async initMaps() {
+  //   try {
+  //     await SensorTemperaturaManager.init();
+  //   } catch (error) {
+  //     console.log("Socket Model | Error init maps");
+  //     console.log(error);
+  //   }
+  // }
 }
 
 

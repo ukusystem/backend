@@ -80,6 +80,7 @@ export class EquipoEntradaMap {
     } catch (error) {
       console.log(`EquipoEntradaMap | Error al inicilizar equipos de entrada`);
       console.error(error);  
+      throw error
     }
   }
 

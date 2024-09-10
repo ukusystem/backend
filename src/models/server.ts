@@ -1,6 +1,5 @@
 import express, { Application } from "express";
 import cookieParser from "cookie-parser";
-import { PORT } from "../configs/server.configs";
 import { MySQL2 } from "../database/mysql";
 import cors from "cors";
 import { authRoutes } from "../routes/auth.routes";
@@ -18,11 +17,13 @@ import { siteRoutes } from "../routes/site.routes";
 
 import { vmsRoutes } from "../routes/vms.routes";
 import { frontEndRoutes } from "../routes/frontend.routes";
-import { DeteccionMovimiento } from "./camera/CameraMotion";
+// import { DeteccionMovimiento } from "./camera/CameraMotion";
 import { main } from "./controllerapp/controller";
-import { MedidorEnergiaMap, PinesEntradaMap, PinesSalidaMap, RegistroAccesoMap, RegistroEntradaMap, SensorTemperaturaMap } from "../controllers/socket";
-import { ContrataMap, EquipoAccesoMap, EquipoEntradaMap, EquipoSalidaMap } from "./maps";
+import { ModuloEnergiaManager, PinEntradaManager, PinSalidaManager, RegistroAccesoMap, RegistroEntradaMap, SensorTemperaturaManager } from "../controllers/socket";
+import { ContrataMap, ControllerMapManager, EquipoAccesoMap, EquipoEntradaMap, EquipoSalidaMap, RegionMapManager, Resolution } from "./maps";
 import { dashboardRouter } from "../routes/dashboard.routes";
+import { appConfig } from "../configs";
+import { DeteccionMovimiento } from "./camera";
 
 // import { createServer as createServerHttps } from "https";
 // import fs from "fs";
@@ -34,13 +35,13 @@ export class ServerApp {
   
   constructor() {
     this.#app = express();
-    this.#port = PORT;
+    this.#port = appConfig.server.port;
     this.#httpServer = createServer(this.#app);
     // this.#httpServer = createServerHttps(
     //   {
-    //     key: fs.readFileSync("./crtssl/key.pem"),
-    //     cert: fs.readFileSync("./crtssl/crt.pem"),
-    //     passphrase: "test123.",
+    //     key: fs.readFileSync(path.resolve( __dirname, '../../crtssl/key.pem')),
+    //     cert: fs.readFileSync(path.resolve( __dirname, '../../crtssl/crt.pem')),
+    //     passphrase: "test123",
     //   },
     //   this.#app
     // );
@@ -134,17 +135,23 @@ export class ServerApp {
       await EquipoEntradaMap.init()
       await EquipoSalidaMap.init()
 
-      await SensorTemperaturaMap.init()
-      await MedidorEnergiaMap.init()
-      await PinesSalidaMap.init()
-      await PinesEntradaMap.init()
+      await Resolution.init()
+      await RegionMapManager.init();
+      await ControllerMapManager.init();
+
+      await SensorTemperaturaManager.init()
+      await ModuloEnergiaManager.init()
+      await PinSalidaManager.init()
+      await PinEntradaManager.init()
       await RegistroAccesoMap.init()
       await RegistroEntradaMap.init()
+    
       // await TicketMap.init() // iniciar despues de controller
 
     } catch (error) {
       console.log("Server Model | Error init maps")
       console.log(error)
+      throw error
     }
   }
 

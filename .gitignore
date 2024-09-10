@@ -1,5 +1,6 @@
 node_modules
 crtssl
+build
 deteccionmovimiento
 archivos
 package-lock.json

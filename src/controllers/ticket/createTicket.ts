@@ -9,16 +9,10 @@ import fs from 'fs'
 import { getFormattedDate } from "../../utils/getFormattedDateTime";
 import { v4 as uuidv4 } from 'uuid';
 import { getExtesionFile } from "../../utils/getExtensionFile";
-// import { TECHNICIAN_PORT, TECHNICIAN_SERVER_IP } from "../../configs/server.configs";
 
 import { Ticket ,Personal,Solicitante } from "../../models/controllerapp/src/ticket";
 import { onTicket } from "../../models/controllerapp/controller";
 import { RegistroTicketObject, TicketMap } from "../../models/ticketschedule";
-
-// ======================== Agregar esto
-// import { LoadedFile } from "../../models/controllerapp/src/types";
-// import { Main } from "../../models/controllerapp/src/main";
-// import { onTicket } from "../../models/controllerapp/controller";
 
 export const multerCreateTicketArgs: GeneralMulterMiddlewareArgs = {
   allowedMimeTypes: ["image/jpeg","image/jpg","image/png","application/pdf"],
@@ -31,32 +25,6 @@ export interface TicketForm {
     solicitante: Solicitante;
     personales:  Personal[];
 }
-
-// export interface Personal {
-//     c_id:     number;
-//     co_id:    number;
-//     dni:      string;
-//     foto:     null | string;
-//     nombre:   string;
-//     apellido: string;
-//     telefono: string;
-//     isNew:    boolean;
-// }
-
-// export interface Solicitante {
-//     telefono:      string;
-//     correo:        string;
-//     descripcion:   string;
-//     fechacomienzo: number;
-//     fechatermino:  number;
-//     prioridad:     number;
-//     p_id:          number;
-//     tt_id:         number;
-//     sn_id:         number;
-//     co_id:         number;
-//     ctrl_id:       number;
-// }
-
 
 export const createTicket = asyncErrorHandler( async (req: Request, res: Response, next: NextFunction) => {
 
@@ -186,23 +154,6 @@ export const createTicket = asyncErrorHandler( async (req: Request, res: Respons
           return res.status(500).json({ success: false, message: "Internal Server Error,Backend-Technician", });
         }
         
-
-        // try {
-        //   const response = await fetch( `http://${TECHNICIAN_SERVER_IP}:${TECHNICIAN_PORT}/servlets/ticket`, { method: "POST", body: JSON.stringify(finalDataRequest) } );
-        //   const resJson = await response.json()
-
-        //   if (response.ok) {
-        //     console.log("Respuesta Backend-Technician:\n", resJson)
-        //     return res.json({success: true,message: "Ticket creado correctamente.",});
-        //   } else {
-        //     console.log("Respuesta Backend-Technician:\n", resJson)
-        //     const statusCode = response.status;
-        //     return res.status(statusCode).json({ success: false, message: "Ocurrrio un error al intentar crear el ticket.", });
-        //   }
-
-        // } catch (error) {
-        //   return res.status(500).json({ success: false, message: "Internal Server Error,Backend-Technician", });
-        // }
     }
 
     res.status(500).json({ success: false, message: "Internal Server Error", });
