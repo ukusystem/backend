@@ -437,11 +437,31 @@ export const nodeUpdateTrivial = `
 				WHERE ctrl_id=?;
 			`;
 
+/**
+ * ctrl_id, nodo, rgn_id, direccion, descripcion, 
+ * latitud, longitud, usuario, serie, 
+ * ip, mascara, puertaenlace, puerto, personalgestion, 
+ * personalimplementador, seguridad, 
+ * 
+ * motionrecordseconds, res_id_motionrecord, motionrecordfps, 
+ * motionsnapshotseconds, res_id_motionsnapshot, motionsnapshotinterval, 
+ * res_id_streamprimary, streamprimaryfps, 
+ * res_id_streamsecondary, streamsecondaryfps, 
+ * res_id_streamauxiliary, streamauxiliaryfps,
+ * modo, 
+ */
 export const nodeSelect = `
 				SELECT ctrl_id, nodo, rgn_id, direccion, descripcion,
 					latitud, longitud, usuario, serie,
 					ip, mascara, puertaenlace, puerto, personalgestion,
-					personalimplementador, seguridad
+					personalimplementador, seguridad,
+					
+					motionrecordseconds, res_id_motionrecord, motionrecordfps, 
+					motionsnapshotseconds, res_id_motionsnapshot, motionsnapshotinterval, 
+					res_id_streamprimary, streamprimaryfps, 
+					res_id_streamsecondary, streamsecondaryfps, 
+					res_id_streamauxiliary, streamauxiliaryfps,
+					modo
 				FROM general.controlador
 				WHERE activo=1;
 			`;
