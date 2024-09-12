@@ -30,7 +30,7 @@ import { dns_v1beta2 } from "googleapis";
  * Base attachment for the sockets
  */
 export class BaseAttach extends Mortal {
-  static readonly PROCESS_TIMEOUT = 10 * 1000;
+  static readonly PROCESS_TIMEOUT = 60 * 1000;
   static readonly UNREACHABLE_INTERVAL_MS = 60 * 1000;
   static readonly DEFAULT_ADDRESS = "0.0.0.0";
   private static readonly BASE_NODE_NAME = "nodo";

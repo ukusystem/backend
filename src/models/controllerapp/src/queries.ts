@@ -437,6 +437,15 @@ export const nodeUpdateTrivial = `
 				WHERE ctrl_id=?;
 			`;
 
+export const nodeSelect = `
+				SELECT ctrl_id, nodo, rgn_id, direccion, descripcion,
+					latitud, longitud, usuario, serie,
+					ip, mascara, puertaenlace, puerto, personalgestion,
+					personalimplementador, seguridad
+				FROM general.controlador
+				WHERE activo=1;
+			`;
+
 /**
  * ctrl_id, nodo, rgn_id, direccion, descripcion, 
  * latitud, longitud, usuario, serie, 
@@ -450,21 +459,22 @@ export const nodeUpdateTrivial = `
  * res_id_streamauxiliary, streamauxiliaryfps,
  * modo, 
  */
-export const nodeSelect = `
-				SELECT ctrl_id, nodo, rgn_id, direccion, descripcion,
-					latitud, longitud, usuario, serie,
-					ip, mascara, puertaenlace, puerto, personalgestion,
-					personalimplementador, seguridad,
+
+// export const nodeSelect = `
+// 				SELECT ctrl_id, nodo, rgn_id, direccion, descripcion,
+// 					latitud, longitud, usuario, serie,
+// 					ip, mascara, puertaenlace, puerto, personalgestion,
+// 					personalimplementador, seguridad,
 					
-					motionrecordseconds, res_id_motionrecord, motionrecordfps, 
-					motionsnapshotseconds, res_id_motionsnapshot, motionsnapshotinterval, 
-					res_id_streamprimary, streamprimaryfps, 
-					res_id_streamsecondary, streamsecondaryfps, 
-					res_id_streamauxiliary, streamauxiliaryfps,
-					modo
-				FROM general.controlador
-				WHERE activo=1;
-			`;
+// 					motionrecordseconds, res_id_motionrecord, motionrecordfps, 
+// 					motionsnapshotseconds, res_id_motionsnapshot, motionsnapshotinterval, 
+// 					res_id_streamprimary, streamprimaryfps, 
+// 					res_id_streamsecondary, streamsecondaryfps, 
+// 					res_id_streamauxiliary, streamauxiliaryfps,
+// 					modo
+// 				FROM general.controlador
+// 				WHERE activo=1;
+// 			`;
 
 /**
  * Update the node data without modifying the password.
@@ -710,6 +720,10 @@ export const camBrandSelect = `
 				SELECT m_id, marca FROM general.marca;
 			`;
 
+export const selectResolutions = `
+				SELECT res_id, nombre FROM general.resolucion;
+			`;
+
 /* Input pins */
 
 export const inputsSelect = `
@@ -859,4 +873,5 @@ export const tableTuples = [
 	new TableTuple(Codes.VALUE_ACTUATOR, Codes.VALUE_ACTUATOR_END, queries.actuatorSelect, "equiposalida", false),
 	new TableTuple(Codes.VALUE_CAMERA_TYPE, Codes.VALUE_CAMERA_TYPE_END, queries.cameraTypeSelect, "tipocamara", false),
 	new TableTuple(Codes.VALUE_CAMERA_BRAND, Codes.VALUE_CAMERA_BRAND_END, queries.camBrandSelect, "marca", false),
+	new TableTuple(Codes.VALUE_RESOLUTION, Codes.VALUE_RESOLUTION_END, queries.selectResolutions, "resolucion", false)
 ];
