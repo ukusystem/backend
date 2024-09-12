@@ -6,17 +6,21 @@ export type ActionType = "add" | "update" | "delete";
 export interface CameraPropsAlarm {
   cmr_id: number;
   tc_id: number;
-  tipo: string;
-  m_id: number;
-  marca: string;
-  ip: string;
+  // tipo: string; // notificar
+  // m_id: number;
+  // marca: string;
+  // ip: string;
   descripcion: string;
   conectado: number;
+  activo: 0|1;
 }
 
 export interface ControllerPropsAlarm {
   ctrl_id: number;
   nodo: string;
+  rgn_id: number;
+  // region: string; // notificar
+  descripcion: string;
   seguridad: 0 | 1;
   conectado: 0 | 1;
   modo: 0 | 1;

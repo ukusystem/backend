@@ -12,7 +12,7 @@ export const pinEntradaSocket = async (io:Server, socket: Socket) => {
     const observer = new PinesSalidaSocketObserver(socket);
     PinEntradaManager.registerObserver(Number(ctrl_id),observer);
     //emit initial data:
-    const data = PinEntradaManager.getListPinesSalida(ctrl_id)
+    const data = PinEntradaManager.getListPinesEntrada(ctrl_id)
     socket.emit("list_pines_entrada", data);
     try {
       const controller = ControllerMapManager.getController(Number(ctrl_id));

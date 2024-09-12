@@ -15,9 +15,23 @@ type CamCtrlIdIp = Pick<Controlador,"ctrl_id"> & Pick<Camara,"ip">
 
 interface CameraData extends RowDataPacket , Camara {}
 interface CameraInfoRowData extends RowDataPacket , CameraInfo {}
-interface CamResponse {
-  [key : string]: Record<string,(CameraInfo & Pick<Controlador, "ctrl_id" | "nodo"> & {region: string})[]>
-}
+
+type CamResponse = Record<
+  number,
+  {
+    rgn_id: number;
+    region: string;
+    controllers: Record<
+      number,
+      {
+        ctrl_id: number;
+        nodo: string;
+        camaras: (CameraInfo &
+          Pick<Controlador, "ctrl_id" | "nodo"> & { region: string })[];
+      }
+    >;
+  }
+>;
 
 export class Camera  {
 
@@ -150,20 +164,26 @@ export class Camera  {
     static getAllCameras = handleErrorWithoutArgument<CamResponse>(async ()=>{
         const region_nodos = await Init.getRegionNodos()
         if( region_nodos.length > 0){
-          const camerasData = await region_nodos.reduce(async (resultPromise, item) => {
+          const camerasData = await region_nodos.reduce<Promise<CamResponse>>(async (resultPromise, item) => {
             const result = await resultPromise;
-            const { region, nododb_name, nodo,ctrl_id } = item;
-            result[region] = result[region] || {}
-            
-            const cams = await MySQL2.executeQuery<CameraInfoRowData[]>({sql:`SELECT  cmr_id ,ip , descripcion, puertows,tipo, marca FROM ${nododb_name}.camara c INNER JOIN general.marca m ON c.m_id = m.m_id INNER JOIN general.tipocamara t ON c.tc_id = t.tc_id WHERE c.activo = 1 ORDER BY c.ip ASC`})
+            const { region, nododb_name, nodo,ctrl_id,rgn_id } = item;
 
-            result[region][nodo] = cams.map(cam => ({...cam, nodo, ctrl_id,region}))
+            const cams = await MySQL2.executeQuery<CameraInfoRowData[]>({sql:`SELECT  cmr_id ,ip , descripcion, puertows,tipo, marca FROM ${nododb_name}.camara c INNER JOIN general.marca m ON c.m_id = m.m_id INNER JOIN general.tipocamara t ON c.tc_id = t.tc_id WHERE c.activo = 1 ORDER BY c.ip ASC`});
+
+            if(cams.length > 0){
+              result[rgn_id] = result[rgn_id] || { rgn_id, region, controllers: {} };
+            
+              result[rgn_id].controllers[ctrl_id] = result[rgn_id].controllers[ctrl_id] || { ctrl_id, nodo, camaras: [] };
+
+              result[rgn_id].controllers[ctrl_id].camaras = cams.map(cam => ({...cam, nodo, ctrl_id,region}));
+            }
+
             return result
-          },Promise.resolve({} as CamResponse))
+          },Promise.resolve({}))
           return camerasData
         }
         return {}
-      }, "Init.getAllCameras")
+      }, "Camera.getAllCameras")
 
     static getCameraByCtrlId = handleErrorWithArgument<CameraInfo[] , Pick<Controlador,"ctrl_id">>(async({ctrl_id})=>{
 
