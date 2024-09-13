@@ -1,6 +1,6 @@
 import { Server as HttpServer } from "http";
 import { Server } from "socket.io";
-import {  ticketSocket , streamRecordSocket, lastSnapshotSocket, pinEntradaSocket, registroEntradaSocket, SensorTemperaturaManager, registroAccesoSocket, voiceStreamSocket, NamespaceControllerState, contollerStateSocket, NamespacePinSalida, pinSalidaSocket, NamespaceModEnergia, modEnergiaSocket, senTemperaturaSocket, NamespaceSenTemperature, NamespaceSidebarNav, navbarNavSocket, NamespaceLastSnapshot } from "../controllers/socket";
+import {  ticketSocket , streamRecordSocket, lastSnapshotSocket, pinEntradaSocket, registroEntradaSocket, SensorTemperaturaManager, registroAccesoSocket, voiceStreamSocket, NamespaceControllerState, contollerStateSocket, NamespacePinSalida, pinSalidaSocket, NamespaceModEnergia, modEnergiaSocket, senTemperaturaSocket, NamespaceSenTemperature, NamespaceSidebarNav, navbarNavSocket, NamespaceLastSnapshot, NamespaceAlarm, alarmSocket } from "../controllers/socket";
 import { camStreamSocket } from "../controllers/socket/stream/camera.stream.socket";
 
 
@@ -131,6 +131,10 @@ export class Sockets {
 
     // Namespace: "/voice_stream/ctrl_id/ip"
     this.#io.of(/^\/voice_stream\/(\d+)\/([\d\.]+)$/).on("connection", (socket) => { voiceStreamSocket(this.#io, socket);});
+
+    // Namespace : "/last_snapshot/ctrl_id"
+    const AlarmNSP : NamespaceAlarm  = this.#io.of("/alarm_notification");
+    AlarmNSP.on("connection", (socket)=>{ alarmSocket(this.#io, socket)})
 
   }
 

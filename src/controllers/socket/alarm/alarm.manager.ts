@@ -2,21 +2,21 @@ import { ControllerMapManager, RegionMapManager, TipoCamaraMapManager } from "..
 import { NodoCameraMapManager } from "../../../models/maps/nodo.camera";
 import { PinesEntrada } from "../../../types/db";
 import { PinEntradaManager } from "../pinentrada";
-import { ActionType, AlarmObserver, CameraPropsAlarm, ControllerPropsAlarm, SocketAlarma } from "./alarm.types";
+import { ActionType, AlarmObserver, CameraDataAlarm, ControllerDataAlarm, InitialAlarmData, SocketAlarm } from "./alarm.types";
 
 export class AlarmSocketObserver implements AlarmObserver {
-  #socket: SocketAlarma
-  constructor(socket:SocketAlarma ){
+  #socket: SocketAlarm
+  constructor(socket:SocketAlarm ){
     this.#socket = socket
   }
   
   emitPinEntrada(ctrl_id: number, data: PinesEntrada, action: ActionType): void {
     this.#socket.nsp.emit("pin_entrada",ctrl_id,data,action);
   }
-  emitCamera(ctrl_id: number, data: CameraPropsAlarm, action: ActionType): void {
+  emitCamera(ctrl_id: number, data: CameraDataAlarm, action: ActionType): void {
     this.#socket.nsp.emit("camera",ctrl_id,data,action);
   }
-  emitController(ctrl_id: number, data: ControllerPropsAlarm, action: ActionType): void {
+  emitController(ctrl_id: number, data: ControllerDataAlarm, action: ActionType): void {
     this.#socket.nsp.emit("controller",ctrl_id,data,action); 
   }
 };
@@ -50,8 +50,8 @@ export class AlarmManager {
     if(AlarmManager.#observer !== null){
       const cam = NodoCameraMapManager.getCamera(ctrl_id,cmr_id);
       if(cam !== undefined){
-        const {activo,conectado,descripcion,tc_id} = cam
-        AlarmManager.#observer.emitCamera(ctrl_id,{activo,cmr_id,conectado,descripcion,tc_id},action)
+        const {activo,conectado,descripcion,tc_id,ip} = cam
+        AlarmManager.#observer.emitCamera(ctrl_id,{activo,cmr_id,conectado,descripcion,tc_id,ip},action)
         // const tipoCam = TipoCamaraMapManager.getTipoCamara(cam.tc_id);
         // if(tipoCam !== undefined){
         //   const {activo,conectado,descripcion,tc_id} = cam
@@ -66,7 +66,7 @@ export class AlarmManager {
       const controller = ControllerMapManager.getController(ctrl_id);
         if(controller !== undefined){
           const {rgn_id,ctrl_id,nodo,activo,conectado,seguridad,modo,descripcion} = controller;
-          const controllerAlarm: ControllerPropsAlarm = { rgn_id, ctrl_id, nodo, activo, conectado, seguridad, modo, descripcion}; 
+          const controllerAlarm: ControllerDataAlarm = { rgn_id, ctrl_id, nodo, activo, conectado, seguridad, modo, descripcion}; 
           AlarmManager.#observer.emitController(ctrl_id,controllerAlarm,action);
           // const region = RegionMapManager.getRegion(controller.rgn_id);
           // if(region !== undefined){
@@ -77,4 +77,40 @@ export class AlarmManager {
         }
     }
   };
+
+  static getInitialData():InitialAlarmData {
+    const activeControllers = ControllerMapManager.getAllControllers(true);
+    const initialData : InitialAlarmData = {}
+
+    activeControllers.forEach((controller) => {
+      const { ctrl_id, activo, conectado, descripcion, modo, nodo, rgn_id, seguridad, } = controller;
+
+      // controlador
+      const ctrlData : ControllerDataAlarm = { ctrl_id, activo, conectado, descripcion, modo, nodo, rgn_id, seguridad, }
+
+      // camaras
+      const camaras = NodoCameraMapManager.getCamerasByCtrlID(ctrl_id,true);
+      const camsData :  CameraDataAlarm[] = camaras.map((cam)=>{
+        const {activo,cmr_id,conectado,descripcion,tc_id,ip} = cam
+        return {activo,cmr_id,conectado,descripcion,tc_id,ip}
+      });
+
+      // pines entrada
+      const pinesEnt = PinEntradaManager.getListPinesEntrada(String(ctrl_id));
+      const pinsEntData : PinesEntrada[] = pinesEnt.map((pinEnt)=>{
+        const {activo,descripcion,ee_id,estado,pe_id,pin} = pinEnt;
+        return {activo,descripcion,ee_id,estado,pe_id,pin}
+      });
+
+      if (!initialData[ctrl_id]) {
+        initialData[ctrl_id] = {
+          controlador:ctrlData,
+          camara: camsData,
+          pin_entrada: pinsEntData,
+        };
+      }
+    });
+
+    return initialData;
+  }
 }

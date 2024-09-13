@@ -3,19 +3,19 @@ import { PinesEntrada } from "../../../types/db";
 
 export type ActionType = "add" | "update" | "delete";
 
-export interface CameraPropsAlarm {
+export interface CameraDataAlarm {
   cmr_id: number;
   tc_id: number;
   // tipo: string; // notificar
   // m_id: number;
   // marca: string;
-  // ip: string;
+  ip: string;
   descripcion: string;
   conectado: number;
   activo: 0|1;
 }
 
-export interface ControllerPropsAlarm {
+export interface ControllerDataAlarm {
   ctrl_id: number;
   nodo: string;
   rgn_id: number;
@@ -27,11 +27,19 @@ export interface ControllerPropsAlarm {
   activo: 0 | 1;
 }
 
+export interface InitialAlarmData {
+  [ctrl_id: number]: {
+    controlador: ControllerDataAlarm;
+    pin_entrada: PinesEntrada[];
+    camara: CameraDataAlarm[];
+  };
+}
+
 // Observer:
 export interface AlarmObserver {
   emitPinEntrada(ctrl_id: number, data: PinesEntrada, action: ActionType): void;
-  emitCamera(ctrl_id: number, data: CameraPropsAlarm, action: ActionType): void;
-  emitController(ctrl_id: number,data: ControllerPropsAlarm,action: ActionType): void;
+  emitCamera(ctrl_id: number, data: CameraDataAlarm, action: ActionType): void;
+  emitController(ctrl_id: number,data: ControllerDataAlarm,action: ActionType): void;
 }
 
 export interface AlarmSubject {
@@ -48,22 +56,23 @@ interface ClientToServerEvents {}
 
 interface ServerToClientEvents {
   pin_entrada: (ctrl_id: number, data: PinesEntrada, action: ActionType) => void;
-  camera: (ctrl_id: number, data: CameraPropsAlarm, action: ActionType) => void;
-  controller: (ctrl_id: number,data: ControllerPropsAlarm,action: ActionType) => void;
+  camera: (ctrl_id: number, data: CameraDataAlarm, action: ActionType) => void;
+  controller: (ctrl_id: number,data: ControllerDataAlarm,action: ActionType) => void;
+  initial_data: (data: InitialAlarmData) => void;
 }
 
 interface InterServerEvents {}
 
 interface SocketData {}
 
-export type NamespaceAlarma = Namespace<
+export type NamespaceAlarm = Namespace<
   ClientToServerEvents,
   ServerToClientEvents,
   InterServerEvents,
   SocketData
 >;
 
-export type SocketAlarma = Socket<
+export type SocketAlarm = Socket<
   ClientToServerEvents,
   ServerToClientEvents,
   InterServerEvents,

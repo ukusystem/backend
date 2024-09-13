@@ -45,7 +45,7 @@ export class RegionMapManager {
       const regions = await MySQL2.executeQuery<RegionRowData[]>({
         sql: `SELECT * FROM general.region`,
       });
-
+      console.log(JSON.stringify(regions))
       regions.forEach((region) => {
         RegionMapManager.add(region.rgn_id, region);
       });

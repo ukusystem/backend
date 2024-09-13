@@ -4,12 +4,13 @@ import { Camara } from "../../types/db";
 export class CameraNotifyManager {
 
   static #notifyUpdateAlarm(ctrl_id: number,curCam: Camara,fieldsUpdate: Partial<Camara>) {
-    const { conectado, descripcion, tc_id, activo } = fieldsUpdate;
+    const { conectado, descripcion, tc_id, activo,ip } = fieldsUpdate;
     const hasChanges =
       (conectado !== undefined && curCam.conectado !== conectado) ||
       (descripcion !== undefined && curCam.descripcion !== descripcion) ||
       (tc_id !== undefined && curCam.tc_id !== tc_id) ||
-      (activo !== undefined && curCam.activo !== activo);
+      (activo !== undefined && curCam.activo !== activo) ||
+      (ip !== undefined && curCam.ip !== ip);
 
     if (hasChanges) {
       AlarmManager.notifyCamera(ctrl_id, curCam.cmr_id, "update");

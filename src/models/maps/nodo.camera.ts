@@ -52,9 +52,14 @@ export class NodoCameraMapManager {
     return undefined;
   }
 
-  static getCamerasByCtrlID(ctrl_id:number):Camara[]{
+  static getCamerasByCtrlID(ctrl_id:number,active:boolean = false):Camara[]{
     if (NodoCameraMapManager.#camaras.hasOwnProperty(ctrl_id)) {
-      return Array.from(NodoCameraMapManager.#camaras[ctrl_id].values());
+      const camaras = Array.from(NodoCameraMapManager.#camaras[ctrl_id].values());
+      if(!active){
+        return camaras
+      }
+      const activeCameras = camaras.filter((cam)=> cam.activo === 1)
+      return activeCameras;
     }
     return [];
   }
@@ -79,3 +84,10 @@ export class NodoCameraMapManager {
     }
   }
 }
+
+// (()=>{
+//   setTimeout(() => {
+//     console.log("========Update Cam 5 =====")
+//     NodoCameraMapManager.update(1,5,{conectado:0})
+//   }, 20000);
+// })()
