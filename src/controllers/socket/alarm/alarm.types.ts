@@ -1,5 +1,5 @@
 import { Namespace, Socket } from "socket.io";
-import { PinesEntrada } from "../../../types/db";
+import { PinesEntrada, Region } from "../../../types/db";
 
 export type ActionType = "add" | "update" | "delete";
 
@@ -40,6 +40,7 @@ export interface AlarmObserver {
   emitPinEntrada(ctrl_id: number, data: PinesEntrada, action: ActionType): void;
   emitCamera(ctrl_id: number, data: CameraDataAlarm, action: ActionType): void;
   emitController(ctrl_id: number,data: ControllerDataAlarm,action: ActionType): void;
+  emitRegion(rgn_id:number,data: Region,action: ActionType):void;
 }
 
 export interface AlarmSubject {
@@ -49,6 +50,7 @@ export interface AlarmSubject {
   notifyPinEntrada(ctrl_id: number, pe_id: number, action: ActionType): void;
   notifyCamera(ctrl_id: number, cmr_id: number, action: ActionType): void;
   notifyController(ctrl_id: number, action: ActionType): void;
+  notifyRegion(rgn_id:number, action: ActionType):void;
 }
 
 // Socket:
@@ -58,7 +60,8 @@ interface ServerToClientEvents {
   pin_entrada: (ctrl_id: number, data: PinesEntrada, action: ActionType) => void;
   camera: (ctrl_id: number, data: CameraDataAlarm, action: ActionType) => void;
   controller: (ctrl_id: number,data: ControllerDataAlarm,action: ActionType) => void;
-  initial_data: (data: InitialAlarmData) => void;
+  initial_data: (data: InitialAlarmData, regions: Region[]) => void;
+  region:(rgn_id:number,data: Region,action: ActionType) => void;
 }
 
 interface InterServerEvents {}

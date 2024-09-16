@@ -144,54 +144,60 @@ export class ControllerMapManager {
 
 
 // (async ()=>{
-//   //   setInterval(() => {
-//   //   const ramdomConnect = Math.round(Math.random());
-//   //   const ramdomConnect2 = Math.round(Math.random());
-//   //   console.log("=========== Update conexion state =============")
-//   //   console.log(1,ramdomConnect)
-//   //   console.log(4,ramdomConnect2)
-//   //   ControllerMapManager.updateController(1,{conectado:ramdomConnect})  
-//   //   ControllerMapManager.updateController(4,{conectado:ramdomConnect2})  
-//   // }, 10000);
-//   setTimeout(() => {
-//     ControllerMapManager.updateController(1,{rgn_id: 3})
+//     setTimeout(() => {
+//     const ramdomConnect = Math.round(Math.random());
+//     const ramdomConnect2 = Math.round(Math.random());
+//     // console.log("=========== Update conexion state =============")
+//     // console.log(1,ramdomConnect)
+//     // console.log(4,ramdomConnect2)
+//     // ControllerMapManager.updateController(1,{conectado:ramdomConnect as 0 | 1 })  
+//     // ControllerMapManager.updateController(4,{conectado:ramdomConnect2 as 0 | 1})  
+//     console.log("update ctrl_id 4 --> 1")
+//     ControllerMapManager.updateController(4,{conectado: 1})  
+//   }, 15000);
+//     setTimeout(() => {
+//     console.log("update ctrl_id 5 --> 1")
+//     ControllerMapManager.updateController(5,{conectado: 1})  
 //   }, 30000);
+//   // setTimeout(() => {
+//   //   ControllerMapManager.updateController(1,{rgn_id: 3})
+//   // }, 30000);
 
-//   setTimeout(() => {
-//     const newController : ControllerData = {
-//       ctrl_id: 10,
-//       nodo: 'Nodo10',
-//       rgn_id: 1,
-//       direccion: 'Manuel Fuentes',
-//       descripcion: 'Nuevo Nodo 10',
-//       latitud: '-12.0000000',
-//       longitud: '-72.0000000',
-//       usuario: 'admin',
-//       'contraseña': 'AIOEOm+Zy8UJF5O3efJ7VV7zkJAJGeVDVWwPlvB+z14=',
-//       serie: 'SERIE1',
-//       ip: '172.16.3.180',
-//       mascara: '255.255.0.0',
-//       puertaenlace: '172.16.0.1',
-//       puerto: 3333,
-//       personalgestion: 'Juan',
-//       personalimplementador: 'Juan',
-//       seguridad: 1,
-//       conectado: 0,
-//       activo: 1,
-//       modo: 1,
-//       motionrecordseconds: 30,
-//       res_id_motionrecord: 3,
-//       motionrecordfps: 30,
-//       motionsnapshotseconds: 30,
-//       res_id_motionsnapshot: 3,
-//       motionsnapshotinterval: 5,
-//       res_id_streamprimary: 3,
-//       streamprimaryfps: 30,
-//       res_id_streamsecondary: 2,
-//       streamsecondaryfps: 30,
-//       res_id_streamauxiliary: 1,
-//       streamauxiliaryfps: 30,
-//     }
-//     ControllerMapManager.addController(10,newController)
-//   }, 60000);
+//   // setTimeout(() => {
+//   //   const newController : ControllerData = {
+//   //     ctrl_id: 10,
+//   //     nodo: 'Nodo10',
+//   //     rgn_id: 1,
+//   //     direccion: 'Manuel Fuentes',
+//   //     descripcion: 'Nuevo Nodo 10',
+//   //     latitud: '-12.0000000',
+//   //     longitud: '-72.0000000',
+//   //     usuario: 'admin',
+//   //     'contraseña': 'AIOEOm+Zy8UJF5O3efJ7VV7zkJAJGeVDVWwPlvB+z14=',
+//   //     serie: 'SERIE1',
+//   //     ip: '172.16.3.180',
+//   //     mascara: '255.255.0.0',
+//   //     puertaenlace: '172.16.0.1',
+//   //     puerto: 3333,
+//   //     personalgestion: 'Juan',
+//   //     personalimplementador: 'Juan',
+//   //     seguridad: 1,
+//   //     conectado: 0,
+//   //     activo: 1,
+//   //     modo: 1,
+//   //     motionrecordseconds: 30,
+//   //     res_id_motionrecord: 3,
+//   //     motionrecordfps: 30,
+//   //     motionsnapshotseconds: 30,
+//   //     res_id_motionsnapshot: 3,
+//   //     motionsnapshotinterval: 5,
+//   //     res_id_streamprimary: 3,
+//   //     streamprimaryfps: 30,
+//   //     res_id_streamsecondary: 2,
+//   //     streamsecondaryfps: 30,
+//   //     res_id_streamauxiliary: 1,
+//   //     streamauxiliaryfps: 30,
+//   //   }
+//   //   ControllerMapManager.addController(10,newController)
+//   // }, 60000);
 // })()

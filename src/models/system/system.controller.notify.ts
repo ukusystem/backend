@@ -3,7 +3,7 @@ import { Controlador } from "../../types/db";
 
 export class ControllerNotifyManager {
 
-  static #notifyUpdateStream(curController: Controlador,fieldsUpdate: Partial<Controlador>) {
+  static #notifyUpdateToStream(curController: Controlador,fieldsUpdate: Partial<Controlador>) {
     const {res_id_streamprimary,res_id_streamsecondary,res_id_streamauxiliary,} = fieldsUpdate;
     const { streamprimaryfps, streamsecondaryfps, streamauxiliaryfps } = fieldsUpdate;
 
@@ -33,7 +33,7 @@ export class ControllerNotifyManager {
     
   };
 
-  static #notifyUpdateSidebarNav(curController: Controlador,fieldsUpdate: Partial<Controlador>){
+  static #notifyUpdateToSidebarNav(curController: Controlador,fieldsUpdate: Partial<Controlador>){
     const { activo, rgn_id, nodo, conectado, seguridad, modo, descripcion } = fieldsUpdate;
     const hasChangesSidebarNav =
       (activo !== undefined && curController.activo !== activo) ||
@@ -49,7 +49,7 @@ export class ControllerNotifyManager {
       }
   };
 
-  static #notifyUpdatePinEntrada(curController: Controlador,fieldsUpdate: Partial<Controlador>){
+  static #notifyUpdateToPinEntrada(curController: Controlador,fieldsUpdate: Partial<Controlador>){
     const { seguridad, modo } = fieldsUpdate;
     if(modo !== undefined && curController.modo !== modo){
       PinEntradaManager.notifyControllerMode(curController.ctrl_id, modo);
@@ -60,7 +60,7 @@ export class ControllerNotifyManager {
     }
   };
 
-  static #notifyUpdateControllerState(curController: Controlador,fieldsUpdate: Partial<Controlador>){
+  static #notifyUpdateToControllerState(curController: Controlador,fieldsUpdate: Partial<Controlador>){
     const { seguridad, modo , conectado , rgn_id, nodo, descripcion , activo} = fieldsUpdate;
     const hasChanges =
     (nodo !== undefined && curController.nodo !== nodo) || 
@@ -77,7 +77,7 @@ export class ControllerNotifyManager {
 
   }
 
-  static #notifyUpdateAlarm(curController: Controlador,fieldsUpdate: Partial<Controlador>){
+  static #notifyUpdateToAlarm(curController: Controlador,fieldsUpdate: Partial<Controlador>){
 
     const { nodo, seguridad, conectado, modo , activo} = fieldsUpdate;
 
@@ -96,15 +96,15 @@ export class ControllerNotifyManager {
 
   static update(curController: Controlador,fieldsUpdate: Partial<Controlador>) {
     // stream
-    ControllerNotifyManager.#notifyUpdateStream(curController,fieldsUpdate);
+    ControllerNotifyManager.#notifyUpdateToStream(curController,fieldsUpdate);
     // sidebar_nav
-    ControllerNotifyManager.#notifyUpdateSidebarNav(curController,fieldsUpdate);
+    ControllerNotifyManager.#notifyUpdateToSidebarNav(curController,fieldsUpdate);
     // pin entrada
-    ControllerNotifyManager.#notifyUpdatePinEntrada(curController,fieldsUpdate);
+    ControllerNotifyManager.#notifyUpdateToPinEntrada(curController,fieldsUpdate);
     // ControllerState
-    ControllerNotifyManager.#notifyUpdateControllerState(curController,fieldsUpdate);
+    ControllerNotifyManager.#notifyUpdateToControllerState(curController,fieldsUpdate);
     // Alarm
-    ControllerNotifyManager.#notifyUpdateAlarm(curController,fieldsUpdate);
+    ControllerNotifyManager.#notifyUpdateToAlarm(curController,fieldsUpdate);
   }
 
   static add(newController: Controlador) {

@@ -23,6 +23,7 @@ export class RegionMapManager {
     const existRegion = RegionMapManager.#regions.has(rgn_id);
     if (!existRegion) {
       RegionMapManager.#regions.set(rgn_id, newRegion);
+      RegionNotifyManager.add(newRegion)
     }
   }
 
@@ -40,12 +41,15 @@ export class RegionMapManager {
     return RegionMapManager.#regions.get(rgn_id);
   }
 
+  static getAllRegion():Region[]{
+    return Array.from(RegionMapManager.#regions.values())
+  }
+
   static async init() {
     try {
       const regions = await MySQL2.executeQuery<RegionRowData[]>({
         sql: `SELECT * FROM general.region`,
       });
-      console.log(JSON.stringify(regions))
       regions.forEach((region) => {
         RegionMapManager.add(region.rgn_id, region);
       });
@@ -59,8 +63,11 @@ export class RegionMapManager {
 
 
 // (async () => {
-//   setTimeout(() => {
+//   setInterval(() => {
 //     console.log("============Update Region==========")
-//     RegionMapManager.update(1,{region: "Ancash"})
-//   }, 30000);
+//     const getRandomNumber = (min: number, max: number): number  => {
+//       return Math.floor(Math.random() * (max - min + 1)) + min;
+//     }
+//     RegionMapManager.update(1,{region: `Ancash ${getRandomNumber(10,20)}`})
+//   }, 10000);
 // })();

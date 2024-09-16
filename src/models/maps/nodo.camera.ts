@@ -87,7 +87,11 @@ export class NodoCameraMapManager {
 
 // (()=>{
 //   setTimeout(() => {
-//     console.log("========Update Cam 5 =====")
-//     NodoCameraMapManager.update(1,5,{conectado:0})
+//     console.log("========Update CTRL_ID 4 :  Cam 6 --> 1 =====")
+//     NodoCameraMapManager.update(4,6,{conectado:1})
 //   }, 20000);
+//   setTimeout(() => {
+//     console.log("========Update CTRL_ID 5 :  Cam 6 --> 1 =====")
+//     NodoCameraMapManager.update(5,6,{conectado:1})
+//   }, 30000);
 // })()

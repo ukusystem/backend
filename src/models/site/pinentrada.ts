@@ -17,7 +17,7 @@ export class PinEntrada {
               const { nododb_name, ctrl_id } = item;
       
               const pinData = await MySQL2.executeQuery<PinesEntradaRowData[]>({ sql: `SELECT * from ${nododb_name}.pinesentrada` });
-      
+  
               if (pinData.length > 0) {
                 for (let pin of pinData) {
                   result.push({...pin,ctrl_id})

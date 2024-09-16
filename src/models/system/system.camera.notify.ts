@@ -3,7 +3,7 @@ import { Camara } from "../../types/db";
 
 export class CameraNotifyManager {
 
-  static #notifyUpdateAlarm(ctrl_id: number,curCam: Camara,fieldsUpdate: Partial<Camara>) {
+  static #notifyUpdateToAlarm(ctrl_id: number,curCam: Camara,fieldsUpdate: Partial<Camara>) {
     const { conectado, descripcion, tc_id, activo,ip } = fieldsUpdate;
     const hasChanges =
       (conectado !== undefined && curCam.conectado !== conectado) ||
@@ -17,18 +17,18 @@ export class CameraNotifyManager {
     }
   }
 
-  static #notifyAddAlarm(ctrl_id: number,newCam: Camara){
+  static #notifyAddToAlarm(ctrl_id: number,newCam: Camara){
     AlarmManager.notifyCamera(ctrl_id, newCam.cmr_id, "add");
   }
 
   static update(ctrl_id: number,curCam: Camara,fieldsUpdate: Partial<Camara>) {
     // notify Alarm
-    CameraNotifyManager.#notifyUpdateAlarm(ctrl_id, curCam, fieldsUpdate);
+    CameraNotifyManager.#notifyUpdateToAlarm(ctrl_id, curCam, fieldsUpdate);
   }
 
   static add(ctrl_id: number,newCam: Camara) {
     // notify Alarm
-    CameraNotifyManager.#notifyAddAlarm(ctrl_id,newCam);
+    CameraNotifyManager.#notifyAddToAlarm(ctrl_id,newCam);
 
   }
 }

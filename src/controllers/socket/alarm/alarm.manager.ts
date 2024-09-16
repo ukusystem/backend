@@ -1,6 +1,6 @@
 import { ControllerMapManager, RegionMapManager, TipoCamaraMapManager } from "../../../models/maps";
 import { NodoCameraMapManager } from "../../../models/maps/nodo.camera";
-import { PinesEntrada } from "../../../types/db";
+import { PinesEntrada, Region } from "../../../types/db";
 import { PinEntradaManager } from "../pinentrada";
 import { ActionType, AlarmObserver, CameraDataAlarm, ControllerDataAlarm, InitialAlarmData, SocketAlarm } from "./alarm.types";
 
@@ -8,6 +8,9 @@ export class AlarmSocketObserver implements AlarmObserver {
   #socket: SocketAlarm
   constructor(socket:SocketAlarm ){
     this.#socket = socket
+  }
+  emitRegion(rgn_id: number, data: Region, action: ActionType): void {
+    this.#socket.nsp.emit("region",rgn_id,data,action);
   }
   
   emitPinEntrada(ctrl_id: number, data: PinesEntrada, action: ActionType): void {
@@ -51,7 +54,7 @@ export class AlarmManager {
       const cam = NodoCameraMapManager.getCamera(ctrl_id,cmr_id);
       if(cam !== undefined){
         const {activo,conectado,descripcion,tc_id,ip} = cam
-        AlarmManager.#observer.emitCamera(ctrl_id,{activo,cmr_id,conectado,descripcion,tc_id,ip},action)
+        AlarmManager.#observer.emitCamera(ctrl_id,{activo,cmr_id,conectado,descripcion,tc_id,ip},action);
         // const tipoCam = TipoCamaraMapManager.getTipoCamara(cam.tc_id);
         // if(tipoCam !== undefined){
         //   const {activo,conectado,descripcion,tc_id} = cam
@@ -68,13 +71,16 @@ export class AlarmManager {
           const {rgn_id,ctrl_id,nodo,activo,conectado,seguridad,modo,descripcion} = controller;
           const controllerAlarm: ControllerDataAlarm = { rgn_id, ctrl_id, nodo, activo, conectado, seguridad, modo, descripcion}; 
           AlarmManager.#observer.emitController(ctrl_id,controllerAlarm,action);
-          // const region = RegionMapManager.getRegion(controller.rgn_id);
-          // if(region !== undefined){
-          //   const {rgn_id,ctrl_id,nodo,activo,conectado,seguridad,modo,descripcion} = controller;
-          //   const controllerAlarm: ControllerPropsAlarm = { rgn_id, ctrl_id, nodo, activo, conectado, seguridad, modo, descripcion, region: region.region }; 
-          //   AlarmManager.#observer.emitController(ctrl_id,controllerAlarm,action);
-          // }
         }
+    }
+  };
+
+  static notifyRegion(rgn_id:number, action: ActionType){
+    if (AlarmManager.#observer !== null) {
+      const region = RegionMapManager.getRegion(rgn_id);
+      if (region !== undefined) {
+        AlarmManager.#observer.emitRegion(rgn_id,region,action);
+      }
     }
   };
 

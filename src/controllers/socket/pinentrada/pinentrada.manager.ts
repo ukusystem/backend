@@ -191,10 +191,11 @@ export class PinEntradaManager {
     for (const ctrl_id_key in PinEntradaManager.map) {
       if (ctrl_id_key == ctrl_id) {
         is_ctrl_id = true;
-      }
-      for (const pe_id_key in PinEntradaManager.map[ctrl_id_key]) {
-        if (pe_id_key == pe_id) {
-          is_pe_id = true;
+        for (const pe_id_key in PinEntradaManager.map[ctrl_id_key]) {
+          if (pe_id_key == pe_id) {
+            is_pe_id = true;
+            return is_ctrl_id && is_pe_id;
+          }
         }
       }
     }
@@ -356,3 +357,19 @@ export class PinEntradaManager {
     return orderedResult;
   }
 }
+
+// (()=>{
+//   setTimeout(() => {
+//     const pinSal = new PinesEntradaSocket({
+//       pe_id: 1,
+//       pin: 1,
+//       ee_id: 1,
+//       descripcion: 'Entrada 1',
+//       estado: 1,
+//       activo: 1,
+//       ctrl_id:4
+//     });
+  
+//     PinEntradaManager.add_update(pinSal)
+//   }, 20000);
+// })()
