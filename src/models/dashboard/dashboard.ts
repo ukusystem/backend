@@ -47,6 +47,8 @@ interface MaxTemperaturaRowData extends RowDataPacket {
 
 export class Dashboard {
 
+  static #NUM_PARTITION:number = 50;
+
     private static getStartEndDate(date: string, is_monthly: boolean){
         const petitionDate = dayjs(date,"YYYY-MM");
         const startDateTime = petitionDate.startOf(is_monthly ? "month" : "year").format("YYYY-MM-DD HH:mm:ss")
@@ -56,8 +58,8 @@ export class Dashboard {
 
     static getTotalActivePinEntrada = handleErrorWithArgument<Record<any,any>[],IPropMethod>(async ({ctrl_id,isMonthly,date}) => {
       const {endDate,startDate,year}=Dashboard.getStartEndDate(date,isMonthly)
-      const finalTable = DashboardConfig.entrada.has_yearly_tables ?`registroentrada${year}` :"registroentrada"
-      let subQuery = `SELECT re.ee_id, COUNT(*) as total_activo FROM ${"nodo"+ctrl_id}.${finalTable} re  WHERE re.fecha BETWEEN '${startDate}' AND '${endDate}' AND re.estado = 1 GROUP BY re.ee_id`
+      const partitioning = `PARTITION (p${year%Dashboard.#NUM_PARTITION})`;
+      let subQuery = `SELECT re.ee_id, COUNT(*) as total_activo FROM ${"nodo"+ctrl_id}.registroentrada ${partitioning} re  WHERE re.fecha BETWEEN '${startDate}' AND '${endDate}' AND re.estado = 1 GROUP BY re.ee_id`
       let finalQuery = `SELECT totalpinentrada.* , ee.detector , ee.descripcion FROM ( ${subQuery} ) AS totalpinentrada  INNER JOIN general.equipoentrada ee ON totalpinentrada.ee_id = ee.ee_id ORDER BY totalpinentrada.ee_id ASC `
       const totalPinEntrada = await MySQL2.executeQuery<RowDataPacket[]>({sql:finalQuery})
       if(totalPinEntrada.length > 0) return totalPinEntrada;
@@ -66,8 +68,9 @@ export class Dashboard {
 
     static getTotalActivePinSalida = handleErrorWithArgument<Record<any,any>[],IPropMethod>(async ({ctrl_id,isMonthly,date}) => {
       const {endDate,startDate,year}=Dashboard.getStartEndDate(date,isMonthly)
-      const finalTable = DashboardConfig.salida.has_yearly_tables ? `registrosalida${year}` : "registrosalida";
-      let subQuery = `SELECT rs.es_id , COUNT(*) as total_activo FROM ${"nodo"+ctrl_id}.${finalTable} rs WHERE rs.fecha BETWEEN '${startDate}' AND '${endDate}' AND rs.estado = 1 GROUP BY rs.es_id`
+      // const finalTable = DashboardConfig.salida.has_yearly_tables ? `registrosalida${year}` : "registrosalida";
+      const partitioning = `PARTITION (p${year%Dashboard.#NUM_PARTITION})`;
+      let subQuery = `SELECT rs.es_id , COUNT(*) as total_activo FROM ${"nodo"+ctrl_id}.registrosalida ${partitioning} rs WHERE rs.fecha BETWEEN '${startDate}' AND '${endDate}' AND rs.estado = 1 GROUP BY rs.es_id`
       let finalQuery = `SELECT totalpinsalida.* , es.actuador , es.descripcion FROM ( ${subQuery} ) AS totalpinsalida INNER JOIN general.equiposalida es ON totalpinsalida.es_id = es.es_id ORDER BY totalpinsalida.es_id ASC`
       const totalPinSalida = await MySQL2.executeQuery<RowDataPacket[]>({sql:finalQuery})
       if(totalPinSalida.length > 0) return totalPinSalida;
@@ -76,8 +79,9 @@ export class Dashboard {
 
     static getTotalAlarmas = handleErrorWithArgument<{data: {alarmas:Record<any,any>[],total_alarma: number}, start_date: string, end_date: string},IPropMethod>(async ({ctrl_id,isMonthly,date}) => {
         const {endDate,startDate,year}=Dashboard.getStartEndDate(date,isMonthly)
-        const finalTable = DashboardConfig.salida.has_yearly_tables ?`registrosalida${year}` :"registrosalida"
-        const totalAlarmas = await MySQL2.executeQuery<RowDataPacket[]>({sql:`SELECT * FROM ${"nodo"+ctrl_id}.${finalTable} WHERE fecha BETWEEN '${startDate}' AND '${endDate}' AND estado = 1 AND alarma = 1`})
+        // const finalTable = DashboardConfig.salida.has_yearly_tables ?`registrosalida${year}` :"registrosalida"
+        const partitioning = `PARTITION (p${year%Dashboard.#NUM_PARTITION})`;
+        const totalAlarmas = await MySQL2.executeQuery<RowDataPacket[]>({sql:`SELECT * FROM ${"nodo"+ctrl_id}.registrosalida ${partitioning} WHERE fecha BETWEEN '${startDate}' AND '${endDate}' AND estado = 1 AND alarma = 1`})
         if(totalAlarmas.length > 0) return {data: {alarmas:totalAlarmas,total_alarma:totalAlarmas.length}, start_date:startDate, end_date:endDate};
         return {data: {alarmas:[],total_alarma:0}, start_date:startDate, end_date:endDate};
     },"Dashboard.getTotalAlarmas");
@@ -103,10 +107,11 @@ export class Dashboard {
 
     static getTotalTicketContrata = handleErrorWithArgument<{data: Record<any,any>[], start_date: string, end_date: string},IPropMethod>(async ({ctrl_id,isMonthly,date}) => {
         const {endDate,startDate,year}=Dashboard.getStartEndDate(date,isMonthly)
-        const finalTable = DashboardConfig.ticket.has_yearly_tables ?`registroticket${year}` :"registroticket"
-        let subQuery = `SELECT rt.co_id, COUNT(*) AS total_ticket  FROM ${"nodo"+ctrl_id}.${finalTable} rt WHERE rt.fechacomienzo BETWEEN '${startDate}' AND '${endDate}' AND ( rt.estd_id = 2 OR rt.estd_id = 16 ) GROUP BY rt.co_id`
+        // const finalTable = DashboardConfig.ticket.has_yearly_tables ?`registroticket${year}` :"registroticket"
+        
+        let subQuery = `SELECT rt.co_id, COUNT(*) AS total_ticket  FROM ${"nodo"+ctrl_id}.registroticket rt WHERE rt.fechacomienzo BETWEEN '${startDate}' AND '${endDate}' AND ( rt.estd_id = 2 OR rt.estd_id = 16 ) GROUP BY rt.co_id`
         let finalQuery = `SELECT totalticket.* , co.contrata , co.descripcion FROM ( ${subQuery} ) AS totalticket INNER JOIN general.contrata co ON totalticket.co_id = co.co_id ORDER BY totalticket.co_id ASC `
-        // console.log(finalQuery)
+
         const totalTicketContrata = await MySQL2.executeQuery<RowDataPacket[]>({sql:finalQuery})
         if(totalTicketContrata.length > 0) return {data: totalTicketContrata, start_date:startDate, end_date:endDate};
         return {data: [], start_date:startDate, end_date:endDate} ;
@@ -114,8 +119,8 @@ export class Dashboard {
 
     static getTotalIngresoContrata = handleErrorWithArgument<Record<any,any>[],IPropMethod>(async ({ctrl_id,isMonthly,date}) => {
         const {endDate,startDate,year}=Dashboard.getStartEndDate(date,isMonthly)
-        const finalTable = DashboardConfig.acceso.has_yearly_tables ?`registroacceso${year}` :"registroacceso"
-        let subQuery = `SELECT ra.co_id, COUNT(*) AS total_ingreso FROM ${"nodo"+ctrl_id}.${finalTable} ra WHERE ra.fecha BETWEEN '${startDate}' AND '${endDate}' AND ra.tipo = 1 AND ra.autorizacion = 1 GROUP BY ra.co_id`
+        // const finalTable = DashboardConfig.acceso.has_yearly_tables ?`registroacceso${year}` :"registroacceso"
+        let subQuery = `SELECT ra.co_id, COUNT(*) AS total_ingreso FROM ${"nodo"+ctrl_id}.registroacceso ra WHERE ra.fecha BETWEEN '${startDate}' AND '${endDate}' AND ra.tipo = 1 AND ra.autorizacion = 1 GROUP BY ra.co_id`
         let finalQuery = `SELECT ingresototal.* , co.contrata, co.descripcion FROM ( ${subQuery} ) AS ingresototal INNER JOIN general.contrata co ON ingresototal.co_id = co.co_id ORDER BY ingresototal.co_id `
         const totalIngresoContrata = await MySQL2.executeQuery<RowDataPacket[]>({sql:finalQuery})
         if(totalIngresoContrata.length > 0) return totalIngresoContrata;
@@ -124,10 +129,11 @@ export class Dashboard {
 
     static getTotalAccesoTarjetaRemoto = handleErrorWithArgument<{data: TotalAccesoTarjetaRemoto, start_date: string, end_date: string},IPropMethod>(async ({ctrl_id,isMonthly,date}) => {
         const {endDate,startDate,year}=Dashboard.getStartEndDate(date,isMonthly)
-        const finalTableRegAcc = DashboardConfig.acceso.has_yearly_tables ?`registroacceso${year}` :"registroacceso"
-        const finalTableRegSal = DashboardConfig.salida.has_yearly_tables ?`registrosalida${year}` :"registrosalida"
-        const queryAccesoTarjeta = `SELECT CASE WHEN (co_id = 0 AND autorizacion = 0) THEN 'no_registrado' WHEN (co_id >= 1 AND autorizacion = 1) THEN 'registrado' ELSE 'otros' END AS acceso_tarjeta, COUNT(*) AS total FROM  ${"nodo"+ctrl_id}.${finalTableRegAcc} WHERE tipo = 1 AND fecha BETWEEN '${startDate}' AND '${endDate}' GROUP BY acceso_tarjeta`
-        const queryAccesoRemoto = `SELECT COUNT(*) as total_acceso_remoto FROM ${"nodo"+ctrl_id}.${finalTableRegSal} WHERE es_id = 1 AND estado = 1 AND fecha BETWEEN '${startDate}' AND '${endDate}'`
+        // const finalTableRegAcc = DashboardConfig.acceso.has_yearly_tables ?`registroacceso${year}` :"registroacceso" // no tiene particion
+        // const finalTableRegSal = DashboardConfig.salida.has_yearly_tables ?`registrosalida${year}` :"registrosalida"
+        const partitioning = `PARTITION (p${year%Dashboard.#NUM_PARTITION})`;
+        const queryAccesoTarjeta = `SELECT CASE WHEN (co_id = 0 AND autorizacion = 0) THEN 'no_registrado' WHEN (co_id >= 1 AND autorizacion = 1) THEN 'registrado' ELSE 'otros' END AS acceso_tarjeta, COUNT(*) AS total FROM  ${"nodo"+ctrl_id}.registroacceso WHERE tipo = 1 AND fecha BETWEEN '${startDate}' AND '${endDate}' GROUP BY acceso_tarjeta`
+        const queryAccesoRemoto = `SELECT COUNT(*) as total_acceso_remoto FROM ${"nodo"+ctrl_id}.registrosalida ${partitioning} WHERE es_id = 1 AND estado = 1 AND fecha BETWEEN '${startDate}' AND '${endDate}'`
 
         const resultAccesos : TotalAccesoTarjetaRemoto = {tarjeta:{total_registrado:0, total_noregistrado: 0}, remoto:{total_remoto: 0}}
 
@@ -150,10 +156,11 @@ export class Dashboard {
 
     static getAcumuladoKWH = handleErrorWithArgument<Record<any,any>,IPropMethod>(async ({ctrl_id,isMonthly,date}) => {
         const {endDate,startDate,year}=Dashboard.getStartEndDate(date,isMonthly)
-        const finalTable = DashboardConfig.energia.has_yearly_tables ?`registroenergia${year}` :"registroenergia"
+        // const finalTable = DashboardConfig.energia.has_yearly_tables ?`registroenergia${year}` :"registroenergia"
+        const partitioning = `PARTITION (p${year%Dashboard.#NUM_PARTITION})`;
         
-        let subQuery = `SELECT me_id, MIN(fecha) AS primera_fecha , MAX(fecha) AS ultima_fecha FROM ${"nodo"+ctrl_id}.${finalTable} WHERE fecha BETWEEN '${startDate}' AND '${endDate}' GROUP BY me_id`
-        let finalQuery = `SELECT re.me_id, re.potenciakwh,re.fecha , CASE WHEN re.fecha = minmaxregister.primera_fecha THEN 0 WHEN re.fecha = minmaxregister.ultima_fecha THEN 1 ELSE NULL END AS ultimo FROM ${"nodo"+ctrl_id}.${finalTable} re INNER JOIN ( ${subQuery} ) AS minmaxregister ON re.me_id = minmaxregister.me_id AND  (re.fecha = minmaxregister.ultima_fecha OR re.fecha = minmaxregister.primera_fecha )`
+        let subQuery = `SELECT me_id, MIN(fecha) AS primera_fecha , MAX(fecha) AS ultima_fecha FROM ${"nodo"+ctrl_id}.registroenergia ${partitioning} WHERE fecha BETWEEN '${startDate}' AND '${endDate}' GROUP BY me_id`
+        let finalQuery = `SELECT re.me_id, re.potenciakwh,re.fecha , CASE WHEN re.fecha = minmaxregister.primera_fecha THEN 0 WHEN re.fecha = minmaxregister.ultima_fecha THEN 1 ELSE NULL END AS ultimo FROM ${"nodo"+ctrl_id}.registroenergia ${partitioning} re INNER JOIN ( ${subQuery} ) AS minmaxregister ON re.me_id = minmaxregister.me_id AND  (re.fecha = minmaxregister.ultima_fecha OR re.fecha = minmaxregister.primera_fecha )`
 
         const acumuladoKwh = await MySQL2.executeQuery<AcumuladoKWHRowDataPacket[]>({sql:finalQuery})
         const sumAcumulados = acumuladoKwh.reduce((prev, curr) => {
@@ -173,11 +180,12 @@ export class Dashboard {
 
     static getMaxSensorTemperatura = handleErrorWithArgument<{data: MaxTemperaturaRowData[], start_date: string, end_date: string},IPropMethod>(async ({ctrl_id,isMonthly,date}) => {
       const {endDate,startDate,year}=Dashboard.getStartEndDate(date,isMonthly)
-      const finalTable = DashboardConfig.temperatura.has_yearly_tables ?`registrotemperatura${year}` :"registrotemperatura"
+      // const finalTable = DashboardConfig.temperatura.has_yearly_tables ?`registrotemperatura${year}` :"registrotemperatura"
+      const partitioning = `PARTITION (p${year%Dashboard.#NUM_PARTITION})`;
 
       // subQuery1 quitar 'AND valor > 0'
-      let subQuery1 = `SELECT rt.st_id, MAX(rt.valor) AS max_valor  FROM ${"nodo"+ctrl_id}.${finalTable} rt WHERE rt.fecha BETWEEN '${startDate}' AND '${endDate}' AND valor > 0 GROUP BY rt.st_id`
-      let subQuery2 = `SELECT max_temp.* , rt.rtmp_id , rt.fecha FROM ${"nodo"+ctrl_id}.${finalTable} rt INNER JOIN ( ${subQuery1} ) max_temp ON rt.st_id = max_temp.st_id AND rt.valor = max_temp.max_valor WHERE rt.fecha BETWEEN '${startDate}' AND '${endDate}'`
+      let subQuery1 = `SELECT rt.st_id, MAX(rt.valor) AS max_valor  FROM ${"nodo"+ctrl_id}.registrotemperatura ${partitioning} rt WHERE rt.fecha BETWEEN '${startDate}' AND '${endDate}' GROUP BY rt.st_id` //  AND valor > 0 GROUP BY rt.st_id
+      let subQuery2 = `SELECT max_temp.* , rt.rtmp_id , rt.fecha FROM ${"nodo"+ctrl_id}.registrotemperatura ${partitioning} rt INNER JOIN ( ${subQuery1} ) max_temp ON rt.st_id = max_temp.st_id AND rt.valor = max_temp.max_valor WHERE rt.fecha BETWEEN '${startDate}' AND '${endDate}'`
       let finalQuery2 = `SELECT maxtemperatura.* , st.serie , st.ubicacion FROM ( ${subQuery2} ) AS maxtemperatura INNER JOIN nodo1.sensortemperatura st ON maxtemperatura.st_id = st.st_id WHERE st.activo = 1 ORDER BY maxtemperatura.st_id ASC`
       
       const maxTempSensor = await MySQL2.executeQuery<MaxTemperaturaRowData[]>({sql:finalQuery2})
@@ -191,37 +199,37 @@ export class Dashboard {
 
 }
 
-type RegisterType =  "acceso" | "energia" | "entrada" | "estadocamara" | "microsd" | "peticion" | "salida" | "seguridad" | "temperatura" | "ticket";
+// type RegisterType =  "acceso" | "energia" | "entrada" | "estadocamara" | "microsd" | "peticion" | "salida" | "seguridad" | "temperatura" | "ticket";
 
-const DashboardConfig: {[key in RegisterType]: { has_yearly_tables: boolean };} = {
-  acceso: {
-    has_yearly_tables: false,
-  },
-  energia: {
-    has_yearly_tables: false, // true
-  },
-  entrada: {
-    has_yearly_tables: false,// true
-  },
-  estadocamara: {
-    has_yearly_tables: false,
-  },
-  microsd: {
-    has_yearly_tables: false,
-  },
-  peticion: {
-    has_yearly_tables: false,
-  },
-  salida: {
-    has_yearly_tables: false, // true
-  },
-  seguridad: {
-    has_yearly_tables: false,
-  },
-  temperatura: {
-    has_yearly_tables: false,
-  },
-  ticket: {
-    has_yearly_tables: false,
-  },
-};
+// const DashboardConfig: {[key in RegisterType]: { has_yearly_tables: boolean };} = {
+//   acceso: {
+//     has_yearly_tables: false,
+//   },
+//   energia: {
+//     has_yearly_tables: false, // true
+//   },
+//   entrada: {
+//     has_yearly_tables: false,// true *
+//   },
+//   estadocamara: {
+//     has_yearly_tables: false,
+//   },
+//   microsd: {
+//     has_yearly_tables: false,
+//   },
+//   peticion: {
+//     has_yearly_tables: false,
+//   },
+//   salida: {
+//     has_yearly_tables: false, // true *
+//   },
+//   seguridad: {
+//     has_yearly_tables: false,
+//   },
+//   temperatura: {
+//     has_yearly_tables: false,
+//   },
+//   ticket: {
+//     has_yearly_tables: false,
+//   },
+// };
