@@ -160,10 +160,11 @@ export class SensorTemperaturaManager  {
       for (const ctrl_id_key in SensorTemperaturaManager.map) {
         if (Number(ctrl_id_key) == ctrl_id) {
           is_ctrl_id = true;
-        }
-        for (const st_id_key in SensorTemperaturaManager.map[ctrl_id_key]) {
-          if (Number(st_id_key) == st_id) {
-            is_st_id = true;
+          for (const st_id_key in SensorTemperaturaManager.map[ctrl_id_key]) {
+            if (Number(st_id_key) == st_id) {
+              is_st_id = true;
+              return is_ctrl_id && is_st_id;
+            }
           }
         }
       }

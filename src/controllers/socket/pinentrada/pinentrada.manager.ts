@@ -2,6 +2,7 @@ import { Socket } from "socket.io";
 import { IPinesEntradaSocket, IPinesEntradaSocketBad, PinesEntradaObserver } from "./pinentrada.types";
 import { EquipoEntrada, PinesEntrada } from "../../../types/db";
 import { PinEntrada } from "../../../models/site";
+import { AlarmManager } from "../alarm";
 
 export class PinesEntradaSocket implements IPinesEntradaSocket {
   ctrl_id: number;
@@ -154,7 +155,7 @@ export class PinEntradaManager {
   }
   public static notifyListPinesEntrada(data: PinesEntradaSocket): void {
     if (PinEntradaManager.observers[data.ctrl_id]) {
-      let listPinEntrada = PinEntradaManager.getListPinesSalida(
+      let listPinEntrada = PinEntradaManager.getListPinesEntrada(
         String(data.ctrl_id)
       );
       PinEntradaManager.observers[data.ctrl_id].updateListPinesEntrada(
@@ -190,10 +191,11 @@ export class PinEntradaManager {
     for (const ctrl_id_key in PinEntradaManager.map) {
       if (ctrl_id_key == ctrl_id) {
         is_ctrl_id = true;
-      }
-      for (const pe_id_key in PinEntradaManager.map[ctrl_id_key]) {
-        if (pe_id_key == pe_id) {
-          is_pe_id = true;
+        for (const pe_id_key in PinEntradaManager.map[ctrl_id_key]) {
+          if (pe_id_key == pe_id) {
+            is_pe_id = true;
+            return is_ctrl_id && is_pe_id;
+          }
         }
       }
     }
@@ -211,6 +213,7 @@ export class PinEntradaManager {
     if (!PinEntradaManager.map[ctrl_id].hasOwnProperty(pe_id)) {
       PinEntradaManager.map[ctrl_id][pe_id] = pinEnt;
       PinEntradaManager.notifyListPinesEntrada(pinEnt);
+      AlarmManager.notifyPinEntrada(ctrl_id,pe_id,"add");
     }
   }
 
@@ -233,6 +236,7 @@ export class PinEntradaManager {
         }
 
         PinEntradaManager.notifyItemPinEntrada(pinEnt);
+        AlarmManager.notifyPinEntrada(ctrl_id,pe_id,"update");
       }
     }
   }
@@ -264,12 +268,13 @@ export class PinEntradaManager {
           PinEntradaManager.map[ctrl_id][pe_id].setActivo(0);
           // Notificar observer
           PinEntradaManager.notifyListPinesEntrada(pinEnt);
+          AlarmManager.notifyPinEntrada(ctrl_id,pe_id,"delete");
         }
       }
     } else {
       const { ctrl_id, pe_id } = pinEnt.toJSON();
       if (ctrl_id != null && pe_id != null) {
-        const currentPinEntrada = PinEntradaManager.getPinSalida(
+        const currentPinEntrada = PinEntradaManager.getPinEntrada(
           String(ctrl_id),
           String(pe_id)
         );
@@ -277,6 +282,7 @@ export class PinEntradaManager {
           currentPinEntrada.setActivo(0);
           // Notificar observer
           PinEntradaManager.notifyListPinesEntrada(currentPinEntrada);
+          AlarmManager.notifyPinEntrada(ctrl_id,pe_id,"delete");
         }
       }
     }
@@ -298,7 +304,7 @@ export class PinEntradaManager {
     } else {
       const { pe_id, ctrl_id, activo, descripcion, ee_id, estado, pin } = pinEnt.toJSON();
       if (pe_id != null && ctrl_id != null) {
-        const currentPinEntrada = PinEntradaManager.getPinSalida( String(ctrl_id), String(pe_id) );
+        const currentPinEntrada = PinEntradaManager.getPinEntrada( String(ctrl_id), String(pe_id) );
         if (currentPinEntrada) {
           // existe pin entrada
           // actualizar
@@ -313,18 +319,21 @@ export class PinEntradaManager {
 
           // Notificar observer
           PinEntradaManager.notifyItemPinEntrada(currentPinEntrada);
+          AlarmManager.notifyPinEntrada(ctrl_id,pe_id,"update");
+
         } else {
           // agregar
           if ( activo != null && descripcion != null && ee_id != null && estado != null && pin != null ) {
             const newPinEntrada = new PinesEntradaSocket({ pe_id, ctrl_id, activo, descripcion, ee_id, estado, pin, });
             PinEntradaManager.add(newPinEntrada);
+            AlarmManager.notifyPinEntrada(ctrl_id,pe_id,"add");
           }
         }
       }
     }
   }
 
-  public static getPinSalida(ctrl_id: string, pe_id: string) {
+  public static getPinEntrada(ctrl_id: string, pe_id: string) {
     let resultData: PinesEntradaSocket | null = null;
     if (PinEntradaManager.map.hasOwnProperty(ctrl_id)) {
       if (PinEntradaManager.map[ctrl_id].hasOwnProperty(pe_id)) {
@@ -334,7 +343,7 @@ export class PinEntradaManager {
     return resultData;
   }
 
-  public static getListPinesSalida(ctrl_id: string) {
+  public static getListPinesEntrada(ctrl_id: string) {
     let resultData: IPinesEntradaSocket[] = [];
     if (PinEntradaManager.map.hasOwnProperty(ctrl_id)) {
       for (const pe_id_key in PinEntradaManager.map[ctrl_id]) {
@@ -348,3 +357,19 @@ export class PinEntradaManager {
     return orderedResult;
   }
 }
+
+// (()=>{
+//   setTimeout(() => {
+//     const pinSal = new PinesEntradaSocket({
+//       pe_id: 1,
+//       pin: 1,
+//       ee_id: 1,
+//       descripcion: 'Entrada 1',
+//       estado: 1,
+//       activo: 1,
+//       ctrl_id:4
+//     });
+  
+//     PinEntradaManager.add_update(pinSal)
+//   }, 20000);
+// })()

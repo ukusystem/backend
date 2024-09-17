@@ -151,7 +151,7 @@ export class RegistroEntradaMap  {
       // notificar
       RegistroEntradaMap.notifyRegistroAcceso(regEnt)
     }else{
-      const currentPinEntrada = PinEntradaManager.getPinSalida(String(ctrl_id),String(pin));
+      const currentPinEntrada = PinEntradaManager.getPinEntrada(String(ctrl_id),String(pin));
       if(currentPinEntrada){
         if(EquipoEntradaMap.map[currentPinEntrada.ee_id]){
           let newRegEnt = new RegistroEntradaSocket({...regEnt,ee_id:currentPinEntrada.ee_id,detector:EquipoEntradaMap.map[currentPinEntrada.ee_id].detector})

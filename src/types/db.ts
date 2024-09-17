@@ -120,7 +120,7 @@ export interface Controlador {
   personalgestion: string;
   personalimplementador: string;
   seguridad: 0 | 1;
-  conectado: number;
+  conectado: 0 | 1;
   modo: 0 | 1;
   activo: 0 | 1;
   motionrecordseconds: number;
@@ -179,6 +179,7 @@ export interface Camara {
   mascara: string;
   puertaenlace: string;
   conectado: number;
+  activo: 0 | 1;
 }
 
 export interface RegistroTicket {

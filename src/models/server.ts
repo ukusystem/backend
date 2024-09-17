@@ -20,10 +20,11 @@ import { frontEndRoutes } from "../routes/frontend.routes";
 // import { DeteccionMovimiento } from "./camera/CameraMotion";
 import { main } from "./controllerapp/controller";
 import { ModuloEnergiaManager, PinEntradaManager, PinSalidaManager, RegistroAccesoMap, RegistroEntradaMap, SensorTemperaturaManager } from "../controllers/socket";
-import { ContrataMap, ControllerMapManager, EquipoAccesoMap, EquipoEntradaMap, EquipoSalidaMap, RegionMapManager, Resolution } from "./maps";
+import { ContrataMap, ControllerMapManager, EquipoAccesoMap, EquipoEntradaMap, EquipoSalidaMap, RegionMapManager, Resolution, TipoCamaraMapManager } from "./maps";
 import { dashboardRouter } from "../routes/dashboard.routes";
 import { appConfig } from "../configs";
 import { DeteccionMovimiento } from "./camera";
+import { NodoCameraMapManager } from "./maps/nodo.camera";
 
 // import { createServer as createServerHttps } from "https";
 // import fs from "fs";
@@ -145,6 +146,10 @@ export class ServerApp {
       await PinEntradaManager.init()
       await RegistroAccesoMap.init()
       await RegistroEntradaMap.init()
+
+      await TipoCamaraMapManager.init()
+      await NodoCameraMapManager.init();
+
     
       // await TicketMap.init() // iniciar despues de controller
 

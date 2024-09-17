@@ -206,10 +206,11 @@ export class ModuloEnergiaManager {
     for (const ctrl_id_key in ModuloEnergiaManager.map) {
       if (Number(ctrl_id_key) == ctrl_id) {
         is_ctrl_id = true;
-      }
-      for (const me_id_key in ModuloEnergiaManager.map[ctrl_id_key]) {
-        if (Number(me_id_key) == me_id) {
-          is_me_id = true;
+        for (const me_id_key in ModuloEnergiaManager.map[ctrl_id_key]) {
+          if (Number(me_id_key) == me_id) {
+            is_me_id = true;
+            return is_ctrl_id && is_me_id;
+          }
         }
       }
     }
