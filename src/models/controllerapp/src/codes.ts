@@ -222,6 +222,10 @@ export const VALUE_ENERGY_ENABLES = 0x289 // Get all energy modules enables
 export const VALUE_ORDER_RESULT = 0x28A   // Send the result of an order
 export const VALUE_RESOLUTION = 0x28B      // Resolution received
 export const VALUE_RESOLUTION_END = 0x28C      // End resolutions
+export const VALUE_MODE = 0x28D                // Controller mode
+export const VALUE_MODE_SECURITY = 0x28E       // Mode security
+export const VALUE_MODE_FREE = 0x28F       // Mode free
+export const VALUE_GENERAL = 0x290         // General info
 
 export const VALUE_SOCKET_CLOSED = 0x400 // Socket was closed
 export const VALUE_AUTHORIZED = 0x401 // Card authorized

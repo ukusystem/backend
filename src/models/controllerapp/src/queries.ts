@@ -201,6 +201,12 @@ export const securityUpdate = `
 				WHERE ctrl_id=?;
 			`;
 
+export const modeUpdate = `
+			UPDATE general.controlador
+			SET modo=?
+			WHERE ctrl_id=?;
+		`;
+
 export const insertSecurity = `
 				INSERT INTO %s.registroseguridad ( estado, fecha) VALUE (?, ?);
 			`;
@@ -437,14 +443,14 @@ export const nodeUpdateTrivial = `
 				WHERE ctrl_id=?;
 			`;
 
-export const nodeSelect = `
-				SELECT ctrl_id, nodo, rgn_id, direccion, descripcion,
-					latitud, longitud, usuario, serie,
-					ip, mascara, puertaenlace, puerto, personalgestion,
-					personalimplementador, seguridad
-				FROM general.controlador
-				WHERE activo=1;
-			`;
+// export const nodeSelect = `
+// 				SELECT ctrl_id, nodo, rgn_id, direccion, descripcion,
+// 					latitud, longitud, usuario, serie,
+// 					ip, mascara, puertaenlace, puerto, personalgestion,
+// 					personalimplementador, seguridad
+// 				FROM general.controlador
+// 				WHERE activo=1;
+// 			`;
 
 /**
  * ctrl_id, nodo, rgn_id, direccion, descripcion, 
@@ -460,21 +466,22 @@ export const nodeSelect = `
  * modo, 
  */
 
-// export const nodeSelect = `
-// 				SELECT ctrl_id, nodo, rgn_id, direccion, descripcion,
-// 					latitud, longitud, usuario, serie,
-// 					ip, mascara, puertaenlace, puerto, personalgestion,
-// 					personalimplementador, seguridad,
+export const nodeSelect = `
+				SELECT ctrl_id, nodo, rgn_id, direccion, descripcion,
+					latitud, longitud, usuario, serie,
+					ip, mascara, puertaenlace, puerto, personalgestion,
+					personalimplementador, seguridad,
 					
-// 					motionrecordseconds, res_id_motionrecord, motionrecordfps, 
-// 					motionsnapshotseconds, res_id_motionsnapshot, motionsnapshotinterval, 
-// 					res_id_streamprimary, streamprimaryfps, 
-// 					res_id_streamsecondary, streamsecondaryfps, 
-// 					res_id_streamauxiliary, streamauxiliaryfps,
-// 					modo
-// 				FROM general.controlador
-// 				WHERE activo=1;
-// 			`;
+					motionrecordseconds, res_id_motionrecord, motionrecordfps, 
+					motionsnapshotseconds, res_id_motionsnapshot, motionsnapshotinterval, 
+					res_id_streamprimary, streamprimaryfps, 
+					res_id_streamsecondary, streamsecondaryfps, 
+					res_id_streamauxiliary, streamauxiliaryfps,
+					modo
+
+				FROM general.controlador
+				WHERE activo=1;
+			`;
 
 /**
  * Update the node data without modifying the password.
@@ -484,7 +491,14 @@ export const nodeUpdate = `
 				SET nodo=?, rgn_id=?, direccion=?, descripcion=?,
 					latitud=?, longitud=?, usuario=?, serie=?,
 					ip=?, mascara=?, puertaenlace=?, puerto=?, personalgestion=?,
-					personalimplementador=?
+					personalimplementador=?,
+
+					motionrecordseconds=?, res_id_motionrecord=?, motionrecordfps=?, 
+					motionsnapshotseconds=?, res_id_motionsnapshot=?, motionsnapshotinterval=?, 
+					res_id_streamprimary=?, streamprimaryfps=?, 
+					res_id_streamsecondary=?, streamsecondaryfps=?, 
+					res_id_streamauxiliary=?, streamauxiliaryfps=?
+
 				WHERE ctrl_id=?;
 			`;
 
@@ -497,7 +511,15 @@ export const nodeUpdatePwd = `
 				SET nodo=?, rgn_id=?, direccion=?, descripcion=?,
 					latitud=?, longitud=?, usuario=?, serie=?,
 					ip=?, mascara=?, puertaenlace=?, puerto=?, personalgestion=?,
-					personalimplementador=?, contraseña=?
+					personalimplementador=?, 
+
+					motionrecordseconds=?, res_id_motionrecord=?, motionrecordfps=?, 
+					motionsnapshotseconds=?, res_id_motionsnapshot=?, motionsnapshotinterval=?, 
+					res_id_streamprimary=?, streamprimaryfps=?, 
+					res_id_streamsecondary=?, streamsecondaryfps=?, 
+					res_id_streamauxiliary=?, streamauxiliaryfps=?,
+
+					contraseña=?
 				WHERE ctrl_id=?;
 			`;
 
@@ -505,13 +527,27 @@ export const nodeInsert = `
 				INSERT INTO general.controlador (
 					ctrl_id, nodo, rgn_id, direccion, descripcion, latitud, longitud,
 					usuario, serie, ip, mascara, puertaenlace, puerto, personalgestion,
-					personalimplementador, contraseña,
-					seguridad, conectado, activo)
+					personalimplementador,
+
+					motionrecordseconds, res_id_motionrecord, motionrecordfps, 
+					motionsnapshotseconds, res_id_motionsnapshot, motionsnapshotinterval, 
+					res_id_streamprimary, streamprimaryfps, 
+					res_id_streamsecondary, streamsecondaryfps, 
+					res_id_streamauxiliary, streamauxiliaryfps,
+
+					contraseña, modo, seguridad, conectado, activo)
 				VALUE (
 					?, ?, ?, ?, ?, ?, ?,
 					?, ?, ?, ?, ?, ?, ?,
+					?,
+
+					?, ?, ?,
+					?, ?, ?,
 					?, ?,
-					0, 0, 1)
+					?, ?,
+					?, ?,
+
+					?, 0, 0, 0, 1)
 			`;
 
 export const nodeDisable = `
@@ -520,7 +556,7 @@ export const nodeDisable = `
 				WHERE ctrl_id=?;
 			`;
 
-export const indexForTrivial = [0, 1, 2, 3, 4, 5, 6, 8, 13, 14];
+export const indexForTrivial = [0, 1, 2, 3, 4, 5, 6, 8, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26];
 
 export const nodeSelectID = `
 				SELECT ctrl_id AS entero FROM general.controlador
@@ -530,7 +566,19 @@ export const nodeSelectID = `
 /**
  * Tuples to parse the node data without a password.
  */
-export const nodeParse = [tupleID, tupleTxt, tupleID, tupleTxt, tupleTxt, tupleTxt, tupleTxt, tupleTxt, tupleTxt, tupleTxt, tupleTxt, tupleTxt, tupleInt, tupleTxt, tupleTxt];
+export const nodeParse = [
+	tupleID, 
+	tupleTxt, tupleID, tupleTxt, tupleTxt, 
+	tupleTxt, tupleTxt, tupleTxt, tupleTxt, 
+	tupleTxt, tupleTxt, tupleTxt, tupleInt, tupleTxt, 
+	tupleTxt,
+	tupleInt, tupleID, tupleInt,
+	tupleInt, tupleID, tupleInt,
+	tupleID, tupleInt,
+	tupleID, tupleInt,
+	tupleID, tupleInt
+	// tupleInt
+];
 
 /**
  * Tuples to parse the node data expecting a password as the last item.
@@ -875,3 +923,16 @@ export const tableTuples = [
 	new TableTuple(Codes.VALUE_CAMERA_BRAND, Codes.VALUE_CAMERA_BRAND_END, queries.camBrandSelect, "marca", false),
 	new TableTuple(Codes.VALUE_RESOLUTION, Codes.VALUE_RESOLUTION_END, queries.selectResolutions, "resolucion", false)
 ];
+
+/**
+ * General configuration
+ */
+
+export const generalSelect = `
+				SELECT nombreempresa, correoadministrador FROM general.configuracion LIMIT 1;
+`
+
+export const generalUpdate = `
+				UPDATE general.configuracion
+				SET nombreempresa=?, correoadministrador=? WHERE conf_id >0;
+`

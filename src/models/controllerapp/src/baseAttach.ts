@@ -24,7 +24,6 @@ import * as codes from "./codes";
 import * as db2 from "./db2";
 import * as sm from "../../../controllers/socket";
 import { Main } from "./main";
-import { dns_v1beta2 } from "googleapis";
 
 /**
  * Base attachment for the sockets
@@ -410,6 +409,7 @@ export class BaseAttach extends Mortal {
       params.push(items[i + 1].selected);
     }
     params.push(items[0].selected);
+    console.log(params)
     return await this._saveItemGeneral(name, params, updateQuery, id, nodeID);
   }
 
@@ -682,7 +682,7 @@ export class BaseAttach extends Mortal {
       st_id: stID,
       ubicacion: desc,
     });
-    // this._log('Notifying web about tempertaure.')
+    // this._log(`Notifying web about tempertaure ${newTemp.ctrl_id}.`)
     if (active === 0) {
       sm.SensorTemperaturaManager.delete(newTemp);
     } else {
@@ -1178,6 +1178,7 @@ export class NodeAttach extends BaseAttach {
       case codes.VALUE_SD:
       case codes.VALUE_SECURITY:
       case codes.VALUE_VOLTAGE:
+      case codes.VALUE_MODE:
       case codes.VALUE_STATES:
       case codes.VALUE_NET:
       case codes.VALUE_INPUT_CTRL_END:
@@ -1187,7 +1188,7 @@ export class NodeAttach extends BaseAttach {
       case codes.VALUE_ENERGY_CTRL_END:
         this.mirrorMessage(command, true);
         // Register some of the messages
-        if (cmdOrValue === codes.VALUE_SECURITY || cmdOrValue === codes.VALUE_SD) {
+        if (cmdOrValue === codes.VALUE_SECURITY || cmdOrValue === codes.VALUE_SD || cmdOrValue === codes.VALUE_MODE) {
           const data = this._parseMessage(parts, queries.valueDateParse, id);
           if (!data) {
             this._log(`Error getting security or sd event. Received '${command}'`);
@@ -1196,6 +1197,10 @@ export class NodeAttach extends BaseAttach {
           const value = data[0].getInt();
           const date = this.fixDateNumber(data[1].getInt());
           switch (cmdOrValue) {
+            case codes.VALUE_MODE:
+              const mode = value == codes.VALUE_MODE_SECURITY
+              this._saveItemGeneral("mode", [mode, this.controllerID], queries.modeUpdate, id, -1)
+              break;
             case codes.VALUE_SECURITY:
               const security = value == codes.VALUE_ARM;
               this._saveItemGeneral("security", [security, this.controllerID], queries.securityUpdate, id, -1);
@@ -1280,6 +1285,7 @@ export class NodeAttach extends BaseAttach {
         } else {
           if (cardInfo.length === 1) {
             co_id = params[4] = isAdmin?0: cardInfo[0].co_id;
+            console.log(`${co_id} ${params[4]}`)
             ea_id = params[5] = cardInfo[0].ea_id;
             if (!isAdmin) {
               // Since there is a company registered for that number
@@ -1782,6 +1788,9 @@ export class ManagerAttach extends BaseAttach {
               } else {
                 // this._log('Value: %d', valueToGet)
                 switch (valueToGet) {
+                  case codes.VALUE_GENERAL:
+                    await this.addGeneral(id,true)
+                    break
                   case codes.VALUE_NODE:
                     await this.addNodes(selector, id, false);
                     // Just to check on keys. No other particular reason.
@@ -1797,11 +1806,14 @@ export class ManagerAttach extends BaseAttach {
                   case codes.VALUE_STRUCT_INPUT:
                   case codes.VALUE_CTRL_STATE:
                   case codes.VALUE_NET:
+                  case codes.VALUE_ENERGY_CTRL:
+
+                  // Useful?
                   case codes.VALUE_SECURITY:
                   case codes.VALUE_VOLTAGE:
                   case codes.VALUE_SD:
+
                   case codes.VALUE_STATES:
-                  case codes.VALUE_ENERGY_CTRL:
                     const nodeData = this._parseMessage(parts, queries.idParse, id);
                     if (!nodeData) break;
                     const targetNodeID = nodeData[0].getInt();
@@ -1846,6 +1858,9 @@ export class ManagerAttach extends BaseAttach {
                 this._log(`Received set config '${command}'.`);
               }
               switch (valueToSet) {
+                case codes.VALUE_GENERAL:
+
+                  break
                 case codes.VALUE_GROUP:
                 case codes.VALUE_GROUP_ADD:
                   const regionData = this._parseMessage(parts, queries.regionParse, id);
@@ -1903,6 +1918,7 @@ export class ManagerAttach extends BaseAttach {
                    * in.
                    */
                   this.completeNodeData = nodeData;
+                  // console.log(this.completeNodeData)
                   const halfForTrivialData: DataStruct[] = [];
                   for (let i = 0; i < queries.indexForTrivial.length; i++) {
                     if (nodeData.length > queries.indexForTrivial[i]) {
@@ -2552,6 +2568,26 @@ export class ManagerAttach extends BaseAttach {
       this._addEnd(codes.VALUE_NODES_END, endID, nextID[0].AUTO_INCREMENT);
       // this._log("Added end nodes.");
     }
+  }
+
+  private async addGeneral(id:number, log:boolean){
+    const generalResponse = await executeQuery<db2.GeneralData[]>(queries.generalSelect)
+    if(generalResponse && generalResponse.length === 1){
+      this._addOne(new Message(codes.VALUE_GENERAL, id, [generalResponse[0].nombreempresa, generalResponse[0].correoadministrador]))
+    }else{
+      this._log('Error getting general info.')
+    }
+  }
+
+  private async updateGeneral(items:DataStruct[]):Promise<boolean>{
+    const data = items.map((i)=>{return i.getString()})
+    const res = await executeQuery<ResultSetHeader>(queries.generalUpdate,data)
+    if(res){
+      return true
+    }else{
+      this._log("Error saving general info.")
+    }
+    return false
   }
 }
 
