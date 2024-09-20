@@ -1,4 +1,4 @@
-// compatible con dayjs
+import { RowDataPacket } from "mysql2";
 
 export enum Day {
   "Monday" = 1,
@@ -10,7 +10,7 @@ export enum Day {
   "Sunday" = 7,
 }
 
-interface NvrPreferencia {
+export interface NvrPreferencia {
   nvrpref_id: number;
   dia: Day;
   tiempo_inicio: string;
@@ -19,6 +19,19 @@ interface NvrPreferencia {
   activo: number;
 }
 
-export type CamaraEvents = Map<number, NvrPreferencia>; // key: cmr_id
+export interface NvrJobSchedule {
+  stop():void;
+}
+
+export interface CameraJob {
+  info: NvrPreferencia,
+  StartScheduledJob?:NvrJobSchedule,
+  EndScheduleJob?: NvrJobSchedule,
+}
+
+export type CamaraEvents = Map<number, CameraJob>; // key: cmr_id
 
 export type NvrControllerStructure = Map<number, CamaraEvents>; // key: ctrl_id
+
+
+export interface NvrPreferenciaRowData extends RowDataPacket, NvrPreferencia {};
