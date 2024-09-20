@@ -434,15 +434,6 @@ export const nodeGetForUpdate = `
 				WHERE ctrl_id=? AND activo=1;
 			`;
 
-export const nodeUpdateTrivial = `
-				UPDATE general.controlador
-				SET nodo=?, rgn_id=?, direccion=?, descripcion=?,
-					latitud=?, longitud=?, serie=?,
-					personalgestion=?,
-					personalimplementador=?
-				WHERE ctrl_id=?;
-			`;
-
 // export const nodeSelect = `
 // 				SELECT ctrl_id, nodo, rgn_id, direccion, descripcion,
 // 					latitud, longitud, usuario, serie,
@@ -523,6 +514,22 @@ export const nodeUpdatePwd = `
 				WHERE ctrl_id=?;
 			`;
 
+export const nodeUpdateTrivial = `
+			UPDATE general.controlador
+			SET nodo=?, rgn_id=?, direccion=?, descripcion=?,
+				latitud=?, longitud=?, serie=?,
+				personalgestion=?,
+				personalimplementador=?,
+
+				motionrecordseconds=?, res_id_motionrecord=?, motionrecordfps=?, 
+				motionsnapshotseconds=?, res_id_motionsnapshot=?, motionsnapshotinterval=?, 
+				res_id_streamprimary=?, streamprimaryfps=?, 
+				res_id_streamsecondary=?, streamsecondaryfps=?, 
+				res_id_streamauxiliary=?, streamauxiliaryfps=?
+			WHERE ctrl_id=?;
+		`;
+
+
 export const nodeInsert = `
 				INSERT INTO general.controlador (
 					ctrl_id, nodo, rgn_id, direccion, descripcion, latitud, longitud,
@@ -567,10 +574,10 @@ export const nodeSelectID = `
  * Tuples to parse the node data without a password.
  */
 export const nodeParse = [
-	tupleID, 
-	tupleTxt, tupleID, tupleTxt, tupleTxt, 
-	tupleTxt, tupleTxt, tupleTxt, tupleTxt, 
-	tupleTxt, tupleTxt, tupleTxt, tupleInt, tupleTxt, 
+	tupleID,
+	tupleTxt, tupleID, tupleTxt, tupleTxt,
+	tupleTxt, tupleTxt, tupleTxt, tupleTxt,
+	tupleTxt, tupleTxt, tupleTxt, tupleInt, tupleTxt,
 	tupleTxt,
 	tupleInt, tupleID, tupleInt,
 	tupleInt, tupleID, tupleInt,
@@ -936,3 +943,5 @@ export const generalUpdate = `
 				UPDATE general.configuracion
 				SET nombreempresa=?, correoadministrador=? WHERE conf_id >0;
 `
+
+export const generalParse = [tupleTxt, tupleTxt]

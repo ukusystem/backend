@@ -47,6 +47,8 @@ export const contollerStateSocket = async ( io: Server, socket: SocketController
 
   socket.on("setSecurity", (newSecurity) => {
     ControllerMapManager.updateController(ctrl_id,{seguridad: newSecurity});
+    console.log(`Seguridad: ${newSecurity}`)
+    
   });
 
   socket.on("disconnect", () => {

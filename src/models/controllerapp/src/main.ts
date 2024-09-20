@@ -28,6 +28,7 @@ import * as net from "net";
 import { CameraMotionManager } from "../../camera";
 import * as cp from "child_process";
 import { sql } from "googleapis/build/src/apis/sql";
+import { Console } from "console";
 
 export class Main {
   /**
@@ -514,6 +515,16 @@ export class Main {
     this.log(`Final state of ticket ID = ${ticketID} : ${finalState}`);
   }
 
+  public async sendSecurity(controllerID:number, security:boolean):Promise<RequestResult>{
+    const node = this.selector.getNodeAttachByID(controllerID)
+    if(node){
+      // return await node.sendSecurity(security)
+    }else{
+      this.log(`The node ${controllerID} does not exist in the loaded map.`)
+    }
+    return {id:4, mensaje:"Text", resultado:false}
+  }
+
   /**
    * Process an order to change the state of a ticket. This method considers that
    * all the possible states of the ticket can only be 4: ACCEPTED,
@@ -591,6 +602,8 @@ export class Main {
         // These events can happen only when the ticket is waiting for approve.
         switch (newAction) {
           case States.ACCEPTED:
+            console.log('Ticket aceptado:')
+            console.log(ticketData[0])
             const start = useful.datetimeToLong(ticketData[0].fechacomienzo);
             const end = useful.datetimeToLong(ticketData[0].fechatermino);
             await this.finishTicket(States.ACCEPTED, ticketID, nodeID);

@@ -24,6 +24,8 @@ import * as codes from "./codes";
 import * as db2 from "./db2";
 import * as sm from "../../../controllers/socket";
 import { Main } from "./main";
+import { SystemManager } from "../../system";
+import { ControllerData, ControllerMapManager } from "../../maps";
 
 /**
  * Base attachment for the sockets
@@ -409,7 +411,7 @@ export class BaseAttach extends Mortal {
       params.push(items[i + 1].selected);
     }
     params.push(items[0].selected);
-    console.log(params)
+    // console.log(params)
     return await this._saveItemGeneral(name, params, updateQuery, id, nodeID);
   }
 
@@ -525,7 +527,7 @@ export class BaseAttach extends Mortal {
    *                 only the end value.
    */
   _addEnd(endValue: number, id: number, nextID: number) {
-    this._addOne(new Message(endValue, id, nextID > 0 ? [nextID.toString()] : []));
+    this._addOne(new Message(endValue, id, nextID > 0 ? [nextID.toString()] : []).setLogOnSend(false));
   }
 
   /**
@@ -1013,7 +1015,7 @@ export class NodeAttach extends BaseAttach {
         if (powerStamp >= this.lastPowerStamp + NodeAttach.POWER_SAVE_INTERVAL_S) {
           const powerQuery = util.format(queries.insertPower, BaseAttach.getNodeDBName(this.controllerID))
           if (await executeQuery<ResultSetHeader>(powerQuery, [medidorID, voltaje, amperaje, fdp, frecuencia, potenciaw, potenciakwh, fecha])) {
-            this._log(`Inserted power`);
+            // this._log(`Inserted power`);
           } else {
             this._log(`Error saving power`);
           }
@@ -1199,11 +1201,17 @@ export class NodeAttach extends BaseAttach {
           switch (cmdOrValue) {
             case codes.VALUE_MODE:
               const mode = value == codes.VALUE_MODE_SECURITY
-              this._saveItemGeneral("mode", [mode, this.controllerID], queries.modeUpdate, id, -1)
+              if(await this._saveItemGeneral("mode", [mode, this.controllerID], queries.modeUpdate, id, -1)){
+                this._log('Notifying web about mode')
+                ControllerMapManager.updateController(this.controllerID, {modo:mode?1:0})
+              }
               break;
             case codes.VALUE_SECURITY:
               const security = value == codes.VALUE_ARM;
-              this._saveItemGeneral("security", [security, this.controllerID], queries.securityUpdate, id, -1);
+              if(await this._saveItemGeneral("security", [security, this.controllerID], queries.securityUpdate, id, -1)){
+                this._log('Notifying web about security')
+                ControllerMapManager.updateController(this.controllerID, {seguridad:security?1:0})
+              }
               await executeQuery(BaseAttach.formatQueryWithNode(queries.insertSecurity, this.controllerID), [security, useful.formatTimestamp(date)]);
               break;
             case codes.VALUE_SD:
@@ -1480,6 +1488,13 @@ export class NodeAttach extends BaseAttach {
     await executeQuery(queries.insertNet, [this.controllerID, useful.getCurrentDate(), state]);
     await executeQuery(queries.insertCtrlState, [state, this.controllerID]);
     this._log(`Inserting: Net state ${state ? "conectado" : "desconectado"}`);
+  }
+
+  async sendSecurity(security:boolean):Promise<boolean>{
+    this.addCommandForController(codes.CMD_ESP, 0, null, [(security?codes.VALUE_ARM:codes.VALUE_DISARM).toString()], ()=>{
+      return true
+    })
+    return false
   }
 
   /**
@@ -1859,7 +1874,12 @@ export class ManagerAttach extends BaseAttach {
               }
               switch (valueToSet) {
                 case codes.VALUE_GENERAL:
-
+                  const newGeneral = this._parseMessage(parts, queries.generalParse, id, false)
+                  if(newGeneral){
+                    await this.updateGeneral(newGeneral)
+                  }else{
+                    // this._log(`Error parsing general`)
+                  }
                   break
                 case codes.VALUE_GROUP:
                 case codes.VALUE_GROUP_ADD:
@@ -2270,8 +2290,9 @@ export class ManagerAttach extends BaseAttach {
   private async completeReconnect(selector: Selector, nodeID: number, forceReconnect: boolean, id: number) {
     // The channel must be reconnected anyways. This ensures that there will be a
     // channel for that controller after this method returns.
-    const currentAttach = selector.getNodeAttachByID(nodeID);
+    let currentAttach = selector.getNodeAttachByID(nodeID);
     const updateQuery = this.updatWithPassword ? queries.nodeUpdatePwd : queries.nodeUpdate;
+    let notify = false
     if (!currentAttach) {
       this._log(`Channel for controller ID = ${nodeID} did not exist. Opening ...`);
       // The channel was not found. This can happen when a new node is being created
@@ -2281,9 +2302,12 @@ export class ManagerAttach extends BaseAttach {
 
       // Save all the data that was received. This should update the entry in the
       // database when there was one but, somehow, its key wasn't registered.
-      if (!(await this._insertItem("node", this.completeNodeData, queries.nodeInsert, id))) {
+      if (await this._insertItem("node", this.completeNodeData, queries.nodeInsert, id)) {
+        notify = true
+      }else{
         this._log("Could not insert, updating node instead.");
         if (await this._updateItem("node", this.completeNodeData, updateQuery, id)) {
+          notify = true
           this._log("Node updated");
         } else {
           this._log("Could not update node.");
@@ -2299,6 +2323,7 @@ export class ManagerAttach extends BaseAttach {
       // Create attachment and connect the socket
 
       const newAttach = NodeAttach.getInstanceFromPacket(newData, this._logger);
+      currentAttach = newAttach
       newAttach.tryConnectNode(selector, true);
     } else {
       /**
@@ -2314,7 +2339,9 @@ export class ManagerAttach extends BaseAttach {
 
         // Save all the data that was received and update attachment
 
-        await this._updateItem("node", this.completeNodeData, updateQuery, id);
+        if(await this._updateItem("node", this.completeNodeData, updateQuery, id)){
+          notify = true
+        }
         const newData = await this.getOneControllerData(nodeID);
         if (!newData) {
           return;
@@ -2330,7 +2357,9 @@ export class ManagerAttach extends BaseAttach {
       } else {
         // Save the data that only belongs to the database (that the controller doesn't
         // use)
-        await this._updateItem("node trivial data", this.halfForTrivial, queries.nodeUpdateTrivial, id);
+        if(await this._updateItem("node trivial data", this.halfForTrivial, queries.nodeUpdateTrivial, id)){
+          notify = true
+        }
         // Update trivial data
         const newData = await this.getOneControllerData(nodeID);
         if (!newData) {
@@ -2340,6 +2369,39 @@ export class ManagerAttach extends BaseAttach {
         currentAttach.setName(newData.nodo);
         this._log(`Channel '${currentAttach.toString()}' will reconnect when the controller confirms the changes.`);
       }
+    }
+    if(notify && this.completeNodeData){
+      this.completeNodeData?.map((v, i)=>{
+        console.log(`${i} - ${v}`)
+      })
+      // console.log(this.completeNodeData)
+
+      this._log('Notifying web about controller')
+      const cd = this.completeNodeData
+      ControllerMapManager.updateController(currentAttach.controllerID, {
+        nodo:cd[1].getString(),
+        rgn_id:cd[2].getInt(),
+        direccion:cd[3].getString(),
+        descripcion:cd[4].getString(),
+        latitud:cd[5].getString(),
+        longitud:cd[6].getString(),
+        serie:cd[8].getString(),
+        ip:cd[9].getString(),
+        personalgestion:cd[13].getString(),
+        personalimplementador:cd[14].getString(),
+        motionrecordseconds:cd[15].getInt(),
+        res_id_motionrecord:cd[16].getInt(),
+        motionrecordfps:cd[17].getInt(),
+        motionsnapshotseconds:cd[18].getInt(),
+        res_id_motionsnapshot:cd[19].getInt(),
+        motionsnapshotinterval:cd[20].getInt(),
+        res_id_streamprimary:cd[21].getInt(),
+        streamprimaryfps:cd[22].getInt(),
+        res_id_streamsecondary:cd[23].getInt(),
+        streamsecondaryfps:cd[24].getInt(),
+        res_id_streamauxiliary:cd[25].getInt(),
+        streamauxiliaryfps:cd[26].getInt(),
+      })
     }
     this.printKeyCount(selector);
   }
@@ -2583,6 +2645,12 @@ export class ManagerAttach extends BaseAttach {
     const data = items.map((i)=>{return i.getString()})
     const res = await executeQuery<ResultSetHeader>(queries.generalUpdate,data)
     if(res){
+      // Notify web about general data
+      this._log(`Notifying general data.`)
+      SystemManager.updateGeneral({
+        COMPANY_NAME:data[0], 
+        EMAIL_ADMIN:data[1]
+      })
       return true
     }else{
       this._log("Error saving general info.")
