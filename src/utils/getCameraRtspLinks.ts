@@ -151,7 +151,7 @@ export function getMulticastRtspStreamAndSubStream(rtspUriOnvif: string, usernam
       // Agregar credenciales al sub rstp
       let rtspSubWithCredentials = addCredentialToRtsp(rtspSub, username, password);
       result.push(rtspSubWithCredentials);
-
+      
       return resolve(result)
     }
 
