@@ -359,6 +359,7 @@ export class PinEntradaManager {
 }
 
 // (()=>{
+//   console.log("========Update pin entrada======")
 //   setTimeout(() => {
 //     const pinSal = new PinesEntradaSocket({
 //       pe_id: 1,
@@ -367,7 +368,7 @@ export class PinEntradaManager {
 //       descripcion: 'Entrada 1',
 //       estado: 1,
 //       activo: 1,
-//       ctrl_id:4
+//       ctrl_id:5
 //     });
   
 //     PinEntradaManager.add_update(pinSal)

@@ -207,7 +207,7 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
               fs.unlinkSync(videoPath);
             } catch (error) {
               console.log(`Detección Movimiento | Error al eliminar video: ${videoPath} | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`);
-              console.error(error);
+              console.error(error); 
             }
           }
 
