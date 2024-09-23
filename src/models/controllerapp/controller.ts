@@ -2,6 +2,7 @@ import { Ticket } from "./src/ticket";
 import { Main } from "./src/main";
 import { FinishTicket } from "./src/finishTicket";
 import { PinOrder } from "./src/types";
+import { RequestResult } from "./src/requestResult";
 
 let mainService:Main|null = null
 
@@ -23,7 +24,6 @@ export async function onOrder(pinOrder: PinOrder) {
   return await mainService?.onOrder(pinOrder);
 }
 
-export async function sendSecurity(controllerID:number, security:boolean):Promise<boolean> {
-  const res = await mainService?.sendSecurity(controllerID, security);
-  return res?.resultado===true
+export async function sendSecurity(controllerID:number, security:boolean):Promise<RequestResult|undefined> {
+  return await mainService?.sendSecurity(controllerID, security);
 }

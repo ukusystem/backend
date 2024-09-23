@@ -57,13 +57,13 @@ export function isLinux(): boolean {
  * Parse the date time.
  *
  * @param date The date in a specific format.
- * @returns The equivalent date in milliseconds, or `-1` if an error occurred.
+ * @returns The equivalent date in seconds, or `-1` if an error occurred.
  * @see {@linkcode DATE_FORMAT}
  */
 export function datetimeToLong(date: string) {
   const curDate = new Date(date);
   if (!isNaN(curDate.getTime())) {
-    return curDate.getTime();
+    return curDate.getTime()/1000;
   }
   return -1;
 }

@@ -320,17 +320,21 @@ export const insertWorker = `
 				INSERT INTO %s.actividadpersonal (nombre, apellido, telefono, dni, c_id, co_id, rt_id, foto)
 				VALUE (?, ?, ?, ?, ?, ?, ?, ?);
 			`;
-
+			
+/**
+ * Removed:
+ * WHERE enviado=0
+ * So new controllers can be updated with valid tickets
+ */
 export const ticketSelectAccepted = `
 				SELECT rt_id, co_id, fechacomienzo, fechatermino
 				FROM %s.registroticket
-				WHERE enviado=0
-				AND fechatermino > now()
+				WHERE fechatermino > now()
 				AND estd_id = (
 					SELECT estd_id
 					FROM general.estado
 					WHERE estado='Aceptado'
-				);
+				) ORDER BY fechacomienzo ASC;
 			`;
 
 export const ticketSelectOne = `

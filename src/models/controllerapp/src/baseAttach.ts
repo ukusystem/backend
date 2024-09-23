@@ -26,12 +26,13 @@ import * as sm from "../../../controllers/socket";
 import { Main } from "./main";
 import { SystemManager } from "../../system";
 import { ControllerData, ControllerMapManager } from "../../maps";
+import { NodeTickets } from "./nodeTickets";
 
 /**
  * Base attachment for the sockets
  */
 export class BaseAttach extends Mortal {
-  static readonly PROCESS_TIMEOUT = 60 * 1000;
+  static readonly PROCESS_TIMEOUT = parseInt(process.env.NODE_PROCESS_TIMEOUT??'59') * 1000;
   static readonly UNREACHABLE_INTERVAL_MS = 60 * 1000;
   static readonly DEFAULT_ADDRESS = "0.0.0.0";
   private static readonly BASE_NODE_NAME = "nodo";
@@ -894,6 +895,9 @@ export class BaseAttach extends Mortal {
  * Attachment for channels related to controllers
  */
 export class NodeAttach extends BaseAttach {
+
+  static ticketsMap = new Map<number, NodeTickets>()
+
   /**
    * The controller sends temperature readings in a periodo of 3 seconds.
    * Saving the readings each minute gives
@@ -938,7 +942,7 @@ export class NodeAttach extends BaseAttach {
    * {@linkcode codes.CMD_HELLO_FROM_CTRL} has been received). Is set to false when
    * the socket is programmed to closed.
    */
-  loggedToController = false;
+  private loggedToController = false;
 
   constructor(nodeID: number, nodeName: string, nodeIP: string, nodePort: number, nodeUser: string, nodePassword: string, currentLogger: Logger) {
     super(currentLogger);
@@ -948,6 +952,28 @@ export class NodeAttach extends BaseAttach {
     this.port = nodePort;
     this.user = nodeUser;
     this.password = nodePassword;
+  }
+
+  setLogged(state:boolean){
+    if(this.loggedToController === state){
+      return
+    }
+    if(!state){
+      const partialNode = NodeAttach.ticketsMap.get(this.controllerID);
+      if (partialNode) {
+        for(const ticket of partialNode.tickets){
+          ticket.sent = false
+        }
+        this._log(`Tickets for node marked as not sent`)
+      }else{
+        this._log(`No tickets for node ID ${this.controllerID}`);
+      }
+    }
+    this.loggedToController = state
+  }
+
+  isLogged(){
+    return this.loggedToController
   }
 
   get getIP(): string {
@@ -1293,7 +1319,7 @@ export class NodeAttach extends BaseAttach {
         } else {
           if (cardInfo.length === 1) {
             co_id = params[4] = isAdmin?0: cardInfo[0].co_id;
-            console.log(`${co_id} ${params[4]}`)
+            // console.log(`${co_id} ${params[4]}`)
             ea_id = params[5] = cardInfo[0].ea_id;
             if (!isAdmin) {
               // Since there is a company registered for that number
@@ -1334,7 +1360,7 @@ export class NodeAttach extends BaseAttach {
         break;
       case codes.CMD_HELLO_FROM_CTRL:
         this._log("Received hello from controller.");
-        this.loggedToController = true;
+        this.setLogged(true);
         // Send all cards. Inactive cards will be send with an order to erase it in the
         // controller.
         this._log("Sending cards");
@@ -1490,13 +1516,6 @@ export class NodeAttach extends BaseAttach {
     this._log(`Inserting: Net state ${state ? "conectado" : "desconectado"}`);
   }
 
-  async sendSecurity(security:boolean):Promise<boolean>{
-    this.addCommandForController(codes.CMD_ESP, 0, null, [(security?codes.VALUE_ARM:codes.VALUE_DISARM).toString()], ()=>{
-      return true
-    })
-    return false
-  }
-
   /**
    * Add a message for the controller that this object represents.
    *
@@ -1637,7 +1656,7 @@ export class NodeAttach extends BaseAttach {
     this.password = rowWithData.contraseña;
     this._closeOnNextSend = false;
     this._selectable = true;
-    this.loggedToController = false;
+    this.setLogged(false);
     this._log(`Data updated node ID = ${this.controllerID}.`);
   }
 }
@@ -2334,7 +2353,7 @@ export class ManagerAttach extends BaseAttach {
        * with the same attachment changing only the connection data.
        * This covers the case where the connection configuration is being corrected.
        */
-      if (!currentAttach.loggedToController || forceReconnect) {
+      if (!currentAttach.isLogged() || forceReconnect) {
         this._log(`About to cancel and reconnect node ID ${currentAttach.controllerID}.`);
 
         // Save all the data that was received and update attachment
@@ -2352,8 +2371,6 @@ export class ManagerAttach extends BaseAttach {
 
         BaseAttach.simpleReconnect(selector, currentAttach);
 
-        // selector.cancelChannel(currentAttach);
-        // currentAttach.tryConnectNode(selector, true);
       } else {
         // Save the data that only belongs to the database (that the controller doesn't
         // use)
@@ -2449,7 +2466,7 @@ export class ManagerAttach extends BaseAttach {
    */
   private updateCardInControllersGeneral(selector: Selector, cardID: number, companyID: number, serial: number, isAdmin: boolean, remove: boolean = false) {
     for (const nodeAttach of selector.nodeAttachments) {
-      if (nodeAttach.loggedToController) {
+      if (nodeAttach.isLogged()) {
         nodeAttach.addCommandForControllerBody(
           codes.CMD_CONFIG_SET,
           -1,
@@ -2696,7 +2713,7 @@ export class Selector {
     const nodeAttach = this.getNodeAttachByID(nodeID);
     if (nodeAttach) {
       if (Selector.isChannelConnected(nodeAttach._currentSocket)) {
-        return nodeAttach.loggedToController ? codes.VALUE_CONNECTED : codes.VALUE_DENIED;
+        return nodeAttach.isLogged() ? codes.VALUE_CONNECTED : codes.VALUE_DENIED;
       }
     }
     return codes.VALUE_DISCONNECTED;
@@ -2762,7 +2779,7 @@ export class Selector {
     } else if (attach instanceof NodeAttach) {
       const nodeAttach = <NodeAttach>attach;
       nodeAttach._selectable = false;
-      nodeAttach.loggedToController = false;
+      nodeAttach.setLogged(false);
     }
     this.simpleCancel(attach);
     return isManager;
