@@ -34,12 +34,12 @@ export class Init {
     return []
   }, "Init.getControladores")
 
-  static getAllCameras = handleErrorWithoutArgument< Record<string,AllCam[]> >(async ()=>{
+  static getAllCameras = handleErrorWithoutArgument< Record<number,AllCam[]> >(async ()=>{
     const region_nodos = await Init.getRegionNodos()
     if( region_nodos.length > 0){
-      const camerasData = await region_nodos.reduce(async (resultPromise, item) => {
+      const camerasData = await region_nodos.reduce<Promise<Record<number,AllCam[]>>>(async (resultPromise, item) => {
         const result = await resultPromise;
-        const { region, nododb_name, nodo,ctrl_id } = item;
+        const { nododb_name,ctrl_id } = item;
 
         const cams = await MySQL2.executeQuery<CameraRowData[]>({sql:`SELECT * FROM ${nododb_name}.camara c WHERE c.activo = 1`})
 
@@ -50,9 +50,9 @@ export class Init {
           });
         }
 
-        result[nodo] = camsMap
+        result[ctrl_id] = camsMap
         return result
-      },Promise.resolve({} as Record<string,AllCam[]>))
+      },Promise.resolve({}))
       return camerasData
     }
     return {}

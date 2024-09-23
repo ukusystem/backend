@@ -595,8 +595,8 @@ const insertPathToDB = (newPath: string, ctrl_id: number, cmr_id: number, tipo: 
 export const DeteccionMovimiento = async () => {
   try {
     const camerasData = await Init.getAllCameras();
-    Object.keys(camerasData).forEach((nodoName) => {
-      camerasData[nodoName].forEach(async (cam) => {
+    Object.keys(camerasData).forEach((ctrlIdKey) => {
+      camerasData[ctrlIdKey].forEach(async (cam) => {
         const { ip, usuario, contraseña, cmr_id, ctrl_id } = cam;
 
         const contraseñaDecrypt = decrypt(contraseña);

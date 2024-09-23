@@ -1,4 +1,5 @@
 import { RowDataPacket } from "mysql2";
+import { ChildProcessWithoutNullStreams } from "node:child_process";
 
 export enum Day {
   "Monday" = 1,
@@ -20,18 +21,29 @@ export interface NvrPreferencia {
 }
 
 export interface NvrJobSchedule {
-  stop():void;
+  stop(): void;
+  start(): void;
 }
 
 export interface CameraJob {
   info: NvrPreferencia,
-  StartScheduledJob?:NvrJobSchedule,
-  EndScheduleJob?: NvrJobSchedule,
+  startScheduledJob?:NvrJobSchedule,
+  endScheduleJob?: NvrJobSchedule,
+  // ffmpegProcess?: ChildProcessByStdio<null, any, null>
+  ffmpegProcess?: ChildProcessWithoutNullStreams
 }
 
-export type CamaraEvents = Map<number, CameraJob>; // key: cmr_id
+// export type CamaraEvents = Map<number, CameraJob>; // key: cmr_id
+export type PreferenciaStructure = Map<number, CameraJob>; // key: nvrpref_id
 
-export type NvrControllerStructure = Map<number, CamaraEvents>; // key: ctrl_id
+export type NvrControllerStructure = Map<number, PreferenciaStructure>; // key: ctrl_id
 
 
 export interface NvrPreferenciaRowData extends RowDataPacket, NvrPreferencia {};
+
+export interface CronTimesNvr {
+  cron_tiempo_inicio: string;
+  cron_tiempo_final: string;
+}
+
+export type CronJobContext = NvrPreferencia & {ctrl_id:number}
