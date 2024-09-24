@@ -226,6 +226,9 @@ export const VALUE_MODE = 0x28D                // Controller mode
 export const VALUE_MODE_SECURITY = 0x28E       // Mode security
 export const VALUE_MODE_FREE = 0x28F       // Mode free
 export const VALUE_GENERAL = 0x290         // General info
+export const VALUE_SECURITY_WEB = 0x291     // Security from web
+export const VALUE_ARM_WEB = 0x292          // Security arm from web
+export const VALUE_DISARM_WEB = 0x293       // Security disarm from web
 
 export const VALUE_SOCKET_CLOSED = 0x400 // Socket was closed
 export const VALUE_AUTHORIZED = 0x401 // Card authorized

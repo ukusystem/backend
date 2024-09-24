@@ -27,9 +27,8 @@ import * as util from "util";
 import * as net from "net";
 import { CameraMotionManager } from "../../camera";
 import * as cp from "child_process";
-import { sql } from "googleapis/build/src/apis/sql";
-import { Console } from "console";
-import { ondemandscanning } from "googleapis/build/src/apis/ondemandscanning";
+import { Encryption } from "./encryption";
+import { ControllerConnect } from "../../system";
 
 export class Main {
   /**
@@ -41,11 +40,11 @@ export class Main {
   // month in seconds 2,628,000
   // private static readonly TABLES_INTERVAL = 2628000;
 
-  private static readonly REQUEST_TIMEOUT = 5 * 1000;
+  private static readonly REQUEST_TIMEOUT = parseInt(process.env.CTRL_REQUEST_TIMEOUT??'9') * 1000;
 
   private static readonly ALIVE_INTERVAL_MS = 2 * 1000;
   private static readonly ALIVE_TIMEOUT = 15;
-  private static readonly MANAGER_ALIVE_TIMEOUT = 10;
+  private static readonly MANAGER_ALIVE_TIMEOUT = parseInt(process.env.MANAGER_TIMEOUT??'9');
 
   private static readonly TICKET_CHECK_PERIOD = 1 * 1000;
 
@@ -98,6 +97,10 @@ export class Main {
   static isWindows = false
 
   constructor() {
+    // const enc = Encryption.encrypt("admin",true)
+    // console.log(enc)
+    // console.log(Encryption.decrypt(enc??'', true))
+
     Main.isWindows = useful.isWindows();
     /* Logger */
 
@@ -142,8 +145,6 @@ export class Main {
 
     /* Assign map */
     NodeAttach.ticketsMap = this.ticketsBuffer
-
-    this.log(`${BaseAttach.PROCESS_TIMEOUT}`)
 
     /* Database manager */
 
@@ -547,11 +548,17 @@ export class Main {
           resolve(new RequestResult(false, `El controlador ID = ${controllerID} no ha respondido a tiempo.`));
         }, Main.REQUEST_TIMEOUT);
         // Send order to controller
-        const msgID = node.addCommandForControllerBody(codes.CMD_ESP, -1, [(security ? codes.VALUE_ARM : codes.VALUE_DISARM).toString()], true, true, (code) => {
+        const codeToSend = security ? codes.VALUE_ARM_WEB : codes.VALUE_DISARM_WEB
+        const msgID = node.addCommandForControllerBody(codes.CMD_ESP, -1, [codeToSend.toString()], 
+        true, true, (code) => {
           ignoreTimeout = true;
           clearTimeout(securityHandle);
-          resolve(new RequestResult(true, `Orden de seguridad ejecutada.`));
-          this.log(`Response from controller 0x${code.toString(16)}`);
+          if(code == codeToSend){
+            resolve(new RequestResult(true, `Orden de seguridad ejecutada.`));
+          }else{
+            resolve(new RequestResult(false, `La order no se ejecutó`))
+          }
+          this.log(`Response from controller ${useful.toHex(code)}`);
         });
         this.log("Added order for controller. Waiting response...");
       } else {
@@ -812,7 +819,7 @@ export class Main {
           this.registerOrder(newOrder, monitor);
           // resolve(monitor)
           resolve(new RequestResult(true, `Orden para pines ejecutada.`));
-          this.log(`Response from controller 0x${code.toString(16)}`);
+          this.log(`Response from controller ${useful.toHex(code)}`);
         });
         this.log("Added order for controller. Waiting response...");
       } else {
@@ -835,7 +842,7 @@ export class Main {
     // This is the default data that should be saved when an error occurs.
     // pin, orden, fecha, estd_id
     const params = [order.pin, order.action, useful.getCurrentDate(), state];
-    this.log(`Inserting request result ${state}`);
+    this.log(`Inserting request result ${useful.toHex(state)}`);
     await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.insertRequest, order.ctrl_id), params);
   }
 
@@ -1016,7 +1023,7 @@ export class Main {
                 await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.ticketSetSent, nodeID), [ticket.ticketID]);
                 this.log(`Ticket ID = ${ticket.ticketID} ${rsp === codes.AIO_OK ? "added to" : "was already in the"} controller.`);
               } else {
-                this.log(`Couldn't add ticket ID = ${ticket.ticketID}. Error 0x${rsp.toString(16)}. Not removed.`);
+                this.log(`Couldn't add ticket ID = ${ticket.ticketID}. Error ${useful.toHex(rsp)}. Not removed.`);
               }
             });
             count++;

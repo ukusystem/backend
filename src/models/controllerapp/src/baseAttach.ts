@@ -95,6 +95,16 @@ export class BaseAttach extends Mortal {
   }
 
   /**
+   * Append a part to the end of a message separating it properly with {@linkcode code.SEP_CMD}
+   * @param message Original message
+   * @param part Part to append
+   * @returns The new message
+   */
+  public _appendPart(message:string, part:string):string{
+    return message + codes.SEP_CMD + part
+  }
+
+  /**
    * Create a custom message. The caller must ensure that the structure of the message is correct.
    * @param message New message.
    * @param logOnSend Whether to log the message when it is sent.
@@ -1203,10 +1213,14 @@ export class NodeAttach extends BaseAttach {
         break;
       case codes.VALUE_STRUCT_INPUT:
       case codes.VALUE_CTRL_STATE:
+
+      // Should be mirrored with the node ID appended
       case codes.VALUE_SD:
       case codes.VALUE_SECURITY:
+      case codes.VALUE_SECURITY_WEB:
       case codes.VALUE_VOLTAGE:
       case codes.VALUE_MODE:
+
       case codes.VALUE_STATES:
       case codes.VALUE_NET:
       case codes.VALUE_INPUT_CTRL_END:
@@ -1214,9 +1228,16 @@ export class NodeAttach extends BaseAttach {
       case codes.VALUE_TEMP_SENSOR_CTRL_END:
       case codes.VALUE_CARD_READER_CTRL_END:
       case codes.VALUE_ENERGY_CTRL_END:
-        this.mirrorMessage(command, true);
+        let commandToMirror = command
+        if(cmdOrValue === codes.VALUE_SECURITY || cmdOrValue === codes.VALUE_SECURITY_WEB || cmdOrValue === codes.VALUE_SD
+          || cmdOrValue === codes.VALUE_VOLTAGE || cmdOrValue === codes.VALUE_MODE ){
+          commandToMirror = this._appendPart(commandToMirror, this.controllerID.toString())
+        }
+        this.mirrorMessage(commandToMirror, true);
         // Register some of the messages
-        if (cmdOrValue === codes.VALUE_SECURITY || cmdOrValue === codes.VALUE_SD || cmdOrValue === codes.VALUE_MODE) {
+        if (cmdOrValue === codes.VALUE_SECURITY || cmdOrValue === codes.VALUE_SECURITY_WEB || 
+          cmdOrValue === codes.VALUE_SD || cmdOrValue === codes.VALUE_MODE) {
+          // Parse date and value
           const data = this._parseMessage(parts, queries.valueDateParse, id);
           if (!data) {
             this._log(`Error getting security or sd event. Received '${command}'`);
@@ -1224,20 +1245,24 @@ export class NodeAttach extends BaseAttach {
           }
           const value = data[0].getInt();
           const date = this.fixDateNumber(data[1].getInt());
+          // Save and notify
           switch (cmdOrValue) {
             case codes.VALUE_MODE:
               const mode = value == codes.VALUE_MODE_SECURITY
-              if(await this._saveItemGeneral("mode", [mode, this.controllerID], queries.modeUpdate, id, -1)){
-                this._log('Notifying web about mode')
-                ControllerMapManager.updateController(this.controllerID, {modo:mode?1:0})
-              }
+              this._log('Notifying web about mode')
+              ControllerMapManager.updateController(this.controllerID, {modo:mode?1:0})
+              await this._saveItemGeneral("mode", [mode, this.controllerID], queries.modeUpdate, id, -1)
               break;
             case codes.VALUE_SECURITY:
-              const security = value == codes.VALUE_ARM;
-              if(await this._saveItemGeneral("security", [security, this.controllerID], queries.securityUpdate, id, -1)){
+            case codes.VALUE_SECURITY_WEB:
+              const security = value == codes.VALUE_ARM || value == codes.VALUE_ARM_WEB;
+              if(cmdOrValue == codes.VALUE_SECURITY){
                 this._log('Notifying web about security')
                 ControllerMapManager.updateController(this.controllerID, {seguridad:security?1:0})
+              }else if(cmdOrValue == codes.VALUE_SECURITY_WEB){
+                this.removePendingMessageByID(id, value)
               }
+              await this._saveItemGeneral("security", [security, this.controllerID], queries.securityUpdate, id, -1)
               await executeQuery(BaseAttach.formatQueryWithNode(queries.insertSecurity, this.controllerID), [security, useful.formatTimestamp(date)]);
               break;
             case codes.VALUE_SD:
@@ -2388,9 +2413,9 @@ export class ManagerAttach extends BaseAttach {
       }
     }
     if(notify && this.completeNodeData){
-      this.completeNodeData?.map((v, i)=>{
-        console.log(`${i} - ${v}`)
-      })
+      // this.completeNodeData?.map((v, i)=>{
+      //   console.log(`${i} - ${v}`)
+      // })
       // console.log(this.completeNodeData)
 
       this._log('Notifying web about controller')

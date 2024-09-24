@@ -8,6 +8,7 @@ import fs from 'fs'
  */
 export class Logger {
   static readonly MAX_LEVEL = 9;
+  static readonly  ALLOW_PRINT = process.env.ALLOW_OUTPUT_TO_CMD === 'true'
 
   private static readonly BASE_FILENAME = "log_";
   private static readonly FILE_EXTENSION = ".txt";
@@ -36,7 +37,7 @@ export class Logger {
    * @param level The level of the message, which has to be a minimum to be considered to log and print.
    * @param print Whether to print the message on screen.
    */
-  async #logComplete(level: number, print: boolean, format: string) {
+  private async logComplete(level: number, print: boolean, format: string) {
     if (level >= this.#minLevel) {
       let success = true;
       const date = Useful.getCurrentDate();
@@ -56,7 +57,7 @@ export class Logger {
         }
       });
 
-      if (print) {
+      if (print && Logger.ALLOW_PRINT) {
         if (!success) {
           console.log(Logger.NO_LOGGER_MESSAGE + "\n");
         }
@@ -70,7 +71,7 @@ export class Logger {
    * @param message
    */
   async log(message: string) {
-    await this.#logComplete(Logger.MAX_LEVEL, true, message);
+    await this.logComplete(Logger.MAX_LEVEL, true, message);
   }
 
   // /**

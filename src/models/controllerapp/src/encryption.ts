@@ -36,7 +36,7 @@ export class Encryption {
 	//   console.log(`Encrypted hex '${crypted.toString('hex')}'`)
       return crypted.toString("base64"); // +fHL53d9GKUS842X7U+hlA==
     } catch (e) {
-      console.log(`Error decrypting. ${e}`);
+      console.log(`Error encrypting. ${e}`);
     }
     return null;
   }
