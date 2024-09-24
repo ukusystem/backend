@@ -25,6 +25,7 @@ import { dashboardRouter } from "../routes/dashboard.routes";
 import { appConfig } from "../configs";
 import { DeteccionMovimiento } from "./camera";
 import { NodoCameraMapManager } from "./maps/nodo.camera";
+import { NvrManager } from "./nvr/nvr.manager";
 
 // import { createServer as createServerHttps } from "https";
 // import fs from "fs";
@@ -149,6 +150,8 @@ export class ServerApp {
 
       await TipoCamaraMapManager.init()
       await NodoCameraMapManager.init();
+
+      await NvrManager.init() // inicializar despues de NodoCameraMapManager
 
     
       // await TicketMap.init() // iniciar despues de controller

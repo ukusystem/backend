@@ -29,7 +29,6 @@ export interface CameraJob {
   info: NvrPreferencia,
   startScheduledJob?:NvrJobSchedule,
   endScheduleJob?: NvrJobSchedule,
-  // ffmpegProcess?: ChildProcessByStdio<null, any, null>
   ffmpegProcess?: ChildProcessWithoutNullStreams
 }
 
@@ -44,6 +43,11 @@ export interface NvrPreferenciaRowData extends RowDataPacket, NvrPreferencia {};
 export interface CronTimesNvr {
   cron_tiempo_inicio: string;
   cron_tiempo_final: string;
+}
+
+export interface SecondTimesNvr {
+  start_time_seconds: number;
+  end_time_seconds: number;
 }
 
 export type CronJobContext = NvrPreferencia & {ctrl_id:number}

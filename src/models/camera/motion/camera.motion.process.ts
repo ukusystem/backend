@@ -214,6 +214,9 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
           if (this.ffmpegProcessVideo) {
             this.ffmpegProcessVideo.kill();
             this.ffmpegProcessVideo = null;
+            // if(code !== 0){
+            //   this.isActiveProccesVideo = false;
+            // }
           }
 
           if (this.isActiveProccesVideo) {
