@@ -1,5 +1,6 @@
 import { AlarmManager } from "../../controllers/socket";
 import { Camara } from "../../types/db";
+import { NvrManager } from "../nvr/nvr.manager";
 
 export class CameraNotifyManager {
 
@@ -20,10 +21,23 @@ export class CameraNotifyManager {
   static #notifyAddToAlarm(ctrl_id: number,newCam: Camara){
     AlarmManager.notifyCamera(ctrl_id, newCam.cmr_id, "add");
   }
+  
+  static #notifyUpdateToNvr(ctrl_id: number,curCam: Camara,fieldsUpdate: Partial<Camara>){
+    const { usuario, contraseña, ip } = fieldsUpdate;
+    const hasChanges =
+      (usuario !== undefined && curCam.usuario !== usuario) ||
+      (contraseña !== undefined && curCam.contraseña !== contraseña) ||
+      (ip !== undefined && curCam.ip !== ip) ;
+    if(hasChanges){
+      NvrManager.notifyChangeCamera(ctrl_id,curCam.cmr_id);
+    }
+  }
 
   static update(ctrl_id: number,curCam: Camara,fieldsUpdate: Partial<Camara>) {
     // notify Alarm
     CameraNotifyManager.#notifyUpdateToAlarm(ctrl_id, curCam, fieldsUpdate);
+    // notify NVR
+    CameraNotifyManager.#notifyUpdateToNvr(ctrl_id, curCam, fieldsUpdate)
   }
 
   static add(ctrl_id: number,newCam: Camara) {

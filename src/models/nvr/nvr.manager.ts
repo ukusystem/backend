@@ -43,8 +43,6 @@ export class NvrManager {
       cron_tiempo_inicio: cronStartTime,
       cron_tiempo_final: cronEndTime,
     };
-
-
   }
 
   static #getTimesInSecond(times: Pick<NvrPreferencia, "tiempo_final" | "tiempo_inicio">) : SecondTimesNvr {
@@ -339,7 +337,48 @@ export class NvrManager {
   }
 
   static notifyChangeCamera(ctrl_id:number,cmr_id:number){
+    const currPrefStructure = NvrManager.#map.get(ctrl_id);
+    if(currPrefStructure !== undefined){
 
+      const allCamJobs = Array.from(currPrefStructure.values());
+      const camJobsFilterByCmrId = allCamJobs.filter((camJob) => camJob.info.cmr_id === cmr_id);
+
+      const curDateTime = dayjs();
+      const currentTimeSeconds = (curDateTime.hour()*60*60) + (curDateTime.minute()*60) + (curDateTime.second());
+
+      camJobsFilterByCmrId.forEach(async (camJob) => {
+        const currCamJob = camJob;
+        const secondTimes = NvrManager.#getTimesInSecond({
+          tiempo_final: currCamJob.info.tiempo_final,
+          tiempo_inicio: currCamJob.info.tiempo_inicio,
+        });
+        const isInRangeCurTime = currentTimeSeconds > secondTimes.start_time_seconds && currentTimeSeconds < secondTimes.end_time_seconds;
+
+        if(isInRangeCurTime){
+          // stops cron jobs:
+          if(currCamJob.endScheduleJob){
+            currCamJob.endScheduleJob.stop();
+            delete currCamJob.endScheduleJob;
+          }
+          if(currCamJob.startScheduledJob){
+            currCamJob.startScheduledJob.stop();
+            delete currCamJob.startScheduledJob;
+          }
+          // kill ffmpeg process:
+          if(currCamJob.ffmpegProcess !== undefined){
+            currCamJob.ffmpegProcess.kill();
+            delete currCamJob.ffmpegProcess;
+          }
+          // delete preference:
+          currPrefStructure.delete(currCamJob.info.nvrpref_id);
+          NvrManager.#map.set(ctrl_id,currPrefStructure);
+
+          // add new preference:
+          await NvrManager.add(ctrl_id,currCamJob.info);
+        }
+      })
+
+    }
   }
 }
 

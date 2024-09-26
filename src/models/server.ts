@@ -72,13 +72,14 @@ export class ServerApp {
     this.#app.use(
       cors({
         credentials: true,
-        origin: ["http://localhost:5173","http://localhost:5174", "http://172.16.4.53:3005","http://172.16.4.53:3000","http://172.16.4.3:3000"],
+        origin: ["http://localhost:5173","http://localhost:5174"],
       })
     );
     this.#app.use(express.urlencoded({ extended: false }));
     // Desplegar el directorio público
     this.#app.use( express.static( path.resolve( __dirname, '../../public' )));
     this.#app.use( express.static( path.resolve( __dirname, '../../' ) ) );
+    this.#app.use( express.static( path.resolve( __dirname, '../../nvr' ) ) );
 
     // Parsear y transformar el req.body en json
     this.#app.use(express.json({limit:"10mb"}));
@@ -151,14 +152,17 @@ export class ServerApp {
       await TipoCamaraMapManager.init()
       await NodoCameraMapManager.init();
 
-      await NvrManager.init() // inicializar despues de NodoCameraMapManager
-
-    
-      // await TicketMap.init() // iniciar despues de controller
-
     } catch (error) {
       console.log("Server Model | Error init maps")
       console.log(error)
+      throw error
+    }
+  }
+
+  async startNvrMode(){
+    try {
+      await NvrManager.init() // inicializar despues de NodoCameraMapManager
+    } catch (error) {
       throw error
     }
   }

@@ -14,12 +14,15 @@ import { TicketMap } from "./models/ticketschedule";
     const server = new ServerApp();
     // Inicializar websockets
     server.websocket();
-    // Inicializar dectecion de movimiento
-    await server.motion()
-
     // Init Maps
     await server.initmaps()
 
+    // Inicializar dectecion de movimiento
+    // await server.motion()
+
+    // inciar modo nvr
+    // server.startNvrMode()
+    
     // Mio
     server.runController();
 

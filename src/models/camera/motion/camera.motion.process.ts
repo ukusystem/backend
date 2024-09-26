@@ -531,8 +531,20 @@ const getImageFfmpegArgs = (rtspUrl: string, ctrl_id: number): string[] => {
   if(ctrlConfig === undefined){
     throw new Error(`Error getImageFfmpegArgs | Controlador ${ctrl_id} no encontrado getControllerAndResolution`);
   }
-  const {controller} = ctrlConfig
-  return ["-rtsp_transport", "tcp", "-i", `${rtspUrl}`, "-vf", `select='gte(t\\,0)',fps=1/${controller.motionsnapshotinterval}`, "-an", "-t", `${controller.motionsnapshotseconds}`, "-c:v", "mjpeg", "-f", "image2pipe", "-"];
+  const {controller,resolution:{motion_snapshot}} = ctrlConfig
+  const motionSnapshotFps = 30;
+  const finalArgs : string[] = [
+    "-rtsp_transport", "tcp",
+    "-i", `${rtspUrl}`,
+    "-r",`${motionSnapshotFps}`,
+    "-vf",`select='eq(n\,0)+not(mod(n\,10*${motionSnapshotFps}))',scale=${motion_snapshot.ancho}:${motion_snapshot.altura}`,
+    "-an",
+    "-t", `${controller.motionsnapshotseconds}`,
+    "-c:v", "mjpeg",
+    "-f", "image2pipe",
+    "-"
+  ]
+  return finalArgs;
 };
 
 const getVideoFfmpegArgs = (rtspUrl: string, outputPath: string, ctrl_id: number): string[] => {
@@ -540,18 +552,16 @@ const getVideoFfmpegArgs = (rtspUrl: string, outputPath: string, ctrl_id: number
   if(ctrlConfig === undefined){
     throw new Error(`Error getVideoFfmpegArgs | Controlador ${ctrl_id} no encontrado getControllerAndResolution`);
   }
-  const {controller} = ctrlConfig
+  const {controller,resolution:{motion_record}} = ctrlConfig
 
   return [
-    "-rtsp_transport",
-    "tcp",
-    "-i",
-    `${rtspUrl}`,
+    "-rtsp_transport","tcp",
+    "-i",`${rtspUrl}`,
+    "-r",`${controller.motionrecordfps}`,
+    "-vf",`scale=${motion_record.ancho}:${motion_record.altura}`,
     "-an",
-    "-c:v",
-    "copy",
-    "-t",
-    `${controller.motionrecordseconds}`,
+    "-c:v","copy",
+    "-t",`${controller.motionrecordseconds}`,
     // "pipe:1",  // Salida de FFMPEG a stdout
     `${outputPath}`,
   ];
@@ -599,7 +609,7 @@ export const DeteccionMovimiento = async () => {
   try {
     const camerasData = await Init.getAllCameras();
     Object.keys(camerasData).forEach((ctrlIdKey) => {
-      camerasData[ctrlIdKey].forEach(async (cam) => {
+      camerasData[Number(ctrlIdKey)].forEach(async (cam) => {
         const { ip, usuario, contraseña, cmr_id, ctrl_id } = cam;
 
         const contraseñaDecrypt = decrypt(contraseña);
