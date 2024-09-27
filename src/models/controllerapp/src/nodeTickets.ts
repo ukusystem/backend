@@ -1,5 +1,5 @@
 import { PartialTicket } from "./partialTicket";
 
-export class PartialNode {
+export class NodeTickets {
 	readonly tickets:PartialTicket[] = [];
 }

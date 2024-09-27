@@ -3,6 +3,7 @@ import { SocketControllerState } from "./controller.state.types";
 import { controllerStateSocketSchema } from "./controller.state.schema";
 import { ControllerStateManager, ControllerStateSocketObserver } from "./controller.state.manager";
 import { ControllerMapManager } from "../../../models/maps";
+import { sendSecurity } from "../../../models/controllerapp/controller";
 
 export const contollerStateSocket = async ( io: Server, socket: SocketControllerState ) => {
   const nspControllerState = socket.nsp;
@@ -45,8 +46,17 @@ export const contollerStateSocket = async ( io: Server, socket: SocketController
 
   });
 
-  socket.on("setSecurity", (newSecurity) => {
-    ControllerMapManager.updateController(ctrl_id,{seguridad: newSecurity});
+  socket.on("setSecurity", async (newSecurity) => {
+    // console.log(`Seguridad: ${newSecurity}`)
+    const res = await sendSecurity(ctrl_id, newSecurity===1)
+    if(res && res.resultado){
+      ControllerMapManager.updateController(ctrl_id,{seguridad: newSecurity});
+    }else{
+      console.log('No response or false')
+    }
+    if(res){
+      console.log(res.mensaje)
+    }
   });
 
   socket.on("disconnect", () => {

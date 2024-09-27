@@ -2,6 +2,7 @@ import { Ticket } from "./src/ticket";
 import { Main } from "./src/main";
 import { FinishTicket } from "./src/finishTicket";
 import { PinOrder } from "./src/types";
+import { RequestResult } from "./src/requestResult";
 
 let mainService:Main|null = null
 
@@ -15,10 +16,14 @@ export async function onTicket(newTicket:Ticket){
   return await mainService?.onTicket(newTicket)
 }
 
-export async function onFinishTicket(newTicket: FinishTicket) {
-  return await mainService?.onFinishTicket(newTicket);
+export async function onFinishTicket(ticket: FinishTicket) {
+  return await mainService?.onFinishTicket(ticket);
 }
 
-export async function onOrder(newTicket: PinOrder) {
-  return await mainService?.onOrder(newTicket);
+export async function onOrder(pinOrder: PinOrder) {
+  return await mainService?.onOrder(pinOrder);
+}
+
+export async function sendSecurity(controllerID:number, security:boolean):Promise<RequestResult|undefined> {
+  return await mainService?.sendSecurity(controllerID, security);
 }

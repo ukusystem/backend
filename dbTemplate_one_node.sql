@@ -327,7 +327,7 @@ CREATE TABLE `preferenciasvms` (
   PRIMARY KEY (`prfvms_id`),
   KEY `fk_preferenciasvms_usuario_u_id_idx` (`u_id`),
   CONSTRAINT `fk_preferenciasvms_usuario_u_id` FOREIGN KEY (`u_id`) REFERENCES `usuario` (`u_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -336,6 +336,7 @@ CREATE TABLE `preferenciasvms` (
 
 LOCK TABLES `preferenciasvms` WRITE;
 /*!40000 ALTER TABLE `preferenciasvms` DISABLE KEYS */;
+INSERT INTO `preferenciasvms` VALUES (1,'Todas las cámaras',1,'{\"streams\": [{\"ip\": \"172.16.4.101\", \"nodo\": \"Placa 1\", \"tipo\": \"Bullet\", \"marca\": \"Dahua\", \"cmr_id\": 2, \"region\": \"Everytel\", \"ctrl_id\": 1, \"puertows\": 55431, \"descripcion\": \"Exterior\"}, {\"ip\": \"172.16.4.102\", \"nodo\": \"Placa 1\", \"tipo\": \"Bullet\", \"marca\": \"Dahua\", \"cmr_id\": 3, \"region\": \"Everytel\", \"ctrl_id\": 1, \"puertows\": 55432, \"descripcion\": \"Puerta\"}, {\"ip\": \"172.16.4.103\", \"nodo\": \"Placa 1\", \"tipo\": \"Domo PTZ\", \"marca\": \"Dahua\", \"cmr_id\": 4, \"region\": \"Everytel\", \"ctrl_id\": 1, \"puertows\": 55433, \"descripcion\": \"Garaje\"}, {\"ip\": \"172.16.4.104\", \"nodo\": \"Placa 1\", \"tipo\": \"Domo PTZ\", \"marca\": \"Dahua\", \"cmr_id\": 5, \"region\": \"Everytel\", \"ctrl_id\": 1, \"puertows\": 55434, \"descripcion\": \"Kitchen\"}, {\"ip\": \"172.16.4.105\", \"nodo\": \"Placa 1\", \"tipo\": \"Domo PTZ\", \"marca\": \"Dahua\", \"cmr_id\": 6, \"region\": \"Everytel\", \"ctrl_id\": 1, \"puertows\": 55435, \"descripcion\": \"Desarrollo\"}, {\"ip\": \"172.16.4.106\", \"nodo\": \"Placa 1\", \"tipo\": \"Domo PTZ\", \"marca\": \"Dahua\", \"cmr_id\": 7, \"region\": \"Everytel\", \"ctrl_id\": 1, \"puertows\": 55436, \"descripcion\": \"Comedor\"}, {\"ip\": \"172.16.4.107\", \"nodo\": \"Placa 1\", \"tipo\": \"Bullet\", \"marca\": \"Dahua\", \"cmr_id\": 8, \"region\": \"Everytel\", \"ctrl_id\": 1, \"puertows\": 55437, \"descripcion\": \"Primer piso - Reuniones\"}, {\"ip\": \"172.16.4.109\", \"nodo\": \"Placa 1\", \"tipo\": \"Domo PTZ\", \"marca\": \"Dahua\", \"cmr_id\": 10, \"region\": \"Everytel\", \"ctrl_id\": 1, \"puertows\": 55439, \"descripcion\": \"Primer piso - interior\"}, null], \"gridOption\": 3}',1);
 /*!40000 ALTER TABLE `preferenciasvms` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -380,7 +381,7 @@ CREATE TABLE `registrored` (
   PRIMARY KEY (`rr_id`),
   KEY `fk_registrored_controlador_co_id_idx` (`ctrl_id`),
   CONSTRAINT `fk_registrored_controlador_co_id` FOREIGN KEY (`ctrl_id`) REFERENCES `controlador` (`ctrl_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -389,7 +390,7 @@ CREATE TABLE `registrored` (
 
 LOCK TABLES `registrored` WRITE;
 /*!40000 ALTER TABLE `registrored` DISABLE KEYS */;
-INSERT INTO `registrored` VALUES (1,1,'2024-07-30 17:23:42',0),(2,1,'2024-07-30 17:24:16',0),(3,1,'2024-07-30 17:25:50',0);
+INSERT INTO `registrored` VALUES (1,1,'2024-07-30 20:11:01',0),(2,1,'2024-07-30 20:12:32',0);
 /*!40000 ALTER TABLE `registrored` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1230,7 +1231,7 @@ CREATE TABLE `camara` (
 
 LOCK TABLES `camara` WRITE;
 /*!40000 ALTER TABLE `camara` DISABLE KEYS */;
-INSERT INTO `camara` VALUES (1,'CAM1',1,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.100',55443,'Cámara 1',55430,'255.255.0.0','172.16.0.1',0,0),(2,'CAM2',1,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.101',55443,'Cámara 2',55431,'255.255.0.0','172.16.0.1',1,1),(3,'CAM3',1,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.102',55443,'Cámara 3',55432,'255.255.0.0','172.16.0.1',1,1),(4,'CAM4',1,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.103',55443,'Cámara 4',55433,'255.255.0.0','172.16.0.1',1,1),(5,'CAM5',1,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.104',55443,'Cámara 5',55434,'255.255.0.0','172.16.0.1',1,1),(6,'CAM6',1,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.105',55443,'Cámara 6',55435,'255.255.0.0','172.16.0.1',1,1),(7,'CAM7',1,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.106',55443,'Cámara 7',55436,'255.255.0.0','172.16.0.1',1,1),(8,'CAM8',1,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.107',55443,'Cámara 8',55437,'255.255.0.0','172.16.0.1',1,1),(9,'CAM9',1,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.108',55443,'Cámara 9',55438,'255.255.0.0','172.16.0.1',0,0),(10,'CAM10',1,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.109',55443,'Cámara 10',55439,'255.255.0.0','172.16.0.1',1,1),(11,'CAM11',3,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.110',55443,'Cámara 11',55440,'255.255.0.0','172.16.0.1',0,1);
+INSERT INTO `camara` VALUES (1,'CAM1',1,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.100',55443,'Cámara 1',55430,'255.255.0.0','172.16.0.1',0,0),(2,'CAM2',1,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.101',55443,'Exterior',55431,'255.255.0.0','172.16.0.1',1,1),(3,'CAM3',1,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.102',55443,'Puerta',55432,'255.255.0.0','172.16.0.1',1,1),(4,'CAM4',3,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.103',55443,'Garaje',55433,'255.255.0.0','172.16.0.1',1,1),(5,'CAM5',3,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.104',55443,'Kitchen',55434,'255.255.0.0','172.16.0.1',1,1),(6,'CAM6',3,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.105',55443,'Desarrollo',55435,'255.255.0.0','172.16.0.1',1,1),(7,'CAM7',3,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.106',55443,'Comedor',55436,'255.255.0.0','172.16.0.1',1,1),(8,'CAM8',1,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.107',55443,'Primer piso - Reuniones',55437,'255.255.0.0','172.16.0.1',1,1),(9,'CAM9',1,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.108',55443,'Cámara 9',55438,'255.255.0.0','172.16.0.1',0,0),(10,'CAM10',1,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.109',55443,'Primer piso - interior',55439,'255.255.0.0','172.16.0.1',1,1),(11,'CAM11',1,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.110',55443,'Cámara 11',55440,'255.255.0.0','172.16.0.1',0,0);
 /*!40000 ALTER TABLE `camara` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1478,7 +1479,7 @@ CREATE TABLE `registroestadocamara` (
   PRIMARY KEY (`rec_id`),
   KEY `fk_registroestadocamara_camara_cmr_id_idx` (`cmr_id`),
   CONSTRAINT `fk_registroestadocamara_camara_cmr_id` FOREIGN KEY (`cmr_id`) REFERENCES `camara` (`cmr_id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE=InnoDB AUTO_INCREMENT=35 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1487,7 +1488,6 @@ CREATE TABLE `registroestadocamara` (
 
 LOCK TABLES `registroestadocamara` WRITE;
 /*!40000 ALTER TABLE `registroestadocamara` DISABLE KEYS */;
-INSERT INTO `registroestadocamara` VALUES (1,2,'2024-07-30 17:24:16',0),(2,4,'2024-07-30 17:24:16',0),(3,10,'2024-07-30 17:24:16',0),(4,11,'2024-07-30 17:24:16',0),(5,3,'2024-07-30 17:24:16',0),(6,5,'2024-07-30 17:24:16',0),(7,6,'2024-07-30 17:24:16',0),(8,7,'2024-07-30 17:24:16',0),(9,8,'2024-07-30 17:24:16',0),(10,2,'2024-07-30 17:24:24',1),(11,3,'2024-07-30 17:24:24',1),(12,4,'2024-07-30 17:24:24',1),(13,5,'2024-07-30 17:24:24',1),(14,6,'2024-07-30 17:24:24',1),(15,7,'2024-07-30 17:24:24',1),(16,8,'2024-07-30 17:24:24',1),(17,10,'2024-07-30 17:24:24',1),(18,2,'2024-07-30 17:25:50',0),(19,7,'2024-07-30 17:25:50',0),(20,5,'2024-07-30 17:25:50',0),(21,8,'2024-07-30 17:25:50',0),(22,10,'2024-07-30 17:25:50',0),(23,3,'2024-07-30 17:25:50',0),(24,4,'2024-07-30 17:25:50',0),(25,6,'2024-07-30 17:25:50',0),(26,11,'2024-07-30 17:25:50',0),(27,2,'2024-07-30 17:25:58',1),(28,3,'2024-07-30 17:25:58',1),(29,4,'2024-07-30 17:25:58',1),(30,5,'2024-07-30 17:25:58',1),(31,6,'2024-07-30 17:25:58',1),(32,7,'2024-07-30 17:25:58',1),(33,8,'2024-07-30 17:25:58',1),(34,10,'2024-07-30 17:25:58',1);
 /*!40000 ALTER TABLE `registroestadocamara` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1731,4 +1731,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-07-30 12:43:01
+-- Dump completed on 2024-07-30 15:18:04

@@ -7,7 +7,7 @@ import { PartialTicket } from "./partialTicket";
 import { RequestResult } from "./requestResult";
 import { AtomicNumber } from "./atomicNumber";
 import { FinishTicket } from "./finishTicket";
-import { PartialNode } from "./partialNode";
+import { NodeTickets } from "./nodeTickets";
 import { executeQuery } from "./dbManager";
 import { ResultCode } from "./resultCode";
 import { ResultSetHeader } from "mysql2";
@@ -15,7 +15,7 @@ import { Logger } from "./logger";
 import { Camera } from "./camera";
 import { Bundle } from "./bundle";
 import { Mortal } from "./mortal";
-import { Ticket ,type  Personal, type Solicitante } from "./ticket";
+import { Ticket, type Personal, type Solicitante } from "./ticket";
 import { PinOrder } from "./types";
 import fs from "fs";
 import { appConfig } from "../../../configs";
@@ -27,7 +27,8 @@ import * as util from "util";
 import * as net from "net";
 import { CameraMotionManager } from "../../camera";
 import * as cp from "child_process";
-import { sql } from "googleapis/build/src/apis/sql";
+import { Encryption } from "./encryption";
+import { ControllerConnect } from "../../system";
 
 export class Main {
   /**
@@ -37,13 +38,13 @@ export class Main {
 
   // year in seconds 31,536,000
   // month in seconds 2,628,000
-  private static readonly TABLES_INTERVAL = 2628000;
+  // private static readonly TABLES_INTERVAL = 2628000;
 
-  private static readonly REQUEST_TIMEOUT = 5 * 1000;
+  private static readonly REQUEST_TIMEOUT = parseInt(process.env.CTRL_REQUEST_TIMEOUT??'9') * 1000;
 
   private static readonly ALIVE_INTERVAL_MS = 2 * 1000;
   private static readonly ALIVE_TIMEOUT = 15;
-  private static readonly MANAGER_ALIVE_TIMEOUT = 10;
+  private static readonly MANAGER_ALIVE_TIMEOUT = parseInt(process.env.MANAGER_TIMEOUT??'9');
 
   private static readonly TICKET_CHECK_PERIOD = 1 * 1000;
 
@@ -82,7 +83,7 @@ export class Main {
    * Approved tickets are stored here, grouped by nodes, to send them when the
    * controller has space.
    */
-  private readonly ticketsBuffer = new Map<number, PartialNode>();
+  private readonly ticketsBuffer = new Map<number, NodeTickets>();
 
   /**
    * Whether the initialization of the service has been successful and the service can start running. The conditions are:
@@ -93,9 +94,13 @@ export class Main {
 
   // static readonly isWindows2 = useful.isWindows();
   // static readonly isWindows2 = true;
-  static  isWindows = false
+  static isWindows = false
 
   constructor() {
+    // const enc = Encryption.encrypt("admin",true)
+    // console.log(enc)
+    // console.log(Encryption.decrypt(enc??'', true))
+
     Main.isWindows = useful.isWindows();
     /* Logger */
 
@@ -121,7 +126,7 @@ export class Main {
 
     /* Init messages */
 
-    this.log("████ BACKEND INIT ████");
+    this.log("█ Controller service v 0.2 █");
     this.log(`Running on ${useful.isWindows() ? "Windows" : useful.isLinux() ? "Linux" : "Unknown OS"}`);
 
     /* Events to clean up */
@@ -137,6 +142,9 @@ export class Main {
     process.once("SIGHUP", (signal) => {
       this.end(signal);
     });
+
+    /* Assign map */
+    NodeAttach.ticketsMap = this.ticketsBuffer
 
     /* Database manager */
 
@@ -323,7 +331,7 @@ export class Main {
       this.log(`ERROR listening to managers. Code ${e.code}`);
     });
 
-    this.managerServer.listen( appConfig.server.manager_port , appConfig.server.ip , 16, () => {
+    this.managerServer.listen(appConfig.server.manager_port, appConfig.server.ip, 16, () => {
       this.log(`Server for managers listening on ${appConfig.server.manager_port}`);
     });
   }
@@ -386,22 +394,22 @@ export class Main {
    * @returns False if a table could not be created.
    * @deprecated
    */
-  private async checkTablesForNodes(current: boolean): Promise<boolean> {
-    // Get year, month
-    const year = useful.getYear();
-    const month = useful.getMonth();
-    if (!month || !year) {
-      this.log("ERROR: Could not get the month or year.");
-      return false;
-    }
-    for (const node of this.selector.nodeAttachments) {
-      if (!(await BaseAttach._checkTablesStatic(node.controllerID, month, year, current))) {
-        this.log(`ERROR Could not create temperature table for node ID ${node.controllerID}`);
-        return false;
-      }
-    }
-    return true;
-  }
+  // private async checkTablesForNodes(current: boolean): Promise<boolean> {
+  //   // Get year, month
+  //   const year = useful.getYear();
+  //   const month = useful.getMonth();
+  //   if (!month || !year) {
+  //     this.log("ERROR: Could not get the month or year.");
+  //     return false;
+  //   }
+  //   for (const node of this.selector.nodeAttachments) {
+  //     if (!(await BaseAttach._checkTablesStatic(node.controllerID, month, year, current))) {
+  //       this.log(`ERROR Could not create temperature table for node ID ${node.controllerID}`);
+  //       return false;
+  //     }
+  //   }
+  //   return true;
+  // }
 
   /**
    * Read nodes from database, cancel current keys that are related to controllers
@@ -424,7 +432,7 @@ export class Main {
    * @param nodeID
    * @param ticketID
    */
-  private async removeTicket(nodeID: number, ticketID: number) {
+  private removeTicket(nodeID: number, ticketID: number, fromController = true) {
     this.log("Removing ticket...");
     const partialNode = this.ticketsBuffer.get(nodeID);
     if (!partialNode) {
@@ -433,6 +441,7 @@ export class Main {
     }
     const tickets = partialNode.tickets;
     let found = false;
+
     // Remove from pending
     for (let i = 0; i < tickets.length; i++) {
       if (tickets[i].ticketID == ticketID) {
@@ -442,18 +451,22 @@ export class Main {
         break;
       }
     }
+
     // Remove from controller
-    const nodeOptional = this.selector.getNodeAttachByID(nodeID);
-    if (!nodeOptional) {
-      this.log(`No node attach ID = ${nodeID}`);
-    } else {
-      if (nodeOptional.loggedToController) {
-        nodeOptional.addCommandForControllerBody(codes.CMD_TICKET_REMOVE, -1, [ticketID.toString()]);
-        this.log("Added command for controller.");
+    if (fromController) {
+      const nodeOptional = this.selector.getNodeAttachByID(nodeID);
+      if (!nodeOptional) {
+        this.log(`No node attach ID = ${nodeID}`);
       } else {
-        this.log(`Node ID = ${nodeID} was not connected.`);
+        if (nodeOptional.isLogged()) {
+          nodeOptional.addCommandForControllerBody(codes.CMD_TICKET_REMOVE, -1, [ticketID.toString()]);
+          this.log("Added command for controller.");
+        } else {
+          this.log(`Node ID = ${nodeID} was not connected.`);
+        }
       }
     }
+
     if (!found) {
       this.log(`Could not find ticket ID = ${ticketID} in pending list`);
     }
@@ -477,7 +490,7 @@ export class Main {
       partialNode.tickets.push(partialTicket);
       this.log(`Ticket ID = ${partialTicket.ticketID} added to node ${nodeID}`);
     } else {
-      const newPartialNode = new PartialNode();
+      const newPartialNode = new NodeTickets();
       newPartialNode.tickets.push(partialTicket);
       this.ticketsBuffer.set(nodeID, newPartialNode);
       this.log(`New partial node created ID = ${nodeID} and ticket ID = ${partialTicket.ticketID} added`);
@@ -512,6 +525,48 @@ export class Main {
   private async finishTicket(finalState: number, ticketID: number, nodeID: number) {
     await executeQuery(BaseAttach.formatQueryWithNode(queries.finishTicket, nodeID), [finalState, useful.getCurrentDate(), ticketID]);
     this.log(`Final state of ticket ID = ${ticketID} : ${finalState}`);
+  }
+
+  public async sendSecurity(controllerID: number, security: boolean): Promise<RequestResult> {
+    const node = this.selector.getNodeAttachByID(controllerID)
+    if (!node) {
+      this.log(`The node ${controllerID} does not exist.`)
+      return new RequestResult(false, `El nodo ID = ${controllerID} no existe`);
+    }
+    // Asynchronous task
+    const myPromise: Promise<RequestResult> = new Promise(async (resolve, reject) => {
+      let ignoreTimeout = false;
+      if (Selector.isChannelConnected(node._currentSocket)) {
+        // Timeout for this operation
+        const securityHandle = setTimeout(() => {
+          if (ignoreTimeout) {
+            return;
+          }
+          this.log(`Remove message ID = ${msgID} by timeout.`);
+          // Message has to be removed anyways
+          node.removePendingMessageByID(msgID, codes.ERR_TIMEOUT, true, false);
+          resolve(new RequestResult(false, `El controlador ID = ${controllerID} no ha respondido a tiempo.`));
+        }, Main.REQUEST_TIMEOUT);
+        // Send order to controller
+        const codeToSend = security ? codes.VALUE_ARM_WEB : codes.VALUE_DISARM_WEB
+        const msgID = node.addCommandForControllerBody(codes.CMD_ESP, -1, [codeToSend.toString()], 
+        true, true, (code) => {
+          ignoreTimeout = true;
+          clearTimeout(securityHandle);
+          if(code == codeToSend){
+            resolve(new RequestResult(true, `Orden de seguridad ejecutada.`));
+          }else{
+            resolve(new RequestResult(false, `La order no se ejecutó`))
+          }
+          this.log(`Response from controller ${useful.toHex(code)}`);
+        });
+        this.log("Added order for controller. Waiting response...");
+      } else {
+        this.log(`Controller ${controllerID} disconnected.`);
+        resolve(new RequestResult(false, `El controlador ID = ${controllerID} no está conectado.`));
+      }
+    });
+    return myPromise
   }
 
   /**
@@ -591,6 +646,8 @@ export class Main {
         // These events can happen only when the ticket is waiting for approve.
         switch (newAction) {
           case States.ACCEPTED:
+            // console.log('Accepted  ticket:')
+            // console.log(ticketData[0])
             const start = useful.datetimeToLong(ticketData[0].fechacomienzo);
             const end = useful.datetimeToLong(ticketData[0].fechatermino);
             await this.finishTicket(States.ACCEPTED, ticketID, nodeID);
@@ -676,12 +733,12 @@ export class Main {
       }
       // Write photo, if conditions are met
       const byteSize = new AtomicNumber();
-      const newFileName = useful.getReplacedPath(await this.processPhotoField(worker, byteSize, nodeID) ?? "error") ;
+      const newFileName = useful.getReplacedPath(await this.processPhotoField(worker, byteSize, nodeID) ?? "error");
       this.log(`File writing result: Filename = '${newFileName ?? "<photo not present>"}' Written = ${byteSize.inner} bytes`);
       // Save worker. All workers who are going to visit the node must have been sent
       // in the JSON.
       if (await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.insertWorker, nodeID), this.workerToArrayForQuery(worker, insertedID, newFileName))) {
-        this.log(`Worker added: Ticket ID ${insertedID} Worker '${worker}'`);
+        this.log(`Worker added: Ticket ID ${insertedID} Worker ` + worker);
       } else {
         this.log(`Error adding worker: Ticket ${insertedID}`);
       }
@@ -696,7 +753,7 @@ export class Main {
     }
     this.log(`Ticket created ID ${insertedID}.`);
     // return States.EXECUTED;
-    return new RequestResult(true, `Ticket creado`,insertedID);
+    return new RequestResult(true, `Ticket creado`, insertedID);
   }
 
   /**
@@ -733,7 +790,6 @@ export class Main {
     const nodeKey = this.selector.getNodeAttachByID(newOrder.ctrl_id);
     if (!nodeKey) {
       this.log(`Controller ${newOrder.ctrl_id} doesn't exist.`);
-      // return States.NONEXISTENT;
       return new RequestResult(false, `El nodo ID = ${newOrder.ctrl_id} no existe`);
     }
 
@@ -747,7 +803,7 @@ export class Main {
           if (ignoreTimeout) {
             return;
           }
-          this.log(`Remove message ID = ${msgID}by timeout.`);
+          this.log(`Remove message ID = ${msgID} by timeout.`);
           // Message has to be removed anyways
           nodeKey.removePendingMessageByID(msgID, codes.ERR_TIMEOUT, true, false);
           monitor = States.TIMEOUT;
@@ -762,8 +818,8 @@ export class Main {
           monitor = States.EXECUTED;
           this.registerOrder(newOrder, monitor);
           // resolve(monitor)
-          resolve(new RequestResult(true, `Order ejecutada.`));
-          this.log(`Response from controller ${code}`);
+          resolve(new RequestResult(true, `Orden para pines ejecutada.`));
+          this.log(`Response from controller ${useful.toHex(code)}`);
         });
         this.log("Added order for controller. Waiting response...");
       } else {
@@ -786,7 +842,7 @@ export class Main {
     // This is the default data that should be saved when an error occurs.
     // pin, orden, fecha, estd_id
     const params = [order.pin, order.action, useful.getCurrentDate(), state];
-    this.log(`Inserting request result ${state}`);
+    this.log(`Inserting request result ${useful.toHex(state)}`);
     await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.insertRequest, order.ctrl_id), params);
   }
 
@@ -844,7 +900,7 @@ export class Main {
     for (const node of nodesData) {
       nodes++;
       const nodeID = node.entero;
-      const newNode = new PartialNode();
+      const newNode = new NodeTickets();
       if (this.ticketsBuffer.has(nodeID)) {
         this.log(`ERROR Node with duplicate ID? ID=${nodeID}`);
       } else {
@@ -900,49 +956,74 @@ export class Main {
    * controller can accept a ticket. If a controller has space for tickets and
    * there are tickets pending for that controller, the ticket is send and removed
    * from the buffer.
+   * 
+   * NEXT UPDATE: For the controller to always get the valid tickets on every connection, this function should not remove the tickets when they are sent,
+   * but only when they expire. Expiration task should be performed here too.
    */
   private startTicketsCheck() {
     this.ticketsTimer = setInterval(() => {
       for (const ticket of this.ticketsBuffer) {
-        // If there are tickets left
+
+        const nodeID = ticket[0];
         const ticketList = ticket[1].tickets;
+
+        // Check tickets' end dates and remove them if expired (current datetime is more than end datetime)
+        for (const ticket of ticketList) {
+          if (ticket.endTime < useful.timeInt()) {
+            // The controller should also delete expired tickets by its own
+            this.removeTicket(nodeID, ticket.ticketID, false)
+            this.log(`Ticket ID = ${ticket.ticketID} removed from buffer of node ${nodeID}`)
+          }
+        }
+
+        // If there are tickets left
         if (ticketList.length === 0) {
           // log("No tickets pending in node ID = %d", nodeID);
           continue;
         }
+
+        // Check if at least one is not yet sent
+        let atLeastOne = false
+        for (const ticket of ticketList) {
+          if (!ticket.sent) {
+            atLeastOne = true
+            break
+          }
+        }
+        if (!atLeastOne) {
+          continue
+        }
+
         // If node is registered
-        const nodeID = ticket[0];
         const attach = this.selector.getNodeAttachByID(nodeID);
         if (!attach) {
           // log("No attachment for node ID = %d", nodeID);
           continue;
         }
         // If node is logged in
-        if (!attach.loggedToController) {
+        if (!attach.isLogged()) {
           // log("Attachment ID = %d not logged", nodeID);
           continue;
         }
         attach.addCommandForControllerBody(codes.CMD_CONFIG_GET, -1, [codes.VALUE_CAN_ACCEPT_TICKET.toString()], true, true, (available: number) => {
           if (available <= 0) {
-            this.log(`No space for ticket in node ID = ${nodeID}`);
+            // this.log(`No space for ticket in node ID = ${nodeID}`);
             return;
           }
           // log("Available %d in controller ID=%d", available, nodeID);
           let count = 0;
           for (const ticket of ticketList) {
+            if (ticket.sent) {
+              continue
+            }
+            ticket.sent = true
             attach.addCommandForControllerBody(codes.CMD_TICKET_ADD, -1, ticket.getBody(), true, true, async (rsp: number) => {
               if (rsp === codes.AIO_OK || rsp === codes.ERR_NO_CHANGE) {
-                // Remove if the ticket can be updated in the database
-                const toRemove = ticketList.indexOf(ticket);
-                if (ticketList.splice(toRemove, 1)) {
-                  this.log(`Removed ticket ID = ${ticket.ticketID} from list.`);
-                } else {
-                  this.log("Couldn't remove ticket. Maybe it was cancelled in the process?");
-                }
+
                 await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.ticketSetSent, nodeID), [ticket.ticketID]);
                 this.log(`Ticket ID = ${ticket.ticketID} ${rsp === codes.AIO_OK ? "added to" : "was already in the"} controller.`);
               } else {
-                this.log(`Couldn't add ticket ID = ${ticket.ticketID}. Error 0x${rsp.toString(16)}. Not removed.`);
+                this.log(`Couldn't add ticket ID = ${ticket.ticketID}. Error ${useful.toHex(rsp)}. Not removed.`);
               }
             });
             count++;
@@ -983,11 +1064,11 @@ export class Main {
           await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.insertCameraState, cam.nodeID), [cam.cameraID, useful.getCurrentDate(), change === Changes.TO_ACTIVE]);
           // Update instant state
           const changeBool = change === Changes.TO_ACTIVE;
-          await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.cameraSetNet, cam.nodeID),[changeBool, cam.cameraID])
+          await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.cameraSetNet, cam.nodeID), [changeBool, cam.cameraID])
           if (change === Changes.TO_ACTIVE) {
             this.log(`Reconnecting camera ${cam.cameraIP}`);
             CameraMotionManager.reconnect(cam.cameraID, cam.nodeID);
-          }else if(change === Changes.TO_INACTIVE){
+          } else if (change === Changes.TO_INACTIVE) {
             CameraMotionManager.deleteFfmpegProccess(cam.cameraID, cam.nodeID)
           }
         }
@@ -1015,14 +1096,14 @@ export class Main {
   private startDisconnectionDetection = async (selector: Selector) => {
     const nodeCopy = selector.nodeAttachments.slice();
     for (const node of nodeCopy) {
-        if (node.isDead(Main.ALIVE_TIMEOUT)) {
-          if (node.loggedToController) {
-            this.log(`Channel '${node}' ID = ${node.controllerID} is dead. Reconnecting...`);
-            BaseAttach.simpleReconnect(this.selector, node);
-            await node.insertNet(false);
-            node.printKeyCount(selector);
-          }
+      if (node.isDead(Main.ALIVE_TIMEOUT)) {
+        if (node.isLogged()) {
+          this.log(`Channel '${node}' ID = ${node.controllerID} is dead. Reconnecting...`);
+          BaseAttach.simpleReconnect(this.selector, node);
+          await node.insertNet(false);
+          node.printKeyCount(selector);
         }
+      }
     }
     let deleted = false;
     const mngrCopy = this.selector.managerConnections.slice();
@@ -1031,7 +1112,7 @@ export class Main {
         this.log("Manager keep alive timeout");
         manager.reconnect(selector);
         const mngrIndex = this.selector.managerConnections.indexOf(manager);
-        if(mngrIndex>=0){
+        if (mngrIndex >= 0) {
           this.selector.managerConnections.splice(mngrIndex, 1);
           deleted = true;
         }
@@ -1059,7 +1140,7 @@ export class Main {
     if (this.checkCamerasTimer) {
       clearInterval(this.checkCamerasTimer);
     }
-    
+
     if (this.ticketsTimer) {
       clearInterval(this.ticketsTimer);
     }
