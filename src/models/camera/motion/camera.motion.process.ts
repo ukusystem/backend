@@ -532,19 +532,17 @@ const getImageFfmpegArgs = (rtspUrl: string, ctrl_id: number): string[] => {
     throw new Error(`Error getImageFfmpegArgs | Controlador ${ctrl_id} no encontrado getControllerAndResolution`);
   }
   const {controller,resolution:{motion_snapshot}} = ctrlConfig
-  const motionSnapshotFps = 30;
-  const finalArgs : string[] = [
-    "-rtsp_transport", "tcp",
+
+  return [
+    "-rtsp_transport", "tcp", 
     "-i", `${rtspUrl}`,
-    "-r",`${motionSnapshotFps}`,
-    "-vf",`select='eq(n\,0)+not(mod(n\,10*${motionSnapshotFps}))',scale=${motion_snapshot.ancho}:${motion_snapshot.altura}`,
+    "-vf", `scale=${motion_snapshot.ancho}:${motion_snapshot.altura},select='gte(t\\,0)',fps=1/${controller.motionsnapshotinterval}`,
     "-an",
     "-t", `${controller.motionsnapshotseconds}`,
     "-c:v", "mjpeg",
     "-f", "image2pipe",
     "-"
-  ]
-  return finalArgs;
+    ];
 };
 
 const getVideoFfmpegArgs = (rtspUrl: string, outputPath: string, ctrl_id: number): string[] => {
@@ -560,9 +558,9 @@ const getVideoFfmpegArgs = (rtspUrl: string, outputPath: string, ctrl_id: number
     "-r",`${controller.motionrecordfps}`,
     "-vf",`scale=${motion_record.ancho}:${motion_record.altura}`,
     "-an",
-    "-c:v","copy",
+    "-c:v","libx264",
+    "-preset","fast",
     "-t",`${controller.motionrecordseconds}`,
-    // "pipe:1",  // Salida de FFMPEG a stdout
     `${outputPath}`,
   ];
 };

@@ -11,6 +11,7 @@ export const getFfmpegArgs = async (ctrl_id: number, ip: string, q: Calidad) => 
       }
       const {resolution,controller} = ctrlConfig
       const [rtspUrl, rtspUrlsub] = await getRstpLinksByCtrlIdAndIp(ctrl_id,ip);
+      
       let ffmpegArg : string[] = [];
       if (q === "q1") {
         ffmpegArg = [
@@ -43,10 +44,11 @@ export const getFfmpegArgs = async (ctrl_id: number, ip: string, q: Calidad) => 
         ffmpegArg = [
           "-rtsp_transport","tcp",
           "-i",rtspUrlsub,
-          "-r",`${controller.streamauxiliaryfps}`,
-          "-vf",`scale=${resolution.stream_aux.ancho}:${resolution.stream_aux.altura}`,
+          // "-r",`${controller.streamauxiliaryfps}`,
+          // "-vf",`scale=${resolution.stream_aux.ancho}:${resolution.stream_aux.altura}`,
           "-an", 
           "-c:v","copy",
+          // "-c:v", "mjpeg",
           "-f","image2pipe",
           "-",
         ];
