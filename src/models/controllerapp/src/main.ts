@@ -126,7 +126,7 @@ export class Main {
 
     /* Init messages */
 
-    this.log("████ BACKEND INIT ████");
+    this.log("█ Controller service v 0.2 █");
     this.log(`Running on ${useful.isWindows() ? "Windows" : useful.isLinux() ? "Linux" : "Unknown OS"}`);
 
     /* Events to clean up */
