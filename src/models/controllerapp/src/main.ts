@@ -29,6 +29,7 @@ import { CameraMotionManager } from "../../camera";
 import * as cp from "child_process";
 import { Encryption } from "./encryption";
 import { ControllerConnect } from "../../system";
+import { NodoCameraMapManager } from "../../maps/nodo.camera";
 
 export class Main {
   /**
@@ -1068,7 +1069,9 @@ export class Main {
           if (change === Changes.TO_ACTIVE) {
             this.log(`Reconnecting camera ${cam.cameraIP}`);
             CameraMotionManager.reconnect(cam.cameraID, cam.nodeID);
+            NodoCameraMapManager.update(cam.nodeID,cam.cameraID,{conectado:1})
           } else if (change === Changes.TO_INACTIVE) {
+            NodoCameraMapManager.update(cam.nodeID,cam.cameraID,{conectado:0})
             CameraMotionManager.deleteFfmpegProccess(cam.cameraID, cam.nodeID)
           }
         }
