@@ -242,6 +242,9 @@ export const VALUE_EJECT = 0x408 // Re-mount SD card
 export const VALUE_UNPLUGGED = 0x409 // Device not plugged in
 export const VALUE_TRUE = 0x40a
 export const VALUE_FALSE = 0x40b
+export const VALUE_OUTPUT_TYPE_ALARM = 0x40C     // Alarm type
+export const VALUE_OUTPUT_TYPE_NO_ALARM = 0x40D  // Not alarm type
+export const VALUE_OUTPUT_TYPE_FREE = 0x40E      // Free type
 
 /**
  * Command to set the initial configuration in the controller once the socket is
