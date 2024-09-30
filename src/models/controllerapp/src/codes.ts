@@ -220,6 +220,15 @@ export const VALUE_CARD_SYNC = 0x287 // Synchronize cards. Is the same as VALUE_
 export const VALUE_CARD_EMPTY_SYNC = 0x288 // Synchronize cards. Is the same as VALUE_CARD_EMPTY but this should not log
 export const VALUE_ENERGY_ENABLES = 0x289 // Get all energy modules enables
 export const VALUE_ORDER_RESULT = 0x28A   // Send the result of an order
+export const VALUE_RESOLUTION = 0x28B      // Resolution received
+export const VALUE_RESOLUTION_END = 0x28C      // End resolutions
+export const VALUE_MODE = 0x28D                // Controller mode
+export const VALUE_MODE_SECURITY = 0x28E       // Mode security
+export const VALUE_MODE_FREE = 0x28F       // Mode free
+export const VALUE_GENERAL = 0x290         // General info
+export const VALUE_SECURITY_WEB = 0x291     // Security from web
+export const VALUE_ARM_WEB = 0x292          // Security arm from web
+export const VALUE_DISARM_WEB = 0x293       // Security disarm from web
 
 export const VALUE_SOCKET_CLOSED = 0x400 // Socket was closed
 export const VALUE_AUTHORIZED = 0x401 // Card authorized
@@ -233,6 +242,9 @@ export const VALUE_EJECT = 0x408 // Re-mount SD card
 export const VALUE_UNPLUGGED = 0x409 // Device not plugged in
 export const VALUE_TRUE = 0x40a
 export const VALUE_FALSE = 0x40b
+export const VALUE_OUTPUT_TYPE_ALARM = 0x40C     // Alarm type
+export const VALUE_OUTPUT_TYPE_NO_ALARM = 0x40D  // Not alarm type
+export const VALUE_OUTPUT_TYPE_FREE = 0x40E      // Free type
 
 /**
  * Command to set the initial configuration in the controller once the socket is

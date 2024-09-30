@@ -1,12 +1,12 @@
-import { ENCRYPT_SALT, ENCRYPT_SECRET_KEY } from "../../../configs/server.configs";
 import * as crypto from "crypto";
+import { appConfig  } from "../../../configs";
 
 export class Encryption {
   private static readonly KEY_LENGTH = 32;
   private static readonly ITERATION_COUNT = 65536;
 
   private static getKey(): Buffer {
-    return crypto.pbkdf2Sync(ENCRYPT_SECRET_KEY, ENCRYPT_SALT, Encryption.ITERATION_COUNT, Encryption.KEY_LENGTH, "sha256");
+    return crypto.pbkdf2Sync(appConfig.encrypt.secret, appConfig.encrypt.salt, Encryption.ITERATION_COUNT, Encryption.KEY_LENGTH, "sha256");
   }
 
   /**
@@ -36,7 +36,7 @@ export class Encryption {
 	//   console.log(`Encrypted hex '${crypted.toString('hex')}'`)
       return crypted.toString("base64"); // +fHL53d9GKUS842X7U+hlA==
     } catch (e) {
-      console.log(`Error decrypting. ${e}`);
+      console.log(`Error encrypting. ${e}`);
     }
     return null;
   }

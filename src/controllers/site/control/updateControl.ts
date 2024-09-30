@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from "express";
 import { asyncErrorHandler } from "../../../utils/asynErrorHandler";
-import { Control } from "../../../models/site";
 
 // ========== Agregar esto
 import { PinOrder } from "../../../models/controllerapp/src/types";

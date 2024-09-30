@@ -3,6 +3,14 @@ import * as db from "../../../types/db";
 import { Row } from 'exceljs';
 
 /**
+ * 
+ */
+export interface GeneralData extends RowDataPacket{
+  nombreempresa:string
+  correoadministrador:string
+}
+
+/**
  * To load nodes from the database 
  */
 export interface Controlador2 extends db.Controlador, RowDataPacket {}

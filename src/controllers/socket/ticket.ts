@@ -1,26 +1,13 @@
 import { Server, Socket } from "socket.io";
-import { Ticket } from "../../models/ticket";
+import { TicketMap, TicketScheduleSocketObserver } from "../../models/ticketschedule";
 
 export const ticketSocket = async (io: Server, socket: Socket) => {
-  let intervalId: NodeJS.Timeout | null = null;
-  if (!intervalId) {
-    intervalId = setInterval(async () => {
-      const nspTickets = socket.nsp;
+  const nspTickets = socket.nsp;
+  const [, , ctrl_id] = nspTickets.name.split("/"); // Namespace: "/tickets/ctrl_id/"
 
-      const [, , ctrl_id] = nspTickets.name.split("/"); // Namespace: "/tickets/ctrl_id/"
-
-      const registrotickets = await Ticket.getNext7DaysByCtrlId({
-        ctrl_id: parseInt(ctrl_id, 10),
-      });
-
-      socket.emit("tickets", registrotickets);
-    }, 1000);
-  }
-
-  socket.on("disconnect", () => {
-    if (intervalId) {
-      clearInterval(intervalId);
-      intervalId = null;
-    }
-  });
+  let newObserver = new TicketScheduleSocketObserver(socket)
+  TicketMap.registerObserver(Number(ctrl_id),newObserver)
+  // emit initial data
+  let data = TicketMap.getTicket(Number(ctrl_id))
+  socket.emit("tickets", data);
 };

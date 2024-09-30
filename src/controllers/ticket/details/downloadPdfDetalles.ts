@@ -4,9 +4,9 @@ import { asyncErrorHandler } from "../../../utils/asynErrorHandler";
 import { TDocumentDefinitions, TableCell, UnorderedListElement } from "pdfmake/interfaces";
 import { Ticket } from "../../../models/ticket";
 import dayjs from 'dayjs'
-import { PORT, SERVER_IP } from "../../../configs/server.configs";
 import type { RequestWithUser } from "../../../types/requests";
 import { join } from "node:path";
+import { appConfig } from "../../../configs";
 
 // PDF fonts:
 const fonts = {
@@ -59,7 +59,7 @@ export const downloadPdfDetalles = asyncErrorHandler(
         const fotoFinal = foto ? {
               text: "Ver",
               alignment: "left",
-              link: `http://${SERVER_IP}:${PORT}/api/v1/ticket/download/fotoactividadpersonal?filePath=${encodeURIComponent(foto)}`,
+              link: `http://${appConfig.server.ip}:${appConfig.server.port}/api/v1/ticket/download/fotoactividadpersonal?filePath=${encodeURIComponent(foto)}`,
               color: "blue",
             }
           : "Sin Foto";
@@ -116,7 +116,7 @@ export const downloadPdfDetalles = asyncErrorHandler(
                 width: "*",
                 text: "Ver",
                 alignment: "right",
-                link: `http://${SERVER_IP}:${PORT}/api/v1/ticket/download/archivorespaldo?filePath=${encodeURIComponent(archivo.ruta)}`,
+                link: `http://${appConfig.server.ip}:${appConfig.server.port}/api/v1/ticket/download/archivorespaldo?filePath=${encodeURIComponent(archivo.ruta)}`,
                 color: "blue",
               },
             ],

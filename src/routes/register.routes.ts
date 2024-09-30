@@ -1,16 +1,19 @@
 import {Router} from 'express'
 import { registerController } from '../controllers/register';
+import { requestDataValidator } from '../middlewares/validator.middleware';
+import { downloadRegistersSchema, getRegistersSchema } from '../schemas/register';
 
 export const registerRoutes = Router();
 
-// Registros POST /register
-registerRoutes.post("/register",registerController.getRegisters)  // Cambiar de metodo
 
-// DownloadExcel POST /register/download/excel
-registerRoutes.post("/register/download/excel",registerController.excelDownload)
+// Registros GET /register?type=""&ctrl_id=1&start_date=""&end_date=""&cursor=""&limit="" & ...others...
+registerRoutes.get("/register",requestDataValidator({querySchema: getRegistersSchema},{hasQuery:true}),registerController.getRegistersFinal)
 
-// DownloadCSV POST /register/download/csv
-registerRoutes.post("/register/download/csv",registerController.csvDownload)
+// DownloadExcel GET /register/download/excel
+registerRoutes.get("/register/download/excel",registerController.excelDownload)
+
+// DownloadCSV GET /register/download/csv
+registerRoutes.get("/register/download/csv",requestDataValidator({querySchema: downloadRegistersSchema},{hasQuery:true}),registerController.csvDownload)
 
 // DownloadPDF POST /register/download/pdf
-registerRoutes.post("/register/download/pdf",registerController.pdfDownload)
+// registerRoutes.post("/register/download/pdf",registerController.pdfDownload)

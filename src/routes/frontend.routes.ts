@@ -14,7 +14,7 @@ const allFrontEndPaths = [
 "/logs",
 "/invitado/tickets",
 "/invitado/tickets/historial",
-"/nodos/:ctrl_id/:region/:nodo",
+"/site/:ctrl_id",
 ];
 
 frontEndRoutes.get(allFrontEndPaths, (req, res) => {

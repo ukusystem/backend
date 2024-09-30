@@ -1,17 +1,16 @@
 import { MySQL2 } from "../database/mysql";
-import { authConfigs } from "../configs/auth.configs";
 import jwt from "jsonwebtoken";
 import { RowDataPacket } from "mysql2";
 import { simpleErrorHandler } from "../utils/simpleErrorHandler";
 
 import {Contrata, Personal, Rol, Rubro, Usuario} from '../types/db'
+import { appConfig } from "../configs";
 
 interface JwtPayload {
   sub: string;
   exp: number;
   id: number;
   rol: string;
-  // Otros campos personalizados
 }
 
 export type UserInfo = Pick<Usuario,"u_id"|"usuario"|"contraseña"|"rl_id"|"fecha"|"p_id"> & Pick<Personal,"nombre"|"apellido"|"dni"|"telefono"|"correo"|"c_id"> & Pick<Contrata,"contrata"|"co_id"> & Pick<Rubro,"rubro"> & Pick<Rol,"rl_id"|"rol"|"descripcion">
@@ -44,23 +43,49 @@ export class Auth {
     "Auth.findUserById"
   );
 
-  static generateAccessJWT = simpleErrorHandler<string | undefined,string | object | Buffer>((payload) => {
+  static generateAccessToken = simpleErrorHandler<string | undefined,string | object | Buffer>((payload) => {
     return new Promise((resolve, reject) => {
       jwt.sign(
         payload,
-        authConfigs.secretKey,
-        { expiresIn: "1d" },
+        appConfig.jwt.access_token.secret,
+        { expiresIn: appConfig.jwt.access_token.expire },
         (err, token) => {
           if (err) reject(err);
           resolve(token);
         }
       );
     });
-  }, "Auth.generateAccessJWT");
+  }, "Auth.generateAccessToken");
+  
+  static generateRefreshToken = simpleErrorHandler<string | undefined,string | object | Buffer>((payload) => {
+    return new Promise((resolve, reject) => {
+      jwt.sign(
+        payload,
+        appConfig.jwt.refresh_token.secret,
+        { expiresIn: appConfig.jwt.refresh_token.expire },
+        (err, token) => {
+          if (err) reject(err);
+          resolve(token);
+        }
+      );
+    });
+  }, "Auth.generateRefreshToken");
 
   static verifyAccessToken = simpleErrorHandler<JwtPayload | null, string>((token) => {
       return new Promise((resolve, _reject) => {
-        jwt.verify(token, authConfigs.secretKey, (err, user) => {
+        jwt.verify(token, appConfig.jwt.access_token.secret, (err, user) => {
+          if (err) {
+            resolve(null);
+          }
+          resolve(user as JwtPayload);
+        });
+      });
+    },
+    "Auth.verifyAccessToken"
+  );
+  static verifyRefreshToken = simpleErrorHandler<JwtPayload | null, string>((token) => {
+      return new Promise((resolve, _reject) => {
+        jwt.verify(token, appConfig.jwt.refresh_token.secret, (err, user) => {
           if (err) {
             resolve(null);
           }

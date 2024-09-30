@@ -8,5 +8,5 @@ export const notFound = (req: Request, res: Response, next: NextFunction) => {
     errorMessage: 'No se pudo encontrar el recurso solicitado',
 };
 
-return res.json(responseData)
+return res.status(404).json(responseData)
 };

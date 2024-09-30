@@ -1,6 +1,5 @@
 import express, { Application } from "express";
 import cookieParser from "cookie-parser";
-import { PORT } from "../configs/server.configs";
 import { MySQL2 } from "../database/mysql";
 import cors from "cors";
 import { authRoutes } from "../routes/auth.routes";
@@ -12,18 +11,23 @@ import { ticketRoutes } from "../routes/ticket.routes";
 
 import { createServer } from "node:http";
 import path from "node:path";
-
 import { Sockets } from "./socket";
 import {smartMapRoutes } from "../routes/smartmap.routes";
 import { siteRoutes } from "../routes/site.routes";
-import { updateTicketPendiente } from "../utils/updateTicketPendiente";
 
-import cron from 'node-cron'
 import { vmsRoutes } from "../routes/vms.routes";
 import { frontEndRoutes } from "../routes/frontend.routes";
-import { DeteccionMovimiento } from "./camera/CameraMotion";
 import { main } from "./controllerapp/controller";
-import { SensorTemperaturaMap } from "../controllers/socket";
+import { ModuloEnergiaManager, PinEntradaManager, PinSalidaManager, RegistroAccesoMap, RegistroEntradaMap, SensorTemperaturaManager } from "../controllers/socket";
+import { ContrataMap, ControllerMapManager, EquipoAccesoMap, EquipoEntradaMap, EquipoSalidaMap, RegionMapManager, Resolution, TipoCamaraMapManager } from "./maps";
+import { dashboardRouter } from "../routes/dashboard.routes";
+import { appConfig } from "../configs";
+import { DeteccionMovimiento } from "./camera";
+import { NodoCameraMapManager } from "./maps/nodo.camera";
+import { NvrManager } from "./nvr/nvr.manager";
+
+// import { createServer as createServerHttps } from "https";
+// import fs from "fs";
 
 export class ServerApp {
   #app: Application;
@@ -32,9 +36,16 @@ export class ServerApp {
   
   constructor() {
     this.#app = express();
-    this.#port = PORT;
+    this.#port = appConfig.server.port;
     this.#httpServer = createServer(this.#app);
-    // this.conectDB();
+    // this.#httpServer = createServerHttps(
+    //   {
+    //     key: fs.readFileSync(path.resolve( __dirname, '../../crtssl/key.pem')),
+    //     cert: fs.readFileSync(path.resolve( __dirname, '../../crtssl/crt.pem')),
+    //     passphrase: "test123",
+    //   },
+    //   this.#app
+    // );
     this.middlewares();
     this.routes();
     this.listen();
@@ -55,27 +66,24 @@ export class ServerApp {
     await MySQL2.create()
   }
 
-
-
   middlewares() {
-
     //Cors
     this.#app.use(
       cors({
         credentials: true,
-        origin: ["http://localhost:5173","http://localhost:5174", "http://172.16.4.53:3005","http://172.16.4.53:3000","http://172.16.4.3:3000"],
+        origin: ["http://localhost:5173","http://localhost:5174"],
       })
     );
     this.#app.use(express.urlencoded({ extended: false }));
     // Desplegar el directorio público
     this.#app.use( express.static( path.resolve( __dirname, '../../public' )));
     this.#app.use( express.static( path.resolve( __dirname, '../../' ) ) );
+    this.#app.use( express.static( path.resolve( __dirname, '../../nvr' ) ) );
 
     // Parsear y transformar el req.body en json
     this.#app.use(express.json({limit:"10mb"}));
     // Parsear cookies
     this.#app.use(cookieParser());
-    // this.#app.use(express.raw({limit:"50MB"}))
   }
 
   routes() {
@@ -85,6 +93,8 @@ export class ServerApp {
     this.#app.use("/api/v1", initRoutes)
     // Camera
     this.#app.use("/api/v1", cameraRoutes)
+    // Dashboard:
+    this.#app.use("/api/v1",dashboardRouter)
     // Register
     this.#app.use("/api/v1", registerRoutes)
     // Ticket
@@ -107,7 +117,6 @@ export class ServerApp {
   }
 
   async motion() {
-    // testMotion()
     try {
       await DeteccionMovimiento()
     } catch (error) {
@@ -122,19 +131,39 @@ export class ServerApp {
 
   async initmaps(){
     try {
-      await SensorTemperaturaMap.init()
+      // inicializar maps generales primero:
+      await ContrataMap.init() // inicializar antes que RegistroAccesoMap
+      await EquipoAccesoMap.init()
+      await EquipoEntradaMap.init()
+      await EquipoSalidaMap.init()
+
+      await Resolution.init()
+      await RegionMapManager.init();
+      await ControllerMapManager.init();
+
+      await SensorTemperaturaManager.init()
+      await ModuloEnergiaManager.init()
+      await PinSalidaManager.init()
+      await PinEntradaManager.init()
+      await RegistroAccesoMap.init()
+      await RegistroEntradaMap.init()
+
+      await TipoCamaraMapManager.init()
+      await NodoCameraMapManager.init();
+
     } catch (error) {
       console.log("Server Model | Error init maps")
       console.log(error)
+      throw error
     }
   }
 
-  ticketNoAtendidoTest(){
-    // setInterval(updateTicketPendiente,60000);
-    cron.schedule('1 * * * * *', () => {
-      // console.log('running a task every minute + 1s');
-      updateTicketPendiente()
-    });
+  async startNvrMode(){
+    try {
+      await NvrManager.init() // inicializar despues de NodoCameraMapManager
+    } catch (error) {
+      throw error
+    }
   }
 
   runController(){

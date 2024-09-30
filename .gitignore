@@ -1,10 +1,20 @@
 node_modules
-logs
-photos
+crtssl
+build
 deteccionmovimiento
+nvr
+archivos
 package-lock.json
 .env
 git-extras
+
+logs
+# Include only the default worker's photo
+photos/*
+!photos/registered
+photos/registered/*
+!photos/registered/foto1.png
+
 
 dist
 dist-ssr

@@ -1,9 +1,8 @@
 import nodemailer from "nodemailer";
 import { google } from "googleapis";
-import { credentials, tokens } from "../configs/auth.configs";
+import { appConfig } from "../configs";
 
-const { client_id, client_secret, redirect_uris } = credentials.installed;
-const { refresh_token } = tokens;
+const {client_id,client_secret,redirect_uris,refresh_token} = appConfig.email
 
 const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris);
 

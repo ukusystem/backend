@@ -1,15 +1,15 @@
 export class CameraForFront {
-  readonly cameraIP: string|null;
-  readonly cameraID: number;
-  readonly controllerID: number;
-  readonly user: string|null;
-  password: string | null;
+  readonly ip: string|null;
+  readonly cmr_id: number;
+  readonly ctrl_id: number;
+  readonly usuario: string|null;
+  contraseña: string | null;
 
-  constructor(cameraID: number, controllerID: number, cameraIP: string|null = null, user: string|null = null, password: string | null = null) {
-    this.cameraID = cameraID;
-    this.cameraIP = cameraIP;
-    this.controllerID = controllerID;
-    this.user = user;
-    this.password = password;
+  constructor(cmr_id: number, ctrl_id: number, ip: string|null = null, usuario: string|null = null, contraseña: string | null = null) {
+    this.cmr_id = cmr_id;
+    this.ip = ip;
+    this.ctrl_id = ctrl_id;
+    this.usuario = usuario;
+    this.contraseña = contraseña;
   }
 }

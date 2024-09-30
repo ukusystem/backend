@@ -1,7 +1,7 @@
 import { z } from "zod";
-// "/site/sensortemperatura/registros/:xctrl_id/:xst_id/:xdate"
+
 export const getRegistroTemperaturaSchema = z.object({
-    xctrl_id: z.coerce.number({required_error: "El controlador ID es requerido",invalid_type_error: "El controlador ID debe ser un numero",}).int("El controlador ID debe ser un numero entero").gte(0, "El controlador ID debe ser mayor o igual a 0"),
-    xst_id: z.coerce.number({required_error: "El sensor temperatura ID es requerido",invalid_type_error: "El sensor temperatura ID debe ser un numero",}).int("El sensor temperatura ID debe ser un numero entero").gte(0, "El sensor temperatura ID debe ser mayor o igual a 0"),
-    xdate: z.coerce.date({required_error:"Fecha es requerido", invalid_type_error:"No es un tipo fecha"})
+    ctrl_id: z.union([z.string(), z.number()],{errorMap: ()=>{return {message: "'ctrl_id' es requerido"}}}).pipe(z.coerce.number({required_error: "'ctrl_id' es requerido",invalid_type_error: "'ctrl_id' debe ser un numero"}).int("'ctrl_id' debe ser un numero entero").gte(0, "'ctrl_id' debe ser mayor o igual a 0")),
+    st_id: z.union([z.string(), z.number()],{errorMap: ()=>{return {message: "'st_id' es requerido"}}}).pipe(z.coerce.number({required_error: "'st_id' es requerido",invalid_type_error: "'st_id' debe ser un numero"}).int("'st_id' debe ser un numero entero").gte(0, "'st_id' debe ser mayor o igual a 0")),
+    date: z.string({required_error:"'date' es requerido",invalid_type_error:"'date' debe ser un string"}).regex(/^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[1-2][0-9]|3[0-1])$/g,"'date' es incorrecto."), 
 });

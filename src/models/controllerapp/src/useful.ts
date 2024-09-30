@@ -1,12 +1,13 @@
 import { AtomicNumber } from "./atomicNumber";
 import { BaseAttach } from "./baseAttach";
 import fs from "fs/promises";
+import fsNormal from "fs";
 import crypto from "crypto";
 import bcrypt from "bcrypt";
 import dayjs from "dayjs";
 import path from "path";
 import * as codes from "./codes";
-
+// import process from 'node:process'
 const BCRYPT_STRENGTH = 12;
 const MAX_FILE_SIZE_B = 5 * 1000 * 1000;
 const PHOTO_BASE_NAME = "foto";
@@ -16,7 +17,7 @@ const DATE_FORMAT = "YYYY-MM-DD HH:mm:ss";
 const YEAR_FORMAT = "YYYY";
 const MONTH_FORMAT = "MM";
 
-export const DUMMY_DATE = "2000-01-01 00:00:00";
+// export const DUMMY_DATE = "2000-01-01 00:00:00";
 
 const PHOTOS_RELATIVE_PATH = "photos";
 const REGISTERED_RELATIVE_PATH = "registered";
@@ -38,6 +39,7 @@ export function isWindows(): boolean {
     osName = process.platform;
   }
   return osName === "win32";
+  // return true
 }
 
 /**
@@ -51,17 +53,21 @@ export function isLinux(): boolean {
   return osName === "linux";
 }
 
+export function toHex(number:number):string{
+  return "0x"+number.toString(16);
+}
+
 /**
  * Parse the date time.
  *
  * @param date The date in a specific format.
- * @returns The equivalent date in milliseconds, or `-1` if an error occurred.
+ * @returns The equivalent date in seconds, or `-1` if an error occurred.
  * @see {@linkcode DATE_FORMAT}
  */
 export function datetimeToLong(date: string) {
   const curDate = new Date(date);
   if (!isNaN(curDate.getTime())) {
-    return curDate.getTime();
+    return curDate.getTime()/1000;
   }
   return -1;
 }
@@ -116,6 +122,9 @@ async function writeFileFromBase64(base64: string, filePath: string, byteSize: A
     const temp = Buffer.from(base64, "base64");
     if (temp.length <= MAX_FILE_SIZE_B) {
       const parent = path.dirname(filePath);
+      if (!fsNormal.existsSync(parent)) {
+        fsNormal.mkdirSync(parent, { recursive: true });
+      }
       // await fs.mkdir(parent,{recursive:true})
       // console.log('Directories created')
       await fs.writeFile(filePath, temp);

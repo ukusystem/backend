@@ -7,6 +7,7 @@ import { Camara } from "../types/db";
 import { decrypt } from "./decrypt";
 import { CustomError } from "./CustomError";
 import { RowDataPacket } from "mysql2";
+import { NodoCameraMapManager } from "../models/maps/nodo.camera";
 interface CamaraData extends Camara, RowDataPacket {}
 
 export function addCredentialToRtsp(rtspLink : string, username: string, password: string) {
@@ -45,7 +46,7 @@ export const getRstpLinksByCtrlIdAndIp = async (ctrl_id: number, ip: string ) : 
           timeout: 5000,
           // preserveAddress: true,
         },
-        async function (err) {
+        async function (err:any) {
           if (err) {
             const errCamConnect = new CustomError(`Error al intentar establecer conexión con la cámara ${ip}`, 500,"Onvif Camera Connection")
             return reject(errCamConnect)
@@ -97,61 +98,92 @@ export const getRstpLinksByCtrlIdAndIp = async (ctrl_id: number, ip: string ) : 
               throw errorRtspUrl;
             }
             const mulRstp = await getMulticastRtspStreamAndSubStream(onvifRtspUrl,usuario,contraseñaDecrypt,manufacturer)
-            // if (manufacturer == "HIKVISION") {
-            //   // Eliminar "?transportmode=unicast&profile=Profile_1" de rtsp://<ip>/Streaming/Channels/101?transportmode=unicast&profile=Profile_1
-            //   let rtspMain = onvifRtspUrl.split("?")[0];
-            //   // console.log(rtspMain)
 
-            //   // Cambiar 101 --> 102
-            //   // let rtspSub= cambiarUltimoNumero(rtspMain)
-            //   let rtspSub = rtspMain.replace(/1(?=[^1]*$)/, "2");
-            //   // console.log(rtspSub)
+            resolve(mulRstp);
+          } catch (error) {
+            reject(error);
+          }
+        }
+      );
+    });
 
-            //   // Agregar credenciales al main rtsp
-            //   let rtspMainWihtCredentials = addCredentialToRtsp(
-            //     rtspMain,
-            //     usuario,
-            //     contraseñaDecrypt
-            //   );
-            //   rtspURL.push(rtspMainWihtCredentials);
-            //   // console.log(rtspMainWihtCredentials)
+};
+export const getRstpLinksByCtrlIdAndCmrId = async (ctrl_id: number, cmr_id: number ) : Promise<string[]> => {
 
-            //   // Agregar credenciales al sub rstp
-            //   let rtspSubWithCredentials = addCredentialToRtsp(
-            //     rtspSub,
-            //     usuario,
-            //     contraseñaDecrypt
-            //   );
-            //   rtspURL.push(rtspSubWithCredentials);
-            //   // console.log(rtspSubWithCredentials)
-            // }
+  // const camara = await MySQL2.executeQuery<CamaraData[]>({sql:`SELECT * FROM ${"nodo" + ctrl_id}.camara WHERE ip = ? `, values:[ip] })
+  // obtener camara:
+  const camara = NodoCameraMapManager.getCamera(ctrl_id,cmr_id);
+  
 
-            // if (manufacturer == "Dahua") {
-            //   // Eliminar "&unicast=true&proto=Onvif" de "rtsp://<ip>/cam/realmonitor?channel=1&subtype=0&unicast=true&proto=Onvif"
-            //   let rtspMain = onvifRtspUrl.replace(
-            //     /&unicast=true&proto=Onvif/,
-            //     ""
-            //   );
+  return new Promise((resolve, reject) => {
+  
+      if(camara === undefined){
+        const errorCamData = new Error(`Camara cmr_id: ${cmr_id} no se encuentra en NodoCameraMapManager.`)
+        return reject(errorCamData)
+      }
+      const { usuario, contraseña,ip} = camara;
 
-            //   //Cambiar 0 --> 1
-            //   let rtspSub = rtspMain.replace(/0(?=[^0]*$)/, "1");
+      const contraseñaDecrypt = decrypt(contraseña)
 
-            //   // Agregar credenciales al main rtsp
-            //   let rtspMainWihtCredentials = addCredentialToRtsp(
-            //     rtspMain,
-            //     usuario,
-            //     contraseñaDecrypt
-            //   );
-            //   rtspURL.push(rtspMainWihtCredentials);
+      new Cam(
+        {
+          hostname: ip,
+          username: usuario,
+          password: contraseñaDecrypt,
+          timeout: 5000,
+        },
+        async function (err:any) {
+          if (err) {
+            const errCamConnect = new CustomError(`Error al intentar establecer conexión con la cámara ${ip}`, 500,"Onvif Camera Connection")
+            return reject(errCamConnect)
+          }
+          // console.log("Connected to ONVIF Device");
+          const cam_obj = this;
 
-            //   // Agregar credenciales al sub rstp
-            //   let rtspSubWithCredentials = addCredentialToRtsp(
-            //     rtspSub,
-            //     usuario,
-            //     contraseñaDecrypt
-            //   );
-            //   rtspURL.push(rtspSubWithCredentials);
-            // }
+          function getStreamUriPromise() {
+            return new Promise<any>((resolve, reject) => {
+              cam_obj.getStreamUri(
+                { protocol: "RTSP" },
+                function (err: any, stream: any) {
+                  if (err) {
+                    const errGetStreamUri = new CustomError("Se produjo un error al intentar obtener el StreamUri RTSP ", 500,"Onvif Stream URI")
+                    return reject(errGetStreamUri)
+                  } else {
+                    resolve(stream.uri);
+                  }
+                }
+              );
+            });
+          }
+
+          function getDeviceInformationPromise() {
+            return new Promise<any>((resolve, reject) => {
+              cam_obj.getDeviceInformation((err:any, info: any, xml: any) => {
+                if (err) {
+                  const errGetDiveceInformation = new CustomError("Se produjo un error al intentar informacion del dispositivo ", 500, "Onvif Divice Information")
+                  return reject(errGetDiveceInformation)
+                } else {
+                  resolve(info);
+                }
+              });
+            });
+          }
+
+          try {
+            const info = await getDeviceInformationPromise();
+            const manufacturer = info.manufacturer;
+            if (manufacturer !== "Dahua" && manufacturer !== "HIKVISION") {
+              const errorManufacturer = new Error("Marca de camara no soportada");
+              throw errorManufacturer;
+            }
+
+            // Get RTSP:
+            const onvifRtspUrl = await getStreamUriPromise();
+            if (!onvifRtspUrl) {
+              const errorRtspUrl = new Error("Error al obtener link rtsp");
+              throw errorRtspUrl;
+            }
+            const mulRstp = await getMulticastRtspStreamAndSubStream(onvifRtspUrl,usuario,contraseñaDecrypt,manufacturer)
 
             resolve(mulRstp);
           } catch (error) {
@@ -206,7 +238,7 @@ export function getMulticastRtspStreamAndSubStream(rtspUriOnvif: string, usernam
       // Agregar credenciales al sub rstp
       let rtspSubWithCredentials = addCredentialToRtsp(rtspSub, username, password);
       result.push(rtspSubWithCredentials);
-
+      
       return resolve(result)
     }
 

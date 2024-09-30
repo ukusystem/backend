@@ -13,12 +13,12 @@ import * as queries from "./queries";
  * @return The complete list of tuples
  */
 export function addPasswordTuple(parseList: IntTuple[]): IntTuple[] {
-	const newList:IntTuple[] = []
-	for(const item of parseList){
+	const newList: IntTuple[] = []
+	for (const item of parseList) {
 		newList.push(item)
 	}
 	newList.push(queries.tuplePassword)
-  return newList;
+	return newList;
 }
 
 export const DEFAULT_DATE = "2000-01-01 00:00:00";
@@ -47,7 +47,7 @@ export const idParse = [tupleID];
 export const pinStateParse = [tupleID, tupleInt];
 export const enablesParse = [tupleInt, tupleBig, tupleInt, tupleBig, tupleInt, tupleBig, tupleInt, tupleBig, tupleBig, tupleBig];
 
-export const pinParse = [tupleInt, tupleInt, tupleLong];
+export const pinParse = [tupleInt, tupleInt, tupleLong, tupleInt];
 export const cardReadParse = [tupleInt, tupleBig, tupleInt, tupleInt, tupleInt, tupleLong];
 export const powerParse = [tupleLong, tupleID, tupleFloat, tupleFloat, tupleFloat, tupleFloat, tupleFloat, tupleFloat];
 export const orderParse = [tupleInt, tupleInt, tupleLong]
@@ -58,19 +58,75 @@ export const createDatabase = `
 				CREATE DATABASE IF NOT EXISTS %s
 			`;
 
+/* Create tables. These scripts are the output of 'SHOW CREATE TABLE nodo.%s' with format specifiers. */
+
 /**
- * This script is the output of 'SHOW CREATE TABLE nodo.registrotemperatura' with format specifiers.	
+ * @deprecated
  */
 export const createTemperatureTable = `
 				CREATE TABLE IF NOT EXISTS %s.registrotemperatura%s (
-					rtmp_id bigint NOT NULL AUTO_INCREMENT,
-					st_id int NOT NULL,
-					valor float NOT NULL,
-					fecha timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-					PRIMARY KEY (rtmp_id),
-					KEY fk_sensortemperatura_idx (st_id),
-					CONSTRAINT fk_sentemp%s FOREIGN KEY (st_id) REFERENCES %s.sensortemperatura (st_id)
-				) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+	rtmp_id bigint NOT NULL AUTO_INCREMENT,
+	st_id int NOT NULL,
+	valor float NOT NULL,
+	fecha timestamp NOT NULL,
+   PRIMARY KEY (rtmp_id),
+   KEY fk_registrotemperatura_sensortemperatura_st_id_idx (st_id),
+   CONSTRAINT fk_registrotemperatura_sensortemperatura_st_id%s FOREIGN KEY (st_id) REFERENCES %s.sensortemperatura (st_id)
+ ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb3;
+  
+			`;
+
+/**
+ * @deprecated
+ */
+export const createEnergyTable = `
+				CREATE TABLE IF NOT EXISTS %s.registroenergia%s (
+		re_id bigint NOT NULL AUTO_INCREMENT,
+		me_id int NOT NULL,
+		voltaje float NOT NULL,
+		amperaje float NOT NULL,
+		fdp float NOT NULL,
+		frecuencia float unsigned NOT NULL,
+		potenciaw float NOT NULL,
+		potenciakwh double unsigned NOT NULL,
+		fecha timestamp NOT NULL,
+   PRIMARY KEY (re_id),
+   KEY fk_registroenergia_medidorenergia_me_id_idx (me_id),
+   CONSTRAINT fk_registroenergia_medidorenergia_me_id%s FOREIGN KEY (me_id) REFERENCES %s.medidorenergia (me_id)
+ ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb3;
+			`;
+
+/**
+ * @deprecated
+ */
+export const createInputRegistreTable = `
+				CREATE TABLE IF NOT EXISTS %s.registroentrada%s (
+   rentd_id bigint NOT NULL AUTO_INCREMENT,
+   pin tinyint NOT NULL,
+   estado tinyint NOT NULL,
+   fecha timestamp NOT NULL,
+   ee_id int NOT NULL,
+   PRIMARY KEY (rentd_id),
+   KEY fk_registroentrada_equipoentrada_ee_id_idx (ee_id),
+   CONSTRAINT fk_registroentrada_equipoentrada_ee_id%s FOREIGN KEY (ee_id) REFERENCES general.equipoentrada (ee_id) ON DELETE RESTRICT ON UPDATE RESTRICT
+ ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb3;
+			`;
+
+/**
+ * @deprecated
+ */
+export const createOutputRegistreTable = `
+CREATE TABLE IF NOT EXISTS %s.registrosalida%s (
+   rs_id bigint NOT NULL AUTO_INCREMENT,
+   pin tinyint NOT NULL,
+   estado tinyint NOT NULL,
+   fecha timestamp NOT NULL,
+   es_id int NOT NULL,
+   alarma tinyint NOT NULL,
+   PRIMARY KEY (rs_id),
+   KEY fk_registrosalida_equiopsalida_es_id_idx (es_id),
+   CONSTRAINT fk_registrosalida_equiopsalida_es_id%s FOREIGN KEY (es_id) REFERENCES general.equiposalida (es_id) ON DELETE RESTRICT ON UPDATE RESTRICT
+ ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb3;
 			`;
 
 /* Events */
@@ -125,7 +181,7 @@ export const insertCard = `
 export const getCardInfo = `
 				SELECT co_id, ea_id
 				FROM general.acceso
-				WHERE a_id =?;
+				WHERE a_id =? AND activo=1;
 			`;
 
 export const insertCtrlState = `
@@ -135,7 +191,7 @@ export const insertCtrlState = `
 			`;
 
 export const insertNet = `
-				INSERT INTO general.registrored ( co_id, fecha, estado )
+				INSERT INTO general.registrored ( ctrl_id, fecha, estado )
 				VALUE (?, ?, ?);
 			`;
 
@@ -145,20 +201,26 @@ export const securityUpdate = `
 				WHERE ctrl_id=?;
 			`;
 
+export const modeUpdate = `
+			UPDATE general.controlador
+			SET modo=?
+			WHERE ctrl_id=?;
+		`;
+
 export const insertSecurity = `
 				INSERT INTO %s.registroseguridad ( estado, fecha) VALUE (?, ?);
 			`;
 
 export const insertTemperature = `
-				INSERT INTO %s.registrotemperatura%s (st_id, valor, fecha)
+				INSERT INTO %s.registrotemperatura (st_id, valor, fecha)
 				VALUES (?, ?, ?);
 			`;
 
-export const setCurrentTemperature = `
-				UPDATE %s.sensortemperatura
-				SET actual=?
-				WHERE st_id = ?;
-			`;
+// export const setCurrentTemperature = `
+// 				UPDATE %s.sensortemperatura
+// 				SET actual=?
+// 				WHERE st_id = ?;
+// 			`;
 
 export const insertInputChanged = `
 				INSERT INTO %s.registroentrada (pin, estado, fecha, ee_id)
@@ -166,8 +228,8 @@ export const insertInputChanged = `
 			`;
 
 export const insertOutputChanged = `
-				INSERT INTO %s.registrosalida (pin, estado, fecha, es_id)
-				VALUES (?, ?, ?, (SELECT es_id FROM %s.pinessalida WHERE pin=?));
+				INSERT INTO %s.registrosalida (pin, estado, fecha, es_id, alarma)
+				VALUES (?, ?, ?, (SELECT es_id FROM %s.pinessalida WHERE pin=?), ?);
 			`;
 
 export const updateInputState = `
@@ -206,6 +268,21 @@ export const insertCameraState = `
 
 /* Tickets and requests */
 
+/**
+ * rt_id, telefono, correo, descripcion, fechacomienzo, fechatermino, estd_id, fechaestadofinal, fechacreacion, 
+ * prioridad, p_id, tt_id, sn_id, enviado, co_id, asistencia
+ */
+export const selectUnattendedTicket = `
+				SELECT rt_id AS entero FROM %s.registroticket
+				WHERE co_id = ? AND fechacomienzo < ? AND fechatermino > ? AND enviado = 1 AND asistencia = 0;
+			`;
+
+export const updateAttendance = `
+				UPDATE %s.registroticket
+				SET asistencia = 1
+				WHERE rt_id = ?;
+				`;
+
 export const insertRequest = `
 				INSERT INTO %s.registropeticion ( pin, orden, fecha, estd_id)
 				VALUE (?, ?, ?, ?);
@@ -215,11 +292,11 @@ export const insertTicket = `
 				INSERT INTO %s.registroticket
 				(telefono, correo, descripcion, fechacomienzo, fechatermino,
 				estd_id, fechacreacion, prioridad, p_id, tt_id,
-				sn_id, co_id, enviado)
+				sn_id, co_id, enviado, asistencia)
 				VALUE
 				(?, ?, ?, ?, ?,
 				?, ?, ?, ?,	?,
-				?, ?, 0 );
+				?, ?, 0 , 0);
 			`;
 
 export const getCompanyID = `
@@ -243,17 +320,21 @@ export const insertWorker = `
 				INSERT INTO %s.actividadpersonal (nombre, apellido, telefono, dni, c_id, co_id, rt_id, foto)
 				VALUE (?, ?, ?, ?, ?, ?, ?, ?);
 			`;
-
+			
+/**
+ * Removed:
+ * WHERE enviado=0
+ * So new controllers can be updated with valid tickets
+ */
 export const ticketSelectAccepted = `
 				SELECT rt_id, co_id, fechacomienzo, fechatermino
 				FROM %s.registroticket
-				WHERE enviado=0
-				AND fechatermino > now()
+				WHERE fechatermino > now()
 				AND estd_id = (
 					SELECT estd_id
 					FROM general.estado
 					WHERE estado='Aceptado'
-				);
+				) ORDER BY fechacomienzo ASC;
 			`;
 
 export const ticketSelectOne = `
@@ -357,20 +438,42 @@ export const nodeGetForUpdate = `
 				WHERE ctrl_id=? AND activo=1;
 			`;
 
-export const nodeUpdateTrivial = `
-				UPDATE general.controlador
-				SET nodo=?, rgn_id=?, direccion=?, descripcion=?,
-					latitud=?, longitud=?, serie=?,
-					personalgestion=?,
-					personalimplementador=?
-				WHERE ctrl_id=?;
-			`;
+// export const nodeSelect = `
+// 				SELECT ctrl_id, nodo, rgn_id, direccion, descripcion,
+// 					latitud, longitud, usuario, serie,
+// 					ip, mascara, puertaenlace, puerto, personalgestion,
+// 					personalimplementador, seguridad
+// 				FROM general.controlador
+// 				WHERE activo=1;
+// 			`;
+
+/**
+ * ctrl_id, nodo, rgn_id, direccion, descripcion, 
+ * latitud, longitud, usuario, serie, 
+ * ip, mascara, puertaenlace, puerto, personalgestion, 
+ * personalimplementador, seguridad, 
+ * 
+ * motionrecordseconds, res_id_motionrecord, motionrecordfps, 
+ * motionsnapshotseconds, res_id_motionsnapshot, motionsnapshotinterval, 
+ * res_id_streamprimary, streamprimaryfps, 
+ * res_id_streamsecondary, streamsecondaryfps, 
+ * res_id_streamauxiliary, streamauxiliaryfps,
+ * modo, 
+ */
 
 export const nodeSelect = `
 				SELECT ctrl_id, nodo, rgn_id, direccion, descripcion,
 					latitud, longitud, usuario, serie,
 					ip, mascara, puertaenlace, puerto, personalgestion,
-					personalimplementador, seguridad
+					personalimplementador, seguridad,
+					
+					motionrecordseconds, res_id_motionrecord, motionrecordfps, 
+					motionsnapshotseconds, res_id_motionsnapshot, motionsnapshotinterval, 
+					res_id_streamprimary, streamprimaryfps, 
+					res_id_streamsecondary, streamsecondaryfps, 
+					res_id_streamauxiliary, streamauxiliaryfps,
+					modo
+
 				FROM general.controlador
 				WHERE activo=1;
 			`;
@@ -383,7 +486,14 @@ export const nodeUpdate = `
 				SET nodo=?, rgn_id=?, direccion=?, descripcion=?,
 					latitud=?, longitud=?, usuario=?, serie=?,
 					ip=?, mascara=?, puertaenlace=?, puerto=?, personalgestion=?,
-					personalimplementador=?
+					personalimplementador=?,
+
+					motionrecordseconds=?, res_id_motionrecord=?, motionrecordfps=?, 
+					motionsnapshotseconds=?, res_id_motionsnapshot=?, motionsnapshotinterval=?, 
+					res_id_streamprimary=?, streamprimaryfps=?, 
+					res_id_streamsecondary=?, streamsecondaryfps=?, 
+					res_id_streamauxiliary=?, streamauxiliaryfps=?
+
 				WHERE ctrl_id=?;
 			`;
 
@@ -396,21 +506,59 @@ export const nodeUpdatePwd = `
 				SET nodo=?, rgn_id=?, direccion=?, descripcion=?,
 					latitud=?, longitud=?, usuario=?, serie=?,
 					ip=?, mascara=?, puertaenlace=?, puerto=?, personalgestion=?,
-					personalimplementador=?, contraseña=?
+					personalimplementador=?, 
+
+					motionrecordseconds=?, res_id_motionrecord=?, motionrecordfps=?, 
+					motionsnapshotseconds=?, res_id_motionsnapshot=?, motionsnapshotinterval=?, 
+					res_id_streamprimary=?, streamprimaryfps=?, 
+					res_id_streamsecondary=?, streamsecondaryfps=?, 
+					res_id_streamauxiliary=?, streamauxiliaryfps=?,
+
+					contraseña=?
 				WHERE ctrl_id=?;
 			`;
+
+export const nodeUpdateTrivial = `
+			UPDATE general.controlador
+			SET nodo=?, rgn_id=?, direccion=?, descripcion=?,
+				latitud=?, longitud=?, serie=?,
+				personalgestion=?,
+				personalimplementador=?,
+
+				motionrecordseconds=?, res_id_motionrecord=?, motionrecordfps=?, 
+				motionsnapshotseconds=?, res_id_motionsnapshot=?, motionsnapshotinterval=?, 
+				res_id_streamprimary=?, streamprimaryfps=?, 
+				res_id_streamsecondary=?, streamsecondaryfps=?, 
+				res_id_streamauxiliary=?, streamauxiliaryfps=?
+			WHERE ctrl_id=?;
+		`;
+
 
 export const nodeInsert = `
 				INSERT INTO general.controlador (
 					ctrl_id, nodo, rgn_id, direccion, descripcion, latitud, longitud,
 					usuario, serie, ip, mascara, puertaenlace, puerto, personalgestion,
-					personalimplementador, contraseña,
-					seguridad, conectado, activo)
+					personalimplementador,
+
+					motionrecordseconds, res_id_motionrecord, motionrecordfps, 
+					motionsnapshotseconds, res_id_motionsnapshot, motionsnapshotinterval, 
+					res_id_streamprimary, streamprimaryfps, 
+					res_id_streamsecondary, streamsecondaryfps, 
+					res_id_streamauxiliary, streamauxiliaryfps,
+
+					contraseña, modo, seguridad, conectado, activo)
 				VALUE (
 					?, ?, ?, ?, ?, ?, ?,
 					?, ?, ?, ?, ?, ?, ?,
+					?,
+
+					?, ?, ?,
+					?, ?, ?,
 					?, ?,
-					0, 0, 1)
+					?, ?,
+					?, ?,
+
+					?, 0, 0, 0, 1)
 			`;
 
 export const nodeDisable = `
@@ -419,7 +567,7 @@ export const nodeDisable = `
 				WHERE ctrl_id=?;
 			`;
 
-export const indexForTrivial = [0, 1, 2, 3, 4, 5, 6, 8, 13, 14];
+export const indexForTrivial = [0, 1, 2, 3, 4, 5, 6, 8, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26];
 
 export const nodeSelectID = `
 				SELECT ctrl_id AS entero FROM general.controlador
@@ -429,7 +577,19 @@ export const nodeSelectID = `
 /**
  * Tuples to parse the node data without a password.
  */
-export const nodeParse = [tupleID, tupleTxt, tupleID, tupleTxt, tupleTxt, tupleTxt, tupleTxt, tupleTxt, tupleTxt, tupleTxt, tupleTxt, tupleTxt, tupleInt, tupleTxt, tupleTxt];
+export const nodeParse = [
+	tupleID,
+	tupleTxt, tupleID, tupleTxt, tupleTxt,
+	tupleTxt, tupleTxt, tupleTxt, tupleTxt,
+	tupleTxt, tupleTxt, tupleTxt, tupleInt, tupleTxt,
+	tupleTxt,
+	tupleInt, tupleID, tupleInt,
+	tupleInt, tupleID, tupleInt,
+	tupleID, tupleInt,
+	tupleID, tupleInt,
+	tupleID, tupleInt
+	// tupleInt
+];
 
 /**
  * Tuples to parse the node data expecting a password as the last item.
@@ -573,7 +733,7 @@ export const cardSelectForController = `
 /* Energy */
 
 export const energySelect = `
-			SELECT me_id, serie, descripcion
+			SELECT me_id, descripcion
 			FROM %s.medidorenergia;
 			`;
 
@@ -617,6 +777,10 @@ export const cameraTypeSelect = `
 
 export const camBrandSelect = `
 				SELECT m_id, marca FROM general.marca;
+			`;
+
+export const selectResolutions = `
+				SELECT res_id, nombre FROM general.resolucion;
 			`;
 
 /* Input pins */
@@ -698,6 +862,12 @@ export const cameraDisable = `
 				WHERE cmr_id=?;
 			`;
 
+export const cameraSetNet = `
+				UPDATE %s.camara
+				SET conectado=?
+				WHERE cmr_id=?;
+			`;
+
 /**
  * Tuples to parse the camera data without password.
  */
@@ -747,19 +917,35 @@ export const cardReaderParse = [tupleInt, tupleTxt];
  * further processing and no node dependent.
  */
 export const tableTuples = [
-  new TableTuple(Codes.VALUE_GROUP, Codes.VALUE_GROUPS_END, queries.regionSelect, "region", false),
-  new TableTuple(Codes.VALUE_USER, Codes.VALUE_USER_END, queries.userSelect, "usuario", false),
-  new TableTuple(Codes.VALUE_COMPANY, Codes.VALUE_COMPANY_END, queries.companySelect, "contrata", false),
+	new TableTuple(Codes.VALUE_GROUP, Codes.VALUE_GROUPS_END, queries.regionSelect, "region", false),
+	new TableTuple(Codes.VALUE_USER, Codes.VALUE_USER_END, queries.userSelect, "usuario", false),
+	new TableTuple(Codes.VALUE_COMPANY, Codes.VALUE_COMPANY_END, queries.companySelect, "contrata", false),
 
-  new TableTuple(Codes.VALUE_ACCESS_TYPE, Codes.VALUE_ACCESS_TYPE_END, queries.accessSelect, "equipoacceso", false),
-  new TableTuple(Codes.VALUE_SECTOR, Codes.VALUE_SECTOR_END, queries.sectorSelect, "rubro", false),
-  new TableTuple(Codes.VALUE_ROLE, Codes.VALUE_ROLE_END, queries.roleSelect, "rol", false),
-  new TableTuple(Codes.VALUE_POST, Codes.VALUE_POST_END, queries.postSelect, "cargo", false),
+	new TableTuple(Codes.VALUE_ACCESS_TYPE, Codes.VALUE_ACCESS_TYPE_END, queries.accessSelect, "equipoacceso", false),
+	new TableTuple(Codes.VALUE_SECTOR, Codes.VALUE_SECTOR_END, queries.sectorSelect, "rubro", false),
+	new TableTuple(Codes.VALUE_ROLE, Codes.VALUE_ROLE_END, queries.roleSelect, "rol", false),
+	new TableTuple(Codes.VALUE_POST, Codes.VALUE_POST_END, queries.postSelect, "cargo", false),
 
-  new TableTuple(Codes.VALUE_CARD, Codes.VALUE_CARD_END, queries.cardSelect, "acceso", false),
+	new TableTuple(Codes.VALUE_CARD, Codes.VALUE_CARD_END, queries.cardSelect, "acceso", false),
 
-  new TableTuple(Codes.VALUE_DETECTOR, Codes.VALUE_DETECTOR_END, queries.detectorSelect, "equipoentrada", false),
-  new TableTuple(Codes.VALUE_ACTUATOR, Codes.VALUE_ACTUATOR_END, queries.actuatorSelect, "equiposalida", false),
-  new TableTuple(Codes.VALUE_CAMERA_TYPE, Codes.VALUE_CAMERA_TYPE_END, queries.cameraTypeSelect, "tipocamara", false),
-  new TableTuple(Codes.VALUE_CAMERA_BRAND, Codes.VALUE_CAMERA_BRAND_END, queries.camBrandSelect, "marca", false),
+	new TableTuple(Codes.VALUE_DETECTOR, Codes.VALUE_DETECTOR_END, queries.detectorSelect, "equipoentrada", false),
+	new TableTuple(Codes.VALUE_ACTUATOR, Codes.VALUE_ACTUATOR_END, queries.actuatorSelect, "equiposalida", false),
+	new TableTuple(Codes.VALUE_CAMERA_TYPE, Codes.VALUE_CAMERA_TYPE_END, queries.cameraTypeSelect, "tipocamara", false),
+	new TableTuple(Codes.VALUE_CAMERA_BRAND, Codes.VALUE_CAMERA_BRAND_END, queries.camBrandSelect, "marca", false),
+	new TableTuple(Codes.VALUE_RESOLUTION, Codes.VALUE_RESOLUTION_END, queries.selectResolutions, "resolucion", false)
 ];
+
+/**
+ * General configuration
+ */
+
+export const generalSelect = `
+				SELECT nombreempresa, correoadministrador FROM general.configuracion LIMIT 1;
+`
+
+export const generalUpdate = `
+				UPDATE general.configuracion
+				SET nombreempresa=?, correoadministrador=? WHERE conf_id >0;
+`
+
+export const generalParse = [tupleTxt, tupleTxt]

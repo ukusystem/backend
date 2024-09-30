@@ -1,3 +1,12 @@
+export interface Resolucion {
+  res_id: number,
+  nombre: string,
+  relacionaspecto: string,
+  ancho: number,
+  altura: number,
+  activo: 0 | 1
+}
+
 export interface PreferenciasVms {
   prfvms_id: number;
   preferencia: string;
@@ -110,8 +119,22 @@ export interface Controlador {
   puerto: number;
   personalgestion: string;
   personalimplementador: string;
-  seguridad: number;
-  conectado: number;
+  seguridad: 0 | 1;
+  conectado: 0 | 1;
+  modo: 0 | 1;
+  activo: 0 | 1;
+  motionrecordseconds: number;
+  res_id_motionrecord: number;
+  motionrecordfps: number;
+  motionsnapshotseconds: number;
+  res_id_motionsnapshot: number;
+  motionsnapshotinterval: number;
+  res_id_streamprimary: number;
+  streamprimaryfps: number;
+  res_id_streamsecondary: number;
+  streamsecondaryfps: number;
+  res_id_streamauxiliary: number;
+  streamauxiliaryfps: number;
 }
 
 export interface EquipoEntrada {
@@ -156,6 +179,7 @@ export interface Camara {
   mascara: string;
   puertaenlace: string;
   conectado: number;
+  activo: 0 | 1;
 }
 
 export interface RegistroTicket {

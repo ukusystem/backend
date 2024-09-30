@@ -1,4 +1,10 @@
 export class PartialTicket {
+  /**
+   * Wether this ticket is already sent. This state should change to true when the ticket is sent and to false
+   * when the related controller is disconnected, so after the next reconnection it can be sent again.
+   */
+	sent = false;
+
   readonly startTime;
   readonly endTime;
   readonly ticketID;

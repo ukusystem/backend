@@ -9,7 +9,7 @@ export const forgotPassword = asyncErrorHandler(
       res.json({message: "Se ha enviado una solicitud de restablecimiento de contraseña al administrador.",});
     } catch (error) {
       console.log("Error en resetPassword :", error);
-      res.status(500).json({ message: "Error al enviar solicitud de restablecimiento de contraseña.", });
+      res.status(500).json({ message: "Ocuarrio un error al enviar solicitud de restablecimiento de contraseña.", });
     }
   }
 );

@@ -1,9 +1,32 @@
-import { acceleratedmobilepageurl } from "googleapis/build/src/apis/acceleratedmobilepageurl";
+// import { acceleratedmobilepageurl } from "googleapis/build/src/apis/acceleratedmobilepageurl";
 import { LoadedFile } from "./types";
-import { Personal, Solicitante } from "../../../controllers/ticket";
+// import { Personal, Solicitante } from "../../../controllers/ticket";
 import * as useful from './useful'
 import { States } from "./enums";
+export interface Personal {
+  c_id:     number;
+  co_id:    number;
+  dni:      string;
+  foto:     null | string;
+  nombre:   string;
+  apellido: string;
+  telefono: string;
+  isNew:    boolean;
+}
 
+export interface Solicitante {
+  telefono:      string;
+  correo:        string;
+  descripcion:   string;
+  fechacomienzo: number;
+  fechatermino:  number;
+  prioridad:     number;
+  p_id:          number;
+  tt_id:         number;
+  sn_id:         number;
+  co_id:         number;
+  ctrl_id:       number;
+}
 /**
  * Structure of the ticket received from the web application to CREATE a ticket
  * in the database. The acceptance or rejection of the ticket is done by an

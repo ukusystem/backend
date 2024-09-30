@@ -1,0 +1,1 @@
+import{j as r,H as e,n as t}from"./index-f0602fa3.js";const a="/assets/serverError-ca18ed9e.svg",o=({children:s})=>r.jsx(r.Fragment,{children:r.jsxs(e,{spacing:.5,alignItems:"center",children:[r.jsx("img",{src:a,alt:"",width:100}),r.jsx(t,{component:"p",variant:"body1",children:s&&s||"Server Error"})]})});export{o as S,a as s};

@@ -2,15 +2,14 @@ import exceljs from "exceljs";
 import { Request, Response, NextFunction } from "express";
 import { asyncErrorHandler } from "../../utils/asynErrorHandler";
 import { getFormattedDateTime } from "../../utils/getFormattedDateTime";
+import { Register } from "../../models/register";
 
 export const excelDownload = asyncErrorHandler(
   async (req: Request, res: Response, next: NextFunction) => {
-    const data : {data: Object[], title: string} = req.body;
-    // console.log(`
-    // Datos recividos:
-    // Titulo : ${data.title}
-    // Data[0] : ${JSON.stringify(data.data[0])}
-    // `);
+
+    const {ctrl_id,end_date,start_date,type,col_delete,...rest} = req.query as {type: string,ctrl_id: string,start_date:string,end_date:string,col_delete: string | undefined | string[]}
+
+    const registerRows = await Register.getRegistrosDownload({col_delete,ctrl_id,end_date,start_date,type,...rest})
 
     //Create a Workbook
     const workbook = new exceljs.Workbook();
@@ -21,17 +20,17 @@ export const excelDownload = asyncErrorHandler(
     workbook.modified = new Date();
 
     //Add a Worksheet
-    const worksheet = workbook.addWorksheet(data.title);
-
+    const worksheet = workbook.addWorksheet("REGISTRO_" + type.toUpperCase());
+    
     // Columns:
-    worksheet.columns = Object.keys(data.data[0]).map((keydata) => ({
-      header: keydata.toUpperCase(),
-      key: keydata,
+    worksheet.columns = registerRows.columns.map((column) => ({
+      header: column.toUpperCase(),
+      key: column,
       width: 20,
     }));
 
     // Add Rows
-    data.data.forEach((row) => {
+    registerRows.data.forEach((row) => {
       worksheet.addRow(row);
     });
 
@@ -39,42 +38,6 @@ export const excelDownload = asyncErrorHandler(
     worksheet.getRow(1).eachCell((cell) => {
       cell.font = { bold: true };
     });
-
-    // const colFilter = worksheet.getColumn(Object.keys(data.data[0]).length + 3);
-    // colFilter.header = "FILTROS APLICADOS";
-    // colFilter.width = 20;
-    // worksheet.getCell(1, Object.keys(data.data[0]).length + 3).font = {
-    //   bold: true,
-    // };
-
-    // if (data.filters.length > 0) {
-    //   worksheet.getCell(2, Object.keys(data.data[0]).length + 2).value =
-    //     "Filtro";
-    //   worksheet.getCell(2, Object.keys(data.data[0]).length + 2).font = {
-    //     bold: true,
-    //   };
-    //   worksheet.getCell(3, Object.keys(data.data[0]).length + 2).value =
-    //     "Valor";
-    //   worksheet.getCell(3, Object.keys(data.data[0]).length + 2).font = {
-    //     bold: true,
-    //   };
-    //   data.filters.forEach((filter, index) => {
-    //     worksheet.getColumn(
-    //       Object.keys(data.data[0]).length + 3 + index
-    //     ).width = 20;
-    //     worksheet.getCell(
-    //       2,
-    //       Object.keys(data.data[0]).length + 3 + index
-    //     ).value = filter.id;
-    //     worksheet.getCell(
-    //       3,
-    //       Object.keys(data.data[0]).length + 3 + index
-    //     ).value = JSON.stringify(filter.value);
-    //   });
-    // } else {
-    //   worksheet.getCell(2, Object.keys(data.data[0]).length + 3).value =
-    //     "Filtros no aplicados";
-    // }
 
     res.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
 
@@ -84,10 +47,7 @@ export const excelDownload = asyncErrorHandler(
     );
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename=registro_${data.title.replace(
-        / /g,
-        "-"
-      )}_${getFormattedDateTime()}.xlsx`
+      `attachment; filename=registro_${type}_${getFormattedDateTime()}.xlsx`
     );
 
     workbook.xlsx.write(res).then(() => {
