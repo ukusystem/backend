@@ -15,6 +15,7 @@ const allFrontEndPaths = [
 "/invitado/tickets",
 "/invitado/tickets/historial",
 "/site/:ctrl_id",
+"/alarmas"
 ];
 
 frontEndRoutes.get(allFrontEndPaths, (req, res) => {
