@@ -80,6 +80,31 @@ INSERT INTO `cargo` VALUES (1,'Gerente de proyecto'),(2,'Supervisora de Segurida
 UNLOCK TABLES;
 
 --
+-- Table structure for table `configuracion`
+--
+
+DROP TABLE IF EXISTS `configuracion`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `configuracion` (
+  `conf_id` int NOT NULL AUTO_INCREMENT,
+  `nombreempresa` varchar(100) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `correoadministrador` varchar(100) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  PRIMARY KEY (`conf_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb3;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `configuracion`
+--
+
+LOCK TABLES `configuracion` WRITE;
+/*!40000 ALTER TABLE `configuracion` DISABLE KEYS */;
+INSERT INTO `configuracion` VALUES (1,'Everytel','admin@gmail.com');
+/*!40000 ALTER TABLE `configuracion` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `contrata`
 --
 
@@ -95,7 +120,7 @@ CREATE TABLE `contrata` (
   PRIMARY KEY (`co_id`),
   KEY `fk_contrata_rubro_r_id_idx` (`r_id`),
   CONSTRAINT `fk_contrata_rubro_r_id` FOREIGN KEY (`r_id`) REFERENCES `rubro` (`r_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -135,9 +160,32 @@ CREATE TABLE `controlador` (
   `seguridad` tinyint NOT NULL,
   `conectado` tinyint NOT NULL,
   `activo` tinyint NOT NULL,
+  `modo` tinyint NOT NULL DEFAULT '0',
+  `motionrecordseconds` int NOT NULL DEFAULT '30',
+  `res_id_motionrecord` int NOT NULL DEFAULT '3',
+  `motionrecordfps` int NOT NULL DEFAULT '30',
+  `motionsnapshotseconds` int NOT NULL DEFAULT '30',
+  `res_id_motionsnapshot` int NOT NULL DEFAULT '3',
+  `motionsnapshotinterval` int NOT NULL DEFAULT '5',
+  `res_id_streamprimary` int NOT NULL DEFAULT '3',
+  `streamprimaryfps` int NOT NULL DEFAULT '30',
+  `res_id_streamsecondary` int NOT NULL DEFAULT '2',
+  `streamsecondaryfps` int NOT NULL DEFAULT '30',
+  `res_id_streamauxiliary` int NOT NULL DEFAULT '1',
+  `streamauxiliaryfps` int NOT NULL DEFAULT '30',
   PRIMARY KEY (`ctrl_id`),
   KEY `fk_controlador_region_rgn_id_idx` (`rgn_id`) USING BTREE,
-  CONSTRAINT `fk_controlador_region_rgn_id` FOREIGN KEY (`rgn_id`) REFERENCES `region` (`rgn_id`)
+  KEY `fk_controlador_resolucion_res_id_1_idx` (`res_id_motionrecord`),
+  KEY `fk_controlador_resolucion_res_id_2_idx` (`res_id_motionsnapshot`),
+  KEY `fk_controlador_resolucion_res_id_3_idx` (`res_id_streamprimary`),
+  KEY `fk_controlador_resolucion_res_id_4_idx` (`res_id_streamsecondary`),
+  KEY `fk_controlador_resolucion_res_id_5_idx` (`res_id_streamauxiliary`),
+  CONSTRAINT `fk_controlador_region_rgn_id` FOREIGN KEY (`rgn_id`) REFERENCES `region` (`rgn_id`),
+  CONSTRAINT `fk_controlador_resolucion_res_id_1` FOREIGN KEY (`res_id_motionrecord`) REFERENCES `resolucion` (`res_id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT `fk_controlador_resolucion_res_id_2` FOREIGN KEY (`res_id_motionsnapshot`) REFERENCES `resolucion` (`res_id`),
+  CONSTRAINT `fk_controlador_resolucion_res_id_3` FOREIGN KEY (`res_id_streamprimary`) REFERENCES `resolucion` (`res_id`),
+  CONSTRAINT `fk_controlador_resolucion_res_id_4` FOREIGN KEY (`res_id_streamsecondary`) REFERENCES `resolucion` (`res_id`),
+  CONSTRAINT `fk_controlador_resolucion_res_id_5` FOREIGN KEY (`res_id_streamauxiliary`) REFERENCES `resolucion` (`res_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -147,7 +195,7 @@ CREATE TABLE `controlador` (
 
 LOCK TABLES `controlador` WRITE;
 /*!40000 ALTER TABLE `controlador` DISABLE KEYS */;
-INSERT INTO `controlador` VALUES (1,'Placa 1',1,'Manuel Fuentes 833, San Isidro','Primera placa impresa',-12.1011250,-77.0298000,'admin','U7SYCC+FT4OJvIs/LZApbk1SBjKxzJ8gzr2ykjEOxqc=','SERIE1','172.16.3.180','255.255.0.0','172.16.0.1',3333,'Juan','Juan',0,0,1);
+INSERT INTO `controlador` VALUES (1,'Placa 1',1,'Manuel Fuentes 833, San Isidro','Primera placa impresa',-12.1011250,-77.0298000,'admin','U7SYCC+FT4OJvIs/LZApbk1SBjKxzJ8gzr2ykjEOxqc=','SERIE1','172.16.3.180','255.255.0.0','172.16.0.1',3333,'Juan','Juan',0,0,1,0,30,3,30,30,3,5,3,30,2,30,1,30);
 /*!40000 ALTER TABLE `controlador` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -188,7 +236,7 @@ CREATE TABLE `equipoentrada` (
   `descripcion` varchar(100) NOT NULL,
   `activo` tinyint(1) NOT NULL,
   PRIMARY KEY (`ee_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -197,7 +245,7 @@ CREATE TABLE `equipoentrada` (
 
 LOCK TABLES `equipoentrada` WRITE;
 /*!40000 ALTER TABLE `equipoentrada` DISABLE KEYS */;
-INSERT INTO `equipoentrada` VALUES (1,'Detector de humo','D1',1),(2,'Detector de movimiento','D2',1),(3,'Detector de calor','D3',1),(4,'Detector de gas','D4',1),(5,'Detector de intrusión','D5',1),(6,'Detector de vibración','D6',1),(7,'Detector de agua','D7',1),(8,'Detector de luz','D8',1),(9,'Detector de sonido','D9',1),(10,'Detector de proximidad','D10',1),(11,'Boton','D11',1);
+INSERT INTO `equipoentrada` VALUES (1,'Detector de humo','D1',1),(2,'Detector de movimiento','D2',1),(3,'Detector de calor','D3',1),(4,'Detector de gas','D4',1),(5,'Detector de intrusión','D5',1),(6,'Detector de vibración','D6',1),(7,'Detector de agua','D7',1),(8,'Detector de luz','D8',1),(9,'Detector de sonido','D9',1),(10,'Detector de proximidad','D10',1),(11,'Boton','D11',1),(12,'Interruptor','D12',1);
 /*!40000 ALTER TABLE `equipoentrada` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -214,7 +262,7 @@ CREATE TABLE `equiposalida` (
   `descripcion` varchar(100) NOT NULL,
   `activo` tinyint(1) NOT NULL,
   PRIMARY KEY (`es_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -223,7 +271,7 @@ CREATE TABLE `equiposalida` (
 
 LOCK TABLES `equiposalida` WRITE;
 /*!40000 ALTER TABLE `equiposalida` DISABLE KEYS */;
-INSERT INTO `equiposalida` VALUES (1,'Acceso (Apertura de puerta)','A1',1),(2,'Iluminación (Control de luz)','A2',1),(3,'Ventilación (Aire acondicionado)','A3',1),(4,'Calefacción (Control de temperatura)','A4',1),(5,'Persianas (Control de apertura/cierre)','A5',1),(6,'Alarma (Activación/desactivación)','A6',1),(7,'Riego automático','A7',1),(8,'Audio (Control de altavoces)','A8',1),(9,'Video (Control de cámaras)','A9',1),(10,'Control de humedad','A10',1),(11,'Control de gas','A11',1),(12,'Control de agua','A12',1),(13,'Control de energía','A13',1),(14,'Control de movimiento','A14',1),(15,'Control de acceso','A15',1),(16,'Control de seguridad','A16',1),(17,'Control de emergencia','A17',1),(18,'Control de tráfico','A18',1),(19,'Control de elevadores','A19',1),(20,'Control de ascensores','A20',1);
+INSERT INTO `equiposalida` VALUES (1,'Acceso (Apertura de puerta)','A1',1),(2,'Iluminación (Control de luz)','A2',1),(3,'Ventilación (Aire acondicionado)','A3',1),(4,'Calefacción (Control de temperatura)','A4',1),(5,'Persianas (Control de apertura/cierre)','A5',1),(6,'Alarma (Activación/desactivación)','A6',1),(7,'Riego automático','A7',1),(8,'Audio (Control de altavoces)','A8',1),(9,'Video (Control de cámaras)','A9',1),(10,'Control de humedad','A10',1),(11,'Control de gas','A11',1),(12,'Control de agua','A12',1),(13,'Control de energía','A13',1),(14,'Control de movimiento','A14',1),(15,'Control de acceso','A15',1),(16,'Control de seguridad','A16',1),(17,'Control de emergencia','A17',1),(18,'Control de tráfico','A18',1),(19,'Control de elevadores','A19',1),(20,'Control de ascensores','A20',1),(21,'Alarma contra incendio','A21',1);
 /*!40000 ALTER TABLE `equiposalida` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -327,7 +375,7 @@ CREATE TABLE `preferenciasvms` (
   PRIMARY KEY (`prfvms_id`),
   KEY `fk_preferenciasvms_usuario_u_id_idx` (`u_id`),
   CONSTRAINT `fk_preferenciasvms_usuario_u_id` FOREIGN KEY (`u_id`) REFERENCES `usuario` (`u_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -336,7 +384,6 @@ CREATE TABLE `preferenciasvms` (
 
 LOCK TABLES `preferenciasvms` WRITE;
 /*!40000 ALTER TABLE `preferenciasvms` DISABLE KEYS */;
-INSERT INTO `preferenciasvms` VALUES (1,'Todas las cámaras',1,'{\"streams\": [{\"ip\": \"172.16.4.101\", \"nodo\": \"Placa 1\", \"tipo\": \"Bullet\", \"marca\": \"Dahua\", \"cmr_id\": 2, \"region\": \"Everytel\", \"ctrl_id\": 1, \"puertows\": 55431, \"descripcion\": \"Exterior\"}, {\"ip\": \"172.16.4.102\", \"nodo\": \"Placa 1\", \"tipo\": \"Bullet\", \"marca\": \"Dahua\", \"cmr_id\": 3, \"region\": \"Everytel\", \"ctrl_id\": 1, \"puertows\": 55432, \"descripcion\": \"Puerta\"}, {\"ip\": \"172.16.4.103\", \"nodo\": \"Placa 1\", \"tipo\": \"Domo PTZ\", \"marca\": \"Dahua\", \"cmr_id\": 4, \"region\": \"Everytel\", \"ctrl_id\": 1, \"puertows\": 55433, \"descripcion\": \"Garaje\"}, {\"ip\": \"172.16.4.104\", \"nodo\": \"Placa 1\", \"tipo\": \"Domo PTZ\", \"marca\": \"Dahua\", \"cmr_id\": 5, \"region\": \"Everytel\", \"ctrl_id\": 1, \"puertows\": 55434, \"descripcion\": \"Kitchen\"}, {\"ip\": \"172.16.4.105\", \"nodo\": \"Placa 1\", \"tipo\": \"Domo PTZ\", \"marca\": \"Dahua\", \"cmr_id\": 6, \"region\": \"Everytel\", \"ctrl_id\": 1, \"puertows\": 55435, \"descripcion\": \"Desarrollo\"}, {\"ip\": \"172.16.4.106\", \"nodo\": \"Placa 1\", \"tipo\": \"Domo PTZ\", \"marca\": \"Dahua\", \"cmr_id\": 7, \"region\": \"Everytel\", \"ctrl_id\": 1, \"puertows\": 55436, \"descripcion\": \"Comedor\"}, {\"ip\": \"172.16.4.107\", \"nodo\": \"Placa 1\", \"tipo\": \"Bullet\", \"marca\": \"Dahua\", \"cmr_id\": 8, \"region\": \"Everytel\", \"ctrl_id\": 1, \"puertows\": 55437, \"descripcion\": \"Primer piso - Reuniones\"}, {\"ip\": \"172.16.4.109\", \"nodo\": \"Placa 1\", \"tipo\": \"Domo PTZ\", \"marca\": \"Dahua\", \"cmr_id\": 10, \"region\": \"Everytel\", \"ctrl_id\": 1, \"puertows\": 55439, \"descripcion\": \"Primer piso - interior\"}, null], \"gridOption\": 3}',1);
 /*!40000 ALTER TABLE `preferenciasvms` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -381,7 +428,7 @@ CREATE TABLE `registrored` (
   PRIMARY KEY (`rr_id`),
   KEY `fk_registrored_controlador_co_id_idx` (`ctrl_id`),
   CONSTRAINT `fk_registrored_controlador_co_id` FOREIGN KEY (`ctrl_id`) REFERENCES `controlador` (`ctrl_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -390,8 +437,34 @@ CREATE TABLE `registrored` (
 
 LOCK TABLES `registrored` WRITE;
 /*!40000 ALTER TABLE `registrored` DISABLE KEYS */;
-INSERT INTO `registrored` VALUES (1,1,'2024-07-30 20:11:01',0),(2,1,'2024-07-30 20:12:32',0);
 /*!40000 ALTER TABLE `registrored` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `resolucion`
+--
+
+DROP TABLE IF EXISTS `resolucion`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `resolucion` (
+  `res_id` int NOT NULL AUTO_INCREMENT,
+  `nombre` varchar(100) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `relacionaspecto` varchar(100) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `ancho` int NOT NULL,
+  `altura` int NOT NULL,
+  PRIMARY KEY (`res_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb3;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `resolucion`
+--
+
+LOCK TABLES `resolucion` WRITE;
+/*!40000 ALTER TABLE `resolucion` DISABLE KEYS */;
+INSERT INTO `resolucion` VALUES (1,'SD (Standard Definition)','4:3',640,480),(2,'HD (High Definition)','16:9',960,540),(3,'Full HD (FHD)','16:9',1600,900);
+/*!40000 ALTER TABLE `resolucion` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -702,7 +775,7 @@ CREATE TABLE `pinesentrada` (
   PRIMARY KEY (`pe_id`),
   KEY `fk_pinesentrada_equipoentrada_ee_id_idx` (`ee_id`),
   CONSTRAINT `fk_pinesentrada_equipoentrada_ee_id` FOREIGN KEY (`ee_id`) REFERENCES `general`.`equipoentrada` (`ee_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=40 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=39 DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -711,7 +784,7 @@ CREATE TABLE `pinesentrada` (
 
 LOCK TABLES `pinesentrada` WRITE;
 /*!40000 ALTER TABLE `pinesentrada` DISABLE KEYS */;
-INSERT INTO `pinesentrada` VALUES (1,1,1,'Entrada 1',0,0),(2,2,1,'Entrada 2',0,0),(3,3,1,'Entrada 3',0,0),(4,4,1,'Entrada 4',0,0),(5,5,1,'Entrada 5',0,0),(6,6,1,'Entrada 6',0,0),(7,7,1,'Entrada 7',0,0),(8,8,1,'Entrada 8',0,0),(9,9,1,'Entrada 9',0,0),(10,10,1,'Entrada 10',0,0),(11,11,1,'Entrada 11',0,0),(12,12,1,'Entrada 12',0,0),(13,13,1,'Entrada 13',0,0),(14,14,1,'Entrada 14',0,0),(15,15,1,'Entrada 15',0,0),(16,16,1,'Entrada 16',0,0),(17,17,1,'Entrada 17',0,0),(18,18,1,'Entrada 18',0,0),(19,19,1,'Entrada 19',0,0),(20,20,1,'Entrada 20',0,0),(21,21,1,'Entrada 21',0,0),(22,22,1,'Entrada 22',0,0),(23,23,1,'Entrada 23',0,0),(24,24,1,'Entrada 24',0,0),(25,25,1,'Entrada 25',0,0),(26,26,1,'Entrada 26',0,0),(27,27,1,'Entrada 27',0,0),(28,28,1,'Entrada 28',0,0),(29,29,1,'Entrada 29',0,0),(30,30,1,'Entrada 30',0,0),(31,31,1,'Entrada 31',0,0),(32,32,1,'Entrada 32',0,0),(33,33,1,'Entrada 33',0,0),(34,34,1,'Entrada 34',0,0),(35,35,1,'Entrada 35',0,0),(36,36,1,'Entrada 36',0,0),(37,37,1,'Entrada 37',0,0),(38,38,1,'Entrada 38',0,0),(39,39,1,'Entrada 39',0,0);
+INSERT INTO `pinesentrada` VALUES (1,1,1,'Entrada 1',0,0),(2,2,1,'Entrada 2',0,0),(3,3,1,'Entrada 3',0,0),(4,4,1,'Entrada 4',0,0),(5,5,1,'Entrada 5',0,0),(6,6,1,'Entrada 6',0,0),(7,7,1,'Entrada 7',0,0),(8,8,1,'Entrada 8',0,0),(9,9,1,'Entrada 9',0,0),(10,10,1,'Entrada 10',0,0),(11,11,1,'Entrada 11',0,0),(12,12,1,'Entrada 12',0,0),(13,13,1,'Entrada 13',0,0),(14,14,1,'Entrada 14',0,0),(15,15,1,'Entrada 15',0,0),(16,16,1,'Entrada 16',0,0),(17,17,1,'Entrada 17',0,0),(18,18,1,'Entrada 18',0,0),(19,19,1,'Entrada 19',0,0),(20,20,1,'Entrada 20',0,0),(21,21,1,'Entrada 21',0,0),(22,22,1,'Entrada 22',0,0),(23,23,1,'Entrada 23',0,0),(24,24,1,'Entrada 24',0,0),(25,25,1,'Entrada 25',0,0),(26,26,1,'Entrada 26',0,0),(27,27,1,'Entrada 27',0,0),(28,28,1,'Entrada 28',0,0),(29,29,1,'Entrada 29',0,0),(30,30,1,'Entrada 30',0,0),(31,31,1,'Entrada 31',0,0),(32,32,1,'Entrada 32',0,0),(33,33,1,'Entrada 33',0,0),(34,34,1,'Entrada 34',0,0),(35,35,1,'Entrada 35',0,0),(36,36,1,'Entrada 36',0,0),(37,37,1,'Entrada 37',0,0),(38,38,1,'Entrada 38',0,0);
 /*!40000 ALTER TABLE `pinesentrada` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1301,7 +1374,7 @@ CREATE TABLE `pinesentrada` (
   PRIMARY KEY (`pe_id`),
   KEY `fk_pinesentrada_equipoentrada_ee_id_idx` (`ee_id`),
   CONSTRAINT `fk_pinesentrada_equipoentrada_ee_id` FOREIGN KEY (`ee_id`) REFERENCES `general`.`equipoentrada` (`ee_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=40 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=39 DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1310,7 +1383,7 @@ CREATE TABLE `pinesentrada` (
 
 LOCK TABLES `pinesentrada` WRITE;
 /*!40000 ALTER TABLE `pinesentrada` DISABLE KEYS */;
-INSERT INTO `pinesentrada` VALUES (1,1,1,'Entrada 1',0,0),(2,2,1,'Entrada 2',0,0),(3,3,1,'Entrada 3',0,0),(4,4,1,'Entrada 4',0,0),(5,5,1,'Entrada 5',0,0),(6,6,1,'Entrada 6',0,0),(7,7,1,'Entrada 7',0,0),(8,8,1,'Entrada 8',0,0),(9,9,1,'Entrada 9',0,0),(10,10,1,'Entrada 10',0,0),(11,11,1,'Entrada 11',0,0),(12,12,1,'Entrada 12',0,0),(13,13,1,'Entrada 13',0,0),(14,14,1,'Entrada 14',0,0),(15,15,1,'Entrada 15',0,0),(16,16,1,'Entrada 16',0,0),(17,17,1,'Entrada 17',0,0),(18,18,1,'Entrada 18',0,0),(19,19,1,'Entrada 19',0,0),(20,20,1,'Entrada 20',0,0),(21,21,1,'Entrada 21',0,0),(22,22,1,'Entrada 22',0,0),(23,23,1,'Entrada 23',0,0),(24,24,1,'Entrada 24',0,0),(25,25,1,'Entrada 25',0,0),(26,26,1,'Entrada 26',0,0),(27,27,1,'Entrada 27',0,0),(28,28,1,'Entrada 28',0,0),(29,29,1,'Entrada 29',0,0),(30,30,1,'Entrada 30',0,0),(31,31,1,'Entrada 31',0,0),(32,32,1,'Entrada 32',0,0),(33,33,1,'Entrada 33',0,0),(34,34,1,'Entrada 34',0,0),(35,35,1,'Entrada 35',0,0),(36,36,1,'Entrada 36',0,0),(37,37,1,'Entrada 37',0,0),(38,38,1,'Entrada 38',0,0),(39,39,1,'Entrada 39',0,0);
+INSERT INTO `pinesentrada` VALUES (1,1,1,'Entrada 1',0,0),(2,2,1,'Entrada 2',0,0),(3,3,1,'Entrada 3',0,0),(4,4,1,'Entrada 4',0,0),(5,5,1,'Entrada 5',0,0),(6,6,1,'Entrada 6',0,0),(7,7,1,'Entrada 7',0,0),(8,8,1,'Entrada 8',0,0),(9,9,1,'Entrada 9',0,0),(10,10,1,'Entrada 10',0,0),(11,11,1,'Entrada 11',0,0),(12,12,1,'Entrada 12',0,0),(13,13,1,'Entrada 13',0,0),(14,14,1,'Entrada 14',0,0),(15,15,1,'Entrada 15',0,0),(16,16,1,'Entrada 16',0,0),(17,17,1,'Entrada 17',0,0),(18,18,1,'Entrada 18',0,0),(19,19,1,'Entrada 19',0,0),(20,20,1,'Entrada 20',0,0),(21,21,1,'Entrada 21',0,0),(22,22,1,'Entrada 22',0,0),(23,23,1,'Entrada 23',0,0),(24,24,1,'Entrada 24',0,0),(25,25,1,'Entrada 25',0,0),(26,26,1,'Entrada 26',0,0),(27,27,1,'Entrada 27',0,0),(28,28,1,'Entrada 28',0,0),(29,29,1,'Entrada 29',0,0),(30,30,1,'Entrada 30',0,0),(31,31,1,'Entrada 31',0,0),(32,32,1,'Entrada 32',0,0),(33,33,1,'Entrada 33',0,0),(34,34,1,'Entrada 34',0,0),(35,35,1,'Entrada 35',0,0),(36,36,1,'Entrada 36',0,0),(37,37,1,'Entrada 37',0,0),(38,38,1,'Entrada 38',0,0);
 /*!40000 ALTER TABLE `pinesentrada` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1731,4 +1804,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-07-30 15:18:04
+-- Dump completed on 2024-09-27 16:58:50
