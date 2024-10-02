@@ -32,7 +32,7 @@ import { NodeTickets } from "./nodeTickets";
  * Base attachment for the sockets
  */
 export class BaseAttach extends Mortal {
-  static readonly PROCESS_TIMEOUT = parseInt(process.env.NODE_PROCESS_TIMEOUT??'59') * 1000;
+  static readonly PROCESS_TIMEOUT = parseInt(process.env.NODE_PROCESS_TIMEOUT ?? '59') * 1000;
   static readonly UNREACHABLE_INTERVAL_MS = 60 * 1000;
   static readonly DEFAULT_ADDRESS = "0.0.0.0";
   private static readonly BASE_NODE_NAME = "nodo";
@@ -100,7 +100,7 @@ export class BaseAttach extends Mortal {
    * @param part Part to append
    * @returns The new message
    */
-  public _appendPart(message:string, part:string):string{
+  public _appendPart(message: string, part: string): string {
     return message + codes.SEP_CMD + part
   }
 
@@ -470,7 +470,7 @@ export class BaseAttach extends Mortal {
    * @returns True if the operation was successful, false otherwise.
    */
   async _saveItemGeneral(name: string, parameters: any[], query: string, id: number, nodeID: number): Promise<boolean> {
-    this._log(`Received: ${name}`);
+    this._log(`Saved: ${name}`);
     if (await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(query, nodeID), parameters)) {
       this._addResponse(id, codes.AIO_OK);
       return true;
@@ -922,6 +922,11 @@ export class NodeAttach extends BaseAttach {
 
   private unreached = false;
 
+  /**
+   * Complete data of the node edition. This holds the new controller's connection data while we wait a response from the controller.
+   */
+  completeData: DataStruct[] = []
+
   readonly controllerID;
   private node = "";
   private port;
@@ -964,25 +969,25 @@ export class NodeAttach extends BaseAttach {
     this.password = nodePassword;
   }
 
-  setLogged(state:boolean){
-    if(this.loggedToController === state){
+  setLogged(state: boolean) {
+    if (this.loggedToController === state) {
       return
     }
-    if(!state){
+    if (!state) {
       const partialNode = NodeAttach.ticketsMap.get(this.controllerID);
       if (partialNode) {
-        for(const ticket of partialNode.tickets){
+        for (const ticket of partialNode.tickets) {
           ticket.sent = false
         }
         this._log(`Tickets for node marked as not sent`)
-      }else{
+      } else {
         this._log(`No tickets for node ID ${this.controllerID}`);
       }
     }
     this.loggedToController = state
   }
 
-  isLogged(){
+  isLogged() {
     return this.loggedToController
   }
 
@@ -994,8 +999,8 @@ export class NodeAttach extends BaseAttach {
     return this.port;
   }
 
-  setIncrements(input:number, output:number, temp:number, energy:number){
-    if(this.inputAI===0 && this.outputAI===0 && this.tempAI=== 0 && this.energyAI===0){
+  setIncrements(input: number, output: number, temp: number, energy: number) {
+    if (this.inputAI === 0 && this.outputAI === 0 && this.tempAI === 0 && this.energyAI === 0) {
       this.inputAI = input
       this.outputAI = output
       this.tempAI = temp
@@ -1055,7 +1060,7 @@ export class NodeAttach extends BaseAttach {
           } else {
             this._log(`Error saving power`);
           }
-          
+
           this.lastPowerStamp = powerStamp;
         }
 
@@ -1092,7 +1097,7 @@ export class NodeAttach extends BaseAttach {
           const sensorID = oneTemp[0].getInt();
           const sensorRead = oneTemp[1].getInt();
 
-          paramsForRegister.push([ sensorID, sensorRead, currDate]);
+          paramsForRegister.push([sensorID, sensorRead, currDate]);
 
           // Send the data to the web app
           this._notifyTemp(sensorID, this.controllerID, null, sensorRead, null, null);
@@ -1229,13 +1234,13 @@ export class NodeAttach extends BaseAttach {
       case codes.VALUE_CARD_READER_CTRL_END:
       case codes.VALUE_ENERGY_CTRL_END:
         let commandToMirror = command
-        if(cmdOrValue === codes.VALUE_SECURITY || cmdOrValue === codes.VALUE_SECURITY_WEB || cmdOrValue === codes.VALUE_SD
-          || cmdOrValue === codes.VALUE_VOLTAGE || cmdOrValue === codes.VALUE_MODE ){
+        if (cmdOrValue === codes.VALUE_SECURITY || cmdOrValue === codes.VALUE_SECURITY_WEB || cmdOrValue === codes.VALUE_SD
+          || cmdOrValue === codes.VALUE_VOLTAGE || cmdOrValue === codes.VALUE_MODE) {
           commandToMirror = this._appendPart(commandToMirror, this.controllerID.toString())
         }
         this.mirrorMessage(commandToMirror, true);
         // Register some of the messages
-        if (cmdOrValue === codes.VALUE_SECURITY || cmdOrValue === codes.VALUE_SECURITY_WEB || 
+        if (cmdOrValue === codes.VALUE_SECURITY || cmdOrValue === codes.VALUE_SECURITY_WEB ||
           cmdOrValue === codes.VALUE_SD || cmdOrValue === codes.VALUE_MODE) {
           // Parse date and value
           const data = this._parseMessage(parts, queries.valueDateParse, id);
@@ -1250,16 +1255,16 @@ export class NodeAttach extends BaseAttach {
             case codes.VALUE_MODE:
               const mode = value == codes.VALUE_MODE_SECURITY
               this._log('Notifying web about mode')
-              ControllerMapManager.updateController(this.controllerID, {modo:mode?1:0})
+              ControllerMapManager.updateController(this.controllerID, { modo: mode ? 1 : 0 })
               await this._saveItemGeneral("mode", [mode, this.controllerID], queries.modeUpdate, id, -1)
               break;
             case codes.VALUE_SECURITY:
             case codes.VALUE_SECURITY_WEB:
               const security = value == codes.VALUE_ARM || value == codes.VALUE_ARM_WEB;
-              if(cmdOrValue == codes.VALUE_SECURITY){
+              if (cmdOrValue == codes.VALUE_SECURITY) {
                 this._log('Notifying web about security')
-                ControllerMapManager.updateController(this.controllerID, {seguridad:security?1:0})
-              }else if(cmdOrValue == codes.VALUE_SECURITY_WEB){
+                ControllerMapManager.updateController(this.controllerID, { seguridad: security ? 1 : 0 })
+              } else if (cmdOrValue == codes.VALUE_SECURITY_WEB) {
                 this.removePendingMessageByID(id, value)
               }
               await this._saveItemGeneral("security", [security, this.controllerID], queries.securityUpdate, id, -1)
@@ -1295,7 +1300,7 @@ export class NodeAttach extends BaseAttach {
         const pin = pinData[0].getInt();
         const state = pinData[1].getInt() == codes.VALUE_TO_ACTIVE ? 1 : 0;
         const pinDate = pinData[2].getInt();
-        
+
         // const ioYear = useful.getYearFromTimestamp(pinDate);
         switch (cmdOrValue) {
           case codes.CMD_INPUT_CHANGED:
@@ -1343,7 +1348,7 @@ export class NodeAttach extends BaseAttach {
           this._log("Error getting card info from database.");
         } else {
           if (cardInfo.length === 1) {
-            co_id = params[4] = isAdmin?0: cardInfo[0].co_id;
+            co_id = params[4] = isAdmin ? 0 : cardInfo[0].co_id;
             // console.log(`${co_id} ${params[4]}`)
             ea_id = params[5] = cardInfo[0].ea_id;
             if (!isAdmin) {
@@ -1716,13 +1721,13 @@ export class ManagerAttach extends BaseAttach {
    * controller confirms the changes or when there was no socket for the
    * controller.
    */
-  private completeNodeData: DataStruct[] | null = null;
+  // private completeNodeData: DataStruct[] | null = null;
 
   /**
    * Reference to save the trivial part of a ``VALUE_NODE`` command. This will be used
    * to update the socket's attachment only when it is logged to the controller.
    */
-  private halfForTrivial: DataStruct[] | null = null;
+  // private halfForTrivial: DataStruct[] | null = null;
 
   /**
    * True when the edition of the node involves changing the password.
@@ -1848,7 +1853,7 @@ export class ManagerAttach extends BaseAttach {
                 // this._log('Value: %d', valueToGet)
                 switch (valueToGet) {
                   case codes.VALUE_GENERAL:
-                    await this.addGeneral(id,true)
+                    await this.addGeneral(id, false)
                     break
                   case codes.VALUE_NODE:
                     await this.addNodes(selector, id, false);
@@ -1914,14 +1919,14 @@ export class ManagerAttach extends BaseAttach {
               if (!valueData) break;
               const valueToSet = valueData[0].getInt();
               if (valueToSet != codes.VALUE_WORKER_PHOTO && valueToSet != codes.VALUE_WORKER_ADD && valueToSet != codes.VALUE_WORKER) {
-                this._log(`Received set config '${command}'.`);
+                // this._log(`Received set config '${command}'.`);
               }
               switch (valueToSet) {
                 case codes.VALUE_GENERAL:
                   const newGeneral = this._parseMessage(parts, queries.generalParse, id, false)
-                  if(newGeneral){
+                  if (newGeneral) {
                     await this.updateGeneral(newGeneral)
-                  }else{
+                  } else {
                     // this._log(`Error parsing general`)
                   }
                   break
@@ -1974,25 +1979,8 @@ export class ManagerAttach extends BaseAttach {
                     }
                     nodePassword.setString(encrytedNodePassword);
                   }
-
-                  /*
-                   * Slice the data: Save the parts that are trivial like the name, location, etc.
-                   * Save the complete configuration for when the controller confirms the change.
-                   * The trivial data is going to be used in this block if the channel is logged
-                   * in.
-                   */
-                  this.completeNodeData = nodeData;
-                  // console.log(this.completeNodeData)
-                  const halfForTrivialData: DataStruct[] = [];
-                  for (let i = 0; i < queries.indexForTrivial.length; i++) {
-                    if (nodeData.length > queries.indexForTrivial[i]) {
-                      halfForTrivialData.push(nodeData[queries.indexForTrivial[i]]);
-                    } else {
-                      this._log("Out of bound! Trivial item in node data array does not exist.");
-                    }
-                  }
-                  this.halfForTrivial = halfForTrivialData;
-                  await this.completeReconnect(selector, nodeID, false, id);
+                  // console.log(nodeData)
+                  await this.completeReconnect(selector, nodeID, false, id, nodeData);
                   // After a node related order has been processed
                   this.printKeyCount(selector);
                   break;
@@ -2331,26 +2319,32 @@ export class ManagerAttach extends BaseAttach {
    *                       controller responded to a change.
    * @param id             ID of the message being processed.
    */
-  private async completeReconnect(selector: Selector, nodeID: number, forceReconnect: boolean, id: number) {
+  private async completeReconnect(selector: Selector, nodeID: number, forceReconnect: boolean, id: number, newCompleteData: DataStruct[] | null = null) {
     // The channel must be reconnected anyways. This ensures that there will be a
     // channel for that controller after this method returns.
-    let currentAttach = selector.getNodeAttachByID(nodeID);
+    const currentAttach = selector.getNodeAttachByID(nodeID);
     const updateQuery = this.updatWithPassword ? queries.nodeUpdatePwd : queries.nodeUpdate;
     let notify = false
+    let resetData = false
+    /**
+     * The channel was not found.
+     * In both cases, a new channel must be created IF there is data in the database.
+     * Cases: A new node is being created or a channel was closed by an error in the code.
+     */
     if (!currentAttach) {
+      if (!newCompleteData) {
+        this._log(`There was no data to register new node ID ${nodeID}`)
+        return
+      }
       this._log(`Channel for controller ID = ${nodeID} did not exist. Opening ...`);
-      // The channel was not found. This can happen when a new node is being created
-      // or a channel was closed by an error in the code.
-      // In both cases, a new channel must be created IF there is data in the
-      // database, obviously.
 
       // Save all the data that was received. This should update the entry in the
       // database when there was one but, somehow, its key wasn't registered.
-      if (await this._insertItem("node", this.completeNodeData, queries.nodeInsert, id)) {
+      if (await this._insertItem("node", newCompleteData, queries.nodeInsert, id)) {
         notify = true
-      }else{
+      } else {
         this._log("Could not insert, updating node instead.");
-        if (await this._updateItem("node", this.completeNodeData, updateQuery, id)) {
+        if (await this._updateItem("node", newCompleteData, updateQuery, id)) {
           notify = true
           this._log("Node updated");
         } else {
@@ -2367,25 +2361,37 @@ export class ManagerAttach extends BaseAttach {
       // Create attachment and connect the socket
 
       const newAttach = NodeAttach.getInstanceFromPacket(newData, this._logger);
-      currentAttach = newAttach
+      // newAttach.completeData = newCompleteData
+      // currentAttach = newAttach
       newAttach.tryConnectNode(selector, true);
-    } else {
-      /**
-       * The channel was found. IF THE CHANNEL IS LOGGED IN TO THE CONTROLLER, nothing
-       * should be done since the manager will send an order for the controller whose
-       * response will reconnect the channel.
-       * IF THE CHANNEL IS NOT LOGGED IN, the channel must be closed and other opened
-       * with the same attachment changing only the connection data.
-       * This covers the case where the connection configuration is being corrected.
-       */
+    }
+    /**
+     * The channel was found. IF THE CHANNEL IS LOGGED IN TO THE CONTROLLER, nothing
+     * should be done since the manager will send an order for the controller whose
+     * response will reconnect the channel.
+     * IF THE CHANNEL IS NOT LOGGED IN, the channel must be closed and other opened
+     * with the same attachment changing only the connection data.
+     * This covers the case where the connection configuration is being corrected.
+     */
+    else {
       if (!currentAttach.isLogged() || forceReconnect) {
-        this._log(`About to cancel and reconnect node ID ${currentAttach.controllerID}.`);
+        this._log(`About to cancel and reconnect node ID ${currentAttach.controllerID} forcing = ${forceReconnect}.`);
 
-        // Save all the data that was received and update attachment
-
-        if(await this._updateItem("node", this.completeNodeData, updateQuery, id)){
+        /**
+         * Save all the data that was received and update attachment. Forcing reconnect is used when the controller 
+         * confirmed a change in connection data and this data must be updated in the database.
+         */
+        if (await this._updateItem("node", forceReconnect ? currentAttach.completeData : newCompleteData, updateQuery, id)) {
           notify = true
+          resetData = true
         }
+        if(!forceReconnect && newCompleteData){
+          currentAttach.completeData = newCompleteData
+        }else{
+          // console.log(`No data to hold`)
+        }
+
+        // Get the data saved
         const newData = await this.getOneControllerData(nodeID);
         if (!newData) {
           return;
@@ -2393,13 +2399,31 @@ export class ManagerAttach extends BaseAttach {
         currentAttach.resetOnlyData(newData);
 
         // Reset node attachment data and connect with the new data
-
         BaseAttach.simpleReconnect(selector, currentAttach);
 
       } else {
-        // Save the data that only belongs to the database (that the controller doesn't
-        // use)
-        if(await this._updateItem("node trivial data", this.halfForTrivial, queries.nodeUpdateTrivial, id)){
+        if (!newCompleteData) {
+          this._log(`There was no data to edit node ID ${nodeID}`)
+          return
+        }
+        /**
+         * Slice the data: Save the parts that are trivial like the name, location, etc.
+         * Save the complete configuration for when the controller confirms the change.
+         * The trivial data is going to be used in this block if the channel is logged
+         * in.
+         */
+        currentAttach.completeData = newCompleteData
+        console.log(`Current complete data:\n${currentAttach.completeData}`)
+        const halfForTrivialData: DataStruct[] = [];
+        for (let i = 0; i < queries.indexForTrivial.length; i++) {
+          if (newCompleteData.length > queries.indexForTrivial[i]) {
+            halfForTrivialData.push(newCompleteData[queries.indexForTrivial[i]]);
+          } else {
+            this._log("Out of bound! Trivial item in node data array does not exist.");
+          }
+        }
+        // Save the data that only belongs to the database (that the controller doesn't use)
+        if (await this._updateItem("node trivial data", halfForTrivialData, queries.nodeUpdateTrivial, id)) {
           notify = true
         }
         // Update trivial data
@@ -2412,38 +2436,45 @@ export class ManagerAttach extends BaseAttach {
         this._log(`Channel '${currentAttach.toString()}' will reconnect when the controller confirms the changes.`);
       }
     }
-    if(notify && this.completeNodeData){
-      // this.completeNodeData?.map((v, i)=>{
-      //   console.log(`${i} - ${v}`)
-      // })
-      // console.log(this.completeNodeData)
+    try {
+      if (notify && currentAttach) {
+        // this.completeNodeData?.map((v, i)=>{
+        //   console.log(`${i} - ${v}`)
+        // })
+        // console.log(this.completeNodeData)
 
-      this._log('Notifying web about controller')
-      const cd = this.completeNodeData
-      ControllerMapManager.updateController(currentAttach.controllerID, {
-        nodo:cd[1].getString(),
-        rgn_id:cd[2].getInt(),
-        direccion:cd[3].getString(),
-        descripcion:cd[4].getString(),
-        latitud:cd[5].getString(),
-        longitud:cd[6].getString(),
-        serie:cd[8].getString(),
-        ip:cd[9].getString(),
-        personalgestion:cd[13].getString(),
-        personalimplementador:cd[14].getString(),
-        motionrecordseconds:cd[15].getInt(),
-        res_id_motionrecord:cd[16].getInt(),
-        motionrecordfps:cd[17].getInt(),
-        motionsnapshotseconds:cd[18].getInt(),
-        res_id_motionsnapshot:cd[19].getInt(),
-        motionsnapshotinterval:cd[20].getInt(),
-        res_id_streamprimary:cd[21].getInt(),
-        streamprimaryfps:cd[22].getInt(),
-        res_id_streamsecondary:cd[23].getInt(),
-        streamsecondaryfps:cd[24].getInt(),
-        res_id_streamauxiliary:cd[25].getInt(),
-        streamauxiliaryfps:cd[26].getInt(),
-      })
+        this._log('Notifying web about controller')
+        const cd = currentAttach.completeData
+        ControllerMapManager.updateController(currentAttach.controllerID, {
+          nodo: cd[1].getString(),
+          rgn_id: cd[2].getInt(),
+          direccion: cd[3].getString(),
+          descripcion: cd[4].getString(),
+          latitud: cd[5].getString(),
+          longitud: cd[6].getString(),
+          serie: cd[8].getString(),
+          ip: cd[9].getString(),
+          personalgestion: cd[13].getString(),
+          personalimplementador: cd[14].getString(),
+          motionrecordseconds: cd[15].getInt(),
+          res_id_motionrecord: cd[16].getInt(),
+          motionrecordfps: cd[17].getInt(),
+          motionsnapshotseconds: cd[18].getInt(),
+          res_id_motionsnapshot: cd[19].getInt(),
+          motionsnapshotinterval: cd[20].getInt(),
+          res_id_streamprimary: cd[21].getInt(),
+          streamprimaryfps: cd[22].getInt(),
+          res_id_streamsecondary: cd[23].getInt(),
+          streamsecondaryfps: cd[24].getInt(),
+          res_id_streamauxiliary: cd[25].getInt(),
+          streamauxiliaryfps: cd[26].getInt(),
+        })
+      }
+    } catch (e) {
+      console.log(`ERROR Notifying web about controller\n${e}`)
+    }
+    if (resetData && currentAttach) {
+      currentAttach.completeData = []
     }
     this.printKeyCount(selector);
   }
@@ -2674,27 +2705,27 @@ export class ManagerAttach extends BaseAttach {
     }
   }
 
-  private async addGeneral(id:number, log:boolean){
+  private async addGeneral(id: number, log: boolean) {
     const generalResponse = await executeQuery<db2.GeneralData[]>(queries.generalSelect)
-    if(generalResponse && generalResponse.length === 1){
-      this._addOne(new Message(codes.VALUE_GENERAL, id, [generalResponse[0].nombreempresa, generalResponse[0].correoadministrador]))
-    }else{
+    if (generalResponse && generalResponse.length === 1) {
+      this._addOne(new Message(codes.VALUE_GENERAL, id, [generalResponse[0].nombreempresa, generalResponse[0].correoadministrador]).setLogOnSend(log))
+    } else {
       this._log('Error getting general info.')
     }
   }
 
-  private async updateGeneral(items:DataStruct[]):Promise<boolean>{
-    const data = items.map((i)=>{return i.getString()})
-    const res = await executeQuery<ResultSetHeader>(queries.generalUpdate,data)
-    if(res){
+  private async updateGeneral(items: DataStruct[]): Promise<boolean> {
+    const data = items.map((i) => { return i.getString() })
+    const res = await executeQuery<ResultSetHeader>(queries.generalUpdate, data)
+    if (res) {
       // Notify web about general data
       this._log(`Notifying general data.`)
       SystemManager.updateGeneral({
-        COMPANY_NAME:data[0], 
-        EMAIL_ADMIN:data[1]
+        COMPANY_NAME: data[0],
+        EMAIL_ADMIN: data[1]
       })
       return true
-    }else{
+    } else {
       this._log("Error saving general info.")
     }
     return false
