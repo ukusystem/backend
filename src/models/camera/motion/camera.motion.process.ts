@@ -401,15 +401,19 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
     const camHostname = this.ip;
     return new Promise<boolean>((resolve, reject) => {
       cam.getCapabilities(function (err: any, data: any, xml: any) {
-        if (err) {
-          const errCapabilities = new Error(`Deteccion de Movimiento | No se pudo obtener las 'capabilities' del dispositivo ${camHostname}`);
-          reject(errCapabilities);
-        }
-
-        if (data.events) {
-          return resolve(true);
-        } else {
-          return resolve(false);
+        try {
+          if (err) {
+            const errCapabilities = new Error(`Deteccion de Movimiento | No se pudo obtener las 'capabilities' del dispositivo ${camHostname}`);
+            reject(errCapabilities);
+          }
+          if (data.events) {
+            return resolve(true);
+          } else {
+            return resolve(false);
+          }
+        } catch (error) {
+          const errEvents = new Error(`Deteccion de Movimiento | No de pudo obtener eventos ${camHostname}`);
+          reject(errEvents);
         }
       });
     });

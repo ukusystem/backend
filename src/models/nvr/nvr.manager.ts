@@ -18,26 +18,26 @@ export class NvrManager {
 
     let cronStartTime : string = `${parseInt(sec_inicio, 10)} ${parseInt(min_inicio,10)} ${parseInt(hr_inicio, 10)} * * ${times.dia}`;
 
-    const currStartDateTime = dayjs().set("hour",parseInt(hr_inicio, 10)).set("minute",parseInt(min_inicio,10)).set("second",parseInt(sec_inicio, 10));
-    const currStartDateTimeAjusted = currStartDateTime.subtract(NvrManager.#HLS_TIME,"second");
+    // const currStartDateTime = dayjs().set("hour",parseInt(hr_inicio, 10)).set("minute",parseInt(min_inicio,10)).set("second",parseInt(sec_inicio, 10));
+    // const currStartDateTimeAjusted = currStartDateTime.subtract(NvrManager.#HLS_TIME,"second");
 
-    if(currStartDateTime.format("YYYY-MM-DD") === currStartDateTimeAjusted.format("YYYY-MM-DD")){
-      cronStartTime = `${currStartDateTimeAjusted.second()} ${currStartDateTimeAjusted.minute()} ${currStartDateTimeAjusted.hour()} * * ${times.dia}`;
-    }else{
-      const currStartDayTime = currStartDateTime.startOf("day")
-      cronStartTime = `${currStartDayTime.second()} ${currStartDayTime.minute()} ${currStartDayTime.hour()} * * ${times.dia}`;
-    }
+    // if(currStartDateTime.format("YYYY-MM-DD") === currStartDateTimeAjusted.format("YYYY-MM-DD")){
+    //   cronStartTime = `${currStartDateTimeAjusted.second()} ${currStartDateTimeAjusted.minute()} ${currStartDateTimeAjusted.hour()} * * ${times.dia}`;
+    // }else{
+    //   const currStartDayTime = currStartDateTime.startOf("day")
+    //   cronStartTime = `${currStartDayTime.second()} ${currStartDayTime.minute()} ${currStartDayTime.hour()} * * ${times.dia}`;
+    // }
 
-    let cronEndTime : string = `${parseInt(sec_inicio, 10)} ${parseInt(min_inicio,10)} ${parseInt(hr_inicio, 10)} * * ${times.dia}`;
-    const currEndDateTime = dayjs().set("hour",parseInt(hr_final, 10)).set("minute",parseInt(min_final,10)).set("second",parseInt(sec_final, 10));
-    const currEndDateTimeAjusted = currEndDateTime.add(NvrManager.#HLS_TIME,"second");
+    let cronEndTime : string = `${parseInt(sec_final, 10)} ${parseInt(min_final,10)} ${parseInt(hr_final, 10)} * * ${times.dia}`;
+    // const currEndDateTime = dayjs().set("hour",parseInt(hr_final, 10)).set("minute",parseInt(min_final,10)).set("second",parseInt(sec_final, 10));
+    // const currEndDateTimeAjusted = currEndDateTime.add(NvrManager.#HLS_TIME,"second");
   
-    if(currEndDateTime.format("YYYY-MM-DD") === currEndDateTimeAjusted.format("YYYY-MM-DD")){
-      cronEndTime = `${currEndDateTimeAjusted.second()} ${currEndDateTimeAjusted.minute()} ${currEndDateTimeAjusted.hour()} * * ${times.dia}`;
-    }else{
-      const currEndDayTime = currEndDateTime.endOf("day")
-      cronEndTime = `${currEndDayTime.second()} ${currEndDayTime.minute()} ${currEndDayTime.hour()} * * ${times.dia}`;
-    }
+    // if(currEndDateTime.format("YYYY-MM-DD") === currEndDateTimeAjusted.format("YYYY-MM-DD")){
+    //   cronEndTime = `${currEndDateTimeAjusted.second()} ${currEndDateTimeAjusted.minute()} ${currEndDateTimeAjusted.hour()} * * ${times.dia}`;
+    // }else{
+    //   const currEndDayTime = currEndDateTime.endOf("day")
+    //   cronEndTime = `${currEndDayTime.second()} ${currEndDayTime.minute()} ${currEndDayTime.hour()} * * ${times.dia}`;
+    // }
 
     return {
       cron_tiempo_inicio: cronStartTime,
@@ -56,6 +56,33 @@ export class NvrManager {
     };
   }
 
+  static #secondsToTime(seconds_input: number):string {
+    const dateObj = new Date(seconds_input * 1000);
+    const hours = dateObj.getUTCHours();
+    const minutes = dateObj.getUTCMinutes();
+    const seconds = dateObj.getSeconds();
+    const timeString =
+      hours.toString().padStart(2, "0") +
+      ":" +
+      minutes.toString().padStart(2, "0") +
+      ":" +
+      seconds.toString().padStart(2, "0");
+    return timeString;
+  }
+
+  static #getTimeDiff(times: Pick<NvrPreferencia, "tiempo_final" | "tiempo_inicio">) : string {
+
+    const secondTimes = NvrManager.#getTimesInSecond({
+      tiempo_final: times.tiempo_final,
+      tiempo_inicio: times.tiempo_inicio,
+    });
+    const diffSeconds = secondTimes.end_time_seconds - secondTimes.start_time_seconds;
+
+    const timeDiff = NvrManager.#secondsToTime(diffSeconds);
+
+    return timeDiff;
+  }
+
   static async #createDirectory(basePath: string): Promise<string>{
     try {
       const currentDateTime = dayjs();
@@ -63,11 +90,6 @@ export class NvrManager {
       if (!fs.existsSync(folderPath)) {
         fs.mkdirSync(folderPath, { recursive: true });
       }
-      // for (let i = 0; i < 24; i++) {
-      //   const directoryHoursPath = path.join(folderPath, i.toString());
-      //   // Crear el directorio si no existe
-      //   fs.mkdirSync(directoryHoursPath, { recursive: true });
-      // }
       return path.resolve(basePath,currentDateTime.format("YYYY-MM-DD")).split(path.sep).join(path.posix.sep);
     } catch (error) {
       console.log("Error al crear directorio NvrManager.#createDirectory");
@@ -78,12 +100,15 @@ export class NvrManager {
     }
   }
 
-  static async #getFfmpegCLI(ctrl_id:number,cmr_id:number): Promise<string[]>{
+  static async #getFfmpegCLI(ctrl_id:number,cmr_id:number,times: Pick<NvrPreferencia, "tiempo_final" | "tiempo_inicio">): Promise<string[]>{
     try {
       const [mainRtsp] = await getRstpLinksByCtrlIdAndCmrId(ctrl_id,cmr_id);
 
       const basePath : string = `./nvr/hls/nodo${ctrl_id}/camara${cmr_id}`;
       const finalPath = await NvrManager.#createDirectory(basePath);
+
+      const timeDiff = NvrManager.#getTimeDiff(times);
+      console.log("time diff",ctrl_id,cmr_id,timeDiff)
 
       const keyArgs : string[] =[
         "-rtsp_transport","tcp",
@@ -93,11 +118,11 @@ export class NvrManager {
         "-hls_segment_type","mpegts",
         "-hls_time",`${NvrManager.#HLS_TIME}`,
         "-hls_list_size","0",
-        "-hls_playlist_type","event",
+        "-hls_playlist_type", "vod",
         "-hls_flags","append_list",
-        // "-hls_segment_filename",`${finalPath}/%H/segment_%H_%M_%S.ts`,
         "-hls_segment_filename",`${finalPath}/segment_%H_%M_%S.ts`,
         "-strftime","1",
+        "-t",`${timeDiff}`,
         `${finalPath}/index.m3u8`
       ]
 
@@ -189,15 +214,17 @@ export class NvrManager {
           const currCamJob = currPrefStructure.get(this.nvrpref_id);
           if(currCamJob !== undefined){
             try {
-              const ffmpegCli = await NvrManager.#getFfmpegCLI(this.ctrl_id,this.cmr_id);
+              const ffmpegCli = await NvrManager.#getFfmpegCLI(this.ctrl_id,this.cmr_id,{tiempo_inicio:this.tiempo_inicio,tiempo_final:this.tiempo_final});
               const newFfmpegProcess = spawn("ffmpeg",ffmpegCli);
-              if(currCamJob.ffmpegProcess === undefined){
-                currCamJob.ffmpegProcess = newFfmpegProcess;
-              }else{
-                currCamJob.ffmpegProcess.kill();
-                delete currCamJob.ffmpegProcess;
-                currCamJob.ffmpegProcess = newFfmpegProcess;
-              }
+
+
+              // if(currCamJob.ffmpegProcess === undefined){
+              //   currCamJob.ffmpegProcess = newFfmpegProcess;
+              // }else{
+              //   currCamJob.ffmpegProcess.kill();
+              //   delete currCamJob.ffmpegProcess;
+              //   currCamJob.ffmpegProcess = newFfmpegProcess;
+              // }
 
               currPrefStructure.set(this.nvrpref_id,currCamJob);
               NvrManager.#map.set(this.ctrl_id,currPrefStructure);
@@ -258,9 +285,9 @@ export class NvrManager {
 
       if(isInRangeCurTime){
         try {
-          const ffmpegCli = await NvrManager.#getFfmpegCLI(ctrl_id,preferencia.cmr_id);
+          const ffmpegCli = await NvrManager.#getFfmpegCLI(ctrl_id,preferencia.cmr_id,{tiempo_inicio:preferencia.tiempo_inicio,tiempo_final:preferencia.tiempo_final});
           const newFfmpegProcess = spawn("ffmpeg",ffmpegCli);
-          newCamJob.ffmpegProcess = newFfmpegProcess;
+          // newCamJob.ffmpegProcess = newFfmpegProcess;
         } catch (error) {
           console.log("Error al crear proceso ffmpeg | isInRangeCurTime");
           if(error instanceof Error){
@@ -269,12 +296,13 @@ export class NvrManager {
         }
       };
 
-      newPrefStructure.set(preferencia.nvrpref_id, newCamJob);
-
       if(preferencia.activo === 1){
         newCamJob.startScheduledJob?.start();
         newCamJob.endScheduleJob?.start();
       }
+
+      newPrefStructure.set(preferencia.nvrpref_id, newCamJob);
+
       NvrManager.#map.set(ctrl_id, newPrefStructure);
 
 
@@ -289,9 +317,9 @@ export class NvrManager {
 
         if(isInRangeCurTime){
           try {
-            const ffmpegCli = await NvrManager.#getFfmpegCLI(ctrl_id,preferencia.cmr_id);
+            const ffmpegCli = await NvrManager.#getFfmpegCLI(ctrl_id,preferencia.cmr_id,{tiempo_inicio:preferencia.tiempo_inicio,tiempo_final:preferencia.tiempo_final});
             const newFfmpegProcess = spawn("ffmpeg",ffmpegCli);
-            newCamJob.ffmpegProcess = newFfmpegProcess;
+            // newCamJob.ffmpegProcess = newFfmpegProcess;
           } catch (error) {
             console.log("Error al crear proceso ffmpeg | isInRangeCurTime");
             if(error instanceof Error){
