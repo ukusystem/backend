@@ -276,26 +276,29 @@ export class BaseAttach extends Mortal {
     if (this._closeOnNextSend) return;
     const piece = this.receivedData.shift();
     if (!piece) {
+      // this._log(`No data to shift`)
       return;
     }
+    // this._log(`Shifted buffer '${piece}'`)
     const received = piece.toString("utf8");
     if (received.length === 0) {
       this._log("Empty message received.");
     } else if (received.length > 0) {
+      // this._log(`Received decoded '${received}'`)
       // It is still alive
       this.setAlive();
       // Use data
       this._buffer += received;
       // this._log(`Buffer to process: '${this._buffer}'`)
       const commands = this._buffer.split(codes.SEP_EOL);
-      // consolethis._log\(commands)
+      // this._log(`Commands ${commands}`)
       for (let i = 0; i < commands.length - 1; i++) {
         if (commands[i].length > 0) {
           // System.out.println(commands[i])
           const partsArray = commands[i].split(codes.SEP_CMD);
           // Get command or value and id. These are the minimum components of a message.
           const cmdRes = this._parseMessage(partsArray, queries.cmdAndIDParse);
-          if (cmdRes) {
+          if (cmdRes && cmdRes.length>=2) {
             const cmdOrValue = cmdRes[0].getInt();
             const id = cmdRes[1].getInt();
             if (this.parseResponse(partsArray, cmdOrValue, id, commands[i])) {
@@ -304,7 +307,7 @@ export class BaseAttach extends Mortal {
               //this._log('Message was not a response, but was processed by a subclass.')
             } else {
               this._log(`Unknown command '${commands[i]}'. Command = 0x${cmdOrValue.toString(16)} ID = ${id}`);
-              this.#addUnknownCmd(id);
+              this.addUnknownCmd(id);
             }
           } else {
             this._log(`Error parsing command and id, one or both are missing. Received '${commands[i]}'`);
@@ -569,7 +572,7 @@ export class BaseAttach extends Mortal {
    *
    * @param id ID of the message that this method is responding to.
    */
-  #addUnknownCmd(id: number) {
+  private addUnknownCmd(id: number) {
     this._addResponse(id, codes.ERR_UNKNOWN_CMD);
   }
 
@@ -1089,8 +1092,8 @@ export class NodeAttach extends BaseAttach {
         // Get individual measures
         const paramsForRegister: any[] = [];
         // const paramsForCurrent: any[] = [];
-        // Parse every sensor reading from the message
-        while (parts.length !== 0) {
+        // Parse every sensor reading from the message. They come in pairs, so there must be at least two items.
+        while (parts.length >= 2) {
           oneTempOptional = this._parseMessage(parts, queries.tempParse, 0, false);
           if (!oneTempOptional) continue;
           oneTemp = oneTempOptional;
@@ -1208,6 +1211,40 @@ export class NodeAttach extends BaseAttach {
         }
         this.removePendingMessageByID(id, availableData[0].getInt(), false);
         break;
+      case codes.VALUE_ALL_ADDRESSES:
+        
+        // this._log(`Received all addresses '${command}'`)
+        const paramsForUpdate: any[] = [];
+        while (parts.length >= 2) {
+          const addrData = this._parseMessage(parts, queries.IDTextParse, id, false)
+          if (!addrData || addrData.length<2) continue;
+          const sensorID = addrData[0].getInt();
+          const sensorAddress = addrData[1].getString();
+          paramsForUpdate.push([sensorAddress, sensorID]);
+
+          // Send the data to the web app
+          this._notifyTemp(sensorID, this.controllerID, null, null, sensorAddress, null);
+        }
+        // this._log(`Parts remaining ${parts.length}: '${parts}'`)
+        this._log(`Received ${paramsForUpdate.length} temperature addresses.`)
+        await executeBatchForNode(queries.updateAddress, this.controllerID, paramsForUpdate);
+        break
+      case codes.VALUE_ADDRESS_CHANGED:
+        this._log(`Received address changed '${command}'`)
+        const addrChange = this._parseMessage(parts, queries.IDTextParse, id, false)
+        if(!addrChange){
+          break
+        }
+        const sensorID = addrChange[0].getInt()
+        const sensorAddress = addrChange[1].getString()
+        const changeRes = executeQuery(BaseAttach.formatQueryWithNode(queries.updateAddress, this.controllerID), [sensorAddress, sensorID])
+        if(!changeRes){
+          this._log(`ERROR Saving address change`)
+          break
+        }
+        this._log(`Temperature sensor address ID = ${sensorID} changed to '${sensorAddress}'`)
+        this._notifyTemp(sensorID, this.controllerID, null, null, sensorAddress, null);
+        break
       case codes.VALUE_INPUT_CTRL:
       case codes.VALUE_OUTPUT_CTRL:
       case codes.VALUE_TEMP_SENSOR_CTRL:
@@ -1316,8 +1353,9 @@ export class NodeAttach extends BaseAttach {
             break;
           case codes.CMD_OUTPUT_CHANGED:
             await this.insertInputOutput(this.controllerID, pinData, false);
-            // This is not necessary here since real time output states are not shown in the web app
-            // this._notifyOutput()
+            // Notify output changed
+            // Not used since in the web app the real time output state is not shown
+            // this._notifyOutput(pin,true,this.controllerID, null,null,state, null,null)
 
             break;
         }
@@ -1615,7 +1653,9 @@ export class NodeAttach extends BaseAttach {
     });
 
     controllerSocket.on("data", (data: Buffer) => {
-      // this._log(`Received '${data}' from controller`)
+      const a  = [...data]
+      // this._log(`Received buffer '${a.map((s)=>s.toString(16)).join(" ")}' from controller ID ${this.controllerID}`)
+      // this._log(`Received buffer '${data}' from controller ID ${this.controllerID}`)
       this.addData(data);
       // const code = [0]
       // const bundle = new Bundle()

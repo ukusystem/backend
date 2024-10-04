@@ -40,6 +40,7 @@ export const loginParse = [tupleUser, tuplePassword];
 export const valueDateParse = [tupleValue, tupleLong];
 export const cmdAndIDParse = [tupleInt, tupleCmd];
 export const tempParse = [tupleInt, tupleFloat];
+export const IDTextParse = [tupleValue, tupleTxt];
 export const valueParse = [tupleValue];
 export const bigParse = [tupleBig];
 export const longParse = [tupleLong];
@@ -215,6 +216,12 @@ export const insertTemperature = `
 				INSERT INTO %s.registrotemperatura (st_id, valor, fecha)
 				VALUES (?, ?, ?);
 			`;
+
+export const updateAddress = `
+			UPDATE %s.sensortemperatura
+			SET serie = ?
+			WHERE st_id = ?;
+`
 
 // export const setCurrentTemperature = `
 // 				UPDATE %s.sensortemperatura

@@ -1,5 +1,5 @@
 export const RECONNECT_DELAY = 10 // Delay to reconnect socket. Used by the server.
-export const MAX_MSG_LENGTH = 254 // The maximum message length without the null character, i.e. the
+export const MAX_MSG_LENGTH = 511 // The maximum message length without the null character, i.e. the
 // buffer must be MAX_MSG_LENGTH+1 long.
 
 // Separators
@@ -229,6 +229,9 @@ export const VALUE_GENERAL = 0x290         // General info
 export const VALUE_SECURITY_WEB = 0x291     // Security from web
 export const VALUE_ARM_WEB = 0x292          // Security arm from web
 export const VALUE_DISARM_WEB = 0x293       // Security disarm from web
+export const VALUE_STRUCT_MODES = 0x294    // Structure of the mode and security
+export const VALUE_ALL_ADDRESSES = 0x295   // Send all temperature sensor addresses
+export const VALUE_ADDRESS_CHANGED = 0x296 // Temperature sensor address changed
 
 export const VALUE_SOCKET_CLOSED = 0x400 // Socket was closed
 export const VALUE_AUTHORIZED = 0x401 // Card authorized
