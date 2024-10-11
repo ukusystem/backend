@@ -108,7 +108,6 @@ export class NvrManager {
       const finalPath = await NvrManager.#createDirectory(basePath);
 
       const timeDiff = NvrManager.#getTimeDiff(times);
-      console.log("time diff",ctrl_id,cmr_id,timeDiff)
 
       const keyArgs : string[] =[
         "-rtsp_transport","tcp",
@@ -197,6 +196,10 @@ export class NvrManager {
       tiempo_final: preferencia.tiempo_final,
       tiempo_inicio: preferencia.tiempo_inicio,
     });
+
+    if(secondTimes.end_time_seconds <= secondTimes.start_time_seconds){
+      return;
+    }
 
     const isInRangeCurTime = currentTimeSeconds > secondTimes.start_time_seconds && currentTimeSeconds < secondTimes.end_time_seconds;
 
