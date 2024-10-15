@@ -17,11 +17,15 @@ import { TicketMap } from "./models/ticketschedule";
     // Init Maps
     await server.initmaps()
 
-    // Inicializar dectecion de movimiento
-    // await server.motion()
+    // Iniciar dectecion de movimiento
+    if(process.env.START_MOTION_DETECTION === "true"){
+      await server.motion()
+    }
 
-    // inciar modo nvr
-    // server.startNvrMode()
+    // Iniciar modo nvr
+    if(process.env.START_NVR === "true"){
+      server.startNvrMode()
+    }
     
     // Mio
     server.runController();
@@ -30,7 +34,7 @@ import { TicketMap } from "./models/ticketschedule";
 
     // test()
   } catch (error) {
-    console.log(error);
+    console.error(error);
     process.exit(1)
   }
 })();

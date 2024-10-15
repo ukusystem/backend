@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { v4 as uuidv4 } from 'uuid';
 import { spawn } from "node:child_process";
+import { genericLogger } from "../../services/loggers";
 
 export const trimRecordNvr = asyncErrorHandler(
   async (req: RequestWithUser, res: Response, next: NextFunction) => {
@@ -45,18 +46,18 @@ export const trimRecordNvr = asyncErrorHandler(
 
           fs.unlink(temporalSavePath, (err) => {
             if (err) {
-              console.error("Error al eliminar archivo temporal:", err);
+              genericLogger.error(`trimRecordNvr | Error al eliminar archivo temporal`,err);
             }
           });
         });
       });
 
       ffmpegProcess.stdout.on("error", (err) => {
-        console.error("Error al cortar grabacion",err);
+        genericLogger.error(`trimRecordNvr | Error al cortar grabacion`,err);
         res.status(500).json({message:"Error al cortar grabación."});
         fs.unlink(temporalSavePath, (err) => {
           if (err) {
-            console.error("Error al eliminar archivo temporal:", err);
+            genericLogger.error(`trimRecordNvr | Error al eliminar archivo temporal`,err);
           }
         });
       });

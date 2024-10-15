@@ -14,15 +14,16 @@ type permittedRoles = "Invitado" | "Usuario" | "Administrador"
 
 export const authenticate = asyncErrorHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
 
-  const accessToken: string | undefined = req.cookies[appConfig.cookie.access_token.name];
-  const refreshToken: string | undefined = req.cookies[appConfig.cookie.refresh_token.name];
+  const accessTokenCookie: string | undefined = req.cookies[appConfig.cookie.access_token.name];
+  const refreshTokenCookie: string | undefined = req.cookies[appConfig.cookie.refresh_token.name];
+  const refreshTokenHeader: string | undefined = ( req.headers.authorization !== undefined ? req.headers.authorization.split(" ")[1] : undefined);
 
-  if (accessToken === undefined && refreshToken === undefined) {
+  if (accessTokenCookie === undefined && refreshTokenCookie === undefined && refreshTokenHeader === undefined) {
     const errTokenNotProvided = new CustomError( `Token no proporcionado`, 401, "Unauthorized" );
     return next(errTokenNotProvided);
   }
 
-  const tokenPayload = await Auth.verifyAccessToken(accessToken);
+  const tokenPayload = await Auth.verifyAccessToken(accessTokenCookie);
 
   if (tokenPayload !== null) {
 
@@ -36,7 +37,9 @@ export const authenticate = asyncErrorHandler(async (req: CustomRequest, res: Re
 
   }else{ // tokenPayload === null
 
-    if(refreshToken === null){
+    const refreshToken = refreshTokenCookie ?? refreshTokenHeader ;
+
+    if(refreshToken === undefined){
       const errRefresTokenNotProvided = new CustomError( `Refresh token no proporcionado`, 401, "Unauthorized" );
       return next(errRefresTokenNotProvided);
     }
@@ -54,7 +57,6 @@ export const authenticate = asyncErrorHandler(async (req: CustomRequest, res: Re
       req.user = userFound;
 
       const newAccessToken = await Auth.generateAccessToken({ id: userFound.u_id, rol: userFound.rol, });
-      // console.log("generando nuevo acceso token",newAccessToken )
 
       res.cookie(appConfig.cookie.access_token.name, newAccessToken, {
         httpOnly: true, // acceso solo del servidor

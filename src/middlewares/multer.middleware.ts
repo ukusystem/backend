@@ -3,6 +3,7 @@ import multer, { Options ,Field } from "multer";
 import { join } from "path";
 import fs from "fs";
 import { CustomError } from "../utils/CustomError";
+import { genericLogger } from "../services/loggers";
 
 // import mime from 'mime';
 // import filetype from 'file-type'
@@ -141,20 +142,20 @@ export const deleteTemporalFiles =  (files: { [fieldname: string]: Express.Multe
     if (Array.isArray(files)) {
       for (const file of files) {
         fs.unlinkSync(file.path);
-        console.log(`Archivo temporal ${file.filename} eliminado`);
+        genericLogger.info(`deleteTemporalFiles | Archivo temporal ${file.filename} eliminado`);
       }
-      console.log("Todos los archivos temporales han sido eliminados correctamente");
+      genericLogger.info(`deleteTemporalFiles | Todos los archivos temporales han sido eliminados correctamente`);
     } else {
       for (const fieldname in files) {
         for (const file of files[fieldname]) {
           fs.unlinkSync(file.path);
-          console.log(`Archivo temporal ${file.filename} eliminado`);
+          genericLogger.info(`deleteTemporalFiles | Archivo temporal ${file.filename} eliminado`);
         }
       }
-      console.log("Todos los archivos temporales han sido eliminados correctamente");
+      genericLogger.info(`deleteTemporalFiles | Todos los archivos temporales han sido eliminados correctamente`);
     }
   } catch (error) {
-    console.error("Error al eliminar archivos temporales:", error);
+    genericLogger.error(`deleteTemporalFiles | Error al eliminar archivos temporales`,error);
   }
 };
 

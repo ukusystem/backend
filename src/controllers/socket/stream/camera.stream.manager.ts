@@ -3,6 +3,7 @@ import { CamStreamDirection, CamStreamObserver, CamStreamQuality, CamStreamState
 import { createImageBase64, getFfmpegArgs, verifyImageMarkers } from "../../../utils/stream";
 import { spawn } from "child_process";
 import { CustomError } from "../../../utils/CustomError";
+import { vmsLogger } from "../../../services/loggers";
 
 export class CamStreamSocketObserver implements CamStreamObserver {
   #socket: Socket;
@@ -90,7 +91,8 @@ export class CamStreamSocketManager {
 
           setTimeout(() => {
             // crear nuevo proceso
-            console.log("Creando nuevo proceso : ", { ctrl_id, ip, q });
+            vmsLogger.info(`Camera Stream Manager | Crear nuevo proceso`,{ctrl_id,ip,q});
+
             CamStreamSocketManager.createProccess({ ctrl_id, ip, q });
             // cambiar estado observador
             CamStreamSocketManager.#setObserverState({ ctrl_id, ip, q }, true);
@@ -212,13 +214,13 @@ export class CamStreamSocketManager {
       );
 
       CamStreamSocketManager.process[ctrl_id][ip][q].ffmpegProcess.on( "close", (code, signal) => {
-          console.log( `Proceso ffmpeg cerrado con código ${code} y señal ${signal}` );
+
+          vmsLogger.info(`Camera Stream Manager | Proceso ffmpeg cerrado con código ${code} y señal ${signal}`,direction);
+
           const currentProcess = CamStreamSocketManager.process[ctrl_id][ip][q];
           if (currentProcess) {
             // delete observer
             // CamStreamSocketManager.unregisterObserver({ctrl_id,ip,q})
-
-            console.log("Delete proccess stream ", direction);
             currentProcess.ffmpegProcess.kill();
             delete CamStreamSocketManager.process[ctrl_id][ip][q];
             if(code !== null){
@@ -241,7 +243,6 @@ export class CamStreamSocketManager {
           if (currentProcess) {
             // delete observer
             CamStreamSocketManager.unregisterObserver({ ctrl_id, ip, q });
-            console.log("KillProcess ", direction);
             currentProcess.ffmpegProcess.kill();
           }
         }

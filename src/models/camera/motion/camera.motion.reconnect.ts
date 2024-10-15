@@ -1,6 +1,7 @@
 // @ts-ignore
 // @ts-nocheck
 
+import { cameraLogger } from "../../../services/loggers";
 import { CameraMotionManager } from "./camera.motion.manager";
 import { CameraMotionProcess } from "./camera.motion.process";
 import { CameraProps } from "./camera.motion.types";
@@ -29,7 +30,7 @@ export class CameraReconnect {
     try {
       const isConnected = await this.#connect();
       if (isConnected) {
-        console.log("connectado primer intento");
+        cameraLogger.info(`CameraReconnect | execute | Connectado primer intento | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id}  | ip: ${this.ip}`);
         const newCamMotion = new CameraMotionProcess({
           cmr_id: this.cmr_id,
           ctrl_id: this.ctrl_id,
@@ -55,8 +56,7 @@ export class CameraReconnect {
 
       // },30000)
     } catch (error) {
-      console.log("Error CameraReconnect.execute");
-      console.log(error);
+      cameraLogger.error(`CameraReconnect | execute | Error CameraReconnect.execute`,error);
     }
   }
 

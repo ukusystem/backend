@@ -1,3 +1,4 @@
+import { authLogger } from "../../services/loggers";
 import { sendMail } from "../../services/sendEmail";
 import { asyncErrorHandler } from "../../utils/asynErrorHandler";
 import { Request, Response, NextFunction } from "express";
@@ -8,7 +9,7 @@ export const forgotPassword = asyncErrorHandler(
       await sendMail({ toEmail: correo });
       res.json({message: "Se ha enviado una solicitud de restablecimiento de contraseña al administrador.",});
     } catch (error) {
-      console.log("Error en resetPassword :", error);
+      authLogger.error("Error de restablecimiento de contraseña", error);
       res.status(500).json({ message: "Ocuarrio un error al enviar solicitud de restablecimiento de contraseña.", });
     }
   }

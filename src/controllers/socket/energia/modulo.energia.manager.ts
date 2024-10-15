@@ -1,5 +1,6 @@
 
 import { Energia } from "../../../models/site/energia";
+import { genericLogger } from "../../../services/loggers";
 import {  MedEneListAction, MedEneState, MedidorEnergiaSocket, MedidorEnergiaSocketBad, ModEnergiaObserver, ModEnergiaSubject, SocketModEnergia } from "./modulo.energia.types";
 
 export class ModuloEnergiaObserver implements ModEnergiaObserver {
@@ -281,8 +282,7 @@ export class ModuloEnergiaManager {
         ModuloEnergiaManager.add_update(newMedEnergia);
       }
     } catch (error) {
-      console.log(`Socket Medidor Energia | MedidorEnergiaMap | Error al inicilizar modulos`);
-      console.error(error);
+      genericLogger.error("Error al inicializar modulos de energia",error);
       throw error;
     }
   }

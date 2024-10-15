@@ -3,6 +3,7 @@
 import { Cam } from "onvif"; // No existen types para ts
 
 import { CustomError } from "../../utils/CustomError";
+import { cameraLogger } from "../../services/loggers";
 
 interface CameraProps {
   ctrl_id: number ;
@@ -59,7 +60,7 @@ export class CameraOnvif {
         try {
           const newConnection = await this.#createInstanceConnection()
           camOnvifConnections[this.ctrl_id][this.ip] = newConnection;
-          console.log(`CamOnvif -> Nueva Instancia | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`)
+          cameraLogger.info(`CamOnvif | #getInstanceConnection | Nueva Instancia | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`);
           return resolve(newConnection)
         } catch (error) {
           return reject(error)

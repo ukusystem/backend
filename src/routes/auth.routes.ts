@@ -1,5 +1,4 @@
 import { Router } from "express";
-// import { AuthController } from "../controllers/auth.controllers";
 import { requestDataValidator} from "../middlewares/validator.middleware";
 import { authController } from "../controllers/auth";
 import { loginSchema } from "../schemas/auth";
@@ -13,7 +12,8 @@ authRoutes.post("/auth/login", requestDataValidator({bodySchema:loginSchema},{ha
 authRoutes.post("/auth/logout", authController.logout )
 
 // VerifyToken GET /api/v1/auth/verify
-authRoutes.get("/auth/verify", authController.refreshToken)
+authRoutes.get("/auth/verify", authController.verify)
+authRoutes.get("/auth/refresh", authController.refreshToken)
 
 // ResetPassword POST "/auth/resetpassword"
 authRoutes.post("/auth/resetpassword", authController.forgotPassword)

@@ -9,6 +9,7 @@ import { ChildProcessWithoutNullStreams, spawn } from "child_process";
 import { verifyImageMarkers } from "../../utils/stream";
 import { decrypt } from "../../utils/decrypt";
 import { CustomError } from "../../utils/CustomError";
+import { cameraLogger } from "../../services/loggers";
 
 type CameraInfo =  Pick<Camara, "cmr_id"|"ip"| "descripcion"|"puertows"> & Pick<TipoCamara,"tipo"> & Pick<Marca, "marca"> 
 type CamCtrlIdIp = Pick<Controlador,"ctrl_id"> & Pick<Camara,"ip">
@@ -49,9 +50,9 @@ export class Camera  {
         return camera;
       } catch (error) {
         if(error instanceof Error){
-            console.log(`Error en #getCameraOnvifByCtrlIdAndIp: ${error.message}`);
+            cameraLogger.error(`Error en #getCameraOnvifByCtrlIdAndIp: ${error.message}`);
         }else{
-            console.log(`Error en #getCameraOnvifByCtrlIdAndIp: ${error}`);
+            cameraLogger.error(`Error en #getCameraOnvifByCtrlIdAndIp:`,error);
         }
         throw error;
       }
@@ -70,17 +71,12 @@ export class Camera  {
 
         if(mainRtspLink){
           const args = [
-            "-rtsp_transport",
-            "tcp",
-            "-i",
-            `${mainRtspLink}`,
+            "-rtsp_transport","tcp",
+            "-i",`${mainRtspLink}`,
             "-an",
-            "-t",
-            "10",
-            "-c:v",
-            "mjpeg",
-            "-f",
-            "image2pipe",
+            "-t","10",
+            "-c:v","mjpeg",
+            "-f","image2pipe",
             "-",
           ];
   
@@ -120,7 +116,7 @@ export class Camera  {
           });
   
           ffmpegProcessImage.on("close", (code) => {
-            console.log(`Proceso ffmpegImage cerrado con código ${code}`);
+            cameraLogger.info(`getSnapshotByCtrlIdAndIp | Proceso ffmpegImage cerrado con código ${code}`);
             if (ffmpegProcessImage) {
               ffmpegProcessImage.kill();
               ffmpegProcessImage = null;

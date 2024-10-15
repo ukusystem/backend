@@ -3,6 +3,7 @@ import { MySQL2 } from "../../database/mysql";
 import { Camara } from "../../types/db";
 import { Init } from "../init";
 import { CameraNotifyManager } from "../system";
+import { genericLogger } from "../../services/loggers";
 
 interface CameraRowData extends RowDataPacket, Camara {}
 
@@ -78,8 +79,7 @@ export class NodoCameraMapManager {
     });
 
     } catch (error) {
-      console.log(`CameraMapManager | Error al inicializar camaras`);
-      console.error(error);
+      genericLogger.error(`NodoCameraMapManager | Error al inicializar camaras`,error);
       throw error;
     }
   }

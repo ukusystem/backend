@@ -2,6 +2,7 @@ import { Server, Socket } from "socket.io";
 import { CamStreamDirection, CamStreamQuality } from "./camera.stream.types";
 import { CamStreamSocketManager, CamStreamSocketObserver, } from "./camera.stream.manager";
 import { camStreamSocketSchema } from "./camera.stream.schema";
+import { vmsLogger } from "../../../services/loggers";
 
 export const camStreamSocket = async (io: Server, socket: Socket) => {
   // Obtener ip y calidad
@@ -12,14 +13,7 @@ export const camStreamSocket = async (io: Server, socket: Socket) => {
   const result = camStreamSocketSchema.safeParse({ ctrl_id: xctrl_id, ip: xip, q: xq, });
 
   if (!result.success) {
-    console.log(
-      result.error.errors.map((errorDetail) => ({
-        message: errorDetail.message,
-        status: errorDetail.code,
-        path: errorDetail.path,
-      }))
-    );
-
+    socket.disconnect(true);
     return;
   }
 
@@ -27,7 +21,7 @@ export const camStreamSocket = async (io: Server, socket: Socket) => {
   const direction: CamStreamDirection = { ctrl_id: validatedNsp.ctrl_id, ip: validatedNsp.ip, q: validatedNsp.q as CamStreamQuality, };
   const { ctrl_id, ip, q } = direction;
 
-  console.log( `Cliente ID: ${socket.id} | Petición Stream ctrl_id: ${ctrl_id}, ip: ${ip}, q:${q}` );
+  vmsLogger.info(`Camera Stream Socket | Cliente ID: ${socket.id} | Petición Stream`,{ctrl_id,ip,q});
 
   CamStreamSocketManager.createProccess(direction);
   
@@ -36,11 +30,9 @@ export const camStreamSocket = async (io: Server, socket: Socket) => {
 
   // Manejar cierre de conexión
   socket.on("disconnect", () => {
-    console.log("Cliente desconectado ID:", socket.id);
+    vmsLogger.info(`Camera Stream Socket | Cliente desconectado ID: ${socket.id}`,{ctrl_id,ip,q});
     const clientsCount = io.of(`/stream/${ctrl_id}/${ip}/${q}`).sockets.size;
-    console.log(
-      `Numero de clientes conectados: ${clientsCount} | ctrl_id: ${ctrl_id}, ip: ${ip}, q:${q}`
-    );
+    vmsLogger.info(`Camera Stream Socket | Numero de clientes conectados: ${clientsCount} | ctrl_id: ${ctrl_id}, ip: ${ip}, q:${q}`);
     if (clientsCount == 0) {
       CamStreamSocketManager.killProcess(direction);
     }
@@ -48,6 +40,6 @@ export const camStreamSocket = async (io: Server, socket: Socket) => {
 
   // Manejar errores
   socket.on("error", (error) => {
-    console.error(`Error en la conexión Socket.IO: ${error.message}`);
+    vmsLogger.error(`Camera Stream Socket | Error en la conexión Socket.IO: ${error.message}`,{ctrl_id,ip,q});
   });
 };

@@ -1,6 +1,7 @@
 import { RowDataPacket } from "mysql2";
 import { Contrata } from "../../types/db";
 import { MySQL2 } from "../../database/mysql";
+import { genericLogger } from "../../services/loggers";
 
 interface ContrataRowData extends RowDataPacket, Contrata {};
 
@@ -86,8 +87,7 @@ export class ContrataMap {
           }
         }
     } catch (error) {
-        console.log(`ContrataMap | Error al inicilizar contratas`);
-        console.error(error);
+        genericLogger.error(`ContrataMap | Error al inicilizar contratas`,error);
         throw error
     }
   }

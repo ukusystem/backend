@@ -51,7 +51,6 @@ export const getRstpLinksByCtrlIdAndIp = async (ctrl_id: number, ip: string ) : 
             const errCamConnect = new CustomError(`Error al intentar establecer conexión con la cámara ${ip}`, 500,"Onvif Camera Connection")
             return reject(errCamConnect)
           }
-          // console.log("Connected to ONVIF Device");
           const cam_obj = this;
 
           function getStreamUriPromise() {
@@ -137,7 +136,6 @@ export const getRstpLinksByCtrlIdAndCmrId = async (ctrl_id: number, cmr_id: numb
             const errCamConnect = new CustomError(`Error al intentar establecer conexión con la cámara ${ip}`, 500,"Onvif Camera Connection")
             return reject(errCamConnect)
           }
-          // console.log("Connected to ONVIF Device");
           const cam_obj = this;
 
           function getStreamUriPromise() {

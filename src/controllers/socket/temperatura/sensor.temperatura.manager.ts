@@ -1,4 +1,5 @@
 import { Temperatura } from "../../../models/site/temperatura";
+import { genericLogger } from "../../../services/loggers";
 import { SensorTemperaturaSocket, SensorTemperaturaSocketBad, SensorTemperatureObserver, SenTempAction, SenTempState, SocketSenTemperature } from "./sensor.temperatura.types";
 
 export class SenTempSocketObserver implements SensorTemperatureObserver {
@@ -222,8 +223,7 @@ export class SensorTemperaturaManager  {
           SensorTemperaturaManager.add_update(newSenTemp);
         }
       } catch (error) {
-        console.log(`Socket Sensor Temperatura Map | SensorTemperaturaMap | Error al inicilizar sensores`)
-        console.error(error)
+        genericLogger.error(`Socket Sensor Temperatura Map | SensorTemperaturaMap | Error al inicilizar sensores`,error);
         throw error
       }
     }

@@ -1,4 +1,4 @@
-import { ControllerMapManager, RegionMapManager, TipoCamaraMapManager } from "../../../models/maps";
+import { ControllerMapManager, RegionMapManager } from "../../../models/maps";
 import { NodoCameraMapManager } from "../../../models/maps/nodo.camera";
 import { PinesEntrada, Region } from "../../../types/db";
 import { PinEntradaManager } from "../pinentrada";

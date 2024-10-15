@@ -3,6 +3,7 @@ import { IPinesEntradaSocket, IPinesEntradaSocketBad, PinesEntradaObserver } fro
 import { EquipoEntrada, PinesEntrada } from "../../../types/db";
 import { PinEntrada } from "../../../models/site";
 import { AlarmManager } from "../alarm";
+import { genericLogger } from "../../../services/loggers";
 
 export class PinesEntradaSocket implements IPinesEntradaSocket {
   ctrl_id: number;
@@ -252,10 +253,7 @@ export class PinEntradaManager {
         PinEntradaManager.add_update(newPinSalida);
       }
     } catch (error) {
-      console.log(
-        `Socket Pines Entrada | PinEntradaManager | Error al inicilizar equipos de entrada`
-      );
-      console.error(error);
+      genericLogger.error("Error al inicializar pines de entrada | PinEntradaManager",error);
       throw error
     }
   }

@@ -2,6 +2,7 @@ import { Server } from "socket.io";
 import { SocketSenTemperature } from "./sensor.temperatura.types";
 import { senTempNamespaceSchema } from "./sensor.temperatura.schema";
 import { SensorTemperaturaManager, SenTempSocketObserver } from "./sensor.temperatura.manager";
+import { genericLogger } from "../../../services/loggers";
 
 
 export const senTemperaturaSocket = async ( io: Server, socket: SocketSenTemperature ) => {
@@ -12,14 +13,7 @@ export const senTemperaturaSocket = async ( io: Server, socket: SocketSenTempera
     const result = senTempNamespaceSchema.safeParse({ ctrl_id: xctrl_id });
 
     if (!result.success) {
-      console.log(
-        result.error.errors.map((errorDetail) => ({
-          message: errorDetail.message,
-          status: errorDetail.code,
-          path: errorDetail.path,
-        }))
-      );
-
+      socket.disconnect(true);
       return;
     }
 
@@ -33,15 +27,12 @@ export const senTemperaturaSocket = async ( io: Server, socket: SocketSenTempera
 
     socket.on("disconnect", () => {
       const clientsCount = io.of(`/sensor_temperatura/${ctrl_id}`).sockets.size;
-      console.log(`Socket Sensor Temperatura | clientes_conectados = ${clientsCount}| ctrl_id = ${ctrl_id}`);
       if (clientsCount == 0) {
-        console.log(`Socket Sensor Temperatura | Eliminado Observer | ctrl_id = ${ctrl_id}`);
         SensorTemperaturaManager.unregisterObserver(ctrl_id);
       }
     });
 
     socket.on("error", (error: any) => {
-      console.log(`Socket Sensor Temperatura | Error | ctrl_id = ${ctrl_id}`);
-      console.error(error);
+      genericLogger.error(`Socket Sensor Temperatura | Error | ctrl_id = ${ctrl_id}`,error);
     });
 };

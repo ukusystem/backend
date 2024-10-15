@@ -43,22 +43,16 @@ export class Sockets {
   initEvents() {
     // Manejar conexión de sockets en el namespace principal
     this.#io.of("/").on("connection", (socket) => {
-      console.log("==========================================================");
-      console.log("Cliente conectado id:", socket.id);
 
       // Manejar cierre de conexión Socket.IO
       socket.on("disconnect", () => {
-        // console.log("Cliente desconectado:", socket.id);
-        // // Obtener el número de clientes conectados después de la desconexión
-        // const count = io.engine.clientsCount;
-        // const count2 = io.of("/").sockets.size;
-        // console.log("clientes: ", count2);
       });
-
+      
       // Manejar errores de Socket.IO
       socket.on("error", (error) => {
         console.error(`Error en la conexión Socket.IO: ${error.message}`);
       });
+
     });
 
     // Namespace "/stream/nodo_id/camp_ip/calidad"

@@ -2,6 +2,7 @@ import { RowDataPacket } from "mysql2";
 import { MySQL2 } from "../../database/mysql";
 import { Region } from "../../types/db";
 import { RegionNotifyManager } from "../system";
+import { genericLogger } from "../../services/loggers";
 
 interface RegionRowData extends RowDataPacket, Region {}
 
@@ -54,8 +55,7 @@ export class RegionMapManager {
         RegionMapManager.add(region.rgn_id, region);
       });
     } catch (error) {
-      console.log(`RegionMapManager | Error al inicializar regiones`);
-      console.error(error);
+      genericLogger.error(`RegionMapManager | Error al inicializar regiones`,error);
       throw error;
     }
   }

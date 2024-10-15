@@ -1,6 +1,7 @@
 import { RowDataPacket } from "mysql2";
 import { TipoCamara } from "../../types/db";
 import { MySQL2 } from "../../database/mysql";
+import { genericLogger } from "../../services/loggers";
 
 interface TipoCamaraRowData extends RowDataPacket, TipoCamara {}
 
@@ -47,8 +48,7 @@ export class TipoCamaraMapManager {
         TipoCamaraMapManager.add(tipocam.tc_id, tipocam);
       });
     } catch (error) {
-      console.log(`TipoCamaraMapManager | Error al inicializar tipo camaras`);
-      console.error(error);
+      genericLogger.error(`TipoCamaraMapManager | Error al inicializar tipo camaras`,error);
       throw error;
     }
   }

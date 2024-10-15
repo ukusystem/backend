@@ -1,4 +1,5 @@
 import { MySQL2 } from "../../../database/mysql";
+import { genericLogger } from "../../../services/loggers";
 import { Controlador } from "../../../types/db";
 import { ControllerNotifyManager } from "../../system";
 import { RegionMapManager } from "../region";
@@ -135,8 +136,7 @@ export class ControllerMapManager {
         ControllerMapManager.addController(controller.ctrl_id, controller);
       });
     } catch (error) {
-      console.log(`SidebarNavManager | Error al inicializar controladores`);
-      console.error(error);
+      genericLogger.error(`ControllerMapManager | init | Error al inicializar controladores`,error);
       throw error;
     }
   }

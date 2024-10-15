@@ -6,6 +6,39 @@ import { Auth } from "../../models/auth";
 import { CustomError } from "../../utils/CustomError";
 import { appConfig } from '../../configs';
 
+interface IResponseLogin {
+  status: number;
+  message: string;
+  data: IData;
+}
+
+interface IData {
+  token_type: string;
+  access_token: string;
+  refresh_token: string;
+  user: IUserLoginData;
+}
+
+interface IUserLoginData {
+  usuario: string;
+  fecha: string;
+  u_id: number;
+  rl_id: number;
+  p_id: number;
+  nombre: string;
+  dni: string;
+  telefono: string;
+  correo: string;
+  apellido: string;
+  c_id: number;
+  contrata: string;
+  co_id: number;
+  rubro: string;
+  rol: string;
+  descripcion: string;
+  foto: string;
+}
+
 export const login = asyncErrorHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     const { usuario, contraseña } = req.body as Pick< Usuario, "contraseña" | "usuario" >;
@@ -46,7 +79,18 @@ export const login = asyncErrorHandler(
     });
 
     const { contraseña: contraseñaFound, ...userWithoutPassword } = userFound;
-    
-    res.json(userWithoutPassword);
+
+    const response: IResponseLogin = {
+      status: 200,
+      message: "Login successful",
+      data: {
+        token_type: "Bearer",
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        user: userWithoutPassword
+      }
+    }
+
+    res.status(200).json(response);
   }
 );

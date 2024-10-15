@@ -14,6 +14,7 @@ import dayjs from "dayjs";
 import { CameraMotionMethods, CameraMotionProps, CameraProps } from "./camera.motion.types";
 import { CameraMotionManager } from "./camera.motion.manager";
 import { ControllerMapManager } from "../../maps";
+import { cameraLogger } from "../../../services/loggers";
 
 
 export class CameraMotionProcess implements CameraMotionProps, CameraMotionMethods {
@@ -109,7 +110,7 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
             if (verifyImageMarkers(this.imageBuffer, "complete")) {
               try {
                 const pathImg = createMotionDetectionFolders(`./deteccionmovimiento/img/${"nodo" + this.ctrl_id}/${this.ip}`);
-                console.log(`Detección Movimiento | Imagen completo recibido | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`);
+                cameraLogger.debug(`CameraMotionProcess | snapshotMotion | Imagen completo recibido | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`);
                 // Guardar la imagen
                 const imagePath = path.join(pathImg, `captura_${Date.now()}.jpg`); // ---> deteccionmovimiento\img\Arequipa\172.16.4.110\2024-01-26\13\captura_1706292419800.jpg
 
@@ -121,8 +122,7 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
                 insertPathToDB(imagePath, this.ctrl_id, this.cmr_id, 0);
 
               } catch (error) {
-                console.log(`Detección Movimiento | Error al guardar imagen | ctrl_id: ${this.ctrl_id} | ip: ${this.ip} `);
-                console.error(error);
+                cameraLogger.error(`CameraMotionProcess | snapshotMotion | Error al guardar imagen | ctrl_id: ${this.ctrl_id} | ip: ${this.ip} `,error);
               }
             }
           }
@@ -135,7 +135,7 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
         });
 
         this.ffmpegProcessImage.on("error", (err) => {
-          console.log(`Detección Movimiento | Error en el proceso ffmpegImage | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`);
+          cameraLogger.error(`CameraMotionProcess | snapshotMotion | Error en el proceso ffmpegImage | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`,err);
           if (this.ffmpegProcessImage) {
             this.ffmpegProcessImage.kill();
             this.ffmpegProcessImage = null;
@@ -145,12 +145,10 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
 
           this.imageBuffer = Buffer.alloc(0);
           this.isInsideImage = false;
-
-          console.error(err);
         });
 
         this.ffmpegProcessImage.on("close", async (code) => {
-          console.log(`Detección Movimiento | Proceso ffmpegImage cerrado con código ${code} | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`);
+          cameraLogger.debug(`CameraMotionProcess | snapshotMotion | Proceso ffmpegImage cerrado con código ${code} | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`);
           if (this.ffmpegProcessImage) {
             this.ffmpegProcessImage.kill();
             this.ffmpegProcessImage = null;
@@ -161,7 +159,7 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
           this.isInsideImage = false;
 
           if (this.isActiveProccesImage) {
-            console.log(`Detección Movimiento | Evento continua activo para capturar imagenes | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`);
+            cameraLogger.debug(`CameraMotionProcess | snapshotMotion | Evento continua activo para capturar imagenes | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`);
             let isConnected = await this.isCamConnected();
             if (isConnected) {
               return this.snapshotMotion(rtspUrl);
@@ -171,8 +169,7 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
           }
         });
       } catch (error) {
-        console.log(`Detección Movimiento | Error en CameraMotion.snapshotMotion | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`);
-        console.error(error);
+        cameraLogger.error(`CameraMotionProcess | snapshotMotion | Error en CameraMotion.snapshotMotion | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`,error);
       }
     }
   }
@@ -187,27 +184,24 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
         this.ffmpegProcessVideo = spawn("ffmpeg", argsVideoProcces);
 
         this.ffmpegProcessVideo.on("error", (err) => {
-          console.log(`Detección Movimiento | Error en el proceso ffmpegVideo | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`);
+          cameraLogger.error(`CameraMotionProcess | captureMotion | Error en el proceso ffmpegVideo | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`,err);
           if (this.ffmpegProcessVideo) {
             this.ffmpegProcessVideo.kill();
             this.ffmpegProcessVideo = null;
           }
-
-          console.error(err);
         });
 
         this.ffmpegProcessVideo.on("close", async (code) => {
           if (code === 0) {
-            console.log(`Detección Movimiento | Proceso ffmpegVideo completado sin errores | Código de salida: ${code} | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`);
+            cameraLogger.debug(`CameraMotionProcess | captureMotion | Proceso ffmpegVideo completado sin errores | Código de salida: ${code} | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`);
             insertPathToDB(videoPath, this.ctrl_id, this.cmr_id, 1);
           } else {
-            console.error(`Detección Movimiento | Proceso ffmpegVideo cerrado con código de error: ${code} | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`);
+            cameraLogger.error(`CameraMotionProcess | captureMotion | Proceso ffmpegVideo cerrado con código de error: ${code} | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`);
             // Eliminar video.
             try {
               fs.unlinkSync(videoPath);
             } catch (error) {
-              console.log(`Detección Movimiento | Error al eliminar video: ${videoPath} | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`);
-              console.error(error); 
+              cameraLogger.error(`CameraMotionProcess | captureMotion | Error al eliminar video: ${videoPath} | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`,error);
             }
           }
 
@@ -220,7 +214,7 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
           }
 
           if (this.isActiveProccesVideo) {
-            console.log(`Detección Movimiento | Evento continua activo para capturar video | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`);
+            cameraLogger.debug(`CameraMotionProcess | captureMotion | Evento continua activo para capturar video | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`);
             let isConnected = await this.isCamConnected();
             if (isConnected) {
               return this.captureMotion(rtspUrl);
@@ -230,8 +224,7 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
           }
         });
       } catch (error) {
-        console.log(`Detección Movimiento | Error en CameraMotion.captureMotion | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`);
-        console.error(error);
+        cameraLogger.error(`CameraMotionProcess | captureMotion | Error en CameraMotion.captureMotion | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`,error);
       }
     }
   }
@@ -483,28 +476,28 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
   async execute() {
     try {
       const camOnvif = await this.getCamOnvifInstance();
-      console.log(`Deteccion de Movimiento | Conexion establecida con la camara ${this.ip}`);
+      cameraLogger.info(`CameraMotionProcess | execute | Conexion establecida con la camara ${this.ip}`);
 
       // Proceso 1
       const info = await this.getDeviceInformation(camOnvif);
-      console.log("Manufacturer  " + info.manufacturer);
-      console.log("Model         " + info.model);
-      console.log("Firmware      " + info.firmwareVersion);
-      console.log("Serial Number " + info.serialNumber);
+      cameraLogger.info(`CameraMotionProcess | execute | Manufacturer  ${info.manufacturer}`);
+      cameraLogger.info(`CameraMotionProcess | execute | Model         ${info.model}`);
+      cameraLogger.info(`CameraMotionProcess | execute | Firmware      ${info.firmwareVersion}`);
+      cameraLogger.info(`CameraMotionProcess | execute | Serial Number ${info.serialNumber}`);
       // Proceso 2
       const date = await this.getSystemDateAndTime(camOnvif);
-      console.log("Device Time   " + date);
+      cameraLogger.info(`CameraMotionProcess | execute | Device Time   ${date}`);
       // Get RTSP:
       const onvifRtspUrl = await this.getStreamUri(camOnvif);
       // const rstpUrl = addCredentialToRtsp(onvifRtspUrl, this.usuario, this.contraseña);
       const multRtsp = await getMulticastRtspStreamAndSubStream(onvifRtspUrl, this.usuario, this.contraseña, info.manufacturer);
-      console.log("Rtsp URL : ", JSON.stringify(multRtsp));
+      cameraLogger.info(`CameraMotionProcess | execute | Rtsp URL : ${JSON.stringify(multRtsp)}`);
       //Proceso 3
       let hasEvents = await this.getCapabilities(camOnvif);
       // Proceso 4
       let hasTopics = await this.getEventProperties(camOnvif, hasEvents);
 
-      console.log("hasEvents && hasTopics", hasEvents, hasTopics);
+      cameraLogger.info(`CameraMotionProcess | execute | hasEvents && hasTopics ${hasEvents} ${hasTopics}`);
       if (hasEvents && hasTopics) {
         // register for 'event' events. This causes the library to ask the camera for Pull Events
         camOnvif.on("event", (camMessage: any, xml: any) => {
@@ -524,7 +517,7 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
       //   })
       // }
     } catch (error) {
-      console.error("Error en CameraMotion.execute() :", error);
+      cameraLogger.error(`CameraMotionProcess | execute | Error en CameraMotion.execute() :`, error);
       // throw error
     }
   }
@@ -602,7 +595,7 @@ const insertPathToDB = (newPath: string, ctrl_id: number, cmr_id: number, tipo: 
 
       await MySQL2.executeQuery({ sql: `INSERT INTO ${"nodo" + ctrl_id}.registroarchivocamara (cmr_id,tipo,ruta,fecha) VALUES ( ? , ?, ?, ?)`, values: [cmr_id, tipo, finalPath,fecha] });
     } catch (error) {
-      console.error("Error al insertar path a la db:\n", error);
+      cameraLogger.error(`CameraMotionProcess | insertPathToDB | Error al insertar path a la db:\n`, error);
     }
   })();
 };
@@ -613,19 +606,17 @@ export const DeteccionMovimiento = async () => {
     Object.keys(camerasData).forEach((ctrlIdKey) => {
       camerasData[Number(ctrlIdKey)].forEach(async (cam) => {
         const { ip, usuario, contraseña, cmr_id, ctrl_id } = cam;
-
-        const contraseñaDecrypt = decrypt(contraseña);
-        const camMotion = new CameraMotionProcess({ ip, usuario, contraseña: contraseñaDecrypt, cmr_id, ctrl_id });
-        CameraMotionManager.add_whithout_execute(camMotion);
-        // try {
-        //   await camMotion.execute()
-        // } catch (error) {
-        //   console.log(error)
-        // }
+        try {
+          const contraseñaDecrypt = decrypt(contraseña);
+          const camMotion = new CameraMotionProcess({ ip, usuario, contraseña: contraseñaDecrypt, cmr_id, ctrl_id });
+          CameraMotionManager.add_whithout_execute(camMotion);
+        } catch (error) {
+          cameraLogger.error(`DeteccionMovimiento | Error al iniciar el proceso : controlador  ${ctrl_id} | camara ${ip}`, error);
+        }
       });
     });
   } catch (error) {
-    console.error("Ocurrio un error en testMotion", error);
+    cameraLogger.error(`CameraMotionProcess | Ocurrio un error en DeteccionMovimiento`, error);
     throw error;
   }
 };

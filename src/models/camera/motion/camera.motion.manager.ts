@@ -1,4 +1,5 @@
 import { LastSnapShotManager } from "../../../controllers/socket/snapshot";
+import { cameraLogger } from "../../../services/loggers";
 import { CameraForFront } from "../../controllerapp/src/frontend/camaraForFront";
 import { CameraMotionProcess } from "./camera.motion.process";
 import { CameraReconnect } from "./camera.motion.reconnect";
@@ -41,8 +42,7 @@ export class CameraMotionManager {
         try {
           CameraMotionManager.map[cam.ctrl_id][cam.cmr_id].execute();
         } catch (error) {
-          console.log(`Detección Movimiento | Error en CameraMotionActions.add | ctrl_id: ${cam.ctrl_id} | cmr_id: ${cam.cmr_id} | ip: ${cam.ip}`);
-          console.error(error);
+          cameraLogger.error(`CameraMotionManager | Error #addcam | ctrl_id: ${cam.ctrl_id} | cmr_id: ${cam.cmr_id} | ip: ${cam.ip}`,error);
         }
       }
     }
@@ -145,7 +145,7 @@ export class CameraMotionManager {
   }
 
   static async reconnect(cmr_id: number, ctrl_id: number) {
-    console.log(`reconectando camara ctrl_id : ${ctrl_id} | cmr_id: ${cmr_id} `);
+    cameraLogger.info(`CameraMotionManager | reconnect | ctrl_id : ${ctrl_id} | cmr_id: ${cmr_id} `);
 
     if (CameraMotionManager.#exists({ ctrl_id, cmr_id })) {
       const currCamMotion = CameraMotionManager.map[ctrl_id][cmr_id];
@@ -175,9 +175,7 @@ export class CameraMotionManager {
   }
 
   static deleteFfmpegProccess(cmr_id: number, ctrl_id: number) {
-    console.log(
-      `Eliminando Procesos Motion ctrl_id : ${ctrl_id} | cmr_id: ${cmr_id} `
-    );
+    cameraLogger.info(`CameraMotionManager | deleteFfmpegProccess | ctrl_id : ${ctrl_id} | cmr_id: ${cmr_id} `);
 
     if (CameraMotionManager.map.hasOwnProperty(ctrl_id)) {
       if (CameraMotionManager.map[ctrl_id].hasOwnProperty(cmr_id)) {

@@ -1,4 +1,5 @@
 import { ControllerMapManager } from "../../models/maps";
+import { genericLogger } from "../../services/loggers";
 import { getRstpLinksByCtrlIdAndIp } from "../getCameraRtspLinks";
 
 type Calidad = "q1" | "q2" | "q3";
@@ -55,7 +56,7 @@ export const getFfmpegArgs = async (ctrl_id: number, ip: string, q: Calidad) => 
       }
       return ffmpegArg;
     } catch (error) {
-      console.error("Error en getFfmpegArgs", error);
+      genericLogger.error(`Error en getFfmpegArgs`,error);
       throw error
     }
   };

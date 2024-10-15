@@ -25,6 +25,7 @@ import { appConfig } from "../configs";
 import { DeteccionMovimiento } from "./camera";
 import { NodoCameraMapManager } from "./maps/nodo.camera";
 import { NvrManager } from "./nvr/nvr.manager";
+import { genericLogger } from "../services/loggers";
 
 // import { createServer as createServerHttps } from "https";
 // import fs from "fs";
@@ -58,7 +59,7 @@ export class ServerApp {
 
   listen() {
     this.#httpServer.listen(this.#port, () => {
-      console.log(`Servidor corriendo en el puerto ${this.#port}`);
+      genericLogger.info(`Servidor corriendo en el puerto ${this.#port}`);
     });
   }
 
@@ -118,8 +119,10 @@ export class ServerApp {
 
   async motion() {
     try {
+      genericLogger.info(`Iniciando detección de movimiento`);
       await DeteccionMovimiento()
     } catch (error) {
+      genericLogger.error(`Error al iniciar detección de movimiento`,error);
       throw error
     }
   }
@@ -152,16 +155,17 @@ export class ServerApp {
       await NodoCameraMapManager.init();
 
     } catch (error) {
-      console.log("Server Model | Error init maps")
-      console.log(error)
+      genericLogger.error(`Server Model | Error init maps`,error);
       throw error
     }
   }
 
   async startNvrMode(){
     try {
+      genericLogger.info(`Iniciando modo NVR`);
       await NvrManager.init() // inicializar despues de NodoCameraMapManager
     } catch (error) {
+      genericLogger.error(`Error al iniciar modo NVR`,error);
       throw error
     }
   }

@@ -1,11 +1,12 @@
 import "dotenv/config";
-import { IDbEnv, dbEnv } from "./db.configs";
-import { jwtEnv , IJwtEnv } from "./jwt.configs";
-import { emailEnv ,IEmailEnv } from "./email.configs";
-import { serverEnv , IServerEnv } from "./server.configs";
+import { dbEnv } from "./db.configs";
+import { jwtEnv } from "./jwt.configs";
+import { emailEnv } from "./email.configs";
+import { serverEnv } from "./server.configs";
 import { PoolOptions } from "mysql2";
-import { encryptEnv ,IEncryptEnv  } from "./encrypt.configs";
-import { cookieEnv ,ICookieEnv} from "./cookie.config";
+import { encryptEnv } from "./encrypt.configs";
+import { cookieEnv } from "./cookie.config";
+// import { genericLogger } from "../services/loggers";
 
 const zodEnv = jwtEnv.merge(dbEnv).merge(emailEnv).merge(serverEnv).merge(encryptEnv).merge(cookieEnv)
 
@@ -18,13 +19,17 @@ declare global {
 const result = zodEnv.safeParse(process.env)
 
 if (!result.success) {
-  console.log(result.error.errors.map(
+
+  const listErrors = result.error.errors.map(
     (errorDetail) => ({
       message: errorDetail.message,
       status: errorDetail.code,
       path: errorDetail.path
     })
-  ))
+  )
+  // genericLogger.error(`Validación de variables de entorno fallida`,listErrors);
+  console.log("Validación de variables de entorno fallida\n",listErrors)
+
   throw new Error(
     `Environment variable validation error:`
   );
@@ -126,7 +131,9 @@ const appConfig: IAppConfig = {
   },
 };
 
-console.log(appConfig);
+// genericLogger.debug("Configuraciones de entorno cargadas",appConfig);
+console.log("Configuraciones variables de entorno cargadas:\n",appConfig)
+
 export { appConfig };
 
 

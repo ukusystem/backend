@@ -5,6 +5,7 @@ import type { RequestWithUser } from "../../types/requests";
 import { onFinishTicket } from "../../models/controllerapp/controller";
 import { FinishTicket } from "../../models/controllerapp/src/finishTicket";
 import { TicketMap } from "../../models/ticketschedule";
+import { genericLogger } from "../../services/loggers";
 
 interface TicketUpdateBody {
   action: number;
@@ -16,7 +17,7 @@ export const upadateTicket = asyncErrorHandler(
   async (req: RequestWithUser, res: Response, next: NextFunction) => {
     const data: TicketUpdateBody = req.body;
     const {action, ctrl_id ,rt_id} = data
-    console.log("Datos recividos:", data);
+    genericLogger.info(`updateTicket | Datos recividos:`,data);
     const user = req.user!; // ! -> anteponer middleware auth
 
     const ticket = await Ticket.getTicketByCrtlIdAndTicketId({ctrl_id: ctrl_id, rt_id: rt_id});
@@ -51,7 +52,7 @@ export const upadateTicket = asyncErrorHandler(
               if(response){
                 if(response.resultado ){ // success
                   TicketMap.update(ctrl_id,rt_id,action)
-                  console.log(ctrl_id,rt_id,action,{success: true,message: "Accion realizada con éxito",})
+                  genericLogger.info(`updateT ticket successfully | ctrl_id = ${ctrl_id} | rt_id = ${rt_id} | action = ${action}`);                  
                   return res.json({success: true,message: "Accion realizada con éxito",});
                 }else{
                   return res.json({success: false,message: response.mensaje,});

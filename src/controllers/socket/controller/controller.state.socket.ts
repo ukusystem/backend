@@ -13,14 +13,6 @@ export const contollerStateSocket = async ( io: Server, socket: SocketController
   const result = controllerStateSocketSchema.safeParse({ ctrl_id: xctrl_id });
 
   if (!result.success) {
-    console.log(
-      result.error.errors.map((errorDetail) => ({
-        message: errorDetail.message,
-        status: errorDetail.code,
-        path: errorDetail.path,
-      }))
-    );
-
     socket.emit("error_message",{message:`Ocurrio un error al validar el controlador`});
     socket.disconnect(true);
     return;
@@ -47,16 +39,17 @@ export const contollerStateSocket = async ( io: Server, socket: SocketController
   });
 
   socket.on("setSecurity", async (newSecurity) => {
-    // console.log(`Seguridad: ${newSecurity}`)
     const res = await sendSecurity(ctrl_id, newSecurity===1)
-    if(res && res.resultado){
+    if(res !== undefined && res.resultado){
       ControllerMapManager.updateController(ctrl_id,{seguridad: newSecurity});
     }else{
-      console.log('No response or false')
+      // 'No response or false'
     }
-    if(res){
-      console.log(res.mensaje)
-    }
+
+    // if(res !== undefined && res.mensaje){
+    //   // socket.emit("some_event",{message:res.mensaje});
+    // }
+
   });
 
   socket.on("disconnect", () => {

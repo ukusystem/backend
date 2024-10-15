@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response, ErrorRequestHandler} from "express";
 import { CustomError } from "../../utils/CustomError";
+import { genericLogger } from "../../services/loggers";
 export const globalError = (error: CustomError | Error ,_req: Request,res: Response,_next: NextFunction) => {
   if (error instanceof CustomError) {
     // Error personalizado
@@ -16,12 +17,6 @@ export const globalError = (error: CustomError | Error ,_req: Request,res: Respo
     });
   }
 
-  // if (error instanceof ) {
-  //   return res.status(413).json({
-  //     error: 'PayloadTooLargeError',
-  //     message: 'La carga útil de la solicitud es demasiado grande. El tamaño máximo permitido es de 100 KB.'
-  //   });
-  // }
   if ("type" in error) { // PayloadTooLargeError
     if(error.type == "entity.too.large"){
       return res.status(413).json({
@@ -33,7 +28,6 @@ export const globalError = (error: CustomError | Error ,_req: Request,res: Respo
   }
 
   // Errores no controlados
-  console.log("Llego a global error")
-  console.error(error);
+  genericLogger.error("Error interno del servidor",error);
   return res.status(500).json({ status: 500 ,message: "Internal Server Error" });
 };

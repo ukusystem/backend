@@ -7,6 +7,7 @@ import { PreferenciaStructure, CameraJob, CronTimesNvr, NvrControllerStructure, 
 import dayjs from "dayjs";
 import fs from 'fs'
 import { spawn } from "child_process";
+import { genericLogger } from "../../services/loggers";
 
 export class NvrManager {
   static #map: NvrControllerStructure = new Map();
@@ -92,10 +93,7 @@ export class NvrManager {
       }
       return path.resolve(basePath,currentDateTime.format("YYYY-MM-DD")).split(path.sep).join(path.posix.sep);
     } catch (error) {
-      console.log("Error al crear directorio NvrManager.#createDirectory");
-      if(error instanceof Error){
-        console.log(error.message);
-      }
+      genericLogger.error(`NvrManager | #createDirectory | Error al crear directorio`,error);
       throw error;
     }
   }
@@ -127,10 +125,7 @@ export class NvrManager {
 
       return keyArgs;
     } catch (error) {
-      console.log("Error al obtener ffmpeg cli NvrManager.#getFfmpegCLI");
-      if(error instanceof Error){
-        console.log(error.message);
-      }
+      genericLogger.error(`NvrManager | #getFfmpegCLI | Error al obtener ffmpeg cli`,error);
       throw error;
     }
   }
@@ -181,10 +176,7 @@ export class NvrManager {
         }
       }
     } catch (error) {
-      console.log("Error al actualizar nvrpreferencia | NvrManager.update()");
-      if(error instanceof Error){
-        console.log(error.message);
-      }
+      genericLogger.error(`NvrManager | update | Error al actualizar nvrpreferencia`,error);
     }
   }
 
@@ -198,6 +190,7 @@ export class NvrManager {
     });
 
     if(secondTimes.end_time_seconds <= secondTimes.start_time_seconds){
+      genericLogger.info(`NvrManager | add | Tiempo de finalizacion es menor que el de inicio`);
       return;
     }
 
@@ -233,10 +226,7 @@ export class NvrManager {
               NvrManager.#map.set(this.ctrl_id,currPrefStructure);
               
             } catch (error) {
-              console.log("Error al crear proceso ffmpeg | newCronJobStart.onTick");
-              if(error instanceof Error){
-                console.log(error.message);
-              }
+              genericLogger.error(`NvrManager | Error al crear proceso ffmpeg | newCronJobStart.onTick`,error);
             }
           }
         }
@@ -261,10 +251,7 @@ export class NvrManager {
               currPrefStructure.set(this.nvrpref_id,currCamJob);
               NvrManager.#map.set(this.ctrl_id,currPrefStructure);
             } catch (error) {
-              console.log("Error al cerrar proceso ffmpeg | newCronJobEnd.onTick");
-              if(error instanceof Error){
-                console.log(error.message);
-              }
+              genericLogger.error(`NvrManager | Error al cerrar proceso ffmpeg | newCronJobEnd.onTick`,error);
             }
           }
         }
@@ -292,10 +279,7 @@ export class NvrManager {
           const newFfmpegProcess = spawn("ffmpeg",ffmpegCli);
           // newCamJob.ffmpegProcess = newFfmpegProcess;
         } catch (error) {
-          console.log("Error al crear proceso ffmpeg | isInRangeCurTime");
-          if(error instanceof Error){
-            console.log(error.message);
-          }
+          genericLogger.error(`NvrManager | Error al crear proceso ffmpeg | isInRangeCurTime`,error);
         }
       };
 
@@ -324,10 +308,7 @@ export class NvrManager {
             const newFfmpegProcess = spawn("ffmpeg",ffmpegCli);
             // newCamJob.ffmpegProcess = newFfmpegProcess;
           } catch (error) {
-            console.log("Error al crear proceso ffmpeg | isInRangeCurTime");
-            if(error instanceof Error){
-              console.log(error.message);
-            }
+            genericLogger.error(`NvrManager | Error al crear proceso ffmpeg | isInRangeCurTime`,error);
           }
         };
 
@@ -347,22 +328,25 @@ export class NvrManager {
     try {
       const region_nodos = await Init.getRegionNodos();
       region_nodos.forEach(async (reg_nodo) => {
-        const { ctrl_id, nododb_name } = reg_nodo;
 
-        const preferencias = await MySQL2.executeQuery<NvrPreferenciaRowData[]>(
-          {
+        try {
+          const { ctrl_id, nododb_name } = reg_nodo;
+
+          const preferencias = await MySQL2.executeQuery<NvrPreferenciaRowData[]>({
             sql: `SELECT * FROM ${nododb_name}.nvrpreferencia`,
-          }
-        );
-
-        preferencias.forEach(async (preferencia) => {
+          });
+        
+          preferencias.forEach(async (preferencia) => {
            await NvrManager.add(ctrl_id,preferencia);
-        });
+          });
+          
+        } catch (error) {
+          genericLogger.error(`NvrManager | Error al inicializar | nodo ${reg_nodo.nodo}`,error);
+        }
 
       });
     } catch (error) {
-      console.log(`NvrManager | Error al inicializar`);
-      console.error(error);
+      genericLogger.error(`NvrManager | Error al inicializar`,error);
       throw error;
     }
   }
