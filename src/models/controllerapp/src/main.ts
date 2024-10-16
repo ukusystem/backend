@@ -549,17 +549,18 @@ export class Main {
           resolve(new RequestResult(false, `El controlador ID = ${controllerID} no ha respondido a tiempo.`));
         }, Main.REQUEST_TIMEOUT);
         // Send order to controller
-        const codeToSend = security ? codes.VALUE_ARM_WEB : codes.VALUE_DISARM_WEB
-        const msgID = node.addCommandForControllerBody(codes.CMD_ESP, -1, [codeToSend.toString()], 
-        true, true, (code) => {
+        const codeToSend = security ? codes.VALUE_ARM : codes.VALUE_DISARM
+        const msgID = node.addCommandForControllerBody(codes.CMD_CONFIG_SET, -1, 
+          [codes.VALUE_SECURITY_WEB.toString(), codeToSend.toString()], true, true, (receivedCode) => {
           ignoreTimeout = true;
           clearTimeout(securityHandle);
-          if(code == codeToSend){
-            resolve(new RequestResult(true, `Orden de seguridad ejecutada.`));
+          // Valid responses
+          if(receivedCode == codes.VALUE_ARM || receivedCode == codes.VALUE_DISARM || receivedCode == codes.VALUE_ARMING || receivedCode == codes.VALUE_DISARMING){
+            resolve(new RequestResult(true, `Orden de seguridad recibida.`, receivedCode));
           }else{
-            resolve(new RequestResult(false, `La order no se ejecutó`))
+            resolve(new RequestResult(false, `La order no se pudo confirmar.`, receivedCode))
           }
-          this.log(`Response from controller ${useful.toHex(code)}`);
+          this.log(`Response from controller ${useful.toHex(receivedCode)}`);
         });
         this.log("Added order for controller. Waiting response...");
       } else {

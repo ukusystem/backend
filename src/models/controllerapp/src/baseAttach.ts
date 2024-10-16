@@ -1253,16 +1253,6 @@ export class NodeAttach extends BaseAttach {
       case codes.VALUE_ENERGY_INSTALL:
         this.mirrorMessage(command, false);
         break;
-      case codes.VALUE_STRUCT_INPUT:
-      case codes.VALUE_CTRL_STATE:
-
-      // Should be mirrored with the node ID appended
-      case codes.VALUE_SD:
-      case codes.VALUE_SECURITY:
-      case codes.VALUE_SECURITY_WEB:
-      case codes.VALUE_VOLTAGE:
-      case codes.VALUE_MODE:
-
       case codes.VALUE_STATES:
       case codes.VALUE_NET:
       case codes.VALUE_INPUT_CTRL_END:
@@ -1270,43 +1260,63 @@ export class NodeAttach extends BaseAttach {
       case codes.VALUE_TEMP_SENSOR_CTRL_END:
       case codes.VALUE_CARD_READER_CTRL_END:
       case codes.VALUE_ENERGY_CTRL_END:
+      case codes.VALUE_DELAY_TO_ARM:
+      case codes.VALUE_STRUCT_INPUT:
+      case codes.VALUE_CTRL_STATE:
+        this.mirrorMessage(command, true);
+        break
+
+      // Should be mirrored with the node ID appended. These are event for the technician.
+      case codes.VALUE_SD:
+      case codes.VALUE_SECURITY:
+      case codes.VALUE_SECURITY_WEB:
+      case codes.VALUE_SECURITY_TECH:
+      case codes.VALUE_MODE:
+      case codes.VALUE_VOLTAGE:
+
         let commandToMirror = command
-        if (cmdOrValue === codes.VALUE_SECURITY || cmdOrValue === codes.VALUE_SECURITY_WEB || cmdOrValue === codes.VALUE_SD
-          || cmdOrValue === codes.VALUE_VOLTAGE || cmdOrValue === codes.VALUE_MODE) {
-          commandToMirror = this._appendPart(commandToMirror, this.controllerID.toString())
-        }
+        // if (cmdOrValue === codes.VALUE_SECURITY || cmdOrValue === codes.VALUE_SECURITY_WEB || cmdOrValue === codes.VALUE_SD
+        //   || cmdOrValue === codes.VALUE_VOLTAGE || cmdOrValue === codes.VALUE_MODE) {
+        commandToMirror = this._appendPart(commandToMirror, this.controllerID.toString())
+        // }
         this.mirrorMessage(commandToMirror, true);
+        
+        // Parse event data
+        const data = this._parseMessage(parts, queries.valueDateParse, id);
+        if (!data) {
+          this._log(`Error parsing event data. Received '${command}'`);
+          break;
+        }
+        const value = data[0].getInt();
+        const eventDate = this.fixDateNumber(data[1].getInt());
+
         // Register some of the messages
-        if (cmdOrValue === codes.VALUE_SECURITY || cmdOrValue === codes.VALUE_SECURITY_WEB ||
-          cmdOrValue === codes.VALUE_SD || cmdOrValue === codes.VALUE_MODE) {
-          // Parse date and value
-          const data = this._parseMessage(parts, queries.valueDateParse, id);
-          if (!data) {
-            this._log(`Error getting security or sd event. Received '${command}'`);
-            break;
-          }
-          const value = data[0].getInt();
-          const date = this.fixDateNumber(data[1].getInt());
+        // if (cmdOrValue === codes.VALUE_SECURITY || cmdOrValue === codes.VALUE_SD || cmdOrValue === codes.VALUE_MODE) {
           // Save and notify
           switch (cmdOrValue) {
             case codes.VALUE_MODE:
               const mode = value == codes.VALUE_MODE_SECURITY
+              this._log(`Received mode ${useful.toHex(value)}`)
               this._log('Notifying web about mode')
               ControllerMapManager.updateController(this.controllerID, { modo: mode ? 1 : 0 })
               await this._saveItemGeneral("mode", [mode, this.controllerID], queries.modeUpdate, id, -1)
               break;
             case codes.VALUE_SECURITY:
-            case codes.VALUE_SECURITY_WEB:
-              const security = value == codes.VALUE_ARM || value == codes.VALUE_ARM_WEB;
-              if (cmdOrValue == codes.VALUE_SECURITY) {
-                this._log('Notifying web about security')
-                ControllerMapManager.updateController(this.controllerID, { seguridad: security ? 1 : 0 })
-              } else if (cmdOrValue == codes.VALUE_SECURITY_WEB) {
-                this.removePendingMessageByID(id, value)
-              }
+              const security = value == codes.VALUE_ARM;
+              this._log(`Received security ${useful.toHex(value)}`)
+              ControllerMapManager.updateController(this.controllerID, { seguridad: security ? 1 : 0 })
               await this._saveItemGeneral("security", [security, this.controllerID], queries.securityUpdate, id, -1)
-              await executeQuery(BaseAttach.formatQueryWithNode(queries.insertSecurity, this.controllerID), [security, useful.formatTimestamp(date)]);
+              await executeQuery(BaseAttach.formatQueryWithNode(queries.insertSecurity, this.controllerID), [security, useful.formatTimestamp(eventDate)]);
               break;
+            case codes.VALUE_SECURITY_TECH:
+              this._log(`Received security programmed from technician ${useful.toHex(value)}`)
+              // Notify
+              // ControllerMapManager.updateController(this.controllerID, { seguridad: security ? 1 : 0 })
+              break
+            case codes.VALUE_SECURITY_WEB:
+              this._log(`Received security programmed from web ${useful.toHex(value)}`)
+              this.removePendingMessageByID(id, value)
+              break
             case codes.VALUE_SD:
               this._log("Received sd event.");
               let state = States.ERROR;
@@ -1323,10 +1333,10 @@ export class NodeAttach extends BaseAttach {
                 default:
                   break;
               }
-              this.insertSilent("sd event", [useful.formatTimestamp(date), state], queries.insertSD, this.controllerID, true);
+              this.insertSilent("sd event", [useful.formatTimestamp(eventDate), state], queries.insertSD, this.controllerID, true);
               break;
           }
-        }
+        // }
         break;
       case codes.CMD_INPUT_CHANGED:
       case codes.CMD_OUTPUT_CHANGED:
@@ -1911,6 +1921,7 @@ export class ManagerAttach extends BaseAttach {
                   case codes.VALUE_CTRL_STATE:
                   case codes.VALUE_NET:
                   case codes.VALUE_ENERGY_CTRL:
+                  case codes.VALUE_DELAY_TO_ARM:
 
                   // Useful?
                   case codes.VALUE_SECURITY:
@@ -1952,8 +1963,7 @@ export class ManagerAttach extends BaseAttach {
                 }
               }
               break;
-            // Commands to save (or empty) rows in the database that does not require a node
-            // ID. These commands send one response indicating the result of the operation.
+            
             case codes.CMD_CONFIG_SET:
               const valueData = this._parseMessage(parts, queries.valueParse, id);
               if (!valueData) break;
@@ -1962,6 +1972,7 @@ export class ManagerAttach extends BaseAttach {
                 // this._log(`Received set config '${command}'.`);
               }
               switch (valueToSet) {
+                // Commands that does not require a node ID
                 case codes.VALUE_GENERAL:
                   const newGeneral = this._parseMessage(parts, queries.generalParse, id, false)
                   if (newGeneral) {
@@ -2140,6 +2151,8 @@ export class ManagerAttach extends BaseAttach {
                   const cardID = await this.disableItem("card", parts, queries.cardDisable, id);
                   this.removeCardInControllers(selector, cardID);
                   break;
+                
+                // Commands that require a node ID
                 case codes.VALUE_CAMERA:
                 case codes.VALUE_CAMERA_ADD:
                 case codes.VALUE_CAMERA_PASSWORD:
@@ -2151,11 +2164,22 @@ export class ManagerAttach extends BaseAttach {
                 case codes.VALUE_NET_PASSWORD:
                 case codes.VALUE_CARD_READER:
                 case codes.VALUE_ENERGY:
+                case codes.VALUE_DELAY_TO_ARM:
+                case codes.VALUE_SECURITY_TECH:
+                case codes.VALUE_MODE:
+                case codes.VALUE_SD:
+                case codes.VALUE_VOLTAGE:
                   // Node dependent commands
                   const targetNodeData = this._parseMessage(parts, queries.idParse, id);
                   if (!targetNodeData) break;
                   const targetNodeID = targetNodeData[0].getInt();
                   switch (valueToSet) {
+                    // case codes.VALUE_DELAY_TO_ARM:
+                    //   this._log(`Received set delay to arm`)
+                    //   const nodeToSet = selector.getNodeAttachByID(targetNodeID);
+                    //   if (!nodeToSet) break;
+                    //   nodeToSet.addCommandForController(cmdOrValue, id,valueToSet.toString(),parts)
+                    //   break
                     case codes.VALUE_NET:
                     case codes.VALUE_NET_PASSWORD:
                       const nodeAttach = selector.getNodeAttachByID(targetNodeID);
@@ -2272,6 +2296,19 @@ export class ManagerAttach extends BaseAttach {
                       CameraMotionManager.delete(new CameraForFront(disabledCamera, targetNodeID));
                       code.code = Result.CAMERA_DISABLE;
                       break;
+                    case codes.VALUE_SECURITY_TECH:
+                    case codes.VALUE_MODE:
+                    case codes.VALUE_SD:
+                    case codes.VALUE_VOLTAGE:
+                    case codes.VALUE_DELAY_TO_ARM:
+                      this._log(`Received config command for controller 0x${useful.toHex(valueToSet)}. Received '${command}'`);
+                      const nodeAttachToSet = selector.getNodeAttachByID(targetNodeID);
+                      if (nodeAttachToSet) {
+                        nodeAttachToSet.addCommandForController(cmdOrValue, id, valueToSet.toString(), parts);
+                      } else {
+                        this._addResponse(id, codes.ERR_DISCONNECTED);
+                      }
+                      break
                     default:
                       this._logFeelThroughHex(valueToSet);
                   }

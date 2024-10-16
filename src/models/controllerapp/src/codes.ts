@@ -174,7 +174,7 @@ export const VALUE_OUTPUT_ALARM_ONE = 0x259 // Get or set whether one output is 
 export const VALUE_VOLTAGE_ACTIVE = 0x25a // Output voltage is active
 export const VALUE_VOLTAGE_INACTIVE = 0x25b // Output voltage is inactive
 export const VALUE_CTRL_STATE = 0x25c // Get the controller state
-export const VALUE_SECURITY = 0x25d // Get or set the security status
+export const VALUE_SECURITY = 0x25D   // Get the security on demand or as an event
 export const VALUE_SD = 0x25e // Get or set the SD card status
 export const VALUE_VOLTAGE = 0x25f // Get or set the output voltage mode
 export const VALUE_OFFSET = 0x260 // Get or set the temperature offset
@@ -226,12 +226,14 @@ export const VALUE_MODE = 0x28D                // Controller mode
 export const VALUE_MODE_SECURITY = 0x28E       // Mode security
 export const VALUE_MODE_FREE = 0x28F       // Mode free
 export const VALUE_GENERAL = 0x290         // General info
-export const VALUE_SECURITY_WEB = 0x291     // Security from web
+export const VALUE_SECURITY_WEB = 0x291     // Program the security from the web
 export const VALUE_ARM_WEB = 0x292          // Security arm from web
 export const VALUE_DISARM_WEB = 0x293       // Security disarm from web
 export const VALUE_STRUCT_MODES = 0x294    // Structure of the mode and security
 export const VALUE_ALL_ADDRESSES = 0x295   // Send all temperature sensor addresses
 export const VALUE_ADDRESS_CHANGED = 0x296 // Temperature sensor address changed
+export const VALUE_DELAY_TO_ARM = 0x297    // Set or get the delay to arm
+export const VALUE_SECURITY_TECH = 0x298   // Program the security from the technician
 
 export const VALUE_SOCKET_CLOSED = 0x400 // Socket was closed
 export const VALUE_AUTHORIZED = 0x401 // Card authorized
@@ -248,6 +250,8 @@ export const VALUE_FALSE = 0x40b
 export const VALUE_OUTPUT_TYPE_ALARM = 0x40C     // Alarm type
 export const VALUE_OUTPUT_TYPE_NO_ALARM = 0x40D  // Not alarm type
 export const VALUE_OUTPUT_TYPE_FREE = 0x40E      // Free type
+export const VALUE_ARMING = 0x40F                // Arming is programmed
+export const VALUE_DISARMING = 0x410             // Disarming is programmed
 
 /**
  * Command to set the initial configuration in the controller once the socket is
