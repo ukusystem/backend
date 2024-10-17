@@ -55,8 +55,8 @@ export class Sockets {
 
     });
 
-    // Namespace "/stream/nodo_id/camp_ip/calidad"
-    this.#io.of(/^\/stream\/(\d+)\/([^\/]+)\/(q\d+)$/).use(async (socket, next) => {
+    // Namespace "/stream/nodo_id/cmr_id/calidad"
+    this.#io.of(/^\/stream\/(\d+)\/(\d+)\/(q\d+)$/).use(async (socket, next) => {
         try {
           // const cookiesHeader = socket.handshake.headers.cookie; // "token=fsddfjs"
           // console.log(cookiesHeader)
@@ -116,8 +116,8 @@ export class Sockets {
     const PinSalidaNSP: NamespacePinSalida = this.#io.of(/^\/pines_salida\/\d+$/);
     PinSalidaNSP.on("connection", (socket) => { pinSalidaSocket(this.#io, socket); });
 
-    // Namespace: "/record_stream/ctrl_id/ip"
-    this.#io.of(/^\/record_stream\/(\d+)\/([\d\.]+)$/).on("connection", (socket) => {  streamRecordSocket(this.#io, socket);});
+    // Namespace: "/record_stream/ctrl_id/cmr_id"
+    this.#io.of(/^\/record_stream\/(\d+)\/\d+$/).on("connection", (socket) => {  streamRecordSocket(this.#io, socket);});
 
     // Namespace : "/last_snapshot/ctrl_id"
     const LastSnapshotNSP : NamespaceLastSnapshot  = this.#io.of(/^\/last_snapshot\/\d+$/);

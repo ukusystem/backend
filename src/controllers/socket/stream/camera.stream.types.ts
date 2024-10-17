@@ -15,7 +15,7 @@ export interface CamStreamState {
 
 export interface ICamStreamFfmpegProcess {
   [ctrl_id: number]: {
-    [ip: string]: {
+    [cmr_id: number]: {
       [q: string]: {
         ffmpegProcess: ChildProcessByStdio<null, any, null>;
         isChunkInFrame: boolean;
@@ -33,7 +33,7 @@ export interface CamStreamObserver {
 
 export interface ICamStreamProccesObserver {
   [ctrl_id: number]: {
-    [ip: string]: {
+    [cmr_id: number]: {
       [q: string]: {
         observer: CamStreamObserver;
         canDelete: boolean;
@@ -42,7 +42,7 @@ export interface ICamStreamProccesObserver {
   };
 }
 
-export type CamStreamDirection = { ctrl_id: number; ip: string; q: CamStreamQuality };
+export type CamStreamDirection = { ctrl_id: number; cmr_id: number; q: CamStreamQuality };
 
 export interface CamStreamSubject {
   registerObserver(direction: CamStreamDirection, observer: CamStreamObserver): void;

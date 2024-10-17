@@ -213,6 +213,24 @@ export class NvrManager {
               const ffmpegCli = await NvrManager.#getFfmpegCLI(this.ctrl_id,this.cmr_id,{tiempo_inicio:this.tiempo_inicio,tiempo_final:this.tiempo_final});
               const newFfmpegProcess = spawn("ffmpeg",ffmpegCli);
 
+              // newFfmpegProcess.stdout.on('data', (data) => {
+              //   console.log(`stdout: ${data}`);
+              // });
+
+              newFfmpegProcess.on('close', (code) => {
+                console.log(`child process close all stdio with code ${code}`);
+              });
+              
+              newFfmpegProcess.on('exit', (code) => {
+                console.log(`child process exited with code ${code}`);
+              });
+              
+              newFfmpegProcess.on('error', (error) => {
+                console.log(`child process error ${error}`);
+              });
+
+              // newFfmpegProcess.stdout.on("error",()=>{}) //close,data,end,error,pause,readable,resume
+              // newFfmpegProcess.stderr.on("")
 
               // if(currCamJob.ffmpegProcess === undefined){
               //   currCamJob.ffmpegProcess = newFfmpegProcess;

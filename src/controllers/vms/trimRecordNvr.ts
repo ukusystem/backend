@@ -25,42 +25,53 @@ export const trimRecordNvr = asyncErrorHandler(
       if (err) {
         return res.status(404).json({ message: "Grabación no disponible." });
       }
-      const nameTemporalVideo = uuidv4();
-      const temporalSavePath = path.resolve("./archivos/temporal",`${nameTemporalVideo}.mp4`).split(path.sep).join(path.posix.sep);
+      try {
 
-      const keyArgs: string[] = [
-        "-i",`${recorFilePath}`,
-        "-ss",`${startTime}`,
-        "-to",`${endTime}`,
-        "-c","copy",
-        `${temporalSavePath}`,
-      ];
-
-      const ffmpegProcess = spawn("ffmpeg", keyArgs);
-
-      ffmpegProcess.stdout.on("close", (data: any) => {
-        res.download(temporalSavePath, (err) => {
-          if (err) {
-            res.status(500).json({message:"Error al enviar el archivo."});
-          }
-
+        const nameTemporalVideo = uuidv4();
+        const basePath = path.resolve("./archivos/temporal")
+  
+        if (!fs.existsSync(basePath)) {
+          fs.mkdirSync(basePath, { recursive: true });
+        }
+        const temporalSavePath = path.resolve("./archivos/temporal",`${nameTemporalVideo}.mp4`).split(path.sep).join(path.posix.sep);
+  
+        const keyArgs: string[] = [
+          "-i",`${recorFilePath}`,
+          "-ss",`${startTime}`,
+          "-to",`${endTime}`,
+          "-c","copy",
+          `${temporalSavePath}`,
+        ];
+  
+        const ffmpegProcess = spawn("ffmpeg", keyArgs);
+  
+        ffmpegProcess.stdout.on("close", (data: any) => {
+          res.download(temporalSavePath, (err) => {
+            if (err) {
+              res.status(500).json({message:"Error al enviar el archivo."});
+            }
+  
+            fs.unlink(temporalSavePath, (err) => {
+              if (err) {
+                genericLogger.error(`trimRecordNvr | Error al eliminar archivo temporal`,err);
+              }
+            });
+          });
+        });
+  
+        ffmpegProcess.stdout.on("error", (err) => {
+          genericLogger.error(`trimRecordNvr | Error al cortar grabacion`,err);
+          res.status(500).json({message:"Error al cortar grabación."});
           fs.unlink(temporalSavePath, (err) => {
             if (err) {
               genericLogger.error(`trimRecordNvr | Error al eliminar archivo temporal`,err);
             }
           });
         });
-      });
 
-      ffmpegProcess.stdout.on("error", (err) => {
-        genericLogger.error(`trimRecordNvr | Error al cortar grabacion`,err);
-        res.status(500).json({message:"Error al cortar grabación."});
-        fs.unlink(temporalSavePath, (err) => {
-          if (err) {
-            genericLogger.error(`trimRecordNvr | Error al eliminar archivo temporal`,err);
-          }
-        });
-      });
+      } catch (error) {
+        return res.status(500).json({message:"Error al cortar grabación."});
+      }
 
     });
   }
