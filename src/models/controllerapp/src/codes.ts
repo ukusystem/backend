@@ -234,6 +234,7 @@ export const VALUE_ALL_ADDRESSES = 0x295   // Send all temperature sensor addres
 export const VALUE_ADDRESS_CHANGED = 0x296 // Temperature sensor address changed
 export const VALUE_DELAY_TO_ARM = 0x297    // Set or get the delay to arm
 export const VALUE_SECURITY_TECH = 0x298   // Program the security from the technician
+export const VALUE_SECURITY_STATE = 0x299  // Send the security state (one of the 4 states)
 
 export const VALUE_SOCKET_CLOSED = 0x400 // Socket was closed
 export const VALUE_AUTHORIZED = 0x401 // Card authorized

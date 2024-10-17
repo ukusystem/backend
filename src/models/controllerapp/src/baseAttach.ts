@@ -298,7 +298,7 @@ export class BaseAttach extends Mortal {
           const partsArray = commands[i].split(codes.SEP_CMD);
           // Get command or value and id. These are the minimum components of a message.
           const cmdRes = this._parseMessage(partsArray, queries.cmdAndIDParse);
-          if (cmdRes && cmdRes.length>=2) {
+          if (cmdRes && cmdRes.length >= 2) {
             const cmdOrValue = cmdRes[0].getInt();
             const id = cmdRes[1].getInt();
             if (this.parseResponse(partsArray, cmdOrValue, id, commands[i])) {
@@ -306,7 +306,7 @@ export class BaseAttach extends Mortal {
             } else if (await this._processMessage(selector, partsArray, cmdOrValue, id, commands[i], code, bundle)) {
               //this._log('Message was not a response, but was processed by a subclass.')
             } else {
-              this._log(`Unknown command '${commands[i]}'. Command = 0x${cmdOrValue.toString(16)} ID = ${id}`);
+              this._log(`Unknown command '${commands[i]}'. Command = ${useful.toHex(cmdOrValue)} ID = ${id}`);
               this.addUnknownCmd(id);
             }
           } else {
@@ -356,7 +356,7 @@ export class BaseAttach extends Mortal {
       const responseData = new DataStruct();
       const responseRes = this.getNextOrSendError(parts, queries.tupleInt, responseData, id, false);
       if (responseRes) {
-        // this._log(`Response to ${id} 0x${responseData.getInt().toString(16)}`)
+        // this._log(`Response to ${id} ${useful.toHex(responseData.getInt())}`)
         this.removePendingMessageByID(id, responseData.getInt());
       } else {
         this._log("Could not process response.");
@@ -383,7 +383,7 @@ export class BaseAttach extends Mortal {
       const finished = this.pendingMessages.get(id);
       if (finished && this.pendingMessages.delete(id)) {
         if (logFinish && finished.logOnResponse) {
-          this._log(`Message ${id} ended with code 0x${code.toString(16)}.`);
+          this._log(`Message ${id} ended with code ${useful.toHex(code)}.`);
         }
         if (finished.action && execute) {
           finished.action(code);
@@ -519,7 +519,7 @@ export class BaseAttach extends Mortal {
       this._addOne(new Message(value, 0, body).setLogOnSend(logOnSend));
       count++;
     }
-    // this._log(`Added ${count} items with value 0x${value.toString(16)}`);
+    // this._log(`Added ${count} items with value ${useful.toHex(value)}`);
     // Add end of items
     let autoIncrement = 0;
     // At this point it is not certain that nextID is present
@@ -527,7 +527,7 @@ export class BaseAttach extends Mortal {
       autoIncrement = nextID[0].AUTO_INCREMENT;
     }
     this._addEnd(valueEnd, endID, autoIncrement);
-    // this._log(`Added end with value 0x${valueEnd.toString(16)}`);
+    // this._log(`Added end with value ${useful.toHex(valueEnd)}`);
   }
 
   /**
@@ -838,7 +838,7 @@ export class BaseAttach extends Mortal {
       }
     } else {
       success = false;
-      this._log(`Error 0x${typeError.item2.toString(16)} getting next part of type ${typeError.item1}. List is empty`);
+      this._log(`Error ${useful.toHex(typeError.item2)} getting next part of type ${typeError.item1}. List is empty`);
     }
     if (!success) {
       if (sendResponse) {
@@ -1212,12 +1212,12 @@ export class NodeAttach extends BaseAttach {
         this.removePendingMessageByID(id, availableData[0].getInt(), false);
         break;
       case codes.VALUE_ALL_ADDRESSES:
-        
+
         // this._log(`Received all addresses '${command}'`)
         const paramsForUpdate: any[] = [];
         while (parts.length >= 2) {
           const addrData = this._parseMessage(parts, queries.IDTextParse, id, false)
-          if (!addrData || addrData.length<2) continue;
+          if (!addrData || addrData.length < 2) continue;
           const sensorID = addrData[0].getInt();
           const sensorAddress = addrData[1].getString();
           paramsForUpdate.push([sensorAddress, sensorID]);
@@ -1232,13 +1232,13 @@ export class NodeAttach extends BaseAttach {
       case codes.VALUE_ADDRESS_CHANGED:
         this._log(`Received address changed '${command}'`)
         const addrChange = this._parseMessage(parts, queries.IDTextParse, id, false)
-        if(!addrChange){
+        if (!addrChange) {
           break
         }
         const sensorID = addrChange[0].getInt()
         const sensorAddress = addrChange[1].getString()
         const changeRes = executeQuery(BaseAttach.formatQueryWithNode(queries.updateAddress, this.controllerID), [sensorAddress, sensorID])
-        if(!changeRes){
+        if (!changeRes) {
           this._log(`ERROR Saving address change`)
           break
         }
@@ -1280,7 +1280,7 @@ export class NodeAttach extends BaseAttach {
         commandToMirror = this._appendPart(commandToMirror, this.controllerID.toString())
         // }
         this.mirrorMessage(commandToMirror, true);
-        
+
         // Parse event data
         const data = this._parseMessage(parts, queries.valueDateParse, id);
         if (!data) {
@@ -1292,50 +1292,51 @@ export class NodeAttach extends BaseAttach {
 
         // Register some of the messages
         // if (cmdOrValue === codes.VALUE_SECURITY || cmdOrValue === codes.VALUE_SD || cmdOrValue === codes.VALUE_MODE) {
-          // Save and notify
-          switch (cmdOrValue) {
-            case codes.VALUE_MODE:
-              const mode = value == codes.VALUE_MODE_SECURITY
-              this._log(`Received mode ${useful.toHex(value)}`)
-              this._log('Notifying web about mode')
-              ControllerMapManager.updateController(this.controllerID, { modo: mode ? 1 : 0 })
-              await this._saveItemGeneral("mode", [mode, this.controllerID], queries.modeUpdate, id, -1)
-              break;
-            case codes.VALUE_SECURITY:
-              const security = value == codes.VALUE_ARM;
-              this._log(`Received security ${useful.toHex(value)}`)
-              ControllerMapManager.updateController(this.controllerID, { seguridad: security ? 1 : 0 })
-              await this._saveItemGeneral("security", [security, this.controllerID], queries.securityUpdate, id, -1)
-              await executeQuery(BaseAttach.formatQueryWithNode(queries.insertSecurity, this.controllerID), [security, useful.formatTimestamp(eventDate)]);
-              break;
-            case codes.VALUE_SECURITY_TECH:
-              this._log(`Received security programmed from technician ${useful.toHex(value)}`)
-              // Notify
-              // ControllerMapManager.updateController(this.controllerID, { seguridad: security ? 1 : 0 })
-              break
-            case codes.VALUE_SECURITY_WEB:
-              this._log(`Received security programmed from web ${useful.toHex(value)}`)
-              this.removePendingMessageByID(id, value)
-              break
-            case codes.VALUE_SD:
-              this._log("Received sd event.");
-              let state = States.ERROR;
-              switch (value) {
-                case codes.VALUE_MOUNT:
-                  state = States.MOUNTED;
-                  break;
-                case codes.VALUE_EJECT:
-                  state = States.UNMOUNTED;
-                  break;
-                case codes.VALUE_UNPLUGGED:
-                  state = States.EJECTED;
-                  break;
-                default:
-                  break;
-              }
-              this.insertSilent("sd event", [useful.formatTimestamp(eventDate), state], queries.insertSD, this.controllerID, true);
-              break;
-          }
+        // Save and notify
+        switch (cmdOrValue) {
+          case codes.VALUE_MODE:
+            const mode = value == codes.VALUE_MODE_SECURITY
+            this._log(`Received mode ${useful.toHex(value)}`)
+            this._log('Notifying web about mode')
+            ControllerMapManager.updateController(this.controllerID, { modo: mode ? 1 : 0 })
+            await this._saveItemGeneral("mode", [mode, this.controllerID], queries.modeUpdate, id, -1)
+            break;
+          case codes.VALUE_SECURITY:
+            const security = value == codes.VALUE_ARM;
+            this._log(`Received security ${useful.toHex(value)}`)
+            ControllerMapManager.updateController(this.controllerID, { seguridad: security ? 1 : 0 })
+            this.saveSecurity(this.controllerID, security, eventDate, id)
+            // await this._saveItemGeneral("security", [security, this.controllerID], queries.securityUpdate, id, -1)
+            // await executeQuery(BaseAttach.formatQueryWithNode(queries.insertSecurity, this.controllerID), [security, useful.formatTimestamp(eventDate)]);
+            break;
+          case codes.VALUE_SECURITY_TECH:
+            this._log(`Received security programmed from technician ${useful.toHex(value)}`)
+            // Notify
+            // ControllerMapManager.updateController(this.controllerID, { seguridad: security ? 1 : 0 })
+            break
+          case codes.VALUE_SECURITY_WEB:
+            this._log(`Received security programmed from web ${useful.toHex(value)}`)
+            this.removePendingMessageByID(id, value)
+            break
+          case codes.VALUE_SD:
+            this._log("Received sd event.");
+            let state = States.ERROR;
+            switch (value) {
+              case codes.VALUE_MOUNT:
+                state = States.MOUNTED;
+                break;
+              case codes.VALUE_EJECT:
+                state = States.UNMOUNTED;
+                break;
+              case codes.VALUE_UNPLUGGED:
+                state = States.EJECTED;
+                break;
+              default:
+                break;
+            }
+            this.insertSilent("sd event", [useful.formatTimestamp(eventDate), state], queries.insertSD, this.controllerID, true);
+            break;
+        }
         // }
         break;
       case codes.CMD_INPUT_CHANGED:
@@ -1427,13 +1428,13 @@ export class NodeAttach extends BaseAttach {
           case codes.ERR_READ_TEMP:
             const addressData = this._parseMessage(parts, queries.bigParse);
             if (!addressData) break;
-            this._log(`Error reading temperature sensor. Address 0x${addressData[0].getInt().toString(16)}.`);
+            this._log(`Error reading temperature sensor. Address ${useful.toHex(addressData[0].getInt())}.`);
             break;
           case codes.ERR_MEASURE_TEMP:
             this._log("Error measuring all temperature sensors.");
             break;
           default:
-            this._log(`Type of internal error is unknown. Value 0x${internalErrorCode.toString(16)}`);
+            this._log(`Type of internal error is unknown. Value ${useful.toHex(internalErrorCode)}`);
         }
         break;
       case codes.CMD_HELLO_FROM_CTRL:
@@ -1484,10 +1485,38 @@ export class NodeAttach extends BaseAttach {
         }
         this._notifyOutput(orderData[0].getInt(), false, this.controllerID, null, null, null, null, newOrder);
         break;
+      case codes.VALUE_SECURITY_STATE:
+        this._log(`Received security status from controller '${command}'`)
+        const securityData = this._parseMessage(parts, queries.securityStateParse, id, false);
+        if (securityData) {
+          const state = securityData[0].getInt()
+          const programming = securityData[1].getInt()
+          const date = securityData[2].getInt()
+
+          // Save in database
+          if (state == codes.VALUE_ARM || state == codes.VALUE_DISARM) {
+            this.saveSecurity(this.controllerID, state == codes.VALUE_ARM, date, id)
+          }
+
+          // To notify web and technician
+          if (programming == codes.VALUE_ARM || programming == codes.VALUE_DISARM ||
+            programming == codes.VALUE_DISARMING || programming == codes.VALUE_ARMING) {
+            this.mirrorMessage(command, true)
+
+            // Notify web  
+            ControllerMapManager.updateController(this.controllerID, { seguridad: programming == codes.VALUE_ARM ? 1 : 0 })
+          }
+        }
+        break
       default:
         return false;
     }
     return true;
+  }
+
+  private async saveSecurity(nodeID: number, security: boolean, date: number, msgID: number) {
+    await this._saveItemGeneral("security", [security, nodeID], queries.securityUpdate, msgID, -1)
+    await executeQuery(BaseAttach.formatQueryWithNode(queries.insertSecurity, nodeID), [security, useful.formatTimestamp(date)]);
   }
 
   /**
@@ -1663,7 +1692,7 @@ export class NodeAttach extends BaseAttach {
     });
 
     controllerSocket.on("data", (data: Buffer) => {
-      const a  = [...data]
+      const a = [...data]
       // this._log(`Received buffer '${a.map((s)=>s.toString(16)).join(" ")}' from controller ID ${this.controllerID}`)
       // this._log(`Received buffer '${data}' from controller ID ${this.controllerID}`)
       this.addData(data);
@@ -1877,7 +1906,7 @@ export class ManagerAttach extends BaseAttach {
                   break;
                 case codes.CMD_PIN_CONFIG_SET:
                 case codes.CMD_ESP:
-                  this._log(`Received command for controller 0x${cmdOrValue.toString(16)}. Received '${command}'`);
+                  this._log(`Received command for controller ${useful.toHex(cmdOrValue)}. Received '${command}'`);
                   const nodeAttach = selector.getNodeAttachByID(testNodeID);
                   if (nodeAttach) {
                     nodeAttach.addCommandForController(cmdOrValue, id, null, parts);
@@ -1886,7 +1915,7 @@ export class ManagerAttach extends BaseAttach {
                   }
                   break;
                 default:
-                // this._log(`Value fell through in switch but wasn't processed inside the case. Value 0x${cmdOrValue.toString(16)}`);
+                // this._log(`Value fell through in switch but wasn't processed inside the case. Value 0x${useful.toHex(cmdOrValue)}`);
               }
               break;
             case codes.CMD_CONFIG_GET:
@@ -1958,12 +1987,12 @@ export class ManagerAttach extends BaseAttach {
                     this.getDBNameExecuteSend(parts, id, queries.energySelect, codes.VALUE_ENERGY, codes.VALUE_ENERGY_END, false);
                     break;
                   default:
-                    this._log(`Unknown get value. Received '${command}' Value 0x${valueToGet.toString(16)}`);
+                    this._log(`Unknown get value. Received '${command}' Value ${useful.toHex(valueToGet)}}`);
                     this._addUnknownValue(id);
                 }
               }
               break;
-            
+
             case codes.CMD_CONFIG_SET:
               const valueData = this._parseMessage(parts, queries.valueParse, id);
               if (!valueData) break;
@@ -2151,7 +2180,7 @@ export class ManagerAttach extends BaseAttach {
                   const cardID = await this.disableItem("card", parts, queries.cardDisable, id);
                   this.removeCardInControllers(selector, cardID);
                   break;
-                
+
                 // Commands that require a node ID
                 case codes.VALUE_CAMERA:
                 case codes.VALUE_CAMERA_ADD:
@@ -2203,7 +2232,7 @@ export class ManagerAttach extends BaseAttach {
                               this._log("The controller reported no change.");
                               break;
                             default:
-                              this._log(`Unknown response code 0x${code.toString(16)}.`);
+                              this._log(`Unknown response code ${useful.toHex(code)}.`);
                           }
                           this._addControllerConfirmation(id);
                         },
@@ -2314,7 +2343,7 @@ export class ManagerAttach extends BaseAttach {
                   }
                   break;
                 default:
-                  this._log(`Unknown set value. Received '${command}' Value 0x${valueToSet.toString(16)}`);
+                  this._log(`Unknown set value. Received '${command}' Value ${useful.toHex(valueToSet)}`);
                   this._addUnknownValue(id);
               }
               break;
@@ -2462,9 +2491,9 @@ export class ManagerAttach extends BaseAttach {
           notify = true
           resetData = true
         }
-        if(!forceReconnect && newCompleteData){
+        if (!forceReconnect && newCompleteData) {
           currentAttach.completeData = newCompleteData
-        }else{
+        } else {
           // console.log(`No data to hold`)
         }
 
@@ -2649,7 +2678,7 @@ export class ManagerAttach extends BaseAttach {
    * @param end   Header for the end message.
    */
   private async getDBNameExecuteSend(parts: string[], id: number, query: string, value: number, end: number, log: boolean, tableName: string | null = null) {
-    this._log(`Received get value 0x${value.toString(16)}`);
+    this._log(`Received get value ${useful.toHex(value)}`);
     const nodeData = this._parseMessage(parts, queries.idParse, id);
     if (!nodeData) {
       this._log(`Node ID is missing. Message ID = ${id}`);
@@ -2741,7 +2770,7 @@ export class ManagerAttach extends BaseAttach {
         count++;
       }
     }
-    // this._log(`Added ${count} workers with value 0x${codes.VALUE_WORKER.toString(16)}`);
+    // this._log(`Added ${count} workers with value ${useful.toHex(codes.VALUE_WORKER)}`);
     // Add end of workers
     if (nextID && nextID.length === 1) {
       this._addEnd(codes.VALUE_WORKER_END, endID, nextID[0].AUTO_INCREMENT);
@@ -2774,7 +2803,7 @@ export class ManagerAttach extends BaseAttach {
       // this._log(`${count}`)
       count++;
     }
-    // this._log(`Added ${count} nodes with value 0x${codes.VALUE_NODE.toString(16)}.`);
+    // this._log(`Added ${count} nodes with value ${useful.toHex(codes.VALUE_NODE)}.`);
     // Add end of nodes
     if (nextID && nextID.length === 1) {
       this._addEnd(codes.VALUE_NODES_END, endID, nextID[0].AUTO_INCREMENT);
