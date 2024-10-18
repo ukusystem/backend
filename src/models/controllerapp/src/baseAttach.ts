@@ -1274,12 +1274,12 @@ export class NodeAttach extends BaseAttach {
       case codes.VALUE_MODE:
       case codes.VALUE_VOLTAGE:
 
-        let commandToMirror = command
+        // let commandToMirror = command
         // if (cmdOrValue === codes.VALUE_SECURITY || cmdOrValue === codes.VALUE_SECURITY_WEB || cmdOrValue === codes.VALUE_SD
         //   || cmdOrValue === codes.VALUE_VOLTAGE || cmdOrValue === codes.VALUE_MODE) {
-        commandToMirror = this._appendPart(commandToMirror, this.controllerID.toString())
+        // commandToMirror = 
         // }
-        this.mirrorMessage(commandToMirror, true);
+        this.mirrorMessage(this._appendPart(command, this.controllerID.toString()), true);
 
         // Parse event data
         const data = this._parseMessage(parts, queries.valueDateParse, id);
@@ -1311,11 +1311,12 @@ export class NodeAttach extends BaseAttach {
             break;
           case codes.VALUE_SECURITY_TECH:
             this._log(`Received security programmed from technician ${useful.toHex(value)}`)
-            // Notify
-            // ControllerMapManager.updateController(this.controllerID, { seguridad: security ? 1 : 0 })
+            // Update the button state
+            // ControllerMapManager.updateController(this.controllerID, { isButtonActive : 0 })
             break
           case codes.VALUE_SECURITY_WEB:
             this._log(`Received security programmed from web ${useful.toHex(value)}`)
+            // Cancel timeout and resolve
             this.removePendingMessageByID(id, value)
             break
           case codes.VALUE_SD:
@@ -1489,23 +1490,22 @@ export class NodeAttach extends BaseAttach {
         this._log(`Received security status from controller '${command}'`)
         const securityData = this._parseMessage(parts, queries.securityStateParse, id, false);
         if (securityData) {
-          const state = securityData[0].getInt()
+          const security = securityData[0].getInt() == codes.VALUE_ARM
           const programming = securityData[1].getInt()
           const date = securityData[2].getInt()
 
           // Save in database
-          if (state == codes.VALUE_ARM || state == codes.VALUE_DISARM) {
-            this.saveSecurity(this.controllerID, state == codes.VALUE_ARM, date, id)
-          }
+          this.saveSecurity(this.controllerID, security, date, id)
 
-          // To notify web and technician
-          if (programming == codes.VALUE_ARM || programming == codes.VALUE_DISARM ||
-            programming == codes.VALUE_DISARMING || programming == codes.VALUE_ARMING) {
-            this.mirrorMessage(command, true)
+          // Notify technician
+          this.mirrorMessage(command, true)
 
-            // Notify web  
-            ControllerMapManager.updateController(this.controllerID, { seguridad: programming == codes.VALUE_ARM ? 1 : 0 })
-          }
+          const definite = programming == codes.VALUE_ARM || programming == codes.VALUE_DISARM
+          // const transitory = programming == codes.VALUE_DISARMING || programming == codes.VALUE_ARMING
+
+          // Notify web
+          const enableButton = definite   // Add to isButtonActive when the function is updated.
+          ControllerMapManager.updateController(this.controllerID, { seguridad: security ? 1 : 0 })
         }
         break
       default:
