@@ -27,6 +27,7 @@ import { Main } from "./main";
 import { SystemManager } from "../../system";
 import { ControllerData, ControllerMapManager } from "../../maps";
 import { NodeTickets } from "./nodeTickets";
+import { userInfo } from "os";
 
 /**
  * Base attachment for the sockets
@@ -1261,6 +1262,7 @@ export class NodeAttach extends BaseAttach {
       case codes.VALUE_CARD_READER_CTRL_END:
       case codes.VALUE_ENERGY_CTRL_END:
       case codes.VALUE_DELAY_TO_ARM:
+      case codes.VALUE_TICKET_DELAY_TO_ARM:  
       case codes.VALUE_STRUCT_INPUT:
       case codes.VALUE_CTRL_STATE:
         this.mirrorMessage(command, true);
@@ -1271,6 +1273,7 @@ export class NodeAttach extends BaseAttach {
       case codes.VALUE_SECURITY:
       case codes.VALUE_SECURITY_WEB:
       case codes.VALUE_SECURITY_TECH:
+      case codes.VALUE_SECURITY_TICKET:
       case codes.VALUE_MODE:
       case codes.VALUE_VOLTAGE:
 
@@ -1290,33 +1293,30 @@ export class NodeAttach extends BaseAttach {
         const value = data[0].getInt();
         const eventDate = this.fixDateNumber(data[1].getInt());
 
-        // Register some of the messages
-        // if (cmdOrValue === codes.VALUE_SECURITY || cmdOrValue === codes.VALUE_SD || cmdOrValue === codes.VALUE_MODE) {
-        // Save and notify
         switch (cmdOrValue) {
           case codes.VALUE_MODE:
+            // Save and notify
             const mode = value == codes.VALUE_MODE_SECURITY
-            this._log(`Received mode ${useful.toHex(value)}`)
-            this._log('Notifying web about mode')
+            this._log(`Received mode: ${useful.toHex(value)}, notifying web.`)
             ControllerMapManager.updateController(this.controllerID, { modo: mode ? 1 : 0 })
             await this._saveItemGeneral("mode", [mode, this.controllerID], queries.modeUpdate, id, -1)
             break;
           case codes.VALUE_SECURITY:
+            // Save and notify
             const security = value == codes.VALUE_ARM;
-            this._log(`Received security ${useful.toHex(value)}`)
+            this._log(`Received security: ${useful.toHex(value)}`)
             ControllerMapManager.updateController(this.controllerID, { seguridad: security ? 1 : 0 })
-            this.saveSecurity(this.controllerID, security, eventDate, id)
-            // await this._saveItemGeneral("security", [security, this.controllerID], queries.securityUpdate, id, -1)
-            // await executeQuery(BaseAttach.formatQueryWithNode(queries.insertSecurity, this.controllerID), [security, useful.formatTimestamp(eventDate)]);
+            await this.saveSecurity(this.controllerID, security, eventDate, id)
             break;
           case codes.VALUE_SECURITY_TECH:
-            this._log(`Received security programmed from technician ${useful.toHex(value)}`)
+          case codes.VALUE_SECURITY_TICKET:
             // Update the button state
+            this._log(`Received security programmed from technician or ticket: ${useful.toHex(cmdOrValue)}, ${useful.toHex(value)}`)
             // ControllerMapManager.updateController(this.controllerID, { isButtonActive : 0 })
             break
           case codes.VALUE_SECURITY_WEB:
-            this._log(`Received security programmed from web ${useful.toHex(value)}`)
             // Cancel timeout and resolve
+            this._log(`Received security programmed from web: ${useful.toHex(value)}`)
             this.removePendingMessageByID(id, value)
             break
           case codes.VALUE_SD:
@@ -1338,7 +1338,6 @@ export class NodeAttach extends BaseAttach {
             this.insertSilent("sd event", [useful.formatTimestamp(eventDate), state], queries.insertSD, this.controllerID, true);
             break;
         }
-        // }
         break;
       case codes.CMD_INPUT_CHANGED:
       case codes.CMD_OUTPUT_CHANGED:
@@ -1942,6 +1941,12 @@ export class ManagerAttach extends BaseAttach {
                   case codes.VALUE_WORKER:
                     await this.addWorkers(id, false);
                     break;
+                    
+                  // Useful?
+                  case codes.VALUE_SECURITY:
+                  case codes.VALUE_VOLTAGE:
+                  case codes.VALUE_SD:
+
                   case codes.VALUE_INPUT_CTRL:
                   case codes.VALUE_OUTPUT_CTRL:
                   case codes.VALUE_TEMP_SENSOR_CTRL:
@@ -1951,12 +1956,7 @@ export class ManagerAttach extends BaseAttach {
                   case codes.VALUE_NET:
                   case codes.VALUE_ENERGY_CTRL:
                   case codes.VALUE_DELAY_TO_ARM:
-
-                  // Useful?
-                  case codes.VALUE_SECURITY:
-                  case codes.VALUE_VOLTAGE:
-                  case codes.VALUE_SD:
-
+                  case codes.VALUE_TICKET_DELAY_TO_ARM:
                   case codes.VALUE_STATES:
                     const nodeData = this._parseMessage(parts, queries.idParse, id);
                     if (!nodeData) break;
@@ -2194,6 +2194,7 @@ export class ManagerAttach extends BaseAttach {
                 case codes.VALUE_CARD_READER:
                 case codes.VALUE_ENERGY:
                 case codes.VALUE_DELAY_TO_ARM:
+                case codes.VALUE_TICKET_DELAY_TO_ARM:  
                 case codes.VALUE_SECURITY_TECH:
                 case codes.VALUE_MODE:
                 case codes.VALUE_SD:
@@ -2203,12 +2204,6 @@ export class ManagerAttach extends BaseAttach {
                   if (!targetNodeData) break;
                   const targetNodeID = targetNodeData[0].getInt();
                   switch (valueToSet) {
-                    // case codes.VALUE_DELAY_TO_ARM:
-                    //   this._log(`Received set delay to arm`)
-                    //   const nodeToSet = selector.getNodeAttachByID(targetNodeID);
-                    //   if (!nodeToSet) break;
-                    //   nodeToSet.addCommandForController(cmdOrValue, id,valueToSet.toString(),parts)
-                    //   break
                     case codes.VALUE_NET:
                     case codes.VALUE_NET_PASSWORD:
                       const nodeAttach = selector.getNodeAttachByID(targetNodeID);
@@ -2330,7 +2325,8 @@ export class ManagerAttach extends BaseAttach {
                     case codes.VALUE_SD:
                     case codes.VALUE_VOLTAGE:
                     case codes.VALUE_DELAY_TO_ARM:
-                      this._log(`Received config command for controller 0x${useful.toHex(valueToSet)}. Received '${command}'`);
+                    case codes.VALUE_TICKET_DELAY_TO_ARM:
+                      this._log(`Received config set command for controller 0x${useful.toHex(valueToSet)}. Received '${command}'`);
                       const nodeAttachToSet = selector.getNodeAttachByID(targetNodeID);
                       if (nodeAttachToSet) {
                         nodeAttachToSet.addCommandForController(cmdOrValue, id, valueToSet.toString(), parts);
