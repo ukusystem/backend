@@ -607,8 +607,8 @@ export class BaseAttach extends Mortal {
    *
    * @param id ID of the message that this method is responding to.
    */
-  addHello(id: number, userID: number) {
-    this._addOne(new Message(codes.CMD_HELLO_FROM_SRVR, id, [useful.timeInt().toString(), userID.toString()]));
+  addHello(id: number, userID: number, action:IntConsumer = null) {
+    this._addOne(new Message(codes.CMD_HELLO_FROM_SRVR, id, [useful.timeInt().toString(), userID.toString()], action));
   }
 
   /**
@@ -1440,23 +1440,7 @@ export class NodeAttach extends BaseAttach {
       case codes.CMD_HELLO_FROM_CTRL:
         this._log("Received hello from controller.");
         this.setLogged(true);
-        // Send all cards. Inactive cards will be send with an order to erase it in the
-        // controller.
-        this._log("Sending cards");
-        const cards = await executeQuery<db2.CardForController[]>(queries.cardSelectForController);
-        if (cards) {
-          for (const card of cards) {
-            this.addCommandForControllerBody(
-              codes.CMD_CONFIG_SET,
-              -1,
-              card.activo
-                ? [codes.VALUE_CARD_SYNC.toString(), card.a_id.toString(), card.co_id.toString(), card.serie.toString(), card.administrador.toString()]
-                : [codes.VALUE_CARD_EMPTY_SYNC.toString(), card.a_id.toString()],
-              false,
-              false
-            );
-          }
-        }
+
         this.removePendingMessageByID(id, codes.AIO_OK);
         this.insertNet(true)
         this._log("Logged in to controller");
@@ -1491,7 +1475,8 @@ export class NodeAttach extends BaseAttach {
         if (securityData) {
           const security = securityData[0].getInt() == codes.VALUE_ARM
           const programming = securityData[1].getInt()
-          const date = securityData[2].getInt()
+          // const origin = securityData[2].getInt()
+          const date = securityData[3].getInt()
 
           // Save in database
           this.saveSecurity(this.controllerID, security, date, id)
@@ -1687,7 +1672,29 @@ export class NodeAttach extends BaseAttach {
       }
       this.unreached = false;
       this.addLogin();
-      this.addHello(0, 0);
+      this.addHello(-1, 0, async(code:number)=>{
+        if(code != codes.AIO_OK){
+          this._log(`ERROR Sending hello to controller ${useful.toHex(code)}`)
+          return
+        }
+        // Send all cards. Inactive cards will be send with an order to erase it in the
+        // controller.
+        this._log("Sending cards");
+        const cards = await executeQuery<db2.CardForController[]>(queries.cardSelectForController);
+        if (cards) {
+          for (const card of cards) {
+            this.addCommandForControllerBody(
+              codes.CMD_CONFIG_SET,
+              -1,
+              card.activo
+                ? [codes.VALUE_CARD_SYNC.toString(), card.a_id.toString(), card.co_id.toString(), card.serie.toString(), card.administrador.toString()]
+                : [codes.VALUE_CARD_EMPTY_SYNC.toString(), card.a_id.toString()],
+              false,
+              false
+            );
+          }
+        }
+      });
     });
 
     controllerSocket.on("data", (data: Buffer) => {

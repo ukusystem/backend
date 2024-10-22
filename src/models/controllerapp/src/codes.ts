@@ -255,6 +255,7 @@ export const VALUE_OUTPUT_TYPE_NO_ALARM = 0x40D  // Not alarm type
 export const VALUE_OUTPUT_TYPE_FREE = 0x40E      // Free type
 export const VALUE_ARMING = 0x40F                // Arming is programmed
 export const VALUE_DISARMING = 0x410             // Disarming is programmed
+export const VALUE_NONE = 0x411                  // None value. General use.
 
 /**
  * Command to set the initial configuration in the controller once the socket is
