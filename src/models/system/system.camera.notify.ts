@@ -23,11 +23,13 @@ export class CameraNotifyManager {
   }
   
   static #notifyUpdateToNvr(ctrl_id: number,curCam: Camara,fieldsUpdate: Partial<Camara>){
-    const { usuario, contraseña, ip } = fieldsUpdate;
+    const { usuario, contraseña, ip ,conectado } = fieldsUpdate;
     const hasChanges =
       (usuario !== undefined && curCam.usuario !== usuario) ||
       (contraseña !== undefined && curCam.contraseña !== contraseña) ||
-      (ip !== undefined && curCam.ip !== ip) ;
+      (ip !== undefined && curCam.ip !== ip) ||
+      (conectado !== undefined && curCam.conectado !== conectado && conectado === 1) ;
+    
     if(hasChanges){
       NvrManager.notifyChangeCamera(ctrl_id,curCam.cmr_id);
     }

@@ -102,11 +102,12 @@ export class NvrManager {
   static async #getFfmpegCLI(ctrl_id:number,cmr_id:number,times: Pick<NvrPreferencia, "tiempo_final" | "tiempo_inicio">): Promise<string[]>{
     try {
       const [mainRtsp] = await getRstpLinksByCtrlIdAndCmrId(ctrl_id,cmr_id);
-
       const basePath : string = `./nvr/hls/nodo${ctrl_id}/camara${cmr_id}`;
       const finalPath = await NvrManager.#createDirectory(basePath);
 
       const timeDiff = NvrManager.#getTimeDiff(times);
+      const currentDateTime = dayjs();
+      const date = currentDateTime.format("YYYY-MM-DD")
 
       const keyArgs : string[] =[
         "-rtsp_transport","tcp",
@@ -117,7 +118,8 @@ export class NvrManager {
         "-hls_segment_type","mpegts",
         "-hls_time",`${NvrManager.#HLS_TIME}`,
         "-hls_list_size","0",
-        "-hls_playlist_type", "vod",
+        "-hls_playlist_type", "event",
+        "-hls_base_url", `${ctrl_id}/${cmr_id}/${date}/`,
         "-hls_flags","append_list",
         "-hls_segment_filename",`${finalPath}/segment_%H_%M_%S.ts`,
         "-strftime","1",
@@ -230,7 +232,7 @@ export class NvrManager {
               const currCtrlID = this.ctrl_id;
               const currNvrPrefID = this.nvrpref_id;
 
-              const newFfmpegProcess = spawn("ffmpeg",ffmpegCli);
+              const newFfmpegProcess = spawn("ffmpeg",ffmpegCli,{stdio:['ignore', 'ignore', 'ignore']});
               currCamJob.isRecording = true;
 
               newFfmpegProcess.on('close', (code,signal) => {
@@ -301,7 +303,7 @@ export class NvrManager {
       if(isInRangeCurTime){
         try {
           const ffmpegCli = await NvrManager.#getFfmpegCLI(ctrl_id,preferencia.cmr_id,{tiempo_inicio:preferencia.tiempo_inicio,tiempo_final:preferencia.tiempo_final});
-          const newFfmpegProcess = spawn("ffmpeg",ffmpegCli);
+          const newFfmpegProcess = spawn("ffmpeg",ffmpegCli,{stdio:['ignore', 'ignore', 'ignore']});
           newCamJob.isRecording = true;
           newFfmpegProcess.on('close', (code,signal) => {
             genericLogger.info(`NvrManager | proceso ffmpeg cerrado con código ${code}  y señal ${signal} | ctrl_id : ${ctrl_id} | nvrpref_id: ${preferencia.nvrpref_id}`);
@@ -336,7 +338,7 @@ export class NvrManager {
         if(isInRangeCurTime){
           try {
             const ffmpegCli = await NvrManager.#getFfmpegCLI(ctrl_id,preferencia.cmr_id,{tiempo_inicio:preferencia.tiempo_inicio,tiempo_final:preferencia.tiempo_final});
-            const newFfmpegProcess = spawn("ffmpeg",ffmpegCli);
+            const newFfmpegProcess = spawn("ffmpeg",ffmpegCli,{stdio:['ignore', 'ignore', 'ignore']});
             newCamJob.isRecording = true;
             newFfmpegProcess.on('close', (code,signal) => {
               genericLogger.info(`NvrManager | proceso ffmpeg cerrado con código ${code}  y señal ${signal} | ctrl_id : ${ctrl_id} | nvrpref_id: ${preferencia.nvrpref_id}`)

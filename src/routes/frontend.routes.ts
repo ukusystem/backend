@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { resolve } from "path";
+import { CustomError } from "../utils/CustomError";
 export const frontEndRoutes = Router();
 
 const allFrontEndPaths = [
@@ -18,10 +19,15 @@ const allFrontEndPaths = [
 "/alarmas"
 ];
 
-frontEndRoutes.get(allFrontEndPaths, (req, res) => {
+frontEndRoutes.get(allFrontEndPaths, (req, res,next) => {
   res.sendFile(resolve(__dirname, "../../public/index.html"), (err) => {
     if (err) {
-      res.status(500).send(err);
+      const errFileNotFound = new CustomError(
+        `index.html no disponible`,
+        404,
+        "Not Found"
+      );
+      next(errFileNotFound);
     }
   });
 });

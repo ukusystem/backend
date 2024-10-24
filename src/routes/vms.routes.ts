@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { userRolCheck,authenticate } from "../middlewares/auth.middleware";
 import { requestDataValidator } from "../middlewares/validator.middleware";
-import { getPreferencias, createPreferencia,updatePreferencia, deletePreferencia, trimRecordNvr} from "../controllers/vms";
-import { createPreferenciaSchema, updatePreferenciaSchema,deletePreferenciaSchema, trimRecordSchema} from "../schemas/vms";
+import { getPreferencias, createPreferencia,updatePreferencia, deletePreferencia, trimRecordNvr, getPlayListNvr, getSegmentNvr} from "../controllers/vms";
+import { createPreferenciaSchema, updatePreferenciaSchema,deletePreferenciaSchema, trimRecordSchema, nvrPlayListSchema, nvrSegmentSchema} from "../schemas/vms";
 
 export const vmsRoutes = Router();
 
@@ -20,3 +20,9 @@ vmsRoutes.delete("/vms/preferencia/:xprfvms_id",authenticate,userRolCheck(["Admi
 
 // TrimRecordNvr GET /vms/trimrecord?ctrl_id=number&cmr_id=number&date=string&startTime=string&endTime=string
 vmsRoutes.get("/vms/trimrecord",authenticate,userRolCheck(["Administrador","Usuario"]),requestDataValidator({querySchema:trimRecordSchema},{hasQuery:true}),trimRecordNvr)
+
+// PlayList GET /vms/playlist?ctrl_id=number&cmr_id=number&date=string
+vmsRoutes.get("/vms/index.m3u8",authenticate,userRolCheck(["Administrador","Usuario"]),requestDataValidator({querySchema:nvrPlayListSchema},{hasQuery:true}),getPlayListNvr);
+
+// Segment GET /vms/:ctrl_id/:cmr_id/:date/:segment_name
+vmsRoutes.get("/vms/:ctrl_id/:cmr_id/:date/:segment_name",authenticate,userRolCheck(["Administrador","Usuario"]),requestDataValidator({paramSchema:nvrSegmentSchema},{hasParam:true}),getSegmentNvr);

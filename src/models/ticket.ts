@@ -26,8 +26,14 @@ interface ActividaPersonalDetailRowData extends RowDataPacket, ActividaPersonalD
 interface ArchivoRowData extends RowDataPacket, ArchivoTicket {}
 interface TotalRegistroTicketRowData extends RowDataPacket, TotalRegistroTicket {}
 interface RegistroTicketDetailRowData extends RowDataPacket , RegistroTicketDetail {} 
+interface ContrataRowData extends RowDataPacket , Contrata {} 
 
 export class Ticket {
+    
+    static getContratas = handleErrorWithoutArgument<Contrata[]>(async ()=>{
+        const contratas = await MySQL2.executeQuery<ContrataRowData[]>({sql:`SELECT * FROM general.contrata WHERE activo = 1`});
+        return contratas
+    })
 
     static getTicketsByControladorId = handleErrorWithArgument< RegistroTicket[],Pick<Controlador,"ctrl_id">>(
         async ({ctrl_id})=>{

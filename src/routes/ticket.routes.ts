@@ -1,7 +1,7 @@
 import {Router} from 'express'
-import {createTicket, downloadArchivo, downloadArchivoRespaldo, downloadFotoActividadPersonal, downloadPdfDetalles, getCargos, getFotoActividadPersonal, getNodos, getPersonalContrata, getRegistroTicket, getRegistroTickets, getSingleRegistroTicket, getTicketDetalles, getTipoTrabajo ,multerCreateTicketArgs,multerUpdAchRespArgs,upadateTicket, updateArchivoRespaldo } from '../controllers/ticket';
+import {createTicket, downloadArchivo, downloadArchivoRespaldo, downloadFotoActividadPersonal, downloadPdfDetalles, downloadZip, getCargos, getContratas, getFotoActividadPersonal, getNodos, getPersonalContrata, getRegistroTicket, getRegistroTickets, getSingleRegistroTicket, getTicketDetalles, getTipoTrabajo ,multerCreateTicketArgs,multerUpdAchRespArgs,upadateTicket, updateArchivoRespaldo } from '../controllers/ticket';
 import { requestDataValidator} from '../middlewares/validator.middleware';
-import { downloadArchivoRespaldoSchema, downloadArchivoSchema, downloadFotoActividadPersonalSchema, downloadPdfDetallesSchema, getFotoActividadPersonalSchema, getPersonalContrataSchema, getRegistroTicketSchema, getRegistroTicketsSchema, getSingleRegTickParam, getSingleRegTickQuery, getTicketDetallesSchema, updateTicketSchema } from '../schemas/ticket';
+import { downloadArchivoRespaldoSchema, downloadArchivoSchema, downloadFotoActividadPersonalSchema, downloadPdfDetallesSchema, downloadZipSchema, getFotoActividadPersonalSchema, getPersonalContrataSchema, getRegistroTicketSchema, getRegistroTicketsSchema, getSingleRegTickParam, getSingleRegTickQuery, getTicketDetallesSchema, updateTicketSchema } from '../schemas/ticket';
 import { authenticate } from '../middlewares/auth.middleware';
 import { GeneralMulterMiddleware } from '../middlewares/multer.middleware';
 
@@ -27,6 +27,12 @@ ticketRoutes.get("/ticket/registro/:xctrl_id",authenticate,requestDataValidator(
 
 // Cargos GET "/ticket/cargos"
 ticketRoutes.get("/ticket/cargos" ,authenticate, getCargos); // no necesita validar
+
+// Contratas GET "/ticket/contratas"
+ticketRoutes.get("/ticket/contratas",authenticate,getContratas)
+
+// Download ZIP GET /tickets/{rt_id}/download-zip?ctrl_id=1
+ticketRoutes.get("/ticket/:rt_id/download-zip",authenticate,requestDataValidator({paramSchema: downloadZipSchema.omit({ctrl_id:true}),querySchema:downloadZipSchema.omit({rt_id:true}) },{hasParam: true,hasQuery:true}),downloadZip)
 
 
 // ======================= Nuevos
@@ -56,7 +62,7 @@ ticketRoutes.post("/ticket/update/archivorespaldo",authenticate,GeneralMulterMid
 ticketRoutes.get("/ticket/download",authenticate,requestDataValidator({ querySchema: downloadPdfDetallesSchema},{hasQuery:true}), downloadPdfDetalles)
 
 // Download ArchivoRespaldo GET "/ticket/download/archivorespaldo?filePath=encodeURIComponennt"
-ticketRoutes.get("/ticket/download/archivorespaldo",authenticate,requestDataValidator({ querySchema: downloadArchivoRespaldoSchema},{hasQuery:true}), downloadArchivoRespaldo)
+ticketRoutes.get("/ticket/download/archivorespaldo",requestDataValidator({ querySchema: downloadArchivoRespaldoSchema},{hasQuery:true}), downloadArchivoRespaldo)
 // Download ArchivoRespaldo GET "/ticket/download/fotoactividadpersonal?filePath=encodeURIComponennt"
 ticketRoutes.get("/ticket/download/fotoactividadpersonal",authenticate,requestDataValidator({ querySchema: downloadFotoActividadPersonalSchema},{hasQuery:true}), downloadFotoActividadPersonal)
 
