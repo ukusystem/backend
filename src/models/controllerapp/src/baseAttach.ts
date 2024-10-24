@@ -1320,8 +1320,9 @@ export class NodeAttach extends BaseAttach {
             this.removePendingMessageByID(id, value)
             break
           case codes.VALUE_SD:
-            this._log("Received sd event.");
+            this._log(`Received sd event ${useful.toHex(value)}.`);
             let state = States.ERROR;
+            let ignore = false
             switch (value) {
               case codes.VALUE_MOUNT:
                 state = States.MOUNTED;
@@ -1332,10 +1333,15 @@ export class NodeAttach extends BaseAttach {
               case codes.VALUE_UNPLUGGED:
                 state = States.EJECTED;
                 break;
+              case codes.VALUE_MOUNTING:
+                ignore = true;
+                break;
               default:
                 break;
             }
-            this.insertSilent("sd event", [useful.formatTimestamp(eventDate), state], queries.insertSD, this.controllerID, true);
+            if(!ignore){
+              this.insertSilent("sd event", [useful.formatTimestamp(eventDate), state], queries.insertSD, this.controllerID, true);
+            }
             break;
         }
         break;
@@ -1348,6 +1354,9 @@ export class NodeAttach extends BaseAttach {
         const pin = pinData[0].getInt();
         const state = pinData[1].getInt() == codes.VALUE_TO_ACTIVE ? 1 : 0;
         const pinDate = pinData[2].getInt();
+
+        // Send to technician (s)
+        this.mirrorMessage(this._appendPart(command,this.controllerID.toString()), true)
 
         // const ioYear = useful.getYearFromTimestamp(pinDate);
         switch (cmdOrValue) {

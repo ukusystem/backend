@@ -237,6 +237,7 @@ export const VALUE_SECURITY_TECH = 0x298            // Program the security from
 export const VALUE_SECURITY_STATE = 0x299           // Send the security state (one of the 4 states)
 export const VALUE_TICKET_DELAY_TO_ARM = 0x29A      // Set or get the delay to arm for tickets
 export const VALUE_SECURITY_TICKET = 0x29B          // The security was programmed from a ticket
+export const VALUE_MOUNTING = 0x29C                 // The sd card in being mounted
 
 export const VALUE_SOCKET_CLOSED = 0x400 // Socket was closed
 export const VALUE_AUTHORIZED = 0x401 // Card authorized
