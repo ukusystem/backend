@@ -7,7 +7,7 @@ export const getSegmentNvr = asyncErrorHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     const { ctrl_id, cmr_id, date, segment_name } = req.params;
 
-    const segmentFilePath = path.resolve(`./nvr/hls/nodo${ctrl_id}/camara${cmr_id}/${date}/${segment_name}`).split(path.sep).join(path.posix.sep);
+    const segmentFilePath = path.resolve(`./nvr/hls/nodo${ctrl_id}/camara${cmr_id}/${date}/record/${segment_name}`).split(path.sep).join(path.posix.sep);
 
     res.sendFile(segmentFilePath, (err) => {
       if (err) {

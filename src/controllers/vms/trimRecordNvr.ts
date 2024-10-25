@@ -19,57 +19,98 @@ export const trimRecordNvr = asyncErrorHandler(
        return res.status(400).json({message:"'endTime' debe ser mayor a 'startTime'"})
     };
 
-    const recorFilePath = path.resolve(`./nvr/hls/nodo${ctrl_id}/camara${cmr_id}/${date}/index.m3u8`).split(path.sep).join(path.posix.sep);
+    const playlistPath = path.resolve(`./nvr/hls/nodo${ctrl_id}/camara${cmr_id}/${date}/index.m3u8`).split(path.sep).join(path.posix.sep);
 
-    fs.readFile(recorFilePath, "utf8", (err, _data) => {
+    const temporalNamePlaylist = uuidv4();
+    const temporalPlaylistPath = path.resolve(`./nvr/hls/nodo${ctrl_id}/camara${cmr_id}/${date}/${temporalNamePlaylist}.m3u8`).split(path.sep).join(path.posix.sep);
+
+    const temporalNameVideo = uuidv4();
+    const temporalVideoPath = path.resolve("./archivos/temporal",`${temporalNameVideo}.mp4`).split(path.sep).join(path.posix.sep);
+
+
+    fs.readFile(playlistPath, "utf8", (err, data) => {
       if (err) {
         return res.status(404).json({ message: "Grabación no disponible." });
       }
       try {
 
-        const nameTemporalVideo = uuidv4();
+        if (!data.includes('#EXT-X-ENDLIST')) {
+          data += '\n#EXT-X-ENDLIST';
+        }
+        genericLogger.info(`trimRecordNvr | Creando temporal playlist | ${temporalNamePlaylist}.m3u8`);
+        fs.writeFileSync(temporalPlaylistPath, data);
+
         const basePath = path.resolve("./archivos/temporal")
   
         if (!fs.existsSync(basePath)) {
           fs.mkdirSync(basePath, { recursive: true });
         }
-        const temporalSavePath = path.resolve("./archivos/temporal",`${nameTemporalVideo}.mp4`).split(path.sep).join(path.posix.sep);
   
         const keyArgs: string[] = [
-          "-i",`${recorFilePath}`,
+          "-i",`${temporalPlaylistPath}`,
           "-ss",`${startTime}`,
           "-to",`${endTime}`,
           "-c","copy",
-          `${temporalSavePath}`,
+          `${temporalVideoPath}`,
         ];
   
-        const ffmpegProcess = spawn("ffmpeg", keyArgs);
+        const ffmpegProcess = spawn("ffmpeg", keyArgs,{stdio:["ignore","ignore","ignore"]});
+        genericLogger.info(`trimRecordNvr | Proceso ffmpeg ejecutando | pid ${ffmpegProcess.pid}`);
   
-        ffmpegProcess.stdout.on("close", (data: any) => {
-          res.download(temporalSavePath, (err) => {
+        ffmpegProcess.on("close", (code,signal) => {
+          genericLogger.info(`trimRecordNvr | Proceso cerrado con codigo ${code} y señal ${signal}`);
+          res.download(temporalVideoPath, (err) => {
             if (err) {
               res.status(500).json({message:"Error al enviar el archivo."});
             }
   
-            fs.unlink(temporalSavePath, (err) => {
+            fs.unlink(temporalVideoPath, (err) => {
               if (err) {
-                genericLogger.error(`trimRecordNvr | Error al eliminar archivo temporal`,err);
+                genericLogger.error(`trimRecordNvr | Error al eliminar archivo temporal .mp4`,err);
               }
+              genericLogger.info(`trimRecordNvr | Video temporal ${temporalNameVideo}.mp4 eliminado correctamente`);
+
+            });
+            fs.unlink(temporalPlaylistPath, (err) => {
+              if (err) {
+                genericLogger.error(`trimRecordNvr | Error al eliminar archivo temporal .m3u8`,err);
+              }
+              genericLogger.info(`trimRecordNvr | Playlist temporal ${temporalNamePlaylist}.m3u8 eliminado correctamente`);
+
             });
           });
         });
   
-        ffmpegProcess.stdout.on("error", (err) => {
+        ffmpegProcess.on("error", (err) => {
           genericLogger.error(`trimRecordNvr | Error al cortar grabacion`,err);
           res.status(500).json({message:"Error al cortar grabación."});
-          fs.unlink(temporalSavePath, (err) => {
+          fs.unlink(temporalVideoPath, (err) => {
             if (err) {
               genericLogger.error(`trimRecordNvr | Error al eliminar archivo temporal`,err);
             }
+            genericLogger.info(`trimRecordNvr | Video temporal ${temporalNameVideo}.mp4 eliminado correctamente`);
+          });
+          fs.unlink(temporalPlaylistPath, (err) => {
+            if (err) {
+              genericLogger.error(`trimRecordNvr | Error al eliminar archivo temporal .m3u8`,err);
+            }
+            genericLogger.info(`trimRecordNvr | Playlist temporal ${temporalNamePlaylist}.m3u8 eliminado correctamente`);
           });
         });
 
       } catch (error) {
+        fs.unlink(temporalVideoPath, (err) => {
+          if (err) {
+            genericLogger.error(`trimRecordNvr | Error al eliminar archivo temporal`,err);
+          }
+          genericLogger.info(`trimRecordNvr | Video temporal ${temporalNameVideo}.mp4 eliminado correctamente`);
+        });
+        fs.unlink(temporalPlaylistPath, (err) => {
+          if (err) {
+            genericLogger.error(`trimRecordNvr | Error al eliminar archivo temporal .m3u8`,err);
+          }
+          genericLogger.info(`trimRecordNvr | Playlist temporal ${temporalNamePlaylist}.m3u8 eliminado correctamente`);
+        });
         return res.status(500).json({message:"Error al cortar grabación."});
       }
 

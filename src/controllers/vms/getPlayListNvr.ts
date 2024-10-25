@@ -6,7 +6,8 @@ import { v4 as uuidv4 } from 'uuid';
 
 export const getPlayListNvr = asyncErrorHandler(
   async (req: Request, res: Response, next: NextFunction) => {
-    const { ctrl_id, cmr_id, date } = req.query as {ctrl_id: string;cmr_id: string;date: string;startTime: string;endTime: string;};
+    // const { ctrl_id, cmr_id, date } = req.query as {ctrl_id: string;cmr_id: string;date: string;startTime: string;endTime: string;};
+    const { ctrl_id, cmr_id, date } = req.params as {ctrl_id: string;cmr_id: string;date: string};
 
     const recorFilePath = path.resolve(`./nvr/hls/nodo${ctrl_id}/camara${cmr_id}/${date}/index.m3u8`).split(path.sep).join(path.posix.sep);
 

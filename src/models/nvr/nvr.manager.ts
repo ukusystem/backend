@@ -85,14 +85,18 @@ export class NvrManager {
     return timeDiff;
   }
 
-  static async #createDirectory(basePath: string): Promise<string>{
+  static async #createDirectory(basePath: string): Promise< {segment_path: string;playlist_path: string}>{
     try {
       const currentDateTime = dayjs();
-      const folderPath = path.join(basePath,currentDateTime.format("YYYY-MM-DD"));
+      const folderPath = path.join(basePath,currentDateTime.format("YYYY-MM-DD"),"record");
       if (!fs.existsSync(folderPath)) {
         fs.mkdirSync(folderPath, { recursive: true });
       }
-      return path.resolve(basePath,currentDateTime.format("YYYY-MM-DD")).split(path.sep).join(path.posix.sep);
+      
+      return {
+        segment_path: path.resolve(basePath,currentDateTime.format("YYYY-MM-DD"),"record").split(path.sep).join(path.posix.sep),
+        playlist_path: path.resolve(basePath,currentDateTime.format("YYYY-MM-DD")).split(path.sep).join(path.posix.sep),
+      };
     } catch (error) {
       genericLogger.error(`NvrManager | #createDirectory | Error al crear directorio`,error);
       throw error;
@@ -103,11 +107,9 @@ export class NvrManager {
     try {
       const [mainRtsp] = await getRstpLinksByCtrlIdAndCmrId(ctrl_id,cmr_id);
       const basePath : string = `./nvr/hls/nodo${ctrl_id}/camara${cmr_id}`;
-      const finalPath = await NvrManager.#createDirectory(basePath);
+      const finalPaths = await NvrManager.#createDirectory(basePath);
 
       const timeDiff = NvrManager.#getTimeDiff(times);
-      const currentDateTime = dayjs();
-      const date = currentDateTime.format("YYYY-MM-DD")
 
       const keyArgs : string[] =[
         "-rtsp_transport","tcp",
@@ -119,12 +121,12 @@ export class NvrManager {
         "-hls_time",`${NvrManager.#HLS_TIME}`,
         "-hls_list_size","0",
         "-hls_playlist_type", "event",
-        "-hls_base_url", `${ctrl_id}/${cmr_id}/${date}/`,
+        "-hls_base_url", `record/`,
         "-hls_flags","append_list",
-        "-hls_segment_filename",`${finalPath}/segment_%H_%M_%S.ts`,
+        "-hls_segment_filename",`${finalPaths.segment_path}/segment_%H_%M_%S.ts`,
         "-strftime","1",
         "-t",`${timeDiff}`,
-        `${finalPath}/index.m3u8`
+        `${finalPaths.playlist_path}/index.m3u8`
       ]
 
       return keyArgs;
@@ -302,7 +304,8 @@ export class NvrManager {
 
       if(isInRangeCurTime){
         try {
-          const ffmpegCli = await NvrManager.#getFfmpegCLI(ctrl_id,preferencia.cmr_id,{tiempo_inicio:preferencia.tiempo_inicio,tiempo_final:preferencia.tiempo_final});
+          const newInitialTime = currentDateTime.format("HH:mm:ss");
+          const ffmpegCli = await NvrManager.#getFfmpegCLI(ctrl_id,preferencia.cmr_id,{tiempo_inicio:newInitialTime,tiempo_final:preferencia.tiempo_final});
           const newFfmpegProcess = spawn("ffmpeg",ffmpegCli,{stdio:['ignore', 'ignore', 'ignore']});
           newCamJob.isRecording = true;
           newFfmpegProcess.on('close', (code,signal) => {
@@ -337,7 +340,8 @@ export class NvrManager {
 
         if(isInRangeCurTime){
           try {
-            const ffmpegCli = await NvrManager.#getFfmpegCLI(ctrl_id,preferencia.cmr_id,{tiempo_inicio:preferencia.tiempo_inicio,tiempo_final:preferencia.tiempo_final});
+            const newInitialTime = currentDateTime.format("HH:mm:ss");
+            const ffmpegCli = await NvrManager.#getFfmpegCLI(ctrl_id,preferencia.cmr_id,{tiempo_inicio:newInitialTime,tiempo_final:preferencia.tiempo_final});
             const newFfmpegProcess = spawn("ffmpeg",ffmpegCli,{stdio:['ignore', 'ignore', 'ignore']});
             newCamJob.isRecording = true;
             newFfmpegProcess.on('close', (code,signal) => {
