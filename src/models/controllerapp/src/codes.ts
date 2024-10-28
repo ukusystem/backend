@@ -175,7 +175,7 @@ export const VALUE_VOLTAGE_ACTIVE = 0x25a // Output voltage is active
 export const VALUE_VOLTAGE_INACTIVE = 0x25b // Output voltage is inactive
 export const VALUE_CTRL_STATE = 0x25c // Get the controller state
 export const VALUE_SECURITY = 0x25D   // Get the security on demand or as an event
-export const VALUE_SD = 0x25e // Get or set the SD card status
+export const VALUE_SD = 0x25e // Event of the sd card
 export const VALUE_VOLTAGE = 0x25f // Get or set the output voltage mode
 export const VALUE_OFFSET = 0x260 // Get or set the temperature offset
 export const VALUE_INPUT_STATE_ONE = 0x261 // Get the state of one input
@@ -238,6 +238,8 @@ export const VALUE_SECURITY_STATE = 0x299           // Send the security state (
 export const VALUE_TICKET_DELAY_TO_ARM = 0x29A      // Set or get the delay to arm for tickets
 export const VALUE_SECURITY_TICKET = 0x29B          // The security was programmed from a ticket
 export const VALUE_MOUNTING = 0x29C                 // The sd card in being mounted
+export const VALUE_SD_TECH = 0X29D                  // Set or get the SD state from the technician
+export const VALUE_SD_STATE = 0x29E                 // Get the complete sd state
 
 export const VALUE_SOCKET_CLOSED = 0x400 // Socket was closed
 export const VALUE_AUTHORIZED = 0x401 // Card authorized
@@ -257,6 +259,7 @@ export const VALUE_OUTPUT_TYPE_FREE = 0x40E      // Free type
 export const VALUE_ARMING = 0x40F                // Arming is programmed
 export const VALUE_DISARMING = 0x410             // Disarming is programmed
 export const VALUE_NONE = 0x411                  // None value. General use.
+export const VALUE_EJECTING = 0x412            // Unmounting sd card
 
 /**
  * Command to set the initial configuration in the controller once the socket is

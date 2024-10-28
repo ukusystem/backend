@@ -1,6 +1,5 @@
 import { RowDataPacket, ResultSetHeader } from "mysql2";
 import { executeQuery, executeBatchForNode, userExist } from "./dbManager";
-import { CameraMotionManager } from "../../camera";
 import { CameraForFront } from "./frontend/camaraForFront";
 import { ResultCode } from "./resultCode";
 import { AtomicNumber } from "./atomicNumber";
@@ -8,7 +7,8 @@ import { DataStruct } from "./dataStruct";
 import { ParseType, States, Result } from "./enums";
 import { IntTuple } from "./intTuple";
 import { IntConsumer } from "./types";
-import { Camera } from "./camera";
+// import { Camera } from "./camera";
+
 import { Encryption } from "./encryption";
 import { Message } from "./message";
 import { Bundle } from "./bundle";
@@ -25,9 +25,11 @@ import * as db2 from "./db2";
 import * as sm from "../../../controllers/socket";
 import { Main } from "./main";
 import { SystemManager } from "../../system";
-import { ControllerData, ControllerMapManager } from "../../maps";
+import { ControllerMapManager } from "../../maps";
 import { NodeTickets } from "./nodeTickets";
-import { userInfo } from "os";
+import { NodoCameraMapManager } from "../../maps/nodo.camera";
+import { CameraMotionManager } from "../../camera";
+import { Camara } from "../../../types/db";
 
 /**
  * Base attachment for the sockets
@@ -1270,18 +1272,13 @@ export class NodeAttach extends BaseAttach {
 
       // Should be mirrored with the node ID appended. These are event for the technician.
       case codes.VALUE_SD:
+      case codes.VALUE_SD_TECH:
       case codes.VALUE_SECURITY:
       case codes.VALUE_SECURITY_WEB:
       case codes.VALUE_SECURITY_TECH:
       case codes.VALUE_SECURITY_TICKET:
       case codes.VALUE_MODE:
       case codes.VALUE_VOLTAGE:
-
-        // let commandToMirror = command
-        // if (cmdOrValue === codes.VALUE_SECURITY || cmdOrValue === codes.VALUE_SECURITY_WEB || cmdOrValue === codes.VALUE_SD
-        //   || cmdOrValue === codes.VALUE_VOLTAGE || cmdOrValue === codes.VALUE_MODE) {
-        // commandToMirror = 
-        // }
         this.mirrorMessage(this._appendPart(command, this.controllerID.toString()), true);
 
         // Parse event data
@@ -1322,7 +1319,6 @@ export class NodeAttach extends BaseAttach {
           case codes.VALUE_SD:
             this._log(`Received sd event ${useful.toHex(value)}.`);
             let state = States.ERROR;
-            let ignore = false
             switch (value) {
               case codes.VALUE_MOUNT:
                 state = States.MOUNTED;
@@ -1333,15 +1329,10 @@ export class NodeAttach extends BaseAttach {
               case codes.VALUE_UNPLUGGED:
                 state = States.EJECTED;
                 break;
-              case codes.VALUE_MOUNTING:
-                ignore = true;
-                break;
               default:
                 break;
             }
-            if(!ignore){
-              this.insertSilent("sd event", [useful.formatTimestamp(eventDate), state], queries.insertSD, this.controllerID, true);
-            }
+            this.insertSilent("sd event", [useful.formatTimestamp(eventDate), state], queries.insertSD, this.controllerID, true);
             break;
         }
         break;
@@ -1491,7 +1482,7 @@ export class NodeAttach extends BaseAttach {
           this.saveSecurity(this.controllerID, security, date, id)
 
           // Notify technician
-          this.mirrorMessage(command, true)
+          this.mirrorMessage(this._appendPart(command, this.controllerID.toString()), true)
 
           const definite = programming == codes.VALUE_ARM || programming == codes.VALUE_DISARM
           // const transitory = programming == codes.VALUE_DISARMING || programming == codes.VALUE_ARMING
@@ -1499,6 +1490,36 @@ export class NodeAttach extends BaseAttach {
           // Notify web
           const enableButton = definite   // Add to isButtonActive when the function is updated.
           ControllerMapManager.updateController(this.controllerID, { seguridad: security ? 1 : 0 })
+        }
+        break
+      case codes.VALUE_SD_STATE:
+        this._log(`Received sd state from controller ${command}`)
+        const sdData = this._parseMessage(parts, queries.sdStateParse, id, false)
+        if(sdData){
+          const sdProgramming = sdData[1].getInt()
+          const sdDate = sdData[3].getInt()
+          let stateID = States.ERROR;
+            switch (sdProgramming) {
+              case codes.VALUE_MOUNT:
+                stateID = States.MOUNTED;
+                break;
+              case codes.VALUE_EJECT:
+                stateID = States.UNMOUNTED;
+                break;
+              case codes.VALUE_UNPLUGGED:
+                stateID = States.EJECTED;
+                break;
+              case codes.VALUE_MOUNTING:
+                stateID = States.MOUNTING;
+                break;
+              case codes.VALUE_EJECTING:
+                stateID = States.EJECTING;
+                break;
+              default:
+                break;
+            }
+          this.insertSilent("sd state", [useful.formatTimestamp(sdDate), stateID], queries.insertSD, this.controllerID, true);
+          this.mirrorMessage(this._appendPart(command, this.controllerID.toString()), true)
         }
         break
       default:
@@ -1959,9 +1980,9 @@ export class ManagerAttach extends BaseAttach {
                     break;
                     
                   // Useful?
-                  case codes.VALUE_SECURITY:
-                  case codes.VALUE_VOLTAGE:
-                  case codes.VALUE_SD:
+                  // case codes.VALUE_SECURITY:
+                  // case codes.VALUE_VOLTAGE:
+                  // case codes.VALUE_SD:
 
                   case codes.VALUE_INPUT_CTRL:
                   case codes.VALUE_OUTPUT_CTRL:
@@ -2213,7 +2234,7 @@ export class ManagerAttach extends BaseAttach {
                 case codes.VALUE_TICKET_DELAY_TO_ARM:  
                 case codes.VALUE_SECURITY_TECH:
                 case codes.VALUE_MODE:
-                case codes.VALUE_SD:
+                case codes.VALUE_SD_TECH:
                 case codes.VALUE_VOLTAGE:
                   // Node dependent commands
                   const targetNodeData = this._parseMessage(parts, queries.idParse, id);
@@ -2259,9 +2280,39 @@ export class ManagerAttach extends BaseAttach {
                       const cameraData = this._parseMessage(parts, cameraWithPassword ? queries.cameraParsePwd : queries.cameraParse, id);
                       if (!cameraData) break;
                       // To update the local cameras list
-                      bundle.targetCamera = new Camera(cameraData[queries.cameraIDIndex].getInt(), targetNodeID, cameraData[queries.cameraIPIndex].getString());
+                      // bundle.targetCamera = new Camera(cameraData[queries.cameraIDIndex].getInt(), targetNodeID, cameraData[queries.cameraIPIndex].getString());
                       // Camera object for the front
-                      const newCameraItem = new CameraForFront(cameraData[0].getInt(), targetNodeID, cameraData[5].getString(), cameraData[4].getString(), null);
+                      const camID = cameraData[0].getInt()
+                      const serie = cameraData[1].getString()
+                      const typeID = cameraData[2].getInt()
+                      const brandID = cameraData[3].getInt()
+                      const user = cameraData[4].getString()
+                      const ip = cameraData[5].getString()
+                      const port = cameraData[6].getInt()
+                      const desc = cameraData[7].getString()
+                      const portws = cameraData[8].getInt()
+                      const mask = cameraData[9].getString()
+                      const gateway = cameraData[10].getString()
+                      let pwd = ''
+
+                      const newCamera:Camara = {
+                        cmr_id : camID,
+                        activo:1,
+                        conectado:0,
+                        contraseña:pwd,
+                        descripcion:desc,
+                        ip:ip,
+                        m_id:brandID,
+                        mascara:mask,
+                        puertaenlace:gateway,
+                        puerto:port,
+                        puertows:portws,
+                        serie:serie,
+                        tc_id:typeID,
+                        usuario:user,
+                      }
+
+                      // const newCameraItem = new CameraForFront(cameraData[0].getInt(), targetNodeID, cameraData[5].getString(), cameraData[4].getString(), null);
                       // Encrypt password
                       if (cameraWithPassword) {
                         const cameraPassword = cameraData[queries.cameraPasswordIndex];
@@ -2271,28 +2322,30 @@ export class ManagerAttach extends BaseAttach {
                           break;
                         }
                         cameraPassword.setString(encrytedCameraPassword);
-                        newCameraItem.contraseña = encrytedCameraPassword;
+                        pwd = encrytedCameraPassword;
                       }
 
                       // Save camera
                       switch (valueToSet) {
                         case codes.VALUE_CAMERA:
                           await this._updateItem("camera", cameraData, queries.cameraUpdate, id, targetNodeID);
-                          code.code = Result.CAMERA_UPDATE;
+                          NodoCameraMapManager.update(targetNodeID, newCamera.cmr_id, newCamera)
+                          // code.code = Result.CAMERA_UPDATE;
                           break;
                         case codes.VALUE_CAMERA_ADD:
                           await this._insertItem("camera", cameraData, queries.cameraInsert, id, targetNodeID);
-                          code.code = Result.CAMERA_ADD;
+                          NodoCameraMapManager.add(targetNodeID, newCamera)
+                          // code.code = Result.CAMERA_ADD;
                           break;
                         case codes.VALUE_CAMERA_PASSWORD:
                           await this._updateItem("camera", cameraData, queries.cameraUpdatePwd, id, targetNodeID);
-                          code.code = Result.CAMERA_UPDATE;
+                          // code.code = Result.CAMERA_UPDATE;
                           break;
                         default:
                           this._logFeelThroughHex(valueToSet);
                           break;
                       }
-                      CameraMotionManager.add_update(newCameraItem);
+                      // CameraMotionManager.add_update(newCameraItem);
                       break;
                     case codes.VALUE_ENERGY:
                       // id, desc
@@ -2338,7 +2391,7 @@ export class ManagerAttach extends BaseAttach {
                       break;
                     case codes.VALUE_SECURITY_TECH:
                     case codes.VALUE_MODE:
-                    case codes.VALUE_SD:
+                    case codes.VALUE_SD_TECH:
                     case codes.VALUE_VOLTAGE:
                     case codes.VALUE_DELAY_TO_ARM:
                     case codes.VALUE_TICKET_DELAY_TO_ARM:

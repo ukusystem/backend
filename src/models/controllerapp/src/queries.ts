@@ -53,6 +53,7 @@ export const cardReadParse = [tupleInt, tupleBig, tupleInt, tupleInt, tupleInt, 
 export const powerParse = [tupleLong, tupleID, tupleFloat, tupleFloat, tupleFloat, tupleFloat, tupleFloat, tupleFloat];
 export const orderParse = [tupleInt, tupleInt, tupleLong]
 export const securityStateParse = [tupleInt, tupleInt, tupleInt, tupleLong]
+export const sdStateParse = [tupleInt, tupleInt, tupleInt, tupleLong]
 
 /* Manage tables */
 

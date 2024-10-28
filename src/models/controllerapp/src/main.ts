@@ -205,17 +205,17 @@ export class Main {
       const code = new ResultCode();
       const bundle = new Bundle();
       await manager.readOne(this.selector, code, bundle);
-      switch (code.code) {
-        case Result.CAMERA_ADD:
-        case Result.CAMERA_UPDATE:
-          this.addUpdateCamera(bundle.targetCamera);
-          break;
-        case Result.CAMERA_DISABLE:
-          this.removeCamera(bundle.targetCamera.nodeID, bundle.targetCamera.cameraID);
-          break;
-        default:
-          break;
-      }
+      // switch (code.code) {
+      //   case Result.CAMERA_ADD:
+      //   case Result.CAMERA_UPDATE:
+      //     this.addUpdateCamera(bundle.targetCamera);
+      //     break;
+      //   case Result.CAMERA_DISABLE:
+      //     this.removeCamera(bundle.targetCamera.nodeID, bundle.targetCamera.cameraID);
+      //     break;
+      //   default:
+      //     break;
+      // }
     }
     if (this.processMessages) {
       setTimeout(this.processOneFromAll, 1);
@@ -228,22 +228,22 @@ export class Main {
    * @param nodeID   Camera node ID
    * @param cameraID Camera ID
    */
-  private removeCamera(nodeID: number, cameraID: number) {
-    let found = false;
-    for (let i = 0; i < this.cameras.length; i++) {
-      const current = this.cameras[i];
-      if (current.nodeID == nodeID && current.cameraID == cameraID) {
-        this.cameras.slice(i, 1);
-        found = true;
-        this.log(`Remove camera ${current} from checking list`);
-        break;
-      }
-    }
-    if (!found) {
-      this.log(`Camera ID=${cameraID} Node ID=${nodeID} not found`);
-    }
-    this.log(`Total cameras: ${this.cameras.length}`);
-  }
+  // private removeCamera(nodeID: number, cameraID: number) {
+  //   let found = false;
+  //   for (let i = 0; i < this.cameras.length; i++) {
+  //     const current = this.cameras[i];
+  //     if (current.nodeID == nodeID && current.cameraID == cameraID) {
+  //       this.cameras.slice(i, 1);
+  //       found = true;
+  //       this.log(`Remove camera ${current} from checking list`);
+  //       break;
+  //     }
+  //   }
+  //   if (!found) {
+  //     this.log(`Camera ID=${cameraID} Node ID=${nodeID} not found`);
+  //   }
+  //   this.log(`Total cameras: ${this.cameras.length}`);
+  // }
 
   /**
    * Add or update a camera in the buffer, depending on whether it already exists
@@ -252,24 +252,24 @@ export class Main {
    *
    * @param newCamera The data of the new camera or data to update with.
    */
-  private addUpdateCamera(newCamera: Camera) {
-    let found = false;
-    for (let i = 0; i < this.cameras.length; i++) {
-      const current = this.cameras[i];
-      if (current.nodeID == newCamera.nodeID && current.cameraID == newCamera.cameraID) {
-        found = true;
-        this.cameras[i] = newCamera;
-        this.log(`Updated camera to '${newCamera}' in checking list`);
-        break;
-      }
-    }
-    if (!found) {
-      this.cameras.push(newCamera);
-      executeQuery(BaseAttach.formatQueryWithNode(queries.insertCameraState, newCamera.nodeID), [newCamera.cameraID, useful.getCurrentDate(), Mortal.DEFAULT_INITIAL_STATE]);
-      this.log(`Added camera ${newCamera} to checking list`);
-    }
-    this.log(`Total cameras: ${this.cameras.length}`);
-  }
+  // private addUpdateCamera(newCamera: Camera) {
+  //   let found = false;
+  //   for (let i = 0; i < this.cameras.length; i++) {
+  //     const current = this.cameras[i];
+  //     if (current.nodeID == newCamera.nodeID && current.cameraID == newCamera.cameraID) {
+  //       found = true;
+  //       this.cameras[i] = newCamera;
+  //       this.log(`Updated camera to '${newCamera}' in checking list`);
+  //       break;
+  //     }
+  //   }
+  //   if (!found) {
+  //     this.cameras.push(newCamera);
+  //     executeQuery(BaseAttach.formatQueryWithNode(queries.insertCameraState, newCamera.nodeID), [newCamera.cameraID, useful.getCurrentDate(), Mortal.DEFAULT_INITIAL_STATE]);
+  //     this.log(`Added camera ${newCamera} to checking list`);
+  //   }
+  //   this.log(`Total cameras: ${this.cameras.length}`);
+  // }
 
   private startSendingMessages() {
     this.sendMessagesTimer = setInterval(() => {
