@@ -25,7 +25,7 @@ import * as codes from "./codes";
 import * as db2 from "./db2";
 import * as util from "util";
 import * as net from "net";
-import { CameraMotionManager } from "../../camera";
+// import { CameraMotionManager } from "../../camera";
 import * as cp from "child_process";
 import { Encryption } from "./encryption";
 import { ControllerConnect } from "../../system";
@@ -1068,11 +1068,11 @@ export class Main {
           await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.cameraSetNet, cam.nodeID), [changeBool, cam.cameraID])
           if (change === Changes.TO_ACTIVE) {
             this.log(`Reconnecting camera ${cam.cameraIP}`);
-            CameraMotionManager.reconnect(cam.cameraID, cam.nodeID);
+            // CameraMotionManager.reconnect(cam.cameraID, cam.nodeID);
             NodoCameraMapManager.update(cam.nodeID,cam.cameraID,{conectado:1})
           } else if (change === Changes.TO_INACTIVE) {
             NodoCameraMapManager.update(cam.nodeID,cam.cameraID,{conectado:0})
-            CameraMotionManager.deleteFfmpegProccess(cam.cameraID, cam.nodeID)
+            // CameraMotionManager.deleteFfmpegProccess(cam.cameraID, cam.nodeID)
           }
         }
         cam.errorNotified = false;

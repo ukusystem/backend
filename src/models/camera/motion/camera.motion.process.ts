@@ -1,22 +1,20 @@
 // @ts-ignore
 // @ts-nocheck
 
-import { ChildProcessWithoutNullStreams, spawn } from "child_process";
+import { ChildProcessByStdio, spawn } from "child_process";
 import path from "path";
 import fs from "fs";
 import { Cam } from "onvif";
 import { MySQL2 } from "../../../database/mysql";
 import { createImageBase64, verifyImageMarkers } from "../../../utils/stream";
 import { getMulticastRtspStreamAndSubStream } from "../../../utils/getCameraRtspLinks";
-import { Init } from "../../init";
-import { decrypt } from "../../../utils/decrypt";
 import dayjs from "dayjs";
 import { CameraMotionMethods, CameraMotionProps, CameraProps } from "./camera.motion.types";
-import { CameraMotionManager } from "./camera.motion.manager";
 import { ControllerMapManager } from "../../maps";
 import { cameraLogger } from "../../../services/loggers";
+import { CameraMotionManager } from "./camera.motion.manager";
 
-
+const TIMEOUT_DISCONNECT = 5;
 export class CameraMotionProcess implements CameraMotionProps, CameraMotionMethods {
   ip: string;
   usuario: string;
@@ -24,13 +22,12 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
   cmr_id: number;
   ctrl_id: number;
 
-  ffmpegProcessImage: ChildProcessWithoutNullStreams | null = null;
+  ffmpegProcessImage: ChildProcessByStdio<null, any, null> | null = null;
   imageBuffer: Buffer = Buffer.alloc(0);
   isInsideImage: boolean = false;
   isActiveProccesImage: boolean = false;
-  blockProcessImage: boolean = false;
 
-  ffmpegProcessVideo: ChildProcessWithoutNullStreams | null = null;
+  ffmpegProcessVideo: ChildProcessByStdio<null, null, null> | null = null;
   isActiveProccesVideo: boolean = false;
 
   constructor(props: CameraProps) {
@@ -89,10 +86,12 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
   }
 
   snapshotMotion(rtspUrl: string) {
-    if (!this.ffmpegProcessImage) {
+    if (this.ffmpegProcessImage === null) {
       try {
         const argsImageProcces = getImageFfmpegArgs(rtspUrl,this.ctrl_id);
-        this.ffmpegProcessImage = spawn("ffmpeg", argsImageProcces);
+        const newImgProcess = spawn("ffmpeg", argsImageProcces,{stdio:["ignore","pipe","ignore"]});
+        this.ffmpegProcessImage = newImgProcess;
+
         this.ffmpegProcessImage.stdout.on("data", (data: Buffer) => {
           // Verificar marcadores
           let isMarkStart = verifyImageMarkers(data, "start");
@@ -160,7 +159,7 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
 
           if (this.isActiveProccesImage) {
             cameraLogger.debug(`CameraMotionProcess | snapshotMotion | Evento continua activo para capturar imagenes | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`);
-            let isConnected = await this.isCamConnected();
+            const isConnected = await this.isCamConnected();
             if (isConnected) {
               return this.snapshotMotion(rtspUrl);
             } else {
@@ -175,13 +174,13 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
   }
 
   captureMotion(rtspUrl: string) {
-    if (!this.ffmpegProcessVideo) {
+    if (this.ffmpegProcessVideo === null) {
       try {
         const pathFolderVid = createMotionDetectionFolders(`./deteccionmovimiento/vid/${"nodo" + this.ctrl_id}/${this.ip}`);
         const videoPath = path.join(pathFolderVid, `grabacion_${Date.now()}.mp4`);
         const argsVideoProcces = getVideoFfmpegArgs(rtspUrl, videoPath , this.ctrl_id);
-
-        this.ffmpegProcessVideo = spawn("ffmpeg", argsVideoProcces);
+        const newVideoProcess = spawn("ffmpeg", argsVideoProcces,{stdio:["ignore","ignore","ignore"]});
+        this.ffmpegProcessVideo = newVideoProcess;
 
         this.ffmpegProcessVideo.on("error", (err) => {
           cameraLogger.error(`CameraMotionProcess | captureMotion | Error en el proceso ffmpegVideo | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`,err);
@@ -215,7 +214,7 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
 
           if (this.isActiveProccesVideo) {
             cameraLogger.debug(`CameraMotionProcess | captureMotion | Evento continua activo para capturar video | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`);
-            let isConnected = await this.isCamConnected();
+            const isConnected = await this.isCamConnected();
             if (isConnected) {
               return this.captureMotion(rtspUrl);
             } else {
@@ -532,6 +531,7 @@ const getImageFfmpegArgs = (rtspUrl: string, ctrl_id: number): string[] => {
 
   return [
     "-rtsp_transport", "tcp", 
+    "-timeout",`${TIMEOUT_DISCONNECT*1000000}`,
     "-i", `${rtspUrl}`,
     "-vf", `scale=${motion_snapshot.ancho}:${motion_snapshot.altura},select='gte(t\\,0)',fps=1/${controller.motionsnapshotinterval}`,
     "-an",
@@ -551,6 +551,7 @@ const getVideoFfmpegArgs = (rtspUrl: string, outputPath: string, ctrl_id: number
 
   return [
     "-rtsp_transport","tcp",
+    "-timeout",`${TIMEOUT_DISCONNECT*1000000}`,
     "-i",`${rtspUrl}`,
     "-r",`${controller.motionrecordfps}`,
     "-vf",`scale=${motion_record.ancho}:${motion_record.altura}`,
@@ -598,25 +599,4 @@ const insertPathToDB = (newPath: string, ctrl_id: number, cmr_id: number, tipo: 
       cameraLogger.error(`CameraMotionProcess | insertPathToDB | Error al insertar path a la db:\n`, error);
     }
   })();
-};
-
-export const DeteccionMovimiento = async () => {
-  try {
-    const camerasData = await Init.getAllCameras();
-    Object.keys(camerasData).forEach((ctrlIdKey) => {
-      camerasData[Number(ctrlIdKey)].forEach(async (cam) => {
-        const { ip, usuario, contraseña, cmr_id, ctrl_id } = cam;
-        try {
-          const contraseñaDecrypt = decrypt(contraseña);
-          const camMotion = new CameraMotionProcess({ ip, usuario, contraseña: contraseñaDecrypt, cmr_id, ctrl_id });
-          CameraMotionManager.add_whithout_execute(camMotion);
-        } catch (error) {
-          cameraLogger.error(`DeteccionMovimiento | Error al iniciar el proceso : controlador  ${ctrl_id} | camara ${ip}`, error);
-        }
-      });
-    });
-  } catch (error) {
-    cameraLogger.error(`CameraMotionProcess | Ocurrio un error en DeteccionMovimiento`, error);
-    throw error;
-  }
 };

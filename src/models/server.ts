@@ -22,7 +22,7 @@ import { ModuloEnergiaManager, PinEntradaManager, PinSalidaManager, RegistroAcce
 import { ContrataMap, ControllerMapManager, EquipoAccesoMap, EquipoEntradaMap, EquipoSalidaMap, RegionMapManager, Resolution, TipoCamaraMapManager } from "./maps";
 import { dashboardRouter } from "../routes/dashboard.routes";
 import { appConfig } from "../configs";
-import { DeteccionMovimiento } from "./camera";
+import { CameraMotionManager } from "./camera";
 import { NodoCameraMapManager } from "./maps/nodo.camera";
 import { NvrManager } from "./nvr/nvr.manager";
 import { genericLogger } from "../services/loggers";
@@ -120,7 +120,7 @@ export class ServerApp {
   async motion() {
     try {
       genericLogger.info(`Iniciando detección de movimiento`);
-      await DeteccionMovimiento()
+      await CameraMotionManager.init()
     } catch (error) {
       genericLogger.error(`Error al iniciar detección de movimiento`,error);
       throw error

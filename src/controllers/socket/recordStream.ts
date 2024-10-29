@@ -1,4 +1,4 @@
-import { ChildProcessWithoutNullStreams, spawn } from "child_process";
+import { ChildProcessByStdio, spawn } from "child_process";
 import { Server, Socket } from "socket.io";
 import { getRstpLinksByCtrlIdAndCmrId } from "../../utils/getCameraRtspLinks";
 
@@ -9,7 +9,7 @@ import { vmsLogger } from "../../services/loggers";
 
 interface IFmmpegRecordProcess {
   [ctrl_id: number]: {
-    [cmr_id: number]: [ChildProcessWithoutNullStreams, fs.WriteStream];
+    [cmr_id: number]: [ChildProcessByStdio<null, any, null>, fs.WriteStream];
   };
 }
 
@@ -33,6 +33,7 @@ export const streamRecordSocket = async (io: Server, socket: Socket) => {
         const [mainRtsp] = await getRstpLinksByCtrlIdAndCmrId(Number(ctrl_id), cmr_id);
         const args = [
           "-rtsp_transport","tcp",
+          "-timeout",`${5*1000000}`,
           "-i",`${mainRtsp}`,
           "-c:v","libx264",
           "-t",`${t * 60}`,
@@ -43,7 +44,7 @@ export const streamRecordSocket = async (io: Server, socket: Socket) => {
         ];
         const pathFolderVidRecord = createMotionDetectionFolders(`./deteccionmovimiento/vid/${ctrl_id}/${cmr_id}`);
         const videoRecordPath = path.join(pathFolderVidRecord,`grabacion_${Date.now()}.mp4`);
-        const newFfmpegProcess = spawn("ffmpeg", args);
+        const newFfmpegProcess = spawn("ffmpeg", args,{stdio:["ignore","pipe","ignore"]});
   
         const videoRecordStream = fs.createWriteStream(videoRecordPath);
         ffmpegRecordProcess[ctrl_id][cmr_id] = [newFfmpegProcess, videoRecordStream];
@@ -53,7 +54,7 @@ export const streamRecordSocket = async (io: Server, socket: Socket) => {
       }
     }
 
-    ffmpegRecordProcess[Number(xctrl_id)][Number(xcmr_id)][0].stdout.on("data", (data) => {
+    ffmpegRecordProcess[Number(xctrl_id)][Number(xcmr_id)][0].stdout.on("data", (data:any) => {
       socket.nsp.emit("stream_is_recording", true);
       ffmpegRecordProcess[Number(xctrl_id)][Number(xcmr_id)][1].write(data);
     });

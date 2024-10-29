@@ -1,4 +1,4 @@
-import { ChildProcessWithoutNullStreams } from "child_process";
+import { ChildProcessByStdio } from "child_process";
 
 export interface CameraMotionProps {
   ip: string;
@@ -7,11 +7,12 @@ export interface CameraMotionProps {
   cmr_id: number;
   ctrl_id: number;
 
-  ffmpegProcessImage: ChildProcessWithoutNullStreams | null;
+  ffmpegProcessImage: ChildProcessByStdio<null, any, null> | null;
   imageBuffer: Buffer;
   isInsideImage: boolean;
   isActiveProccesImage: boolean;
-  ffmpegProcessVideo: ChildProcessWithoutNullStreams | null;
+  
+  ffmpegProcessVideo: ChildProcessByStdio<null, null, null> | null;
   isActiveProccesVideo: boolean;
 }
 

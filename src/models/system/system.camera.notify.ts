@@ -1,5 +1,6 @@
 import { AlarmManager } from "../../controllers/socket";
 import { Camara } from "../../types/db";
+import { CameraMotionManager } from "../camera";
 import { NvrManager } from "../nvr/nvr.manager";
 
 export class CameraNotifyManager {
@@ -35,16 +36,50 @@ export class CameraNotifyManager {
     }
   }
 
+  static #notifyUpdateToMotion(ctrl_id: number,curCam: Camara,fieldsUpdate: Partial<Camara>){
+    const { usuario, contraseña, ip } = fieldsUpdate;
+    const hasChanges =
+      (usuario !== undefined && curCam.usuario !== usuario) ||
+      (contraseña !== undefined && curCam.contraseña !== contraseña) ||
+      (ip !== undefined && curCam.ip !== ip) ;
+
+    if(hasChanges){
+      CameraMotionManager.notifyAddUpdate(ctrl_id,curCam.cmr_id);
+    };
+  }
+
+  static #notifyDeleteToMotion(ctrl_id: number,curCam: Camara,fieldsUpdate: Partial<Camara>){
+    const { activo } = fieldsUpdate;
+    const hasDelete = (activo !== undefined && curCam.activo !== activo && activo === 0) ;
+    if(hasDelete){
+      CameraMotionManager.notifyDelete(ctrl_id,curCam.cmr_id)
+    };
+  }
+
+  static #notifyReconnectToMotion(ctrl_id: number,curCam: Camara,fieldsUpdate: Partial<Camara>){
+    const { conectado } = fieldsUpdate;
+    const hasConnected = (conectado !== undefined && curCam.conectado !== conectado && conectado === 1) ;
+    if(hasConnected){
+      CameraMotionManager.notifyReconnect(ctrl_id,curCam.cmr_id);
+    };
+  }
+
   static update(ctrl_id: number,curCam: Camara,fieldsUpdate: Partial<Camara>) {
     // notify Alarm
     CameraNotifyManager.#notifyUpdateToAlarm(ctrl_id, curCam, fieldsUpdate);
     // notify NVR
     CameraNotifyManager.#notifyUpdateToNvr(ctrl_id, curCam, fieldsUpdate)
+    // notify Motion
+    CameraNotifyManager.#notifyUpdateToMotion(ctrl_id, curCam, fieldsUpdate)
+    CameraNotifyManager.#notifyDeleteToMotion(ctrl_id, curCam, fieldsUpdate)
+    CameraNotifyManager.#notifyReconnectToMotion(ctrl_id, curCam, fieldsUpdate)
   }
 
   static add(ctrl_id: number,newCam: Camara) {
     // notify Alarm
     CameraNotifyManager.#notifyAddToAlarm(ctrl_id,newCam);
+    // notify Motion
+    CameraMotionManager.notifyAddUpdate(ctrl_id,newCam.cmr_id);
 
   }
 }

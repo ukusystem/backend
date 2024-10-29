@@ -3,7 +3,7 @@
 
 import { cameraLogger } from "../../../services/loggers";
 import { CameraMotionManager } from "./camera.motion.manager";
-import { CameraMotionProcess } from "./camera.motion.process";
+// import { CameraMotionProcess } from "./camera.motion.process";
 import { CameraProps } from "./camera.motion.types";
 import { Cam } from "onvif";
 
@@ -31,14 +31,15 @@ export class CameraReconnect {
       const isConnected = await this.#connect();
       if (isConnected) {
         cameraLogger.info(`CameraReconnect | execute | Connectado primer intento | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id}  | ip: ${this.ip}`);
-        const newCamMotion = new CameraMotionProcess({
-          cmr_id: this.cmr_id,
-          ctrl_id: this.ctrl_id,
-          ip: this.ip,
-          contraseña: this.contraseña,
-          usuario: this.usuario,
-        });
-        CameraMotionManager.add_update(newCamMotion);
+        // const newCamMotion = new CameraMotionProcess({
+        //   cmr_id: this.cmr_id,
+        //   ctrl_id: this.ctrl_id,
+        //   ip: this.ip,
+        //   contraseña: this.contraseña,
+        //   usuario: this.usuario,
+        // });
+        // CameraMotionManager.add_update(newCamMotion);
+        CameraMotionManager.notifyAddUpdate(this.ctrl_id,this.cmr_id);
       }
 
       // console.log("creando setInterval de reconeccion")

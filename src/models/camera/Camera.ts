@@ -5,7 +5,7 @@ import { handleErrorWithArgument, handleErrorWithoutArgument } from "../../utils
 import { CameraOnvif, ControlPTZProps } from "./CamOnvif";
 import { Init } from "../init";
 import { getRstpLinksByCtrlIdAndCmrId } from "../../utils/getCameraRtspLinks";
-import { ChildProcessWithoutNullStreams, spawn } from "child_process";
+import { ChildProcessByStdio, spawn } from "child_process";
 import { verifyImageMarkers } from "../../utils/stream";
 import { decrypt } from "../../utils/decrypt";
 import { CustomError } from "../../utils/CustomError";
@@ -13,9 +13,7 @@ import { cameraLogger } from "../../services/loggers";
 import { NodoCameraMapManager } from "../maps/nodo.camera";
 
 type CameraInfo =  Pick<Camara, "cmr_id"|"ip"| "descripcion"|"puertows" |"tc_id"> & Pick<TipoCamara,"tipo"> & Pick<Marca, "marca"> 
-type CamCtrlIdIp = Pick<Controlador,"ctrl_id"> & Pick<Camara,"ip">
 
-interface CameraData extends RowDataPacket , Camara {}
 interface CameraInfoRowData extends RowDataPacket , CameraInfo {}
 
 interface CamIdentifier {
@@ -83,6 +81,7 @@ export class Camera  {
         if(mainRtspLink !== null){
           const args = [
             "-rtsp_transport","tcp",
+            "-timeout",`${5*1000000}`,
             "-i",`${mainRtspLink}`,
             "-an",
             "-t","10",
@@ -91,15 +90,15 @@ export class Camera  {
             "-",
           ];
   
-          let ffmpegProcessImage : ChildProcessWithoutNullStreams | null = null;
+          let ffmpegProcessImage : ChildProcessByStdio<null, any, null> | null = null;
           let imageBuffer = Buffer.alloc(0);
           let isInsideImage = false;
   
           if (!ffmpegProcessImage) {
-            ffmpegProcessImage = spawn("ffmpeg", args);
+            ffmpegProcessImage = spawn("ffmpeg", args,{stdio:["ignore","pipe","ignore"]});
           }
           // Redirigir la salida de ffmpeg al cliente Socket.IO
-          ffmpegProcessImage.stdout.on("data", (data) => {
+          ffmpegProcessImage.stdout.on("data", (data:any) => {
             // Verificar marcadores
             let isMarkStart = verifyImageMarkers(data, "start");
             let isMarkEnd = verifyImageMarkers(data, "end");

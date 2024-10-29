@@ -18,6 +18,9 @@ export const trimRecordNvr = asyncErrorHandler(
     if(endTimeSeconds <= startTimeSeconds){
        return res.status(400).json({message:"'endTime' debe ser mayor a 'startTime'"})
     };
+    if((endTimeSeconds - startTimeSeconds) > 30*60){
+      return res.status(400).json({message:"Tiempo máximo de recorte permitido 30min ."})
+    };
 
     const playlistPath = path.resolve(`./nvr/hls/nodo${ctrl_id}/camara${cmr_id}/${date}/index.m3u8`).split(path.sep).join(path.posix.sep);
 
