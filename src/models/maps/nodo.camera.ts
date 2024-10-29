@@ -46,17 +46,26 @@ export class NodoCameraMapManager {
     }
   }
 
-  static getCamera(ctrl_id:number,cmr_id:number) : Camara | undefined {
+  static getCamera(ctrl_id:number,cmr_id:number,onlyActive:boolean = true) : Camara | undefined {
     if (NodoCameraMapManager.#camaras.hasOwnProperty(ctrl_id)) {
-      return NodoCameraMapManager.#camaras[ctrl_id].get(cmr_id);
+      const camFound = NodoCameraMapManager.#camaras[ctrl_id].get(cmr_id);
+      if(camFound !== undefined){
+        if(!onlyActive){
+          return camFound
+        }
+        if(camFound.activo === 1){
+          return camFound;
+        }
+      }
+      return undefined
     }
     return undefined;
   }
 
-  static getCamerasByCtrlID(ctrl_id:number,active:boolean = false):Camara[]{
+  static getCamerasByCtrlID(ctrl_id:number,onlyActive:boolean = true):Camara[]{
     if (NodoCameraMapManager.#camaras.hasOwnProperty(ctrl_id)) {
       const camaras = Array.from(NodoCameraMapManager.#camaras[ctrl_id].values());
-      if(!active){
+      if(!onlyActive){
         return camaras
       }
       const activeCameras = camaras.filter((cam)=> cam.activo === 1)
