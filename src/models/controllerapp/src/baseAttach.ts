@@ -2206,10 +2206,9 @@ export class ManagerAttach extends BaseAttach {
                   await this.disableItem("worker", parts, queries.workerDisable, id);
                   break;
                 case codes.VALUE_CARD:
-                  const cardOptional = this._parseMessage(parts, queries.cardParse, id);
-                  if (!cardOptional) break;
-                  const cardData = cardOptional;
-                  await this._updateItem("card", cardOptional, queries.cardUpdate, id);
+                  const cardData = this._parseMessage(parts, queries.cardParse, id);
+                  if (!cardData) break;
+                  await this._updateItem("card", cardData, queries.cardUpdate, id);
                   this.updateCardInControllersGeneral(selector, cardData[0].getInt(), cardData[3].getInt(), cardData[1].getInt(), cardData[2].getInt() > 0);
                   break;
                 case codes.VALUE_CARD_EMPTY:
@@ -2672,8 +2671,7 @@ export class ManagerAttach extends BaseAttach {
   }
 
   /**
-   * Same as the overload but ``remove`` defaults to ``true`` so this
-   * operation erases a card and no more parameters are needed.
+   * Erases a card fomr all controllers.
    *
    * @param selector
    * @param cardID
@@ -2690,13 +2688,22 @@ export class ManagerAttach extends BaseAttach {
    *
    * @param selector  The selector containing the controllers data.
    * @param cardID    The ID of the card to update.
-   * @param companyID The ID of the company to which this card is related to.
+   * @param workerID The ID of the company to which this card is related to.
    * @param serial    The serial number of the card.
    * @param isAdmin   Whether the card is admin or not.
    * @param remove    True to remove the card (only the ID is sent), false to
    *                  update it (all necessary data is sent).
    */
-  private updateCardInControllersGeneral(selector: Selector, cardID: number, companyID: number, serial: number, isAdmin: boolean, remove: boolean = false) {
+  private async updateCardInControllersGeneral(selector: Selector, cardID: number, workerID: number, serial: number, isAdmin: boolean, remove: boolean = false) {
+    let companyID = 0
+    if(!remove) {
+      const workerData = await executeQuery<db2.GeneralNumber[]>(queries.selectWorkerCompany, [workerID])
+      if(!workerData || workerData.length!==1){
+        this._log(`ERROR Getting company for worker ${workerID}`)
+        return
+      }
+      companyID = workerData[0].entero
+    }
     for (const nodeAttach of selector.nodeAttachments) {
       if (nodeAttach.isLogged()) {
         nodeAttach.addCommandForControllerBody(

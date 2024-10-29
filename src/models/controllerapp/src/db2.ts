@@ -1,6 +1,5 @@
 import { RowDataPacket } from 'mysql2';
 import * as db from "../../../types/db";
-import { Row } from 'exceljs';
 
 /**
  * 

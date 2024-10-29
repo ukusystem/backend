@@ -692,6 +692,11 @@ export const userDateIndex = 3;
 
 /* Worker */
 
+export const selectWorkerCompany = `
+	SELECT co_id AS entero FROM general.personal
+	WHERE p_id = ?;
+`
+
 export const workersSelect = `
 				SELECT p_id, nombre, apellido, telefono, dni, c_id, co_id, foto, correo
 				FROM general.personal
@@ -727,13 +732,13 @@ export const workerIDIndex = 0;
  * items should be displayed in their original order.
  */
 export const cardSelect = `
-				SELECT a_id, serie, administrador, co_id, ea_id, activo
+				SELECT a_id, serie, administrador, p_id, ea_id, activo
 				FROM general.acceso;
 			`;
 
 export const cardUpdate = `
 				UPDATE general.acceso
-				SET serie=?, administrador=?, co_id=?, ea_id=?, activo=?
+				SET serie=?, administrador=?, p_id=?, ea_id=?, activo=?
 				WHERE a_id=?;
 			`;
 
@@ -746,7 +751,10 @@ export const cardDisable = `
 export const cardParse = [tupleInt, tupleBig, tupleInt, tupleInt, tupleInt, tupleInt];
 
 export const cardSelectForController = `
-				SELECT a_id, serie, administrador, co_id, activo FROM general.acceso;
+				SELECT A.a_id, A.serie, A.administrador, P.co_id, A.activo
+				FROM general.acceso A
+				JOIN general.personal P
+				ON A.p_id = P.p_id;
 			`;
 
 /* Energy */
