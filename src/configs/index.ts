@@ -76,6 +76,10 @@ interface IAppConfig {
     redirect_uris: string;
     refresh_token: string;
   };
+  system:{
+    start_motion: boolean;
+    start_nvr:boolean
+  }
 }
 
 const appConfig: IAppConfig = {
@@ -129,6 +133,10 @@ const appConfig: IAppConfig = {
     redirect_uris: validatedEnv.EMAIL_REDIRECT_URIS,
     refresh_token: validatedEnv.EMAIL_REFRESH_TOKEN,
   },
+  system:{
+    start_motion: validatedEnv.START_MOTION_DETECTION,
+    start_nvr: validatedEnv.START_NVR
+  }
 };
 
 // genericLogger.debug("Configuraciones de entorno cargadas",appConfig);
