@@ -280,17 +280,27 @@ export const insertCameraState = `
 /**
  * rt_id, telefono, correo, descripcion, fechacomienzo, fechatermino, estd_id, fechaestadofinal, fechacreacion, 
  * prioridad, p_id, tt_id, sn_id, enviado, co_id, asistencia
+ * @deprecated
  */
 export const selectUnattendedTicket = `
 				SELECT rt_id AS entero FROM %s.registroticket
 				WHERE co_id = ? AND fechacomienzo < ? AND fechatermino > ? AND enviado = 1 AND asistencia = 0;
 			`;
 
+/**
+ * @deprecated
+ */
 export const updateAttendance = `
 				UPDATE %s.registroticket
 				SET asistencia = 1
 				WHERE rt_id = ?;
 				`;
+
+export const setAttended = `
+				UPDATE %s.registroticket
+				SET asistencia = 1
+				WHERE co_id = ? AND fechacomienzo < ? AND fechatermino > ? AND enviado = 1 AND asistencia = 0;
+`
 
 export const insertRequest = `
 				INSERT INTO %s.registropeticion ( pin, orden, fecha, estd_id)
@@ -329,7 +339,7 @@ export const insertWorker = `
 				INSERT INTO %s.actividadpersonal (nombre, apellido, telefono, dni, c_id, co_id, rt_id, foto)
 				VALUE (?, ?, ?, ?, ?, ?, ?, ?);
 			`;
-			
+
 /**
  * Removed:
  * WHERE enviado=0

@@ -1404,14 +1404,11 @@ export class NodeAttach extends BaseAttach {
             ea_id = params[5] = cardInfo[0].ea_id;
             if (!isAdmin) {
               // Since there is a company registered for that number
-              const tickets = await executeQuery<db2.GeneralNumber[]>(BaseAttach.formatQueryWithNode(queries.selectUnattendedTicket, this.controllerID), [co_id, date, date]);
-              if (tickets) {
-                for (const ticket of tickets) {
-                  const updateRes = await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.updateAttendance, this.controllerID), [ticket.entero]);
-                  if (updateRes) {
-                    this._log(`Ticket ID = ${ticket.entero} set to attended.`);
-                  }
-                }
+              const setRes = await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.setAttended, this.controllerID), [co_id, date, date]);
+              if(setRes){
+                this._log("Tickets set as attended")
+              }else{
+                this._log("ERROR Setting tickets to attended")
               }
             }
           } else {
@@ -2332,16 +2329,19 @@ export class ManagerAttach extends BaseAttach {
                         case codes.VALUE_CAMERA:
                           await this._updateItem("camera", cameraData, queries.cameraUpdate, id, targetNodeID);
                           NodoCameraMapManager.update(targetNodeID, newCamera.cmr_id, newCamera)
+                          this._log(`Notifying camera ID ${camID} update for node ${targetNodeID}`)
                           // code.code = Result.CAMERA_UPDATE;
                           break;
                         case codes.VALUE_CAMERA_ADD:
                           await this._insertItem("camera", cameraData, queries.cameraInsert, id, targetNodeID);
                           NodoCameraMapManager.add(targetNodeID, newCamera)
+                          this._log(`Notifying camera ID ${camID} add for node ${targetNodeID}`)
                           // code.code = Result.CAMERA_ADD;
                           break;
                         case codes.VALUE_CAMERA_PASSWORD:
                           await this._updateItem("camera", cameraData, queries.cameraUpdatePwd, id, targetNodeID);
                           NodoCameraMapManager.update(targetNodeID, newCamera.cmr_id, newCamera)
+                          this._log(`Notifying camera ID ${camID} update with password for node ${targetNodeID}`)
                           // code.code = Result.CAMERA_UPDATE;
                           break;
                         default:
@@ -2386,12 +2386,14 @@ export class ManagerAttach extends BaseAttach {
                       const cardReaderData = this._parseMessage(parts, queries.cardReaderParse, id);
                       await this._updateItem("card reader", cardReaderData, queries.cardReaderUpdate, id, targetNodeID);
                       break;
-                    case codes.VALUE_CAMERA_DISABLE:
-                      const disabledCamera = await this.disableItem("camera", parts, queries.cameraDisable, id, targetNodeID);
-                      bundle.targetCamera = new Camera(disabledCamera, targetNodeID);
-                      CameraMotionManager.delete(new CameraForFront(disabledCamera, targetNodeID));
-                      code.code = Result.CAMERA_DISABLE;
-                      break;
+                      case codes.VALUE_CAMERA_DISABLE:
+                        const disabledCamera = await this.disableItem("camera", parts, queries.cameraDisable, id, targetNodeID);
+                        // bundle.targetCamera = new Camera(disabledCamera, targetNodeID);
+                        // CameraMotionManager.delete(new CameraForFront(disabledCamera, targetNodeID));
+                        // code.code = Result.CAMERA_DISABLE;
+                        this._log(`Notifying camera ID ${disabledCamera} disable for node ${targetNodeID}`)
+                        NodoCameraMapManager.update(targetNodeID,disabledCamera, {cmr_id:disabledCamera, activo:0})
+                        break;
                     case codes.VALUE_SECURITY_TECH:
                     case codes.VALUE_MODE:
                     case codes.VALUE_SD_TECH:

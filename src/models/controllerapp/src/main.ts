@@ -182,9 +182,8 @@ export class Main {
 
     setTimeout(this.processOneFromAll, 1);
     setTimeout(this.startDisconnectionDetection, Main.ALIVE_INTERVAL_MS, this.selector);
-    setTimeout(this.startCamerasCheck, Main.ALIVE_CAMERA_INTERVAL_MS);
+    // setTimeout(this.startCamerasCheck, Main.ALIVE_CAMERA_INTERVAL_MS);
 
-    // this.startCamerasCheck();
     this.startTicketsCheck();
   }
 
