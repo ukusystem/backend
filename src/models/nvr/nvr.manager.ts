@@ -199,6 +199,22 @@ export class NvrManager {
     }
   }
 
+  static #closeHandlerEvent(code:number | null, signal: NodeJS.Signals | null,context:CronJobContext){
+    const {ctrl_id,nvrpref_id,tiempo_inicio,tiempo_final} = context;
+
+    genericLogger.info(`NvrManager |    ffmpeg cerrado con código ${code} y señal ${signal} | ctrl_id : ${ctrl_id} | nvrpref_id: ${nvrpref_id}`)
+    NvrManager.#updateStateRecording(ctrl_id,nvrpref_id,false);
+
+    const currDateTime = dayjs();
+    const currTimeSeconds = (currDateTime.hour()*60*60) + (currDateTime.minute()*60) + (currDateTime.second());
+    const {end_time_seconds,start_time_seconds} = NvrManager.#getTimesInSecond({tiempo_final,tiempo_inicio});
+
+    const isCloseInRangeTime = currTimeSeconds > start_time_seconds && currTimeSeconds < end_time_seconds;
+    if(isCloseInRangeTime){
+      // notificar deconexión
+    }
+  }
+
   static async add(ctrl_id: number, preferencia: NvrPreferencia) {
 
     const currentDateTime = dayjs();
@@ -231,16 +247,13 @@ export class NvrManager {
             try {
               const ffmpegCli = await NvrManager.#getFfmpegCLI(this.ctrl_id,this.cmr_id,{tiempo_inicio:this.tiempo_inicio,tiempo_final:this.tiempo_final});
 
-              const currCtrlID = this.ctrl_id;
-              const currNvrPrefID = this.nvrpref_id;
+              const contextJob = this;
 
               const newFfmpegProcess = spawn("ffmpeg",ffmpegCli,{stdio:['ignore', 'ignore', 'ignore']});
               currCamJob.isRecording = true;
 
               newFfmpegProcess.on('close', (code,signal) => {
-                genericLogger.info(`NvrManager |    ffmpeg cerrado con código ${code} y señal ${signal} | ctrl_id : ${currCtrlID} | nvrpref_id: ${currNvrPrefID}`)
-                NvrManager.#updateStateRecording(currCtrlID,currNvrPrefID,false);
-                // notificar deconexión
+                NvrManager.#closeHandlerEvent(code,signal,contextJob);
               });
 
               // if(currCamJob.ffmpegProcess === undefined){
@@ -308,10 +321,9 @@ export class NvrManager {
           const ffmpegCli = await NvrManager.#getFfmpegCLI(ctrl_id,preferencia.cmr_id,{tiempo_inicio:newInitialTime,tiempo_final:preferencia.tiempo_final});
           const newFfmpegProcess = spawn("ffmpeg",ffmpegCli,{stdio:['ignore', 'ignore', 'ignore']});
           newCamJob.isRecording = true;
+
           newFfmpegProcess.on('close', (code,signal) => {
-            genericLogger.info(`NvrManager | proceso ffmpeg cerrado con código ${code}  y señal ${signal} | ctrl_id : ${ctrl_id} | nvrpref_id: ${preferencia.nvrpref_id}`);
-            NvrManager.#updateStateRecording(ctrl_id,preferencia.nvrpref_id,false);
-            // notificar deconexión                                                                                                                                                                         
+            NvrManager.#closeHandlerEvent(code,signal,{ctrl_id,...preferencia});                                                                                                                                                                       
           });
           
         } catch (error) {
@@ -344,10 +356,9 @@ export class NvrManager {
             const ffmpegCli = await NvrManager.#getFfmpegCLI(ctrl_id,preferencia.cmr_id,{tiempo_inicio:newInitialTime,tiempo_final:preferencia.tiempo_final});
             const newFfmpegProcess = spawn("ffmpeg",ffmpegCli,{stdio:['ignore', 'ignore', 'ignore']});
             newCamJob.isRecording = true;
+            
             newFfmpegProcess.on('close', (code,signal) => {
-              genericLogger.info(`NvrManager | proceso ffmpeg cerrado con código ${code}  y señal ${signal} | ctrl_id : ${ctrl_id} | nvrpref_id: ${preferencia.nvrpref_id}`)
-              NvrManager.#updateStateRecording(ctrl_id,preferencia.nvrpref_id,false);
-              // notificar deconexión
+              NvrManager.#closeHandlerEvent(code,signal,{ctrl_id,...preferencia});                                                                                                                                                                       
             });
           } catch (error) {
             genericLogger.error(`NvrManager | Error al crear proceso ffmpeg | isInRangeCurTime`,error);

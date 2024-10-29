@@ -1,3 +1,4 @@
+import { appConfig } from "../../configs";
 import { AlarmManager } from "../../controllers/socket";
 import { Camara } from "../../types/db";
 import { CameraMotionManager } from "../camera";
@@ -70,16 +71,20 @@ export class CameraNotifyManager {
     // notify NVR
     CameraNotifyManager.#notifyUpdateToNvr(ctrl_id, curCam, fieldsUpdate)
     // notify Motion
-    CameraNotifyManager.#notifyUpdateToMotion(ctrl_id, curCam, fieldsUpdate)
-    CameraNotifyManager.#notifyDeleteToMotion(ctrl_id, curCam, fieldsUpdate)
-    CameraNotifyManager.#notifyReconnectToMotion(ctrl_id, curCam, fieldsUpdate)
+    if(appConfig.system.start_motion){
+      CameraNotifyManager.#notifyUpdateToMotion(ctrl_id, curCam, fieldsUpdate)
+      CameraNotifyManager.#notifyDeleteToMotion(ctrl_id, curCam, fieldsUpdate)
+      CameraNotifyManager.#notifyReconnectToMotion(ctrl_id, curCam, fieldsUpdate)
+    }
   }
 
   static add(ctrl_id: number,newCam: Camara) {
     // notify Alarm
     CameraNotifyManager.#notifyAddToAlarm(ctrl_id,newCam);
     // notify Motion
-    CameraMotionManager.notifyAddUpdate(ctrl_id,newCam.cmr_id);
+    if(appConfig.system.start_motion){
+      CameraMotionManager.notifyAddUpdate(ctrl_id,newCam.cmr_id);
+    }
 
   }
 }
