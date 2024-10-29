@@ -95,7 +95,7 @@ export class AlarmManager {
       const ctrlData : ControllerDataAlarm = { ctrl_id, activo, conectado, descripcion, modo, nodo, rgn_id, seguridad, }
 
       // camaras
-      const camaras = NodoCameraMapManager.getCamerasByCtrlID(ctrl_id,true);
+      const camaras = NodoCameraMapManager.getCamerasByCtrlID(ctrl_id);
       const camsData :  CameraDataAlarm[] = camaras.map((cam)=>{
         const {activo,cmr_id,conectado,descripcion,tc_id,ip} = cam
         return {activo,cmr_id,conectado,descripcion,tc_id,ip}
