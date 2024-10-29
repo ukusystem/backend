@@ -6,14 +6,18 @@ export interface Resolucion {
   altura: number,
   activo: 0 | 1
 }
-
+export interface ConfigDataPreferencia {
+  streams : ({ctrl_id:number , cmr_id:number}| null)[],
+  gridOption: 1 | 2 | 3 | "c3" | "c4"
+}
 export interface PreferenciasVms {
   prfvms_id: number;
   preferencia: string;
   u_id: number;
-  configdata: Object;
+  configdata: ConfigDataPreferencia;
   activo:number
 }
+
 export interface Rol {
   rl_id: number;
   rol: string;

@@ -1067,11 +1067,11 @@ export class Main {
           await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.cameraSetNet, cam.nodeID), [changeBool, cam.cameraID])
           if (change === Changes.TO_ACTIVE) {
             this.log(`Reconnecting camera ${cam.cameraIP}`);
-            CameraMotionManager.reconnect(cam.cameraID, cam.nodeID);
+            // CameraMotionManager.reconnect(cam.cameraID, cam.nodeID);
             NodoCameraMapManager.update(cam.nodeID,cam.cameraID,{conectado:1})
           } else if (change === Changes.TO_INACTIVE) {
             NodoCameraMapManager.update(cam.nodeID,cam.cameraID,{conectado:0})
-            CameraMotionManager.deleteFfmpegProccess(cam.cameraID, cam.nodeID)
+            // CameraMotionManager.deleteFfmpegProccess(cam.cameraID, cam.nodeID)
           }
         }
         cam.errorNotified = false;

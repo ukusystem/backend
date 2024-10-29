@@ -30,6 +30,7 @@ export interface CameraJob {
   startScheduledJob?:NvrJobSchedule,
   endScheduleJob?: NvrJobSchedule,
   ffmpegProcess?: ChildProcessWithoutNullStreams
+  isRecording?:boolean
 }
 
 // export type CamaraEvents = Map<number, CameraJob>; // key: cmr_id

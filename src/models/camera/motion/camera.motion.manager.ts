@@ -1,5 +1,8 @@
 import { LastSnapShotManager } from "../../../controllers/socket/snapshot";
-import { CameraForFront } from "../../controllerapp/src/frontend/camaraForFront";
+import { cameraLogger } from "../../../services/loggers";
+import { decrypt } from "../../../utils/decrypt";
+import { Init } from "../../init";
+import { NodoCameraMapManager } from "../../maps/nodo.camera";
 import { CameraMotionProcess } from "./camera.motion.process";
 import { CameraReconnect } from "./camera.motion.reconnect";
 
@@ -41,8 +44,7 @@ export class CameraMotionManager {
         try {
           CameraMotionManager.map[cam.ctrl_id][cam.cmr_id].execute();
         } catch (error) {
-          console.log(`Detección Movimiento | Error en CameraMotionActions.add | ctrl_id: ${cam.ctrl_id} | cmr_id: ${cam.cmr_id} | ip: ${cam.ip}`);
-          console.error(error);
+          cameraLogger.error(`CameraMotionManager | Error #addcam | ctrl_id: ${cam.ctrl_id} | cmr_id: ${cam.cmr_id} | ip: ${cam.ip}`,error);
         }
       }
     }
@@ -66,86 +68,46 @@ export class CameraMotionManager {
     }
   }
 
-  static delete(cam: CameraForFront | CameraMotionProcess) {
-    if (CameraMotionManager.map.hasOwnProperty(cam.ctrl_id)) {
-      if (CameraMotionManager.map[cam.ctrl_id].hasOwnProperty(cam.cmr_id)) {
-        const currentCamMot = CameraMotionManager.map[cam.ctrl_id][cam.cmr_id];
+  static notifyAddUpdate(ctrl_id:number, cmr_id:number, execute:boolean = true){
+    const cam = NodoCameraMapManager.getCamera(ctrl_id,cmr_id);
+    const exists = CameraMotionManager.#exists({ ctrl_id, cmr_id});
+    if(cam !== undefined){
+      try {
+        const contDecript = decrypt(cam.contraseña);
+        const newCamMot = new CameraMotionProcess({
+          ip: cam.ip,
+          usuario: cam.usuario,
+          contraseña: contDecript,
+          cmr_id: cam.cmr_id,
+          ctrl_id: ctrl_id,
+        });
+
+        if(exists){
+          CameraMotionManager.#updatecam(newCamMot);
+        }else{
+          CameraMotionManager.#addcam(newCamMot,execute);
+        }
+      } catch (error) {
+        cameraLogger.error(`CameraMotionManager | notifyAddUpdate | ctrl_id:${ctrl_id} cmr_id:${cmr_id}`,error);
+      }
+    }
+  }
+
+  static notifyDelete(ctrl_id:number, cmr_id:number){
+    if (CameraMotionManager.map.hasOwnProperty(ctrl_id)) {
+      if (CameraMotionManager.map[ctrl_id].hasOwnProperty(cmr_id)) {
+        const currentCamMot = CameraMotionManager.map[ctrl_id][cmr_id];
         if (currentCamMot.ffmpegProcessImage != null)
           currentCamMot.ffmpegProcessImage.kill();
         if (currentCamMot.ffmpegProcessVideo != null)
           currentCamMot.ffmpegProcessVideo.kill();
-        delete CameraMotionManager.map[cam.ctrl_id][cam.cmr_id];
+        delete CameraMotionManager.map[ctrl_id][cmr_id];
       }
     }
   }
 
-  static delete_all() {
-    for (const ctrl_id_key in CameraMotionManager.map) {
-      for (const cmr_id_key in CameraMotionManager.map[ctrl_id_key]) {
-        delete CameraMotionManager.map[ctrl_id_key][cmr_id_key];
-      }
-    }
-  }
-
-  static add_whithout_execute(cam: CameraMotionProcess) {
-    const exists = CameraMotionManager.#exists({ctrl_id: cam.ctrl_id,cmr_id: cam.cmr_id,});
-    if (!exists) {
-      CameraMotionManager.#addcam(cam, false);
-    }
-  }
-
-  static add_update(cam: CameraForFront | CameraMotionProcess): void {
-    //Comprobar existencia
-    const exists = CameraMotionManager.#exists({ ctrl_id: cam.ctrl_id, cmr_id: cam.cmr_id, });
-
-    if (cam instanceof CameraMotionProcess) {
-      if (!exists) {
-        CameraMotionManager.#addcam(cam);
-      } else {
-        CameraMotionManager.#updatecam(cam);
-      }
-    } else {
-      let front_cmr_id = cam.cmr_id;
-      let front_ctrl_id = cam.ctrl_id;
-      let front_ip = cam.ip;
-      let front_contraseña = cam.contraseña;
-      let front_usuario = cam.usuario;
-
-      if (!exists) {
-        // add
-        if ( front_cmr_id != null && front_ctrl_id != null && front_ip != null && front_contraseña != null && front_usuario != null ) {
-          const newCamMot = new CameraMotionProcess({
-            ip: front_ip,
-            usuario: front_usuario,
-            contraseña: front_contraseña,
-            cmr_id: front_cmr_id,
-            ctrl_id: front_ctrl_id,
-          });
-          CameraMotionManager.#addcam(newCamMot);
-        }
-      } else {
-        // update
-        const currentCamMot = CameraMotionManager.map[cam.ctrl_id][cam.cmr_id];
-
-        let new_ip = front_ip ?? currentCamMot.ip;
-        let new_contraseña = front_contraseña ?? currentCamMot.contraseña;
-        let new_usuario = front_usuario ?? currentCamMot.usuario;
-
-        const newCamMot = new CameraMotionProcess({
-          ip: new_ip,
-          usuario: new_usuario,
-          contraseña: new_contraseña,
-          cmr_id: front_cmr_id,
-          ctrl_id: front_ctrl_id,
-        });
-
-        CameraMotionManager.#updatecam(newCamMot);
-      }
-    }
-  }
-
-  static async reconnect(cmr_id: number, ctrl_id: number) {
-    console.log(`reconectando camara ctrl_id : ${ctrl_id} | cmr_id: ${cmr_id} `);
+  static async notifyReconnect(cmr_id: number, ctrl_id: number) {
+    cameraLogger.info(`CameraMotionManager | reconnect | ctrl_id : ${ctrl_id} | cmr_id: ${cmr_id} `);
 
     if (CameraMotionManager.#exists({ ctrl_id, cmr_id })) {
       const currCamMotion = CameraMotionManager.map[ctrl_id][cmr_id];
@@ -155,9 +117,9 @@ export class CameraMotionManager {
       const cur_contraseña = currCamMotion.contraseña;
       const cur_usuario = currCamMotion.usuario;
 
-      if (currCamMotion.ffmpegProcessImage != null)
+      if (currCamMotion.ffmpegProcessImage !== null)
         currCamMotion.ffmpegProcessImage.kill();
-      if (currCamMotion.ffmpegProcessVideo != null)
+      if (currCamMotion.ffmpegProcessVideo !== null)
         currCamMotion.ffmpegProcessVideo.kill();
 
       delete CameraMotionManager.map[ctrl_id][cmr_id];
@@ -175,9 +137,7 @@ export class CameraMotionManager {
   }
 
   static deleteFfmpegProccess(cmr_id: number, ctrl_id: number) {
-    console.log(
-      `Eliminando Procesos Motion ctrl_id : ${ctrl_id} | cmr_id: ${cmr_id} `
-    );
+    cameraLogger.info(`CameraMotionManager | deleteFfmpegProccess | ctrl_id : ${ctrl_id} | cmr_id: ${cmr_id} `);
 
     if (CameraMotionManager.map.hasOwnProperty(ctrl_id)) {
       if (CameraMotionManager.map[ctrl_id].hasOwnProperty(cmr_id)) {
@@ -188,6 +148,21 @@ export class CameraMotionManager {
           currentCamMot.ffmpegProcessVideo.kill();
         // delete CameraMotionManager.map[ctrl_id][cmr_id];
       }
+    }
+  }
+
+  static async init(){
+    try {
+      const camerasData = await Init.getAllCameras();
+      Object.keys(camerasData).forEach((ctrlIdKey) => {
+        camerasData[Number(ctrlIdKey)].forEach(async (cam) => {
+          const { cmr_id, ctrl_id } = cam;
+          CameraMotionManager.notifyAddUpdate(ctrl_id,cmr_id,false);
+        });
+      });
+    } catch (error) {
+      cameraLogger.error(`CameraMotionProcess | Ocurrio un error en DeteccionMovimiento`, error);
+      throw error;
     }
   }
 }

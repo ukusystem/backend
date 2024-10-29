@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { asyncErrorHandler } from "../../utils/asynErrorHandler";
 import { Dashboard } from "../../models/dashboard/dashboard";
+import { dashboardLogger } from "../../services/loggers";
 
 export const activePinEntrada = asyncErrorHandler(
   async (req: Request, res: Response, _next: NextFunction) => {
@@ -9,6 +10,7 @@ export const activePinEntrada = asyncErrorHandler(
       const data = await Dashboard.getTotalActivePinEntrada({ctrl_id: Number(ctrl_id),date: date,isMonthly: monthly == "true"});
       res.json(data);
     } catch (error) {
+      dashboardLogger.error(`Error al obtener pines activos de entrada`,error)
       res.json([]);
     }
   }

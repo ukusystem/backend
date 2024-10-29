@@ -1,16 +1,17 @@
 import { MySQL2 } from "../database/mysql";
 import { handleErrorWithArgument } from "../utils/simpleErrorHandler";
-type Stream = {
-  cmr_id: number;
-  ip: string;
-  descripcion: string;
-  puertows: number;
-  tipo: string;
-  marca: string;
-  nodo: string;
+export type Stream = {
   ctrl_id: number;
+  cmr_id: number;
+  descripcion: string;
+  tc_id: number;
 };
+
 export type ConfigData = {
+  gridOption: 1 | 2 | 3 | "c3" | "c4";
+  streams: ( {ctrl_id:number, cmr_id:number} | null)[]
+};
+export type ConfigDataFinal = {
   gridOption: 1 | 2 | 3 | "c3" | "c4";
   streams: ( Stream | null)[]
 };

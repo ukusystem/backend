@@ -43,26 +43,20 @@ export class Sockets {
   initEvents() {
     // Manejar conexión de sockets en el namespace principal
     this.#io.of("/").on("connection", (socket) => {
-      console.log("==========================================================");
-      console.log("Cliente conectado id:", socket.id);
 
       // Manejar cierre de conexión Socket.IO
       socket.on("disconnect", () => {
-        // console.log("Cliente desconectado:", socket.id);
-        // // Obtener el número de clientes conectados después de la desconexión
-        // const count = io.engine.clientsCount;
-        // const count2 = io.of("/").sockets.size;
-        // console.log("clientes: ", count2);
       });
-
+      
       // Manejar errores de Socket.IO
       socket.on("error", (error) => {
         console.error(`Error en la conexión Socket.IO: ${error.message}`);
       });
+
     });
 
-    // Namespace "/stream/nodo_id/camp_ip/calidad"
-    this.#io.of(/^\/stream\/(\d+)\/([^\/]+)\/(q\d+)$/).use(async (socket, next) => {
+    // Namespace "/stream/nodo_id/cmr_id/calidad"
+    this.#io.of(/^\/stream\/(\d+)\/(\d+)\/(q\d+)$/).use(async (socket, next) => {
         try {
           // const cookiesHeader = socket.handshake.headers.cookie; // "token=fsddfjs"
           // console.log(cookiesHeader)
@@ -122,8 +116,8 @@ export class Sockets {
     const PinSalidaNSP: NamespacePinSalida = this.#io.of(/^\/pines_salida\/\d+$/);
     PinSalidaNSP.on("connection", (socket) => { pinSalidaSocket(this.#io, socket); });
 
-    // Namespace: "/record_stream/ctrl_id/ip"
-    this.#io.of(/^\/record_stream\/(\d+)\/([\d\.]+)$/).on("connection", (socket) => {  streamRecordSocket(this.#io, socket);});
+    // Namespace: "/record_stream/ctrl_id/cmr_id"
+    this.#io.of(/^\/record_stream\/(\d+)\/\d+$/).on("connection", (socket) => {  streamRecordSocket(this.#io, socket);});
 
     // Namespace : "/last_snapshot/ctrl_id"
     const LastSnapshotNSP : NamespaceLastSnapshot  = this.#io.of(/^\/last_snapshot\/\d+$/);

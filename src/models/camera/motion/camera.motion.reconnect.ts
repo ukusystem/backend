@@ -1,8 +1,9 @@
 // @ts-ignore
 // @ts-nocheck
 
+import { cameraLogger } from "../../../services/loggers";
 import { CameraMotionManager } from "./camera.motion.manager";
-import { CameraMotionProcess } from "./camera.motion.process";
+// import { CameraMotionProcess } from "./camera.motion.process";
 import { CameraProps } from "./camera.motion.types";
 import { Cam } from "onvif";
 
@@ -29,15 +30,16 @@ export class CameraReconnect {
     try {
       const isConnected = await this.#connect();
       if (isConnected) {
-        console.log("connectado primer intento");
-        const newCamMotion = new CameraMotionProcess({
-          cmr_id: this.cmr_id,
-          ctrl_id: this.ctrl_id,
-          ip: this.ip,
-          contraseña: this.contraseña,
-          usuario: this.usuario,
-        });
-        CameraMotionManager.add_update(newCamMotion);
+        cameraLogger.info(`CameraReconnect | execute | Connectado primer intento | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id}  | ip: ${this.ip}`);
+        // const newCamMotion = new CameraMotionProcess({
+        //   cmr_id: this.cmr_id,
+        //   ctrl_id: this.ctrl_id,
+        //   ip: this.ip,
+        //   contraseña: this.contraseña,
+        //   usuario: this.usuario,
+        // });
+        // CameraMotionManager.add_update(newCamMotion);
+        CameraMotionManager.notifyAddUpdate(this.ctrl_id,this.cmr_id);
       }
 
       // console.log("creando setInterval de reconeccion")
@@ -55,8 +57,7 @@ export class CameraReconnect {
 
       // },30000)
     } catch (error) {
-      console.log("Error CameraReconnect.execute");
-      console.log(error);
+      cameraLogger.error(`CameraReconnect | execute | Error CameraReconnect.execute`,error);
     }
   }
 

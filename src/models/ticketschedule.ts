@@ -4,6 +4,7 @@ import { Socket } from "socket.io";
 import { Ticket } from "./ticket";
 import { onFinishTicket } from "./controllerapp/controller";
 import { FinishTicket } from "./controllerapp/src/finishTicket";
+import { genericLogger } from "../services/loggers";
 
 export class TicketSchedule {
   #cron: CronJob<null,ITicketCronContext>;
@@ -201,8 +202,7 @@ export class TicketMap {
         TicketMap.add(newRegTicket)
       }
     } catch (error) {
-      console.log(`Socket Tickets | TicketMap | Error al inicializar tickets`);
-      console.error(error);  
+      genericLogger.error(`Socket Tickets | TicketMap | Error al inicializar tickets`,error);
       throw error
     }
   }

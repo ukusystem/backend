@@ -1,6 +1,7 @@
 import { ActionPinSal, EquSalPinSalida, IPinSalidaSocket, IPinSalidaSocketBad, IPinSalObject, PinSalidaObserver, SocketPinSalida } from "./pinsalida.types";
 import { EquipoSalida } from "../../../types/db";
 import { PinSalida } from "../../../models/site";
+import { genericLogger } from "../../../services/loggers";
 
 export class PinSalidaSocket implements IPinSalObject {
   ps_id: number;
@@ -299,8 +300,7 @@ export class PinSalidaManager {
         PinSalidaManager.add_update(newPinSalida);
       }
     } catch (error) {
-      console.log(`Socket Medidor Energia | PinSalidaManager | Error al inicilizar equipos de salida`);
-      console.error(error);
+      genericLogger.error(`Error al inicializar pines salida | PinSalidaManager`,error);
       throw error;
     }
   }

@@ -1,6 +1,7 @@
 import { RowDataPacket } from "mysql2";
 import { EquipoSalida } from "../../types/db";
 import { MySQL2 } from "../../database/mysql";
+import { genericLogger } from "../../services/loggers";
 
 export class EquipoSalidaObject implements EquipoSalida {
   #descripcion: string;
@@ -76,8 +77,7 @@ export class EquipoSalidaMap {
         }
       }
     } catch (error) {
-      console.log(`EquipoSalidaMap | Error al inicilizar equipos de salida`);
-      console.error(error);
+      genericLogger.error(`EquipoSalidaMap | Error al inicilizar equipos de salida`,error);
       throw error
     }
   }

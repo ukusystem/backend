@@ -2348,7 +2348,7 @@ export class ManagerAttach extends BaseAttach {
                           this._logFeelThroughHex(valueToSet);
                           break;
                       }
-                      // CameraMotionManager.add_update(newCameraItem);
+                      // CameraMotionManager.add_update(newCameraItem); // update NodoCameraMapManager
                       break;
                     case codes.VALUE_ENERGY:
                       // id, desc
@@ -2388,10 +2388,9 @@ export class ManagerAttach extends BaseAttach {
                       break;
                     case codes.VALUE_CAMERA_DISABLE:
                       const disabledCamera = await this.disableItem("camera", parts, queries.cameraDisable, id, targetNodeID);
-                      // bundle.targetCamera = new Camera(disabledCamera, targetNodeID);
-                      // CameraMotionManager.delete(new CameraForFront(disabledCamera, targetNodeID));
-                      // code.code = Result.CAMERA_DISABLE;
-                      NodoCameraMapManager.update(targetNodeID,disabledCamera, {cmr_id:disabledCamera, activo:0})
+                      bundle.targetCamera = new Camera(disabledCamera, targetNodeID);
+                      CameraMotionManager.delete(new CameraForFront(disabledCamera, targetNodeID));
+                      code.code = Result.CAMERA_DISABLE;
                       break;
                     case codes.VALUE_SECURITY_TECH:
                     case codes.VALUE_MODE:

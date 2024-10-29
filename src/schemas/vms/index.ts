@@ -1,3 +1,5 @@
 export * from "./createPreferenciaSchema"
 export * from "./deletePreferenciaSchema"
 export * from "./updatePreferenciaSchema"
+export * from "./trimRecordSchema"
+export * from "./nvr.schema"

@@ -69,9 +69,6 @@ export const createTicket = asyncErrorHandler( async (req: Request, res: Respons
     const archivosCargados = req.files
     let archivosData : {ruta: string;nombreoriginal: string;tipo: string;}[] = []
 
-    // =============== Usar esto
-    // let archivosData:LoadedFile[] = []
-
     if(archivosCargados){
         if (Array.isArray(archivosCargados)) {
             for (const file of archivosCargados) {
@@ -93,7 +90,6 @@ export const createTicket = asyncErrorHandler( async (req: Request, res: Respons
                 const relativePath = path.relative("./archivos/ticket", movePath); // nodoXX\27-02-2024\1709065263868-hombre.png
                 const finalRelativePath = relativePath.split(path.sep).join(path.posix.sep); // Prueba/27-02-2024/1709065364652-hombre.png
                 const archItem = {ruta: finalRelativePath, nombreoriginal:file.originalname,tipo: file.mimetype}
-                console.log(archItem)
 
                 archivosData.push(archItem)
 
@@ -120,7 +116,6 @@ export const createTicket = asyncErrorHandler( async (req: Request, res: Respons
                 const relativePath = path.relative("./archivos/ticket", movePath); // nodoXX\27-02-2024\1709065263868-hombre.png
                 const finalRelativePath = relativePath.split(path.sep).join(path.posix.sep); // Prueba/27-02-2024/1709065364652-hombre.png
                 const archItem = {ruta: finalRelativePath, nombreoriginal:file.originalname,tipo: file.mimetype}
-                console.log(archItem)
 
                 archivosData.push(archItem)
               }
@@ -129,14 +124,10 @@ export const createTicket = asyncErrorHandler( async (req: Request, res: Respons
     }
 
     if(formValues){
-        const finalDataRequest = {archivos_cargados: archivosData, ... formValues}
         
-        // ================ Usar esto
-        // Main.onTicket(new Ticket(archivos_cargados, formValues.solicitante, formValues.personales))
         try {
           const newTicket = new Ticket(archivosData, formValues.solicitante, formValues.personales)
           let response = await onTicket(newTicket)
-          // console.log( response)
           if(response){
             if(response.resultado && response.id){ // success
 

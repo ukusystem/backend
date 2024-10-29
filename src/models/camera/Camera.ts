@@ -4,17 +4,22 @@ import { Camara, Controlador, Marca, TipoCamara } from "../../types/db";
 import { handleErrorWithArgument, handleErrorWithoutArgument } from "../../utils/simpleErrorHandler";
 import { CameraOnvif, ControlPTZProps } from "./CamOnvif";
 import { Init } from "../init";
-import { getRstpLinksByCtrlIdAndIp } from "../../utils/getCameraRtspLinks";
-import { ChildProcessWithoutNullStreams, spawn } from "child_process";
+import { getRstpLinksByCtrlIdAndCmrId } from "../../utils/getCameraRtspLinks";
+import { ChildProcessByStdio, spawn } from "child_process";
 import { verifyImageMarkers } from "../../utils/stream";
 import { decrypt } from "../../utils/decrypt";
 import { CustomError } from "../../utils/CustomError";
+import { cameraLogger } from "../../services/loggers";
+import { NodoCameraMapManager } from "../maps/nodo.camera";
 
-type CameraInfo =  Pick<Camara, "cmr_id"|"ip"| "descripcion"|"puertows"> & Pick<TipoCamara,"tipo"> & Pick<Marca, "marca"> 
-type CamCtrlIdIp = Pick<Controlador,"ctrl_id"> & Pick<Camara,"ip">
+type CameraInfo =  Pick<Camara, "cmr_id"|"ip"| "descripcion"|"puertows" |"tc_id"> & Pick<TipoCamara,"tipo"> & Pick<Marca, "marca"> 
 
-interface CameraData extends RowDataPacket , Camara {}
 interface CameraInfoRowData extends RowDataPacket , CameraInfo {}
+
+interface CamIdentifier {
+  ctrl_id:number,
+  cmr_id:number
+}
 
 type CamResponse = Record<
   number,
@@ -35,64 +40,65 @@ type CamResponse = Record<
 
 export class Camera  {
 
-    static async #getCameraOnvifByCtrlIdAndIp({ ctrl_id, ip } : CamCtrlIdIp) {
+    static async #getCameraOnvif({ ctrl_id , cmr_id } : CamIdentifier) {
       try {
   
-        const rows = await MySQL2.executeQuery<CameraData[]>({sql:`SELECT * FROM ${"nodo" + ctrl_id}.camara WHERE ip = ? `,values:[ip]})
+        // const rows = await MySQL2.executeQuery<CameraData[]>({sql:`SELECT * FROM ${"nodo" + ctrl_id}.camara WHERE cmr_id = ? `,values:[cmr_id]})
 
-        const cameraData = rows[0];
-        if (!cameraData) {
+        // const cameraData = rows[0];
+        // if (!cameraData) {
+        //   throw new Error("Cámara no encontrada");
+        // }
+        const cameraData = NodoCameraMapManager.getCamera(ctrl_id,cmr_id);
+        if(cameraData === undefined){
           throw new Error("Cámara no encontrada");
         }
+
         const contraseñaDecrypt = decrypt(cameraData.contraseña)
         const camera = new CameraOnvif({ctrl_id: ctrl_id, ip:cameraData.ip, usuario: cameraData.usuario,contraseña: contraseñaDecrypt},);
         return camera;
       } catch (error) {
         if(error instanceof Error){
-            console.log(`Error en #getCameraOnvifByCtrlIdAndIp: ${error.message}`);
+            cameraLogger.error(`Error en #getCameraOnvif: ${error.message}`);
         }else{
-            console.log(`Error en #getCameraOnvifByCtrlIdAndIp: ${error}`);
+            cameraLogger.error(`Error en #getCameraOnvif:`,error);
         }
         throw error;
       }
     }
 
-    static getSnapshotByCtrlIdAndIp = ({ctrl_id, ip}: CamCtrlIdIp )  : Promise<Buffer> =>  {
+    static snapshotCapture = ({ctrl_id, cmr_id}: CamIdentifier )  : Promise<Buffer> =>  {
       return new Promise(async (resolve, reject) => {
-        let mainRtspLink
+        let mainRtspLink : string | null = null
 
         try {
-          const [mainRtsp] = await getRstpLinksByCtrlIdAndIp(ctrl_id, ip);
+          const [mainRtsp] = await getRstpLinksByCtrlIdAndCmrId(ctrl_id, cmr_id);
           mainRtspLink = mainRtsp
         } catch (error) {
           return reject(error)
         }
 
-        if(mainRtspLink){
+        if(mainRtspLink !== null){
           const args = [
-            "-rtsp_transport",
-            "tcp",
-            "-i",
-            `${mainRtspLink}`,
+            "-rtsp_transport","tcp",
+            "-timeout",`${5*1000000}`,
+            "-i",`${mainRtspLink}`,
             "-an",
-            "-t",
-            "10",
-            "-c:v",
-            "mjpeg",
-            "-f",
-            "image2pipe",
+            "-t","10",
+            "-c:v","mjpeg",
+            "-f","image2pipe",
             "-",
           ];
   
-          let ffmpegProcessImage : ChildProcessWithoutNullStreams | null = null;
+          let ffmpegProcessImage : ChildProcessByStdio<null, any, null> | null = null;
           let imageBuffer = Buffer.alloc(0);
           let isInsideImage = false;
   
           if (!ffmpegProcessImage) {
-            ffmpegProcessImage = spawn("ffmpeg", args);
+            ffmpegProcessImage = spawn("ffmpeg", args,{stdio:["ignore","pipe","ignore"]});
           }
           // Redirigir la salida de ffmpeg al cliente Socket.IO
-          ffmpegProcessImage.stdout.on("data", (data) => {
+          ffmpegProcessImage.stdout.on("data", (data:any) => {
             // Verificar marcadores
             let isMarkStart = verifyImageMarkers(data, "start");
             let isMarkEnd = verifyImageMarkers(data, "end");
@@ -120,7 +126,7 @@ export class Camera  {
           });
   
           ffmpegProcessImage.on("close", (code) => {
-            console.log(`Proceso ffmpegImage cerrado con código ${code}`);
+            cameraLogger.info(`snapshotCapture | Proceso ffmpegImage cerrado con código ${code}`);
             if (ffmpegProcessImage) {
               ffmpegProcessImage.kill();
               ffmpegProcessImage = null;
@@ -143,19 +149,19 @@ export class Camera  {
       });
     }
 
-    static async controlPTZByActionAndVelocityAndMovementAndNodoAndIp({ action, velocity, movement, ctrl_id, ip,}:  ControlPTZProps & CamCtrlIdIp) {
+    static async controlPTZ({ action, velocity, movement ,cmr_id,ctrl_id }:  ControlPTZProps & CamIdentifier) {
       try {
-        const camera = await Camera.#getCameraOnvifByCtrlIdAndIp({ctrl_id, ip }); // 1-2ms 
+        const camera = await Camera.#getCameraOnvif({ctrl_id, cmr_id }); // 1-2ms 
         await camera.controlPTZByActionAndVelocityAndMovement({action,velocity,movement}); // 500-800 ms
       } catch (error) {
         throw error;
       }
     }
-    
-    static async gotoPresetPTZByNumPresetAndNodoAndIp({ n_preset, ctrl_id, ip }: CamCtrlIdIp & {n_preset:number | string}) {
+
+    static async presetPTZ({cmr_id,ctrl_id,preset}: CamIdentifier & {preset:number}) {
       try {
-        const camera = await Camera.#getCameraOnvifByCtrlIdAndIp({ctrl_id, ip });
-        await camera.gotoPresetPTZByNumPreset({n_preset})
+        const camera = await Camera.#getCameraOnvif({ctrl_id, cmr_id }); // 1-2ms 
+        await camera.gotoPresetPTZByNumPreset({n_preset: preset})
       } catch (error) {
         throw error;
       }
@@ -168,7 +174,7 @@ export class Camera  {
             const result = await resultPromise;
             const { region, nododb_name, nodo,ctrl_id,rgn_id } = item;
 
-            const cams = await MySQL2.executeQuery<CameraInfoRowData[]>({sql:`SELECT  cmr_id ,ip , descripcion, puertows,tipo, marca FROM ${nododb_name}.camara c INNER JOIN general.marca m ON c.m_id = m.m_id INNER JOIN general.tipocamara t ON c.tc_id = t.tc_id WHERE c.activo = 1 ORDER BY c.ip ASC`});
+            const cams = await MySQL2.executeQuery<CameraInfoRowData[]>({sql:`SELECT  cmr_id ,ip , descripcion, puertows, c.tc_id ,tipo, marca FROM ${nododb_name}.camara c INNER JOIN general.marca m ON c.m_id = m.m_id INNER JOIN general.tipocamara t ON c.tc_id = t.tc_id WHERE c.activo = 1 ORDER BY c.ip ASC`});
 
             if(cams.length > 0){
               result[rgn_id] = result[rgn_id] || { rgn_id, region, controllers: {} };

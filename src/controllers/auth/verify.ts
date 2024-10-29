@@ -4,10 +4,13 @@ import { asyncErrorHandler } from "../../utils/asynErrorHandler";
 import { CustomError } from "../../utils/CustomError";
 import { appConfig } from "../../configs";
 
-export const refreshToken = asyncErrorHandler(
+export const verify = asyncErrorHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     
-    const refreshToken: string | undefined = req.cookies[appConfig.cookie.refresh_token.name];
+    const refreshTokenCookie: string | undefined = req.cookies[appConfig.cookie.refresh_token.name];
+    const refreshTokenHeader: string | undefined = req.headers.authorization;
+
+    const refreshToken = refreshTokenCookie ?? ( refreshTokenHeader !== undefined ? refreshTokenHeader.split(" ")[1] : undefined);
 
     if (refreshToken === undefined ) {
       const errTokenNotProvided = new CustomError(`No se proporcionó un refresh token`,401,"Unauthorized");
@@ -45,7 +48,18 @@ export const refreshToken = asyncErrorHandler(
       sameSite: "strict", // acceso del mismo dominio
       maxAge: appConfig.cookie.refresh_token.max_age, // expiracion 1d
     });
+
+    const response = {
+      status: 200,
+      message: "Refresh token successful",
+      data: {
+        token_type: "Bearer",
+        access_token: newAccessToken,
+        refresh_token: newRefreshToken,
+        user: userWithoutPassword
+      }
+    }
     
-    res.json(userWithoutPassword);
+    res.status(200).json(response);
   }
 );

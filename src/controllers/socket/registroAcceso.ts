@@ -2,11 +2,12 @@ import { Server, Socket } from "socket.io";
 import type { Contrata, Controlador, RegistroAcceso } from "../../types/db";
 import { RegistroAccesoSite } from "../../models/site";
 import { ContrataMap } from "../../models/maps";
+import { genericLogger } from "../../services/loggers";
+
 export const registroAccesoSocket = async (io: Server, socket: Socket) => {
+
   const nspEnergia = socket.nsp;
   const [, , ctrl_id] = nspEnergia.name.split("/"); // Namespace : "/registro_acceso/ctrl_id"
-
-  console.log(`Socket Registro Acceso | Cliente ID: ${socket.id} | Petición ctrl_id: ${ctrl_id}`);
 
   let newObserver = new RegistroAccesoSocketObserver(socket)
   RegistroAccesoMap.registerObserver(Number(ctrl_id),newObserver)
@@ -17,17 +18,14 @@ export const registroAccesoSocket = async (io: Server, socket: Socket) => {
 
   socket.on("disconnect", () => {
     const clientsCount = io.of(`/registro_acceso/${ctrl_id}`).sockets.size;
-    console.log(`Socket Registro Acceso | clientes_conectados = ${clientsCount} | ctrl_id = ${ctrl_id}`);
     if (clientsCount == 0 ) {
-      console.log(`Socket Registro Acceso | Eliminado Observer | ctrl_id = ${ctrl_id}`)
       RegistroAccesoMap.unregisterObserver(Number(ctrl_id))
 
     }
   });
 
   socket.on("error", (error) => {
-    console.log(`Socket Registro Acceso | Error | ctrl_id = ${ctrl_id}`)
-    console.error(error)
+    genericLogger.error(`Socket Registro Acceso | Error | ctrl_id = ${ctrl_id}`,error);
   });
 }
 
@@ -274,8 +272,7 @@ export class RegistroAccesoMap  {
         }
       }
     } catch (error) {
-      console.log(`Socket Registro Acceso | RegistroAccesoMap | Error al inicializar registros`);
-      console.error(error);  
+      genericLogger.error(`Socket Registro Acceso | RegistroAccesoMap | Error al inicializar registros de acceso`,error);
       throw error
     }
   }

@@ -3,15 +3,17 @@ import { asyncErrorHandler } from "../../utils/asynErrorHandler";
 import { Camera } from "../../models/camera/";
 
 
-// PresetFunction GET /camera/preset/:xctrl_id/:xip/:xnum_preset
+// PresetFunction GET /camera/preset?ctrl_id=number&cmr_id=number&preset=number
 export const getPresetOnvif = asyncErrorHandler(
   async (req: Request, res: Response, next: NextFunction) => {
-    const { xctrl_id, xip, xnum_preset } = req.params;
-    await Camera.gotoPresetPTZByNumPresetAndNodoAndIp({
-      n_preset: xnum_preset,
-      ctrl_id: Number(xctrl_id),
-      ip: xip,
-    });
+
+    const {preset,cmr_id,ctrl_id} = req.query as {ctrl_id:string,cmr_id:string,preset:string}
+
+    await Camera.presetPTZ({
+      ctrl_id: Number(ctrl_id),
+      cmr_id: Number(cmr_id),
+      preset: Number(preset)
+    })
     res.json({ message: "Movimiento exitoso" });
   }
 );

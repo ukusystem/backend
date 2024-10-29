@@ -43,7 +43,6 @@ const fonts = {
 export const pdfDownload = asyncErrorHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     const data : {data: Object[], title: string} = req.body;
-    console.log("llego peticion:",data.title)
     const columnsTable = Object.keys(data.data[0]).map(key=>(key.toUpperCase()));
     const rowsTable = data.data.map((onedata) => Object.values(onedata));
     const tableBody : TableCell[][] = [columnsTable, ...rowsTable];

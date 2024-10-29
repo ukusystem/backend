@@ -66,7 +66,6 @@ export const updateArchivoRespaldo = asyncErrorHandler( async (req: Request, res
             const relativePath = path.relative("./archivos/ticket", movePath); // nodoXX\27-02-2024\1709065263868-hombre.png
             const finalRelativePath = relativePath.split(path.sep).join(path.posix.sep); // Prueba/27-02-2024/1709065364652-hombre.png
             const archItem = {ruta: finalRelativePath, nombreoriginal:file.originalname,tipo: file.mimetype}
-            console.log(archItem)
 
             archivosData.push(archItem)
 
@@ -93,8 +92,6 @@ export const updateArchivoRespaldo = asyncErrorHandler( async (req: Request, res
             const relativePath = path.relative("./archivos/ticket", movePath); // nodoXX\27-02-2024\1709065263868-hombre.png
             const finalRelativePath = relativePath.split(path.sep).join(path.posix.sep); // Prueba/27-02-2024/1709065364652-hombre.png
             const archItem = {ruta: finalRelativePath, nombreoriginal:file.originalname,tipo: file.mimetype}
-            console.log(archItem)
-
             archivosData.push(archItem)
           }
         }

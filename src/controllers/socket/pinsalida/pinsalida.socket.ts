@@ -3,6 +3,7 @@ import { SocketPinSalida } from "./pinsalida.types";
 import { PinSalidaManager, PinSalidaSocketObserver } from "./pinsalida.manager";
 import { pinSalNamespaceSchema } from "./pinsalida.schema";
 import { onOrder } from "../../../models/controllerapp/controller";
+import { genericLogger } from "../../../services/loggers";
 
 export const pinSalidaSocket = async ( io: Server, socket: SocketPinSalida ) => {
       
@@ -12,20 +13,12 @@ export const pinSalidaSocket = async ( io: Server, socket: SocketPinSalida ) => 
   const result = pinSalNamespaceSchema.safeParse({ ctrl_id: xctrl_id });
 
   if (!result.success) {
-    console.log(
-      result.error.errors.map((errorDetail) => ({
-        message: errorDetail.message,
-        status: errorDetail.code,
-        path: errorDetail.path,
-      }))
-    );
-
+    socket.disconnect(true);
     return;
   }
 
   const { ctrl_id } = result.data;
 
-  console.log(`Socket Pines Salida | Cliente ID: ${socket.id} | Petición ctrl_id: ${ctrl_id}`);
   const observer = new PinSalidaSocketObserver(socket);
   PinSalidaManager.registerObserver(Number(ctrl_id),observer);
 
@@ -54,11 +47,11 @@ export const pinSalidaSocket = async ( io: Server, socket: SocketPinSalida ) => 
   })
 
   socket.on("orden_pin_salida",async ({action,ctrl_id,pin,es_id})=>{
-    console.log("orden: ",{action,ctrl_id,pin, es_id} )
+    genericLogger.info(`Socket Pines Salida | Orden | ctrl_id = ${ctrl_id}`,{action,pin,es_id});
     try {
       const ordenResult =  await onOrder({action,ctrl_id,pin})
       if(ordenResult != undefined){
-        console.log("result_orden: ", ordenResult.resultado, ordenResult.mensaje)
+        genericLogger.info(`Socket Pines Salida | Resultado Orden | ctrl_id = ${ctrl_id}`,ordenResult);
         if(ordenResult.resultado){ // orden correcto
           if (PinSalidaManager.map.hasOwnProperty(ctrl_id)) {
             if (PinSalidaManager.map[ctrl_id].hasOwnProperty(es_id)) {
@@ -77,21 +70,18 @@ export const pinSalidaSocket = async ( io: Server, socket: SocketPinSalida ) => 
         }
       }
     } catch (error) {
-      console.error(error)
+      genericLogger.error(`Socket Pines Salida | Error Orden | ctrl_id = ${ctrl_id}`,error);
     }
   })
 
   socket.on("disconnect", () => {
     const clientsCount = io.of(`/pines_salida/${ctrl_id}`).sockets.size;
-    console.log(`Socket Pines Salida | clientes_conectados = ${clientsCount} | ctrl_id = ${ctrl_id}`);
     if (clientsCount == 0 ) {
-      console.log(`Socket Pines Salida | Eliminado Observer | ctrl_id = ${ctrl_id}`)
       PinSalidaManager.unregisterObserver(Number(ctrl_id))
     }
   });
 
   socket.on("error", (error: any) => {
-    console.log(`Socket Pines Salida | Error | ctrl_id = ${ctrl_id}`)
-    console.error(error)
+    genericLogger.error(`Error en el namespace pines de salida | ctrl_id = ${ctrl_id}`,error);
   });
 }
