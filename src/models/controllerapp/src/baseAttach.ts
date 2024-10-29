@@ -1,35 +1,37 @@
 import { RowDataPacket, ResultSetHeader } from "mysql2";
 import { executeQuery, executeBatchForNode, userExist } from "./dbManager";
-import { CameraForFront } from "./frontend/camaraForFront";
 import { ResultCode } from "./resultCode";
 import { AtomicNumber } from "./atomicNumber";
 import { DataStruct } from "./dataStruct";
-import { ParseType, States, Result } from "./enums";
+import { ParseType, States } from "./enums";
 import { IntTuple } from "./intTuple";
 import { IntConsumer } from "./types";
-// import { Camera } from "./camera";
-
 import { Encryption } from "./encryption";
 import { Message } from "./message";
 import { Bundle } from "./bundle";
 import { Logger } from "./logger";
 import { Mortal } from "./mortal";
-import util from "util";
+// import { SystemManager } from "@models/system";
+import { SystemManager } from "../../../models/system";
+// import { appConfig } from "@configs/index";
 import { appConfig } from "../../../configs";
+import { Main } from "./main";
+// import { ControllerMapManager } from "@maps/index";
+import { ControllerMapManager } from "../../maps";
+import { NodeTickets } from "./nodeTickets";
+// import { NodoCameraMapManager } from "@maps/nodo.camera";
+import { NodoCameraMapManager } from "../../maps/nodo.camera";
+// import { Camara } from "@type/db";
+import { Camara } from "../../../types/db";
+import util from "util";
 import * as cp from "child_process";
 import * as queries from "./queries";
 import * as useful from "./useful";
 import * as net from "net";
 import * as codes from "./codes";
 import * as db2 from "./db2";
+// import * as sm from "@ctrls/socket";
 import * as sm from "../../../controllers/socket";
-import { Main } from "./main";
-import { SystemManager } from "../../system";
-import { ControllerMapManager } from "../../maps";
-import { NodeTickets } from "./nodeTickets";
-import { NodoCameraMapManager } from "../../maps/nodo.camera";
-import { CameraMotionManager } from "../../camera";
-import { Camara } from "../../../types/db";
 
 /**
  * Base attachment for the sockets
@@ -2295,6 +2297,19 @@ export class ManagerAttach extends BaseAttach {
                       const gateway = cameraData[10].getString()
                       let pwd = ''
 
+                      // const newCameraItem = new CameraForFront(cameraData[0].getInt(), targetNodeID, cameraData[5].getString(), cameraData[4].getString(), null);
+                      // Encrypt password
+                      if (cameraWithPassword) {
+                        const cameraPassword = cameraData[queries.cameraPasswordIndex];
+                        const encrytedCameraPassword = Encryption.encrypt(cameraPassword.getString(), false);
+                        if (!encrytedCameraPassword) {
+                          this._log("Error encrypting camera password.");
+                          break;
+                        }
+                        cameraPassword.setString(encrytedCameraPassword);
+                        pwd = encrytedCameraPassword;
+                      }
+                      
                       const newCamera:Camara = {
                         cmr_id : camID,
                         activo:1,
@@ -2311,20 +2326,7 @@ export class ManagerAttach extends BaseAttach {
                         tc_id:typeID,
                         usuario:user,
                       }
-
-                      // const newCameraItem = new CameraForFront(cameraData[0].getInt(), targetNodeID, cameraData[5].getString(), cameraData[4].getString(), null);
-                      // Encrypt password
-                      if (cameraWithPassword) {
-                        const cameraPassword = cameraData[queries.cameraPasswordIndex];
-                        const encrytedCameraPassword = Encryption.encrypt(cameraPassword.getString(), false);
-                        if (!encrytedCameraPassword) {
-                          this._log("Error encrypting camera password.");
-                          break;
-                        }
-                        cameraPassword.setString(encrytedCameraPassword);
-                        pwd = encrytedCameraPassword;
-                      }
-
+                      
                       // Save camera
                       switch (valueToSet) {
                         case codes.VALUE_CAMERA:
@@ -2339,6 +2341,7 @@ export class ManagerAttach extends BaseAttach {
                           break;
                         case codes.VALUE_CAMERA_PASSWORD:
                           await this._updateItem("camera", cameraData, queries.cameraUpdatePwd, id, targetNodeID);
+                          NodoCameraMapManager.update(targetNodeID, newCamera.cmr_id, newCamera)
                           // code.code = Result.CAMERA_UPDATE;
                           break;
                         default:
@@ -2385,9 +2388,10 @@ export class ManagerAttach extends BaseAttach {
                       break;
                     case codes.VALUE_CAMERA_DISABLE:
                       const disabledCamera = await this.disableItem("camera", parts, queries.cameraDisable, id, targetNodeID);
-                      bundle.targetCamera = new Camera(disabledCamera, targetNodeID);
-                      CameraMotionManager.delete(new CameraForFront(disabledCamera, targetNodeID));
-                      code.code = Result.CAMERA_DISABLE;
+                      // bundle.targetCamera = new Camera(disabledCamera, targetNodeID);
+                      // CameraMotionManager.delete(new CameraForFront(disabledCamera, targetNodeID));
+                      // code.code = Result.CAMERA_DISABLE;
+                      NodoCameraMapManager.update(targetNodeID,disabledCamera, {cmr_id:disabledCamera, activo:0})
                       break;
                     case codes.VALUE_SECURITY_TECH:
                     case codes.VALUE_MODE:

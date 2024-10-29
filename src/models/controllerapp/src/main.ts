@@ -1,8 +1,5 @@
 import { NodeAttach, ManagerAttach, Selector, BaseAttach } from "./baseAttach";
-// import { Personal } from "../../../controllers/ticket/createTicket";
-import { Changes, Result, States, getState } from "./enums";
-// import { Solicitante } from "../../../controllers/ticket";
-
+import { Changes, States, getState } from "./enums";
 import { PartialTicket } from "./partialTicket";
 import { RequestResult } from "./requestResult";
 import { AtomicNumber } from "./atomicNumber";
@@ -11,25 +8,26 @@ import { NodeTickets } from "./nodeTickets";
 import { executeQuery } from "./dbManager";
 import { ResultCode } from "./resultCode";
 import { ResultSetHeader } from "mysql2";
+// import { CameraMotionManager } from "@models/camera";
+import { CameraMotionManager } from "../../../models/camera";
+// import { NodoCameraMapManager } from "@maps/nodo.camera";
+import { NodoCameraMapManager } from "../../maps/nodo.camera";
+// import { appConfig } from "@configs/index";
+import { appConfig } from "../../../configs";
+import { Ticket, type Personal, type Solicitante } from "./ticket";
 import { Logger } from "./logger";
 import { Camera } from "./camera";
 import { Bundle } from "./bundle";
 import { Mortal } from "./mortal";
-import { Ticket, type Personal, type Solicitante } from "./ticket";
 import { PinOrder } from "./types";
 import fs from "fs";
-import { appConfig } from "../../../configs";
 import * as queries from "./queries";
 import * as useful from "./useful";
 import * as codes from "./codes";
 import * as db2 from "./db2";
 import * as util from "util";
 import * as net from "net";
-import { CameraMotionManager } from "../../camera";
 import * as cp from "child_process";
-import { Encryption } from "./encryption";
-import { ControllerConnect } from "../../system";
-import { NodoCameraMapManager } from "../../maps/nodo.camera";
 
 export class Main {
   /**
