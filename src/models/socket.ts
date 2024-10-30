@@ -1,7 +1,8 @@
 import { Server as HttpServer } from "http";
 import { Server } from "socket.io";
-import {  ticketSocket , streamRecordSocket, lastSnapshotSocket, pinEntradaSocket, registroEntradaSocket, SensorTemperaturaManager, registroAccesoSocket, voiceStreamSocket, NamespaceControllerState, contollerStateSocket, NamespacePinSalida, pinSalidaSocket, NamespaceModEnergia, modEnergiaSocket, senTemperaturaSocket, NamespaceSenTemperature, NamespaceSidebarNav, navbarNavSocket, NamespaceLastSnapshot, NamespaceAlarm, alarmSocket } from "../controllers/socket";
+import {  ticketSocket , streamRecordSocket, lastSnapshotSocket, pinEntradaSocket, registroEntradaSocket, voiceStreamSocket, NamespaceControllerState, contollerStateSocket, NamespacePinSalida, pinSalidaSocket, NamespaceModEnergia, modEnergiaSocket, senTemperaturaSocket, NamespaceSenTemperature, NamespaceSidebarNav, navbarNavSocket, NamespaceLastSnapshot, NamespaceAlarm, alarmSocket, NamespaceRegistroEntrada } from "../controllers/socket";
 import { camStreamSocket } from "../controllers/socket/stream/camera.stream.socket";
+import { NamespaceRegistroAcceso, registroAccesoSocket } from "../controllers/socket/registro.acceso";
 
 
 function parserCookie(cookies: string | undefined) {
@@ -97,10 +98,12 @@ export class Sockets {
     SidebarNavNSP.on("connection",(socket)=>{navbarNavSocket(this.#io, socket)})
 
     // Namespace :  "/registro_acceso/ctrl_id"
-    this.#io.of(/^\/registro_acceso\/\d+$/).on("connection", (socket) => { registroAccesoSocket(this.#io, socket); });
+    const RegAccesoNSP: NamespaceRegistroAcceso = this.#io.of(/^\/registro_acceso\/\d+$/);
+    RegAccesoNSP.on("connection", (socket) => { registroAccesoSocket(this.#io, socket); });
 
     // Namespace :  "/registro_entrada/ctrl_id"
-    this.#io.of(/^\/registro_entrada\/\d+$/).on("connection", (socket) => { registroEntradaSocket(this.#io, socket); });
+    const RegEntNSP: NamespaceRegistroEntrada = this.#io.of(/^\/registro_entrada\/\d+$/);
+    RegEntNSP.on("connection", (socket) => { registroEntradaSocket(this.#io, socket); });
 
     // Namespace: "/tickets/ctrl_id/"
     this.#io.of(/^\/tickets\/\d+$/).on("connection", (socket) => { ticketSocket(this.#io, socket); });

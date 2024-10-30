@@ -1,6 +1,4 @@
 
-export * from "./registroAcceso"
-export * from "./registroEntrada"
 export * from "./ticket";
 export * from "./recordStream"
 export * from "./voicestream"
@@ -13,4 +11,6 @@ export * from "./temperatura"
 export * from "./sidebar"
 export * from "./snapshot"
 export * from "./alarm"
+export * from "./registro.acceso"
+export * from "./registro.entrada"
 

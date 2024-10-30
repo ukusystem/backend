@@ -208,7 +208,7 @@ export interface RegistroAcceso {
   ra_id: number;
   serie: number;
   ea_id: number;
-  co_id: number;
+  p_id: number; // co_id: number;
   administrador: number;
   autorizacion: number;
   fecha: string;

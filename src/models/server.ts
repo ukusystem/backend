@@ -18,14 +18,15 @@ import { siteRoutes } from "../routes/site.routes";
 import { vmsRoutes } from "../routes/vms.routes";
 import { frontEndRoutes } from "../routes/frontend.routes";
 import { main } from "./controllerapp/controller";
-import { ModuloEnergiaManager, PinEntradaManager, PinSalidaManager, RegistroAccesoMap, RegistroEntradaMap, SensorTemperaturaManager } from "../controllers/socket";
-import { ContrataMap, ControllerMapManager, EquipoAccesoMap, EquipoEntradaMap, EquipoSalidaMap, RegionMapManager, Resolution, TipoCamaraMapManager } from "./maps";
+import { ModuloEnergiaManager, PinEntradaManager, PinSalidaManager, RegistroAccesoManager, SensorTemperaturaManager } from "../controllers/socket";
+import { ContrataMapManager, ControllerMapManager, EquipoAccesoMap, EquipoEntradaMapManager, EquipoSalidaMap, PersonalMapManager, RegionMapManager, Resolution, TipoCamaraMapManager } from "./maps";
 import { dashboardRouter } from "../routes/dashboard.routes";
 import { appConfig } from "../configs";
 import { CameraMotionManager } from "./camera";
 import { NodoCameraMapManager } from "./maps/nodo.camera";
 import { NvrManager } from "./nvr/nvr.manager";
 import { genericLogger } from "../services/loggers";
+import { RegistroEntradaManager } from "../controllers/socket/registro.entrada";
 
 // import { createServer as createServerHttps } from "https";
 // import fs from "fs";
@@ -135,9 +136,9 @@ export class ServerApp {
   async initmaps(){
     try {
       // inicializar maps generales primero:
-      await ContrataMap.init() // inicializar antes que RegistroAccesoMap
+      await ContrataMapManager.init() // inicializar antes que RegistroAccesoMap
       await EquipoAccesoMap.init()
-      await EquipoEntradaMap.init()
+      await EquipoEntradaMapManager.init()
       await EquipoSalidaMap.init()
 
       await Resolution.init()
@@ -148,11 +149,13 @@ export class ServerApp {
       await ModuloEnergiaManager.init()
       await PinSalidaManager.init()
       await PinEntradaManager.init()
-      await RegistroAccesoMap.init()
-      await RegistroEntradaMap.init()
-
+      await RegistroEntradaManager.init()
+      
       await TipoCamaraMapManager.init()
       await NodoCameraMapManager.init();
+
+      await PersonalMapManager.init()
+      await RegistroAccesoManager.init()
 
     } catch (error) {
       genericLogger.error(`Server Model | Error init maps`,error);

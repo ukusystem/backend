@@ -119,7 +119,6 @@ export class Dashboard {
 
     static getTotalIngresoContrata = handleErrorWithArgument<Record<any,any>[],IPropMethod>(async ({ctrl_id,isMonthly,date}) => {
         const {endDate,startDate,year}=Dashboard.getStartEndDate(date,isMonthly)
-        // const finalTable = DashboardConfig.acceso.has_yearly_tables ?`registroacceso${year}` :"registroacceso"
         let subQuery = `SELECT ra.co_id, COUNT(*) AS total_ingreso FROM ${"nodo"+ctrl_id}.registroacceso ra WHERE ra.fecha BETWEEN '${startDate}' AND '${endDate}' AND ra.tipo = 1 AND ra.autorizacion = 1 GROUP BY ra.co_id`
         let finalQuery = `SELECT ingresototal.* , co.contrata, co.descripcion FROM ( ${subQuery} ) AS ingresototal INNER JOIN general.contrata co ON ingresototal.co_id = co.co_id ORDER BY ingresototal.co_id `
         const totalIngresoContrata = await MySQL2.executeQuery<RowDataPacket[]>({sql:finalQuery})
@@ -129,8 +128,6 @@ export class Dashboard {
 
     static getTotalAccesoTarjetaRemoto = handleErrorWithArgument<{data: TotalAccesoTarjetaRemoto, start_date: string, end_date: string},IPropMethod>(async ({ctrl_id,isMonthly,date}) => {
         const {endDate,startDate,year}=Dashboard.getStartEndDate(date,isMonthly)
-        // const finalTableRegAcc = DashboardConfig.acceso.has_yearly_tables ?`registroacceso${year}` :"registroacceso" // no tiene particion
-        // const finalTableRegSal = DashboardConfig.salida.has_yearly_tables ?`registrosalida${year}` :"registrosalida"
         const partitioning = `PARTITION (p${year%Dashboard.#NUM_PARTITION})`;
         const queryAccesoTarjeta = `SELECT CASE WHEN (co_id = 0 AND autorizacion = 0) THEN 'no_registrado' WHEN (co_id >= 1 AND autorizacion = 1) THEN 'registrado' ELSE 'otros' END AS acceso_tarjeta, COUNT(*) AS total FROM  ${"nodo"+ctrl_id}.registroacceso WHERE tipo = 1 AND fecha BETWEEN '${startDate}' AND '${endDate}' GROUP BY acceso_tarjeta`
         const queryAccesoRemoto = `SELECT COUNT(*) as total_acceso_remoto FROM ${"nodo"+ctrl_id}.registrosalida ${partitioning} WHERE es_id = 1 AND estado = 1 AND fecha BETWEEN '${startDate}' AND '${endDate}'`

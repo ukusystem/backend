@@ -8,3 +8,4 @@ export * from "./region"
 
 export * from "./resolucion"
 export * from "./tipo.camara"
+export * from "./personal"
