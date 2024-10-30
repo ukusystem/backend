@@ -644,7 +644,7 @@ export class BaseAttach extends Mortal {
     return data;
   }
 
-  _notifyCard(serie: number, admin: number, authorized: number, date: string, co_id: number, ea_id: number, type: number, ctrl_id: number) {
+  _notifyCard(serie: number, admin: number, authorized: number, date: string, p_id: number, ea_id: number, type: number, ctrl_id: number) {
     this._log("Notifying web about card.");
     const newEntry = new sm.RegistroAccesoSocketBad({
       // ra_id: 1, // No va
@@ -652,7 +652,7 @@ export class BaseAttach extends Mortal {
       administrador: admin,
       autorizacion: authorized ? 1 : 0,
       fecha: date,
-      co_id: co_id, // Can be 0 or positive
+      co_id: p_id, // Can be 0 or positive
       ea_id: ea_id,
       tipo: type,
       sn_id: 1,
@@ -1379,44 +1379,41 @@ export class NodeAttach extends BaseAttach {
         break;
       case codes.CMD_CARD_READ:
         this._log(`Received card read '${command}'`);
+        // serie, administrador, autorizacion, fecha, co_id, ea_id, tipo, sn_id
+        // The subnode id is still being designed, so a trivial value us used. This
+        // value must exist in the table 'nodo'.'subnodo'
         const cardData = this._parseMessage(parts, queries.cardReadParse, id);
         if (!cardData) break;
-        const cardID = cardData[0].getInt();
+        const companyID = cardData[0].getInt();
         const serial = cardData[1].getInt();
         const autorizado = cardData[2].getInt() == codes.VALUE_AUTHORIZED;
         const isAdmin = cardData[3].getInt();
         const isEntrance = cardData[4].getInt();
         const date = useful.formatTimestamp(cardData[5].getInt());
-        // serie, administrador, autorizacion, fecha, co_id, ea_id, tipo, sn_id
-        // The subnode id is still being designed, so a trivial value us used. This
-        // value must exist in the table 'nodo'.'subnodo'
+        this._log(`(${date}) Card read. company ID = ${companyID} Number = ${serial} result = ${autorizado} admin = ${isAdmin} reader type = ${isEntrance > 0 ? "Entrance" : "Exit"}`);
+        
+        // Set tickets as attended
+        const setRes = await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.setAttended, this.controllerID), [companyID, date, date]);
+        if(setRes){
+          this._log("Tickets set as attended")
+        }else{
+          this._log("ERROR Setting tickets to attended")
+        }
+        
+        // Get info needed to register and notify
+        let deviceID = 0;
+        let workerID = 0;
         const params = [serial, isAdmin, autorizado, date, 0, 0, isEntrance, 1];
-        this._log(`(${date}) Card read. ID = ${cardID} Number = ${serial} result = ${autorizado} admin = ${isAdmin} reader type = ${isEntrance > 0 ? "Entrance" : "Exit"}`);
-        const cardInfo = await executeQuery<db2.CardInfo[]>(queries.getCardInfo, [cardID]);
-        let co_id = 0;
-        let ea_id = 0;
+        const cardInfo = await executeQuery<db2.CardInfo[]>(queries.getCardInfo, [serial, companyID]);
         if (!cardInfo || cardInfo?.length !== 1) {
           this._log("Error getting card info from database.");
         } else {
-          if (cardInfo.length === 1) {
-            co_id = params[4] = isAdmin ? 0 : cardInfo[0].co_id;
-            // console.log(`${co_id} ${params[4]}`)
-            ea_id = params[5] = cardInfo[0].ea_id;
-            if (!isAdmin) {
-              // Since there is a company registered for that number
-              const setRes = await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.setAttended, this.controllerID), [co_id, date, date]);
-              if(setRes){
-                this._log("Tickets set as attended")
-              }else{
-                this._log("ERROR Setting tickets to attended")
-              }
-            }
-          } else {
-            this._log(`No rows returned for card ID = ${cardID}.`);
-          }
+          // console.log(`${co_id} ${params[4]}`)
+          workerID = params[4] = cardInfo[0].p_id
+          deviceID = params[5] = cardInfo[0].ea_id;
         }
         this.insertSilent("card", params, queries.insertCard, this.controllerID, true);
-        this._notifyCard(serial, isAdmin, autorizado ? 1 : 0, date, co_id, ea_id, isEntrance, this.controllerID);
+        this._notifyCard(serial, isAdmin, autorizado ? 1 : 0, date, workerID, deviceID, isEntrance, this.controllerID);
         break;
       case codes.CMD_ERR:
         this._log(`Received internal error '${command}'`);

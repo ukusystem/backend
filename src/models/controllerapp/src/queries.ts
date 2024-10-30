@@ -177,14 +177,17 @@ export const updateAllInputsEnables = `
 			`;
 
 export const insertCard = `
-				INSERT INTO %s.registroacceso (serie, administrador, autorizacion, fecha, co_id, ea_id, tipo, sn_id)
+				INSERT INTO %s.registroacceso (serie, administrador, autorizacion, fecha, p_id, ea_id, tipo, sn_id)
 				VALUES (?,?,?,?,?,?,?,?);
 			`;
 
 export const getCardInfo = `
-				SELECT co_id, ea_id
-				FROM general.acceso
-				WHERE a_id =? AND activo=1;
+				SELECT A.p_id, A.ea_id
+				FROM general.acceso A
+				JOIN general.personal P
+				ON A.p_id = P.p_id
+				WHERE A.serie = ?
+				AND P.co_id = ?;
 			`;
 
 export const insertCtrlState = `
@@ -456,15 +459,6 @@ export const nodeGetForUpdate = `
 				FROM general.controlador
 				WHERE ctrl_id=? AND activo=1;
 			`;
-
-// export const nodeSelect = `
-// 				SELECT ctrl_id, nodo, rgn_id, direccion, descripcion,
-// 					latitud, longitud, usuario, serie,
-// 					ip, mascara, puertaenlace, puerto, personalgestion,
-// 					personalimplementador, seguridad
-// 				FROM general.controlador
-// 				WHERE activo=1;
-// 			`;
 
 /**
  * ctrl_id, nodo, rgn_id, direccion, descripcion, 

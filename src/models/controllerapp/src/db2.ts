@@ -78,7 +78,7 @@ export interface Usuario2 extends RowDataPacket{
 }
 
 export interface CardInfo extends RowDataPacket{
-  co_id:number,
+  p_id:number,
   ea_id:number
 }
 
