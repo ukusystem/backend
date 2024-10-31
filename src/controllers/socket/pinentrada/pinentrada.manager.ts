@@ -368,7 +368,6 @@ export class PinEntradaManager {
 //       activo: 1,
 //       ctrl_id:5
 //     });
-  
 //     PinEntradaManager.add_update(pinSal)
 //   }, 20000);
 // })()

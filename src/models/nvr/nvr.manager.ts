@@ -8,6 +8,8 @@ import dayjs from "dayjs";
 import fs from 'fs'
 import { spawn } from "child_process";
 import { genericLogger } from "../../services/loggers";
+import { notifyNvrCamDisconnect } from "../controllerapp/controller";
+import { NodoCameraMapManager } from "../maps/nodo.camera";
 
 export class NvrManager {
   static #map: NvrControllerStructure = new Map();
@@ -200,7 +202,7 @@ export class NvrManager {
   }
 
   static #closeHandlerEvent(code:number | null, signal: NodeJS.Signals | null,context:CronJobContext){
-    const {ctrl_id,nvrpref_id,tiempo_inicio,tiempo_final} = context;
+    const {ctrl_id,nvrpref_id,tiempo_inicio,tiempo_final,cmr_id} = context;
 
     genericLogger.info(`NvrManager |    ffmpeg cerrado con código ${code} y señal ${signal} | ctrl_id : ${ctrl_id} | nvrpref_id: ${nvrpref_id}`)
     NvrManager.#updateStateRecording(ctrl_id,nvrpref_id,false);
@@ -212,6 +214,11 @@ export class NvrManager {
     const isCloseInRangeTime = currTimeSeconds > start_time_seconds && currTimeSeconds < end_time_seconds;
     if(isCloseInRangeTime){
       // notificar deconexión
+      NodoCameraMapManager.update(ctrl_id,cmr_id,{conectado:0});
+      const camera = NodoCameraMapManager.getCamera(ctrl_id,cmr_id);
+      if(camera !== undefined){
+        notifyNvrCamDisconnect(ctrl_id,{...camera});
+      }
     }
   }
 
