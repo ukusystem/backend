@@ -195,7 +195,7 @@ export const RegisterConfigOptions: {[key in RegisterType]: { has_partition: boo
   acceso: {
     has_partition: false,
     table_name: "registroacceso",
-    table_columns: ["ra_id", "serie", "administrador", "autorizacion", "fecha", "co_id", "ea_id", "tipo", "sn_id"],
+    table_columns: ["ra_id", "serie", "administrador", "autorizacion", "fecha", "p_id", "ea_id", "tipo", "sn_id"],
     order_by: "ra_id",
     datetime_compare: "fecha"
   },

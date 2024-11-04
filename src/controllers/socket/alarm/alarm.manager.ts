@@ -42,9 +42,9 @@ export class AlarmManager {
 
   static notifyPinEntrada(ctrl_id:number,pe_id:number, action: ActionType):void{
     if(AlarmManager.#observer !== null){
-      const pinEntrada = PinEntradaManager.getPinEntrada(String(ctrl_id),String(pe_id));
-      if(pinEntrada !== null){
-        AlarmManager.#observer.emitPinEntrada(ctrl_id,pinEntrada.toJSON(),action);
+      const pinEntrada = PinEntradaManager.getPinEntrada(ctrl_id,pe_id);
+      if(pinEntrada !== undefined){
+        AlarmManager.#observer.emitPinEntrada(ctrl_id,pinEntrada,action);
       }
     }
   };
@@ -102,7 +102,7 @@ export class AlarmManager {
       });
 
       // pines entrada
-      const pinesEnt = PinEntradaManager.getListPinesEntrada(String(ctrl_id));
+      const pinesEnt = PinEntradaManager.getListPinesEntrada(ctrl_id);
       const pinsEntData : PinesEntrada[] = pinesEnt.map((pinEnt)=>{
         const {activo,descripcion,ee_id,estado,pe_id,pin} = pinEnt;
         return {activo,descripcion,ee_id,estado,pe_id,pin}

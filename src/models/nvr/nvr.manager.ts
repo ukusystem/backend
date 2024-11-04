@@ -8,6 +8,8 @@ import dayjs from "dayjs";
 import fs from 'fs'
 import { spawn } from "child_process";
 import { genericLogger } from "../../services/loggers";
+import { notifyCamDisconnect } from "../controllerapp/controller";
+import { NodoCameraMapManager } from "../maps/nodo.camera";
 
 export class NvrManager {
   static #map: NvrControllerStructure = new Map();
@@ -200,7 +202,7 @@ export class NvrManager {
   }
 
   static #closeHandlerEvent(code:number | null, signal: NodeJS.Signals | null,context:CronJobContext){
-    const {ctrl_id,nvrpref_id,tiempo_inicio,tiempo_final} = context;
+    const {ctrl_id,nvrpref_id,tiempo_inicio,tiempo_final,cmr_id} = context;
 
     genericLogger.info(`NvrManager |    ffmpeg cerrado con código ${code} y señal ${signal} | ctrl_id : ${ctrl_id} | nvrpref_id: ${nvrpref_id}`)
     NvrManager.#updateStateRecording(ctrl_id,nvrpref_id,false);
@@ -212,6 +214,11 @@ export class NvrManager {
     const isCloseInRangeTime = currTimeSeconds > start_time_seconds && currTimeSeconds < end_time_seconds;
     if(isCloseInRangeTime){
       // notificar deconexión
+      NodoCameraMapManager.update(ctrl_id,cmr_id,{conectado:0});
+      const camera = NodoCameraMapManager.getCamera(ctrl_id,cmr_id);
+      if(camera !== undefined){
+        notifyCamDisconnect(ctrl_id,{...camera});
+      }
     }
   }
 
@@ -252,17 +259,17 @@ export class NvrManager {
               const newFfmpegProcess = spawn("ffmpeg",ffmpegCli,{stdio:['ignore', 'ignore', 'ignore']});
               currCamJob.isRecording = true;
 
+              if(currCamJob.ffmpegProcess === undefined){
+                currCamJob.ffmpegProcess = newFfmpegProcess;
+              }else{
+                currCamJob.ffmpegProcess.kill();
+                delete currCamJob.ffmpegProcess;
+                currCamJob.ffmpegProcess = newFfmpegProcess;
+              }
+
               newFfmpegProcess.on('close', (code,signal) => {
                 NvrManager.#closeHandlerEvent(code,signal,contextJob);
               });
-
-              // if(currCamJob.ffmpegProcess === undefined){
-              //   currCamJob.ffmpegProcess = newFfmpegProcess;
-              // }else{
-              //   currCamJob.ffmpegProcess.kill();
-              //   delete currCamJob.ffmpegProcess;
-              //   currCamJob.ffmpegProcess = newFfmpegProcess;
-              // }
 
               currPrefStructure.set(this.nvrpref_id,currCamJob);
               NvrManager.#map.set(this.ctrl_id,currPrefStructure);
@@ -321,6 +328,7 @@ export class NvrManager {
           const ffmpegCli = await NvrManager.#getFfmpegCLI(ctrl_id,preferencia.cmr_id,{tiempo_inicio:newInitialTime,tiempo_final:preferencia.tiempo_final});
           const newFfmpegProcess = spawn("ffmpeg",ffmpegCli,{stdio:['ignore', 'ignore', 'ignore']});
           newCamJob.isRecording = true;
+          newCamJob.ffmpegProcess = newFfmpegProcess;
 
           newFfmpegProcess.on('close', (code,signal) => {
             NvrManager.#closeHandlerEvent(code,signal,{ctrl_id,...preferencia});                                                                                                                                                                       
@@ -356,6 +364,7 @@ export class NvrManager {
             const ffmpegCli = await NvrManager.#getFfmpegCLI(ctrl_id,preferencia.cmr_id,{tiempo_inicio:newInitialTime,tiempo_final:preferencia.tiempo_final});
             const newFfmpegProcess = spawn("ffmpeg",ffmpegCli,{stdio:['ignore', 'ignore', 'ignore']});
             newCamJob.isRecording = true;
+            newCamJob.ffmpegProcess = newFfmpegProcess;
             
             newFfmpegProcess.on('close', (code,signal) => {
               NvrManager.#closeHandlerEvent(code,signal,{ctrl_id,...preferencia});                                                                                                                                                                       
@@ -404,7 +413,7 @@ export class NvrManager {
     }
   }
 
-  static notifyChangeCamera(ctrl_id:number,cmr_id:number){
+  static notifyUpdateCamera(ctrl_id:number,cmr_id:number){
     const currPrefStructure = NvrManager.#map.get(ctrl_id);
     if(currPrefStructure !== undefined){
 
@@ -448,6 +457,41 @@ export class NvrManager {
 
     }
   }
+
+  static notifyDeleteCamera(ctrl_id:number,cmr_id:number){
+    const currPrefStructure = NvrManager.#map.get(ctrl_id);
+    if(currPrefStructure !== undefined){
+      const allCamJobs = Array.from(currPrefStructure.values());
+      const camJobsFilterByCmrId = allCamJobs.filter((camJob) => camJob.info.cmr_id === cmr_id);
+      camJobsFilterByCmrId.forEach((camJob) => {
+        // stops cron jobs:
+        if(camJob.endScheduleJob){
+          camJob.endScheduleJob.stop();
+          delete camJob.endScheduleJob;
+        };
+
+        if(camJob.startScheduledJob){
+          camJob.startScheduledJob.stop();
+          delete camJob.startScheduledJob;
+        };
+        // kill ffmpeg process:
+        if(camJob.ffmpegProcess !== undefined){
+          camJob.ffmpegProcess.kill();
+          delete camJob.ffmpegProcess;
+        };
+
+        // delete preference:
+        currPrefStructure.delete(camJob.info.nvrpref_id);
+        NvrManager.#map.set(ctrl_id,currPrefStructure);
+        
+      })
+
+    }
+
+  }
+
+
+
 }
 
 export class CamCronJob implements NvrJobSchedule {

@@ -4,6 +4,7 @@ import { FinishTicket } from "./src/finishTicket";
 import { PinOrder } from "./src/types";
 import { RequestResult } from "./src/requestResult";
 import { Camara } from "../../types/db";
+import { Camara } from "../../types/db";
 
 let mainService:Main|null = null
 
@@ -29,6 +30,6 @@ export async function sendSecurity(controllerID:number, security:boolean):Promis
   return await mainService?.sendSecurity(controllerID, security);
 }
 
-export function notifyCamDisconnect(nodeID:number, camera:Camara){
-  mainService?.addDisconnectedCamera(nodeID, camera);
+export function notifyCamDisconnect(ctrl_id:number,cam: Camara):void{
+
 }

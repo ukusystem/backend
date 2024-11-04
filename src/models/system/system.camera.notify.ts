@@ -25,15 +25,21 @@ export class CameraNotifyManager {
   }
   
   static #notifyUpdateToNvr(ctrl_id: number,curCam: Camara,fieldsUpdate: Partial<Camara>){
-    const { usuario, contraseña, ip ,conectado } = fieldsUpdate;
+    const { usuario, contraseña, ip ,conectado , activo } = fieldsUpdate;
     const hasChanges =
       (usuario !== undefined && curCam.usuario !== usuario) ||
       (contraseña !== undefined && curCam.contraseña !== contraseña) ||
       (ip !== undefined && curCam.ip !== ip) ||
-      (conectado !== undefined && curCam.conectado !== conectado && conectado === 1) ;
+      (conectado !== undefined && curCam.conectado !== conectado && conectado === 1);
+    
+    const hasDelete = activo !== undefined && curCam.activo !== activo && activo === 0;
     
     if(hasChanges){
-      NvrManager.notifyChangeCamera(ctrl_id,curCam.cmr_id);
+      NvrManager.notifyUpdateCamera(ctrl_id,curCam.cmr_id);
+    }
+
+    if(hasDelete){
+      NvrManager.notifyDeleteCamera(ctrl_id,curCam.cmr_id);
     }
   }
 
@@ -53,7 +59,7 @@ export class CameraNotifyManager {
     const { activo } = fieldsUpdate;
     const hasDelete = (activo !== undefined && curCam.activo !== activo && activo === 0) ;
     if(hasDelete){
-      CameraMotionManager.notifyDelete(ctrl_id,curCam.cmr_id)
+      CameraMotionManager.notifyDelete(ctrl_id,curCam.cmr_id);
     };
   }
 

@@ -646,20 +646,26 @@ export class BaseAttach extends Mortal {
 
   _notifyCard(serie: number, admin: number, authorized: number, date: string, p_id: number, ea_id: number, type: number, ctrl_id: number) {
     this._log("Notifying web about card.");
-    const newEntry = new sm.RegistroAccesoSocketBad({
-      // ra_id: 1, // No va
-      serie: serie,
-      administrador: admin,
-      autorizacion: authorized ? 1 : 0,
-      fecha: date,
-      co_id: p_id, // Can be 0 or positive
-      ea_id: ea_id,
-      tipo: type,
-      sn_id: 1,
-      // contrata: DEF_TXT, // No va
-      ctrl_id: ctrl_id,
-    });
-    sm.RegistroAccesoMap.add(newEntry);
+    // const newEntry = new sm.RegistroAccesoSocketBad({
+    //   // ra_id: 1, // No va
+    //   serie: serie,
+    //   administrador: admin,
+    //   autorizacion: authorized ? 1 : 0,
+    //   fecha: date,
+    //   co_id: co_id, // Can be 0 or positive
+    //   ea_id: ea_id,
+    //   tipo: type,
+    //   sn_id: 1,
+    //   // contrata: DEF_TXT, // No va
+    //   ctrl_id: ctrl_id,
+    // });
+    // sm.RegistroAccesoMap.add(newEntry);
+
+    // **********Utilizar**********
+    // const newEntry: sm.RegistroAccesoDTO = {...}
+    // sm.RegistroAccesoManager.add(ctrl_id,newEntry)
+    // **********Utilizar**********
+
   }
 
   _notifyEnergy(
@@ -733,26 +739,25 @@ export class BaseAttach extends Mortal {
     date: string | null = null
   ) {
     // this._log(`Notifying web about input.`);
-    const newInput = new sm.PinesEntradaSocketBad({
+    const newInput : sm.PinEntradaAddUpdateDTO = {
       pe_id: pin,
       pin: pin,
-      ee_id: ee_id,
-      descripcion: desc,
-      estado: state,
-      activo: active,
-      ctrl_id: nodeID,
-    });
+      ee_id: ee_id ?? undefined ,
+      descripcion: desc ?? undefined,
+      estado: state ?? undefined,
+      activo: active ?? undefined,
+    }
     // To disable the pin
     if (active === 0) {
-      sm.PinEntradaManager.delete(newInput);
+      sm.PinEntradaManager.delete(nodeID,pin);
     }
     // To enable or update data
     else {
-      sm.PinEntradaManager.add_update(newInput);
+      sm.PinEntradaManager.add_update(nodeID,newInput);
     }
     // To show in the 'alerts' section
     if (resgister && state && date) {
-      sm.RegistroEntradaMap.add(new sm.RegistroEntradaSocketBad({ pin: pin, estado: state, fecha: date, ctrl_id: nodeID }));
+      sm.RegistroEntradaManager.add(nodeID,{ pin: pin, estado: state, fecha: date, });
     }
   }
 
