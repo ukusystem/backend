@@ -46,8 +46,8 @@ export class RegistroEntradaManager {
     let new_ee_id: number | undefined = newRegEntr.ee_id;
 
     if (new_ee_id === undefined) {
-      const currPinEntrada = PinEntradaManager.getPinEntrada(String(ctrl_id), String(newRegEntr.pin)); // pin === pe_id
-      if (currPinEntrada !== null) {
+      const currPinEntrada = PinEntradaManager.getPinEntrada(ctrl_id, newRegEntr.pin); // pin === pe_id
+      if (currPinEntrada !== undefined) {
         new_ee_id = currPinEntrada.ee_id; // assign ee_id
       }
     }

@@ -731,22 +731,21 @@ export class BaseAttach extends Mortal {
     date: string | null = null
   ) {
     // this._log(`Notifying web about input.`);
-    const newInput = new sm.PinesEntradaSocketBad({
+    const newInput : sm.PinEntradaAddUpdateDTO = {
       pe_id: pin,
       pin: pin,
-      ee_id: ee_id,
-      descripcion: desc,
-      estado: state,
-      activo: active,
-      ctrl_id: nodeID,
-    });
+      ee_id: ee_id ?? undefined ,
+      descripcion: desc ?? undefined,
+      estado: state ?? undefined,
+      activo: active ?? undefined,
+    }
     // To disable the pin
     if (active === 0) {
-      sm.PinEntradaManager.delete(newInput);
+      sm.PinEntradaManager.delete(nodeID,pin);
     }
     // To enable or update data
     else {
-      sm.PinEntradaManager.add_update(newInput);
+      sm.PinEntradaManager.add_update(nodeID,newInput);
     }
     // To show in the 'alerts' section
     if (resgister && state && date) {

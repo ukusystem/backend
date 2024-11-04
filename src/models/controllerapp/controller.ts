@@ -29,6 +29,6 @@ export async function sendSecurity(controllerID:number, security:boolean):Promis
   return await mainService?.sendSecurity(controllerID, security);
 }
 
-export function notifyNvrCamDisconnect(ctrl_id:number,cam: Camara):void{
+export function notifyCamDisconnect(ctrl_id:number,cam: Camara):void{
 
 }

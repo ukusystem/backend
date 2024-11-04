@@ -1,5 +1,5 @@
 import { RowDataPacket } from "mysql2";
-import { ChildProcessWithoutNullStreams } from "node:child_process";
+import { ChildProcessByStdio } from "node:child_process";
 
 export enum Day {
   "Monday" = 1,
@@ -29,7 +29,7 @@ export interface CameraJob {
   info: NvrPreferencia,
   startScheduledJob?:NvrJobSchedule,
   endScheduleJob?: NvrJobSchedule,
-  ffmpegProcess?: ChildProcessWithoutNullStreams
+  ffmpegProcess?: ChildProcessByStdio<null, null, null>
   isRecording?:boolean
 }
 

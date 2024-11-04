@@ -1,6 +1,6 @@
 import { Server as HttpServer } from "http";
 import { Server } from "socket.io";
-import {  ticketSocket , streamRecordSocket, lastSnapshotSocket, pinEntradaSocket, registroEntradaSocket, voiceStreamSocket, NamespaceControllerState, contollerStateSocket, NamespacePinSalida, pinSalidaSocket, NamespaceModEnergia, modEnergiaSocket, senTemperaturaSocket, NamespaceSenTemperature, NamespaceSidebarNav, navbarNavSocket, NamespaceLastSnapshot, NamespaceAlarm, alarmSocket, NamespaceRegistroEntrada } from "../controllers/socket";
+import {  ticketSocket , streamRecordSocket, lastSnapshotSocket, pinEntradaSocket, registroEntradaSocket, voiceStreamSocket, NamespaceControllerState, contollerStateSocket, NamespacePinSalida, pinSalidaSocket, NamespaceModEnergia, modEnergiaSocket, senTemperaturaSocket, NamespaceSenTemperature, NamespaceSidebarNav, navbarNavSocket, NamespaceLastSnapshot, NamespaceAlarm, alarmSocket, NamespaceRegistroEntrada, NamespacePinEntrada } from "../controllers/socket";
 import { camStreamSocket } from "../controllers/socket/stream/camera.stream.socket";
 import { NamespaceRegistroAcceso, registroAccesoSocket } from "../controllers/socket/registro.acceso";
 
@@ -109,7 +109,8 @@ export class Sockets {
     this.#io.of(/^\/tickets\/\d+$/).on("connection", (socket) => { ticketSocket(this.#io, socket); });
 
     // Namespace: "/pin_entrada/ctrl_id"
-    this.#io.of(/^\/pin_entrada\/\d+$/).on("connection", (socket) => { pinEntradaSocket(this.#io, socket); });
+    const PinEntradaNSP : NamespacePinEntrada = this.#io.of(/^\/pin_entrada\/\d+$/);
+    PinEntradaNSP.on("connection", (socket) => { pinEntradaSocket(this.#io, socket); })
 
     // Namespace: "/controller_state/ctrl_id"    
     const ControllerStateNSP: NamespaceControllerState = this.#io.of(/^\/controller_state\/\d+$/);
