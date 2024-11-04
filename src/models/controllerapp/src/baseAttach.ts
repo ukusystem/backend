@@ -666,6 +666,17 @@ export class BaseAttach extends Mortal {
     // sm.RegistroAccesoManager.add(ctrl_id,newEntry)
     // **********Utilizar**********
 
+    const newEntry: sm.RegistroAccesoDTO = {
+      serie: serie,
+      ea_id: ea_id,
+      p_id: p_id, // Can be 0 or positive
+      administrador: admin,
+      autorizacion: authorized,
+      fecha: date,
+      tipo: type,
+      sn_id: 1,
+    }
+    sm.RegistroAccesoManager.add(ctrl_id, newEntry);
   }
 
   _notifyEnergy(
