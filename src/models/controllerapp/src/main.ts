@@ -16,18 +16,19 @@ import { NodoCameraMapManager } from "../../maps/nodo.camera";
 import { appConfig } from "../../../configs";
 import { Ticket, type Personal, type Solicitante } from "./ticket";
 import { Logger } from "./logger";
-import { Camera } from "./camera";
+// import { Camera } from "./camera";
 import { Bundle } from "./bundle";
 import { Mortal } from "./mortal";
-import { PinOrder } from "./types";
+import { CameraToCheck, PinOrder } from "./types";
 import fs from "fs";
 import * as queries from "./queries";
 import * as useful from "./useful";
 import * as codes from "./codes";
 import * as db2 from "./db2";
-import * as util from "util";
+// import * as util from "util";
 import * as net from "net";
 import * as cp from "child_process";
+import { Camara } from "../../../types/db";
 
 export class Main {
   /**
@@ -76,7 +77,7 @@ export class Main {
   /**
    * List of cameras to check their connection state.
    */
-  private readonly cameras: Camera[] = [];
+  private readonly cameras: CameraToCheck[] = [];
 
   /**
    * Approved tickets are stored here, grouped by nodes, to send them when the
@@ -163,7 +164,6 @@ export class Main {
     if (!(await this.loadNodes())) {
       return;
     }
-    await this.loadActiveCameras();
     await this.loadAcceptedTickets();
 
     /* Server for manager */
@@ -182,7 +182,7 @@ export class Main {
 
     setTimeout(this.processOneFromAll, 1);
     setTimeout(this.startDisconnectionDetection, Main.ALIVE_INTERVAL_MS, this.selector);
-    // setTimeout(this.startCamerasCheck, Main.ALIVE_CAMERA_INTERVAL_MS);
+    setTimeout(this.startCamerasCheck, Main.ALIVE_CAMERA_INTERVAL_MS);
 
     this.startTicketsCheck();
   }
@@ -219,55 +219,6 @@ export class Main {
     }
   };
 
-  /**
-   * Remove one camera from the list used to check their connection state.
-   *
-   * @param nodeID   Camera node ID
-   * @param cameraID Camera ID
-   */
-  // private removeCamera(nodeID: number, cameraID: number) {
-  //   let found = false;
-  //   for (let i = 0; i < this.cameras.length; i++) {
-  //     const current = this.cameras[i];
-  //     if (current.nodeID == nodeID && current.cameraID == cameraID) {
-  //       this.cameras.slice(i, 1);
-  //       found = true;
-  //       this.log(`Remove camera ${current} from checking list`);
-  //       break;
-  //     }
-  //   }
-  //   if (!found) {
-  //     this.log(`Camera ID=${cameraID} Node ID=${nodeID} not found`);
-  //   }
-  //   this.log(`Total cameras: ${this.cameras.length}`);
-  // }
-
-  /**
-   * Add or update a camera in the buffer, depending on whether it already exists
-   * or not. The camera will be updated if an existing one has the same camera ID
-   * and node ID. Otherwise, it will be added.
-   *
-   * @param newCamera The data of the new camera or data to update with.
-   */
-  // private addUpdateCamera(newCamera: Camera) {
-  //   let found = false;
-  //   for (let i = 0; i < this.cameras.length; i++) {
-  //     const current = this.cameras[i];
-  //     if (current.nodeID == newCamera.nodeID && current.cameraID == newCamera.cameraID) {
-  //       found = true;
-  //       this.cameras[i] = newCamera;
-  //       this.log(`Updated camera to '${newCamera}' in checking list`);
-  //       break;
-  //     }
-  //   }
-  //   if (!found) {
-  //     this.cameras.push(newCamera);
-  //     executeQuery(BaseAttach.formatQueryWithNode(queries.insertCameraState, newCamera.nodeID), [newCamera.cameraID, useful.getCurrentDate(), Mortal.DEFAULT_INITIAL_STATE]);
-  //     this.log(`Added camera ${newCamera} to checking list`);
-  //   }
-  //   this.log(`Total cameras: ${this.cameras.length}`);
-  // }
-
   private startSendingMessages() {
     this.sendMessagesTimer = setInterval(() => {
       // Send messages to controllers
@@ -294,7 +245,7 @@ export class Main {
 
         connection.setTimeout(Main.MANAGER_TIMEOUT, () => {
           this.log("Manager idle timeout");
-          // Activate when the manager sends keep alives to the server.
+          // Activate when the manager sends keep alives to the server. Managers should not reconnect automaticaly
           // newManagerSocket.reconnect(this.selector)
         });
 
@@ -339,6 +290,7 @@ export class Main {
    * @returns False if the nodes could not be read from the database or if some tables could not be created, true otherwise.
    */
   private async loadNodes(): Promise<boolean> {
+
     // Get nodes
     const res = await executeQuery<db2.Controlador2[]>(queries.nodeGetForSocket);
     if (!res) {
@@ -352,62 +304,9 @@ export class Main {
       this.selector.nodeAttachments.push(newNode);
     }
 
-    // Verify temperature tables before the communication with the nodes start
-    // if (!(await this.checkTablesForNodes(true))) {
-    //   return false;
-    // }
-
-    // Get next increments for tables that work by year.
-    // for (const node of this.selector.nodeAttachments){
-    //   // Get current year.
-    //   const year = useful.getYear();
-    //   // Get auto increments from the tables for the current year.
-    //   const nodeName = BaseAttach.getNodeDBName(node.controllerID)
-    //   const inputAI = await executeQuery<db2.ID[]>(util.format(queries.nextIDForNode, `registroentrada${year}`, nodeName), [], true);
-    //   const outputAI = await executeQuery<db2.ID[]>(util.format(queries.nextIDForNode, `registrosalida${year}`, nodeName), [], true);
-    //   const tempAI = await executeQuery<db2.ID[]>(util.format(queries.nextIDForNode, `registrotemperatura${year}`, nodeName), [], true);
-    //   const energyAI = await executeQuery<db2.ID[]>(util.format(queries.nextIDForNode, `registroenergia${year}`, nodeName), [], true);
-    //   // Set those as the next ids to be used.
-    //   console.log(tempAI)
-    //   if((tempAI?.length === 1) && (energyAI?.length === 1) && (inputAI?.length === 1) && (outputAI?.length === 1)){
-    //     node.setIncrements(inputAI[0].AUTO_INCREMENT, outputAI[0].AUTO_INCREMENT, tempAI[0].AUTO_INCREMENT, energyAI[0].AUTO_INCREMENT)
-    //   }else{
-    //     this.log(`Error getting auto increments`)
-    //   }
-    // }
-
-    // Set a monthly timer to create tables for the following years if the month>=11
-    // this.tablesInterval = setInterval(async () => {
-    //   await this.checkTablesForNodes(false);
-    // }, Main.TABLES_INTERVAL);
-
     this.log(`Loaded ${this.selector.nodeAttachments.length} nodes.`);
-
     return true;
   }
-
-  /**
-   * Create tables for temperatures.
-   * @param current Whether to create a table for the current year.
-   * @returns False if a table could not be created.
-   * @deprecated
-   */
-  // private async checkTablesForNodes(current: boolean): Promise<boolean> {
-  //   // Get year, month
-  //   const year = useful.getYear();
-  //   const month = useful.getMonth();
-  //   if (!month || !year) {
-  //     this.log("ERROR: Could not get the month or year.");
-  //     return false;
-  //   }
-  //   for (const node of this.selector.nodeAttachments) {
-  //     if (!(await BaseAttach._checkTablesStatic(node.controllerID, month, year, current))) {
-  //       this.log(`ERROR Could not create temperature table for node ID ${node.controllerID}`);
-  //       return false;
-  //     }
-  //   }
-  //   return true;
-  // }
 
   /**
    * Read nodes from database, cancel current keys that are related to controllers
@@ -921,36 +820,6 @@ export class Main {
   }
 
   /**
-   * Only active cameras are selected. The cameras are selected from all the
-   * active nodes.
-   */
-  private async loadActiveCameras() {
-    this.log("Starting cameras detection...");
-    const nodesOptional = await executeQuery<db2.GeneralNumber[]>(queries.nodeSelectForCameraCheck);
-    if (!nodesOptional) {
-      this.log("Error reading nodes for cameras check.");
-      return;
-    }
-    for (const node of nodesOptional) {
-      const nodeID = node.entero;
-      const camerasData = await executeQuery<db2.CameraForDetection[]>(util.format(queries.cameraSelectForConnection, BaseAttach.getNodeDBName(nodeID)));
-      if (!camerasData) {
-        this.log(`Error getting cameras for node ID = ${nodeID}`);
-        return;
-      }
-      for (const camera of camerasData) {
-        this.cameras.push(new Camera(camera.cmr_id, nodeID, camera.ip));
-      }
-    }
-    this.log(`Cameras found: ${this.cameras.length}`);
-
-    // Set initial states
-    for (const cam of this.cameras) {
-      executeQuery(BaseAttach.formatQueryWithNode(queries.insertCameraState, cam.nodeID), [cam.cameraID, useful.getCurrentDate(), Mortal.DEFAULT_INITIAL_STATE]);
-    }
-  }
-
-  /**
    * Start a thread that, if there are pending tickets, periodically checks if a
    * controller can accept a ticket. If a controller has space for tickets and
    * there are tickets pending for that controller, the ticket is send and removed
@@ -1035,49 +904,69 @@ export class Main {
     }, Main.TICKET_CHECK_PERIOD);
   }
 
-  private startCamerasCheck = async () => {
-    for (const cam of this.cameras) {
-      try {
-        // Send ping or try to reach address
-        if (Main.isWindows) {
-          cp.exec(`ping ${cam.cameraIP} -n 1`, { timeout: Main.ALIVE_CAMERA_REACH_TIMEOUT_MS }, (error, stdout, stderror) => {
-            if (error) {
-              // this.log(`Error sending ping to ${cam.cameraIP}. Code ${error.code}`);
-              // this.log(`Error output\n ${stderror}\nStdout\n${stdout}`)
-            } else {
-              const res = stdout.includes("TTL");
-              // this.log(`Output\n${ res}`);
-              if (res) {
-                cam.setAlive();
-              }
-            }
-          });
-        } else {
-          this.log(`Ping only implemented for Windows`);
-        }
+  private async registerCameraEvent(state:boolean, camera:CameraToCheck){
+    await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.insertCameraState, camera.nodeID), [camera.camara.cmr_id, useful.getCurrentDate(), state]);
+    await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.cameraSetNet, camera.nodeID), [state, camera.camara.cmr_id])
+    this.log(`Camera ID = ${camera.camara.cmr_id} in node ID = ${camera.nodeID} changed state to ACTIVO`);
+  }
 
-        cam.setState(!cam.isDead(Main.ALIVE_CAMERA_TIMEOUT));
-        const change = cam.getChange();
-        if (change !== Changes.NONE) {
-          this.log(`Camera ID = ${cam.cameraID} in node ID = ${cam.nodeID} changed state to ${change === Changes.TO_ACTIVE ? "ACTIVO" : "INACTIVO"}`);
-          await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.insertCameraState, cam.nodeID), [cam.cameraID, useful.getCurrentDate(), change === Changes.TO_ACTIVE]);
-          // Update instant state
-          const changeBool = change === Changes.TO_ACTIVE;
-          await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.cameraSetNet, cam.nodeID), [changeBool, cam.cameraID])
-          if (change === Changes.TO_ACTIVE) {
-            this.log(`Reconnecting camera ${cam.cameraIP}`);
-            // CameraMotionManager.reconnect(cam.cameraID, cam.nodeID);
-            NodoCameraMapManager.update(cam.nodeID,cam.cameraID,{conectado:1})
-          } else if (change === Changes.TO_INACTIVE) {
-            NodoCameraMapManager.update(cam.nodeID,cam.cameraID,{conectado:0})
-            // CameraMotionManager.deleteFfmpegProccess(cam.cameraID, cam.nodeID)
+  addDisconnectedCamera(nodeID:number, newCamera:Camara):boolean{
+    const alreadyPresent = this.cameras.some((e)=>nodeID == e.nodeID && newCamera.cmr_id == e.camara.cmr_id)
+    if(!alreadyPresent && newCamera.conectado === 0 && newCamera.activo === 1){
+      this.cameras.push(new CameraToCheck(nodeID, newCamera))
+      this.log(`Camera aded to check connection. Node ID ${nodeID}, camera ID ${newCamera.cmr_id}`)
+      return true
+    }else{
+      this.log(`Camera already present. Node ID ${nodeID}, camera ID ${newCamera.cmr_id}`)
+    }
+    return false
+  }
+
+  private startCamerasCheck = async () => {
+    const tempCams = this.cameras.slice()
+    for (let i = 0; i<tempCams.length; i++) {
+      const tempCamera = this.cameras[i]
+
+      // Check in camera
+      if(!tempCamera.checkedIn){
+        await this.registerCameraEvent(false, tempCamera)
+        tempCamera.checkedIn = true
+      }
+
+      // Remove inactive camera
+      if(tempCamera.camara.activo === 0){
+        this.cameras.splice(i,1)
+      }
+
+      // Try to reach
+      else if(tempCamera.camara.conectado === 0){
+        try {
+          // Send ping or try to reach address
+          if (Main.isWindows) {
+            cp.exec(`ping ${tempCamera.camara.ip} -n 1`, { timeout: Main.ALIVE_CAMERA_REACH_TIMEOUT_MS }, async (error, stdout, stderror) => {
+              if (error) {
+                // this.log(`Error sending ping to ${cam.cameraIP}. Code ${error.code}`);
+                // this.log(`Error output\n ${stderror}\nStdout\n${stdout}`)
+              } else {
+                const res = stdout.includes("TTL");
+                // this.log(`Output\n${ res}`);
+                if (res) {
+                  // cam.setAlive();
+                  await this.registerCameraEvent(true, tempCamera)
+                  NodoCameraMapManager.update(tempCamera.nodeID, tempCamera.camara.cmr_id, {conectado:1})
+                  this.cameras.splice(i,1)
+                }
+              }
+            });
+          } else {
+            this.log(`Ping only implemented for Windows`);
           }
-        }
-        cam.errorNotified = false;
-      } catch (e) {
-        if (!cam.errorNotified) {
-          this.log(`Error trying to rach camera ID = ${cam.cameraID}. ${e}`);
-          cam.errorNotified = true;
+          tempCamera.errorNotified = false;
+        } catch (e) {
+          if (!tempCamera.errorNotified) {
+            this.log(`Error trying to rach camera ID = ${tempCamera.camara.cmr_id}. ${e}`);
+            tempCamera.errorNotified = true;
+          }
         }
       }
     }
@@ -1103,6 +992,7 @@ export class Main {
           BaseAttach.simpleReconnect(this.selector, node);
           await node.insertNet(false);
           node.printKeyCount(selector);
+          ManagerAttach.connectedManager?.addNodeState(false,node.controllerID)
         }
       }
     }

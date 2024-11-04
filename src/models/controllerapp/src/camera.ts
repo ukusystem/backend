@@ -1,5 +1,8 @@
 import {Mortal} from './mortal'
 
+/**
+ * @deprecated
+ */
 export class Camera extends Mortal {
   // #inetAddress = null;
 

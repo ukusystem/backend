@@ -1562,7 +1562,7 @@ export class NodeAttach extends BaseAttach {
     if (ManagerAttach.connectedManager) {
       ManagerAttach.connectedManager._addMirrorMessage(command, logOnSend);
     } else {
-      this._log(`Manager not connected. Can't mirror '${command}'.`);
+      // this._log(`Manager not connected. Can't mirror '${command}'.`);
     }
   }
 
@@ -1721,6 +1721,7 @@ export class NodeAttach extends BaseAttach {
           }
         }
       });
+      ManagerAttach.connectedManager?.addNodeState(true,this.controllerID)
     });
 
     controllerSocket.on("data", (data: Buffer) => {
@@ -2423,6 +2424,11 @@ export class ManagerAttach extends BaseAttach {
         break;
     }
     return true;
+  }
+
+  
+  addNodeState(state:boolean, nodeID:number){
+    this._addOne(new Message(codes.VALUE_NODE_STATE,0,[(state?codes.VALUE_CONNECTED:codes.VALUE_DISCONNECTED).toString(), nodeID.toString()]).setLogOnSend(true))
   }
 
   /**

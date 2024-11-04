@@ -240,6 +240,7 @@ export const VALUE_SECURITY_TICKET = 0x29B          // The security was programm
 export const VALUE_MOUNTING = 0x29C                 // The sd card in being mounted
 export const VALUE_SD_TECH = 0X29D                  // Set or get the SD state from the technician
 export const VALUE_SD_STATE = 0x29E                 // Get the complete sd state
+export const VALUE_NODE_STATE = 0x29F               // Notify the controller state to the technicians
 
 export const VALUE_SOCKET_CLOSED = 0x400 // Socket was closed
 export const VALUE_AUTHORIZED = 0x401 // Card authorized

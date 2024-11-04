@@ -34,14 +34,14 @@ CREATE TABLE `acceso` (
   `a_id` int NOT NULL AUTO_INCREMENT,
   `serie` bigint unsigned NOT NULL,
   `administrador` tinyint NOT NULL,
-  `co_id` int NOT NULL,
+  `p_id` int NOT NULL,
   `ea_id` int NOT NULL,
   `activo` tinyint NOT NULL,
   PRIMARY KEY (`a_id`),
-  KEY `fk_acceso_contrata_co_id_idx` (`co_id`),
   KEY `fk_acceso_equipoacceso_ea_id_idx` (`ea_id`) /*!80000 INVISIBLE */,
-  CONSTRAINT `fk_acceso_contrata_co_id` FOREIGN KEY (`co_id`) REFERENCES `contrata` (`co_id`),
-  CONSTRAINT `fk_acceso_equipoacceso_ea_id` FOREIGN KEY (`ea_id`) REFERENCES `equipoacceso` (`ea_id`) ON DELETE RESTRICT ON UPDATE RESTRICT
+  KEY `fk_acceso_personal_p_id_idx` (`p_id`),
+  CONSTRAINT `fk_acceso_equipoacceso_ea_id` FOREIGN KEY (`ea_id`) REFERENCES `equipoacceso` (`ea_id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT `fk_acceso_personal_p_id` FOREIGN KEY (`p_id`) REFERENCES `personal` (`p_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=101 DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -235,7 +235,7 @@ CREATE TABLE `equipoentrada` (
   `descripcion` varchar(100) NOT NULL,
   `activo` tinyint(1) NOT NULL,
   PRIMARY KEY (`ee_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -244,7 +244,7 @@ CREATE TABLE `equipoentrada` (
 
 LOCK TABLES `equipoentrada` WRITE;
 /*!40000 ALTER TABLE `equipoentrada` DISABLE KEYS */;
-INSERT INTO `equipoentrada` VALUES (1,'Detector de humo','D1',1),(2,'Detector de movimiento','D2',1),(3,'Detector de calor','D3',1),(4,'Detector de gas','D4',1),(5,'Detector de intrusión','D5',1),(6,'Detector de vibración','D6',1),(7,'Detector de agua','D7',1),(8,'Detector de luz','D8',1),(9,'Detector de sonido','D9',1),(10,'Detector de proximidad','D10',1),(11,'Boton','D11',1),(12,'Interruptor','D12',1);
+INSERT INTO `equipoentrada` VALUES (1,'General','D1',1),(2,'Detector de movimiento','D2',1),(3,'Detector de calor','D3',1),(4,'Detector de gas','D4',1),(5,'Detector de intrusión','D5',1),(6,'Detector de vibración','D6',1),(7,'Detector de agua','D7',1),(8,'Detector de luz','D8',1),(9,'Detector de sonido','D9',1),(10,'Detector de proximidad','D10',1),(11,'Boton','D11',1),(12,'Interruptor','D12',1),(13,'Contacto magnético','D13',1),(14,'Detector de rotura de vidrio','D14',1),(15,'Detector de humo','D15',1),(16,'Pulsador de incendio','D16',1);
 /*!40000 ALTER TABLE `equipoentrada` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -261,7 +261,7 @@ CREATE TABLE `equiposalida` (
   `descripcion` varchar(100) NOT NULL,
   `activo` tinyint(1) NOT NULL,
   PRIMARY KEY (`es_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -270,7 +270,7 @@ CREATE TABLE `equiposalida` (
 
 LOCK TABLES `equiposalida` WRITE;
 /*!40000 ALTER TABLE `equiposalida` DISABLE KEYS */;
-INSERT INTO `equiposalida` VALUES (1,'Acceso (Apertura de puerta)','A1',1),(2,'Iluminación (Control de luz)','A2',1),(3,'Ventilación (Aire acondicionado)','A3',1),(4,'Calefacción (Control de temperatura)','A4',1),(5,'Persianas (Control de apertura/cierre)','A5',1),(6,'Alarma (Activación/desactivación)','A6',1),(7,'Riego automático','A7',1),(8,'Audio (Control de altavoces)','A8',1),(9,'Video (Control de cámaras)','A9',1),(10,'Control de humedad','A10',1),(11,'Control de gas','A11',1),(12,'Control de agua','A12',1),(13,'Control de energía','A13',1),(14,'Control de movimiento','A14',1),(15,'Control de acceso','A15',1),(16,'Control de seguridad','A16',1),(17,'Control de emergencia','A17',1),(18,'Control de tráfico','A18',1),(19,'Control de elevadores','A19',1),(20,'Control de ascensores','A20',1),(21,'Alarma contra incendio','A21',1);
+INSERT INTO `equiposalida` VALUES (1,'General','A1',1),(2,'Iluminación (Control de luz)','A2',1),(3,'Ventilación (Aire acondicionado)','A3',1),(4,'Calefacción (Control de temperatura)','A4',1),(5,'Persianas (Control de apertura/cierre)','A5',1),(6,'Alarma (Activación/desactivación)','A6',1),(7,'Riego automático','A7',1),(8,'Audio (Control de altavoces)','A8',1),(9,'Video (Control de cámaras)','A9',1),(10,'Control de humedad','A10',1),(11,'Control de gas','A11',1),(12,'Control de agua','A12',1),(13,'Control de energía','A13',1),(14,'Control de movimiento','A14',1),(15,'Control de acceso','A15',1),(16,'Control de seguridad','A16',1),(17,'Control de emergencia','A17',1),(18,'Control de tráfico','A18',1),(19,'Control de elevadores','A19',1),(20,'Control de ascensores','A20',1),(21,'Alarma contra incendio','A21',1),(22,'Acceso (Apertura de puerta)','A22',1);
 /*!40000 ALTER TABLE `equiposalida` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -830,8 +830,8 @@ CREATE TABLE `registroacceso` (
   `administrador` tinyint NOT NULL,
   `autorizacion` tinyint NOT NULL,
   `fecha` timestamp NOT NULL,
-  `co_id` int NOT NULL COMMENT 'Esta columna y ''ea_id'' ya no están relacionados porque se debe poder registrar tarjetas que no necesariamente están en ''general''.''acceso''. En esos casos, estas columnas tendrán valor 0.',
-  `ea_id` int NOT NULL COMMENT 'Ver la descripción de la columna ''co_id''.',
+  `p_id` int NOT NULL COMMENT 'Esta columna y ''ea_id'' ya no están relacionados porque se debe poder registrar tarjetas que no necesariamente están en ''general''.''acceso''. En esos casos, estas columnas tendrán valor 0.',
+  `ea_id` int NOT NULL COMMENT 'Ver la descripción de la columna ''p_id''.',
   `tipo` tinyint NOT NULL,
   `sn_id` int NOT NULL,
   PRIMARY KEY (`ra_id`),
@@ -1204,4 +1204,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-09-27 17:09:12
+-- Dump completed on 2024-11-04 12:14:22

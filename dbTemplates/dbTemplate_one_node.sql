@@ -34,14 +34,14 @@ CREATE TABLE `acceso` (
   `a_id` int NOT NULL AUTO_INCREMENT,
   `serie` bigint unsigned NOT NULL,
   `administrador` tinyint NOT NULL,
-  `co_id` int NOT NULL,
+  `p_id` int NOT NULL,
   `ea_id` int NOT NULL,
   `activo` tinyint NOT NULL,
   PRIMARY KEY (`a_id`),
-  KEY `fk_acceso_contrata_co_id_idx` (`co_id`),
   KEY `fk_acceso_equipoacceso_ea_id_idx` (`ea_id`) /*!80000 INVISIBLE */,
-  CONSTRAINT `fk_acceso_contrata_co_id` FOREIGN KEY (`co_id`) REFERENCES `contrata` (`co_id`),
-  CONSTRAINT `fk_acceso_equipoacceso_ea_id` FOREIGN KEY (`ea_id`) REFERENCES `equipoacceso` (`ea_id`) ON DELETE RESTRICT ON UPDATE RESTRICT
+  KEY `fk_acceso_personal_p_id_idx` (`p_id`),
+  CONSTRAINT `fk_acceso_equipoacceso_ea_id` FOREIGN KEY (`ea_id`) REFERENCES `equipoacceso` (`ea_id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
+  CONSTRAINT `fk_acceso_personal_p_id` FOREIGN KEY (`p_id`) REFERENCES `personal` (`p_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=101 DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -51,7 +51,7 @@ CREATE TABLE `acceso` (
 
 LOCK TABLES `acceso` WRITE;
 /*!40000 ALTER TABLE `acceso` DISABLE KEYS */;
-INSERT INTO `acceso` VALUES (1,1,0,1,1,0),(2,1,0,1,1,0),(3,1,0,1,1,0),(4,1,0,1,1,0),(5,1,0,1,1,0),(6,1,0,1,1,0),(7,1,0,1,1,0),(8,1,0,1,1,0),(9,1,0,1,1,0),(10,1,0,1,1,0),(11,1,0,1,1,0),(12,1,0,1,1,0),(13,1,0,1,1,0),(14,1,0,1,1,0),(15,1,0,1,1,0),(16,1,0,1,1,0),(17,1,0,1,1,0),(18,1,0,1,1,0),(19,1,0,1,1,0),(20,1,0,1,1,0),(21,1,0,1,1,0),(22,1,0,1,1,0),(23,1,0,1,1,0),(24,1,0,1,1,0),(25,1,0,1,1,0),(26,1,0,1,1,0),(27,1,0,1,1,0),(28,1,0,1,1,0),(29,1,0,1,1,0),(30,1,0,1,1,0),(31,1,0,1,1,0),(32,1,0,1,1,0),(33,1,0,1,1,0),(34,1,0,1,1,0),(35,1,0,1,1,0),(36,1,0,1,1,0),(37,1,0,1,1,0),(38,1,0,1,1,0),(39,1,0,1,1,0),(40,1,0,1,1,0),(41,1,0,1,1,0),(42,1,0,1,1,0),(43,1,0,1,1,0),(44,1,0,1,1,0),(45,1,0,1,1,0),(46,1,0,1,1,0),(47,1,0,1,1,0),(48,1,0,1,1,0),(49,1,0,1,1,0),(50,1,0,1,1,0),(51,1,0,1,1,0),(52,1,0,1,1,0),(53,1,0,1,1,0),(54,1,0,1,1,0),(55,1,0,1,1,0),(56,1,0,1,1,0),(57,1,0,1,1,0),(58,1,0,1,1,0),(59,1,0,1,1,0),(60,1,0,1,1,0),(61,1,0,1,1,0),(62,1,0,1,1,0),(63,1,0,1,1,0),(64,1,0,1,1,0),(65,1,0,1,1,0),(66,1,0,1,1,0),(67,1,0,1,1,0),(68,1,0,1,1,0),(69,1,0,1,1,0),(70,1,0,1,1,0),(71,1,0,1,1,0),(72,1,0,1,1,0),(73,1,0,1,1,0),(74,1,0,1,1,0),(75,1,0,1,1,0),(76,1,0,1,1,0),(77,1,0,1,1,0),(78,1,0,1,1,0),(79,1,0,1,1,0),(80,1,0,1,1,0),(81,1,0,1,1,0),(82,1,0,1,1,0),(83,1,0,1,1,0),(84,1,0,1,1,0),(85,1,0,1,1,0),(86,1,0,1,1,0),(87,1,0,1,1,0),(88,1,0,1,1,0),(89,1,0,1,1,0),(90,1,0,1,1,0),(91,1,0,1,1,0),(92,1,0,1,1,0),(93,1,0,1,1,0),(94,1,0,1,1,0),(95,1,0,1,1,0),(96,1,0,1,1,0),(97,1,0,1,1,0),(98,1,0,1,1,0),(99,1,0,1,1,0),(100,1,0,1,1,0);
+INSERT INTO `acceso` VALUES (1,10134776,0,1,1,1),(2,9183763,1,2,1,2),(3,10080853,0,3,1,3),(4,9673362,0,4,1,4),(5,9672827,0,5,1,5),(6,1,0,1,1,0),(7,1,0,1,1,0),(8,1,0,1,1,0),(9,1,0,1,1,0),(10,1,0,1,1,0),(11,1,0,1,1,0),(12,1,0,1,1,0),(13,1,0,1,1,0),(14,1,0,1,1,0),(15,1,0,1,1,0),(16,1,0,1,1,0),(17,1,0,1,1,0),(18,1,0,1,1,0),(19,1,0,1,1,0),(20,1,0,1,1,0),(21,1,0,1,1,0),(22,1,0,1,1,0),(23,1,0,1,1,0),(24,1,0,1,1,0),(25,1,0,1,1,0),(26,1,0,1,1,0),(27,1,0,1,1,0),(28,1,0,1,1,0),(29,1,0,1,1,0),(30,1,0,1,1,0),(31,1,0,1,1,0),(32,1,0,1,1,0),(33,1,0,1,1,0),(34,1,0,1,1,0),(35,1,0,1,1,0),(36,1,0,1,1,0),(37,1,0,1,1,0),(38,1,0,1,1,0),(39,1,0,1,1,0),(40,1,0,1,1,0),(41,1,0,1,1,0),(42,1,0,1,1,0),(43,1,0,1,1,0),(44,1,0,1,1,0),(45,1,0,1,1,0),(46,1,0,1,1,0),(47,1,0,1,1,0),(48,1,0,1,1,0),(49,1,0,1,1,0),(50,1,0,1,1,0),(51,1,0,1,1,0),(52,1,0,1,1,0),(53,1,0,1,1,0),(54,1,0,1,1,0),(55,1,0,1,1,0),(56,1,0,1,1,0),(57,1,0,1,1,0),(58,1,0,1,1,0),(59,1,0,1,1,0),(60,1,0,1,1,0),(61,1,0,1,1,0),(62,1,0,1,1,0),(63,1,0,1,1,0),(64,1,0,1,1,0),(65,1,0,1,1,0),(66,1,0,1,1,0),(67,1,0,1,1,0),(68,1,0,1,1,0),(69,1,0,1,1,0),(70,1,0,1,1,0),(71,1,0,1,1,0),(72,1,0,1,1,0),(73,1,0,1,1,0),(74,1,0,1,1,0),(75,1,0,1,1,0),(76,1,0,1,1,0),(77,1,0,1,1,0),(78,1,0,1,1,0),(79,1,0,1,1,0),(80,1,0,1,1,0),(81,1,0,1,1,0),(82,1,0,1,1,0),(83,1,0,1,1,0),(84,1,0,1,1,0),(85,1,0,1,1,0),(86,1,0,1,1,0),(87,1,0,1,1,0),(88,1,0,1,1,0),(89,1,0,1,1,0),(90,1,0,1,1,0),(91,1,0,1,1,0),(92,1,0,1,1,0),(93,1,0,1,1,0),(94,1,0,1,1,0),(95,1,0,1,1,0),(96,1,0,1,1,0),(97,1,0,1,1,0),(98,1,0,1,1,0),(99,1,0,1,1,0),(100,1,0,1,1,0);
 /*!40000 ALTER TABLE `acceso` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -120,7 +120,7 @@ CREATE TABLE `contrata` (
   PRIMARY KEY (`co_id`),
   KEY `fk_contrata_rubro_r_id_idx` (`r_id`),
   CONSTRAINT `fk_contrata_rubro_r_id` FOREIGN KEY (`r_id`) REFERENCES `rubro` (`r_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -129,7 +129,7 @@ CREATE TABLE `contrata` (
 
 LOCK TABLES `contrata` WRITE;
 /*!40000 ALTER TABLE `contrata` DISABLE KEYS */;
-INSERT INTO `contrata` VALUES (1,'Contrata A',1,'Descripción',1);
+INSERT INTO `contrata` VALUES (1,'Contrata A',1,'Descripción',1),(2,'Contrata B',2,'Descripción',1),(3,'Contrata C',3,'Descripción',1),(4,'Contrata D',4,'Descripción',1),(5,'Contrata E',5,'Descripción',1);
 /*!40000 ALTER TABLE `contrata` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -236,7 +236,7 @@ CREATE TABLE `equipoentrada` (
   `descripcion` varchar(100) NOT NULL,
   `activo` tinyint(1) NOT NULL,
   PRIMARY KEY (`ee_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -245,7 +245,7 @@ CREATE TABLE `equipoentrada` (
 
 LOCK TABLES `equipoentrada` WRITE;
 /*!40000 ALTER TABLE `equipoentrada` DISABLE KEYS */;
-INSERT INTO `equipoentrada` VALUES (1,'Detector de humo','D1',1),(2,'Detector de movimiento','D2',1),(3,'Detector de calor','D3',1),(4,'Detector de gas','D4',1),(5,'Detector de intrusión','D5',1),(6,'Detector de vibración','D6',1),(7,'Detector de agua','D7',1),(8,'Detector de luz','D8',1),(9,'Detector de sonido','D9',1),(10,'Detector de proximidad','D10',1),(11,'Boton','D11',1),(12,'Interruptor','D12',1);
+INSERT INTO `equipoentrada` VALUES (1,'General','D1',1),(2,'Detector de movimiento','D2',1),(3,'Detector de calor','D3',1),(4,'Detector de gas','D4',1),(5,'Detector de intrusión','D5',1),(6,'Detector de vibración','D6',1),(7,'Detector de agua','D7',1),(8,'Detector de luz','D8',1),(9,'Detector de sonido','D9',1),(10,'Detector de proximidad','D10',1),(11,'Boton','D11',1),(12,'Interruptor','D12',1),(13,'Contacto magnético','D13',1),(14,'Detector de rotura de vidrio','D14',1),(15,'Detector de humo','D15',1),(16,'Pulsador de incendio','D16',1);
 /*!40000 ALTER TABLE `equipoentrada` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -262,7 +262,7 @@ CREATE TABLE `equiposalida` (
   `descripcion` varchar(100) NOT NULL,
   `activo` tinyint(1) NOT NULL,
   PRIMARY KEY (`es_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=22 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -271,7 +271,7 @@ CREATE TABLE `equiposalida` (
 
 LOCK TABLES `equiposalida` WRITE;
 /*!40000 ALTER TABLE `equiposalida` DISABLE KEYS */;
-INSERT INTO `equiposalida` VALUES (1,'Acceso (Apertura de puerta)','A1',1),(2,'Iluminación (Control de luz)','A2',1),(3,'Ventilación (Aire acondicionado)','A3',1),(4,'Calefacción (Control de temperatura)','A4',1),(5,'Persianas (Control de apertura/cierre)','A5',1),(6,'Alarma (Activación/desactivación)','A6',1),(7,'Riego automático','A7',1),(8,'Audio (Control de altavoces)','A8',1),(9,'Video (Control de cámaras)','A9',1),(10,'Control de humedad','A10',1),(11,'Control de gas','A11',1),(12,'Control de agua','A12',1),(13,'Control de energía','A13',1),(14,'Control de movimiento','A14',1),(15,'Control de acceso','A15',1),(16,'Control de seguridad','A16',1),(17,'Control de emergencia','A17',1),(18,'Control de tráfico','A18',1),(19,'Control de elevadores','A19',1),(20,'Control de ascensores','A20',1),(21,'Alarma contra incendio','A21',1);
+INSERT INTO `equiposalida` VALUES (1,'General','A1',1),(2,'Iluminación (Control de luz)','A2',1),(3,'Ventilación (Aire acondicionado)','A3',1),(4,'Calefacción (Control de temperatura)','A4',1),(5,'Persianas (Control de apertura/cierre)','A5',1),(6,'Alarma (Activación/desactivación)','A6',1),(7,'Riego automático','A7',1),(8,'Audio (Control de altavoces)','A8',1),(9,'Video (Control de cámaras)','A9',1),(10,'Control de humedad','A10',1),(11,'Control de gas','A11',1),(12,'Control de agua','A12',1),(13,'Control de energía','A13',1),(14,'Control de movimiento','A14',1),(15,'Control de acceso','A15',1),(16,'Control de seguridad','A16',1),(17,'Control de emergencia','A17',1),(18,'Control de tráfico','A18',1),(19,'Control de elevadores','A19',1),(20,'Control de ascensores','A20',1),(21,'Alarma contra incendio','A21',1),(22,'Acceso (Apertura de puerta)','A22',1);
 /*!40000 ALTER TABLE `equiposalida` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -346,7 +346,7 @@ CREATE TABLE `personal` (
   KEY `fk_personal_cargo_c_id_idx` (`c_id`),
   CONSTRAINT `fk_personal_cargo_c_id` FOREIGN KEY (`c_id`) REFERENCES `cargo` (`c_id`),
   CONSTRAINT `fk_personal_contrata_co_id` FOREIGN KEY (`co_id`) REFERENCES `contrata` (`co_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -355,7 +355,7 @@ CREATE TABLE `personal` (
 
 LOCK TABLES `personal` WRITE;
 /*!40000 ALTER TABLE `personal` DISABLE KEYS */;
-INSERT INTO `personal` VALUES (1,'Nombre','Apellido','98765432123513523614','123456782342',1,1,'photos/registered/foto1.png','user@gmail.com',1);
+INSERT INTO `personal` VALUES (1,'Miguel','Ortíz Carhuapoma','987654321','87654321',1,1,'photos/registered/foto1.png','user1@gmail.com',1),(2,'Hans','Gutiérrez Dávila','987654322','87654322',2,2,'photos/registered\\foto2.png','user2@gmail.com',1),(3,'Antony','Jaramillo Aranda','987654323','87654323',3,3,'photos/registered\\foto3.png','user3@gmail.com',1),(4,'Evelyn','De la cruz Vargas','987654324','87654324',4,4,'photos/registered\\foto4.png','user4@gmail.com',1),(5,'Darlyn','Narciso x2','987654325','87654325',5,5,'photos/registered\\foto5.png','user5@gmail.com',1);
 /*!40000 ALTER TABLE `personal` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -428,7 +428,7 @@ CREATE TABLE `registrored` (
   PRIMARY KEY (`rr_id`),
   KEY `fk_registrored_controlador_co_id_idx` (`ctrl_id`),
   CONSTRAINT `fk_registrored_controlador_co_id` FOREIGN KEY (`ctrl_id`) REFERENCES `controlador` (`ctrl_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -437,6 +437,7 @@ CREATE TABLE `registrored` (
 
 LOCK TABLES `registrored` WRITE;
 /*!40000 ALTER TABLE `registrored` DISABLE KEYS */;
+INSERT INTO `registrored` VALUES (1,1,'2024-11-04 17:38:30',0);
 /*!40000 ALTER TABLE `registrored` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -585,7 +586,7 @@ CREATE TABLE `usuario` (
   KEY `fk_usuario_personal_p_id_idx` (`p_id`),
   CONSTRAINT `fk_usuario_personal_p_id` FOREIGN KEY (`p_id`) REFERENCES `personal` (`p_id`),
   CONSTRAINT `fk_usuario_rol_rl_id` FOREIGN KEY (`rl_id`) REFERENCES `rol` (`rl_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -594,7 +595,7 @@ CREATE TABLE `usuario` (
 
 LOCK TABLES `usuario` WRITE;
 /*!40000 ALTER TABLE `usuario` DISABLE KEYS */;
-INSERT INTO `usuario` VALUES (1,'admin','$2a$12$WWEt2QddX66H7DWQc/3MAe4.ObsbliHdIDMU0QKWuTPJMh59K01eC',5,'2024-01-01 05:00:00',1,1);
+INSERT INTO `usuario` VALUES (1,'admin','$2a$12$WWEt2QddX66H7DWQc/3MAe4.ObsbliHdIDMU0QKWuTPJMh59K01eC',5,'2024-01-01 05:00:00',2,1),(2,'user1','$2b$12$Yh8YiejMzTeEth8qURTwbu1LjRgaEplpTvjCntWC9J7/N9/EnRwGq',1,'2024-01-01 05:00:01',1,1),(3,'user2','$2b$12$MKW9ztNAVSP6cal68HmQ3uA4J2wlOng.8JJSlaw9pg8xLLNS5hXzm',1,'2024-01-01 05:00:02',3,1);
 /*!40000 ALTER TABLE `usuario` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -831,8 +832,8 @@ CREATE TABLE `registroacceso` (
   `administrador` tinyint NOT NULL,
   `autorizacion` tinyint NOT NULL,
   `fecha` timestamp NOT NULL,
-  `co_id` int NOT NULL COMMENT 'Esta columna y ''ea_id'' ya no están relacionados porque se debe poder registrar tarjetas que no necesariamente están en ''general''.''acceso''. En esos casos, estas columnas tendrán valor 0.',
-  `ea_id` int NOT NULL COMMENT 'Ver la descripción de la columna ''co_id''.',
+  `p_id` int NOT NULL COMMENT 'Esta columna y ''ea_id'' ya no están relacionados porque se debe poder registrar tarjetas que no necesariamente están en ''general''.''acceso''. En esos casos, estas columnas tendrán valor 0.',
+  `ea_id` int NOT NULL COMMENT 'Ver la descripción de la columna ''p_id''.',
   `tipo` tinyint NOT NULL,
   `sn_id` int NOT NULL,
   PRIMARY KEY (`ra_id`),
@@ -1228,7 +1229,7 @@ CREATE TABLE `actividadpersonal` (
   CONSTRAINT `fk_actividadpersonal_cargo_c_id` FOREIGN KEY (`c_id`) REFERENCES `general`.`cargo` (`c_id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `fk_actividadpersonal_contrata_co_id` FOREIGN KEY (`co_id`) REFERENCES `general`.`contrata` (`co_id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `fk_actividadpersonal_registroticket_rt_id` FOREIGN KEY (`rt_id`) REFERENCES `registroticket` (`rt_id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1237,6 +1238,7 @@ CREATE TABLE `actividadpersonal` (
 
 LOCK TABLES `actividadpersonal` WRITE;
 /*!40000 ALTER TABLE `actividadpersonal` DISABLE KEYS */;
+INSERT INTO `actividadpersonal` VALUES (1,'Antony','Jaramillo Aranda','987654323','87654323',3,3,1,'photos/registered/foto3.png');
 /*!40000 ALTER TABLE `actividadpersonal` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1295,7 +1297,7 @@ CREATE TABLE `camara` (
   KEY `fk_camara_marca_m_id_idx` (`m_id`),
   CONSTRAINT `fk_camara_marca_m_id` FOREIGN KEY (`m_id`) REFERENCES `general`.`marca` (`m_id`),
   CONSTRAINT `fk_camara_tipocamara_tc_id` FOREIGN KEY (`tc_id`) REFERENCES `general`.`tipocamara` (`tc_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=12 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=13 DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1304,7 +1306,7 @@ CREATE TABLE `camara` (
 
 LOCK TABLES `camara` WRITE;
 /*!40000 ALTER TABLE `camara` DISABLE KEYS */;
-INSERT INTO `camara` VALUES (1,'CAM1',1,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.100',55443,'Cámara 1',55430,'255.255.0.0','172.16.0.1',0,0),(2,'CAM2',1,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.101',55443,'Exterior',55431,'255.255.0.0','172.16.0.1',1,1),(3,'CAM3',1,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.102',55443,'Puerta',55432,'255.255.0.0','172.16.0.1',1,1),(4,'CAM4',3,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.103',55443,'Garaje',55433,'255.255.0.0','172.16.0.1',1,1),(5,'CAM5',3,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.104',55443,'Kitchen',55434,'255.255.0.0','172.16.0.1',1,1),(6,'CAM6',3,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.105',55443,'Desarrollo',55435,'255.255.0.0','172.16.0.1',1,1),(7,'CAM7',3,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.106',55443,'Comedor',55436,'255.255.0.0','172.16.0.1',1,1),(8,'CAM8',1,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.107',55443,'Primer piso - Reuniones',55437,'255.255.0.0','172.16.0.1',1,1),(9,'CAM9',1,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.108',55443,'Cámara 9',55438,'255.255.0.0','172.16.0.1',0,0),(10,'CAM10',1,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.109',55443,'Primer piso - interior',55439,'255.255.0.0','172.16.0.1',1,1),(11,'CAM11',1,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.110',55443,'Cámara 11',55440,'255.255.0.0','172.16.0.1',0,0);
+INSERT INTO `camara` VALUES (1,'CAM1',1,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.100',55443,'Cámara 1',55430,'255.255.0.0','172.16.0.1',0,0),(2,'CAM2',1,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.101',55443,'Exterior',55431,'255.255.0.0','172.16.0.1',1,1),(3,'CAM3',1,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.102',55443,'Puerta',55432,'255.255.0.0','172.16.0.1',1,1),(4,'CAM4',3,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.103',55443,'Garaje',55433,'255.255.0.0','172.16.0.1',1,1),(5,'CAM5',3,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.104',55443,'Kitchen',55434,'255.255.0.0','172.16.0.1',1,1),(6,'CAM6',3,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.105',55443,'Desarrollo',55435,'255.255.0.0','172.16.0.1',1,1),(7,'CAM7',3,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.106',55443,'Comedor',55436,'255.255.0.0','172.16.0.1',1,1),(8,'CAM8',1,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.107',55443,'Primer piso - Reuniones',55437,'255.255.0.0','172.16.0.1',1,1),(9,'CAM9',1,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.108',55443,'Cámara 9',55438,'255.255.0.0','172.16.0.1',0,0),(10,'CAM10',1,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.109',55443,'Primer piso - interior',55439,'255.255.0.0','172.16.0.1',1,1),(11,'CAM11',1,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.110',55443,'Cámara 11',55440,'255.255.0.0','172.16.0.1',0,0),(12,'CAM12',3,1,'admin','+fHL53d9GKUS842X7U+hlA==','172.16.4.113',55443,'Cámara exterior PTZ',55440,'255.255.0.0','172.16.0.1',1,1);
 /*!40000 ALTER TABLE `camara` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1430,8 +1432,8 @@ CREATE TABLE `registroacceso` (
   `administrador` tinyint NOT NULL,
   `autorizacion` tinyint NOT NULL,
   `fecha` timestamp NOT NULL,
-  `co_id` int NOT NULL COMMENT 'Esta columna y ''ea_id'' ya no están relacionados porque se debe poder registrar tarjetas que no necesariamente están en ''general''.''acceso''. En esos casos, estas columnas tendrán valor 0.',
-  `ea_id` int NOT NULL COMMENT 'Ver la descripción de la columna ''co_id''.',
+  `p_id` int NOT NULL COMMENT 'Esta columna y ''ea_id'' ya no están relacionados porque se debe poder registrar tarjetas que no necesariamente están en ''general''.''acceso''. En esos casos, estas columnas tendrán valor 0.',
+  `ea_id` int NOT NULL COMMENT 'Ver la descripción de la columna ''p_id''.',
   `tipo` tinyint NOT NULL,
   `sn_id` int NOT NULL,
   PRIMARY KEY (`ra_id`),
@@ -1733,7 +1735,7 @@ CREATE TABLE `registroticket` (
   CONSTRAINT `fk_registroticket_personal_p_id` FOREIGN KEY (`p_id`) REFERENCES `general`.`personal` (`p_id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `fk_registroticket_subnodo_sn_id` FOREIGN KEY (`sn_id`) REFERENCES `subnodo` (`sn_id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `fk_registroticket_tipotrabajo_tt_id` FOREIGN KEY (`tt_id`) REFERENCES `general`.`tipotrabajo` (`tt_id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1742,6 +1744,7 @@ CREATE TABLE `registroticket` (
 
 LOCK TABLES `registroticket` WRITE;
 /*!40000 ALTER TABLE `registroticket` DISABLE KEYS */;
+INSERT INTO `registroticket` VALUES (1,'876145625','asd@asd','qwde','2024-11-04 17:50:00','2024-11-04 23:50:00',2,'2024-11-04 17:45:37','2024-11-04 17:45:30',3,3,2,1,0,3,0);
 /*!40000 ALTER TABLE `registroticket` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1804,4 +1807,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-09-27 16:58:50
+-- Dump completed on 2024-11-04 12:46:37

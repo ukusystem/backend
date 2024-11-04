@@ -3,6 +3,7 @@ import { Main } from "./src/main";
 import { FinishTicket } from "./src/finishTicket";
 import { PinOrder } from "./src/types";
 import { RequestResult } from "./src/requestResult";
+import { Camara } from "../../types/db";
 
 let mainService:Main|null = null
 
@@ -26,4 +27,8 @@ export async function onOrder(pinOrder: PinOrder) {
 
 export async function sendSecurity(controllerID:number, security:boolean):Promise<RequestResult|undefined> {
   return await mainService?.sendSecurity(controllerID, security);
+}
+
+export function notifyCamDisconnect(nodeID:number, camera:Camara){
+  mainService?.addDisconnectedCamera(nodeID, camera);
 }
