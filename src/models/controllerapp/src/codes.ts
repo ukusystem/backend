@@ -526,3 +526,8 @@ export const CMD_TICKET_END = 0x619
  * Used to send the power levels measured by the PZEM-004T
  */
 export const CMD_POWER = 0x61a
+
+/**
+ * Request a keepalive
+ */
+export const CMD_KEEP_ALIVE_REQUEST = 0x61B

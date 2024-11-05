@@ -99,6 +99,10 @@ export class BaseAttach extends Mortal {
     this._logger = logger;
   }
 
+  isBufferEmpty():boolean{
+    return this.sendBuffer.length < 1
+  }
+
   /**
    * Append a part to the end of a message separating it properly with {@linkcode code.SEP_CMD}
    * @param message Original message
@@ -147,6 +151,7 @@ export class BaseAttach extends Mortal {
    * @param selector
    */
   sendOne(selector: Selector) {
+
     // Try send
     if (this.previousMessageSent && this.sendBuffer.length > 0 && Selector.isChannelConnected(this._currentSocket)) {
       try {
@@ -158,7 +163,7 @@ export class BaseAttach extends Mortal {
             this.previousMessageSent = true;
           });
           if (first.logOnSend) {
-            this._log(`Sent '${useful.trimString(first.message)}'`);
+            // this._log(`Sent '${useful.trimString(first.message)}'`);
           }
           this.addPendingMessage(first);
           this.sendBuffer.shift();
@@ -388,7 +393,7 @@ export class BaseAttach extends Mortal {
       const finished = this.pendingMessages.get(id);
       if (finished && this.pendingMessages.delete(id)) {
         if (logFinish && finished.logOnResponse) {
-          this._log(`Message ${id} ended with code ${useful.toHex(code)}.`);
+          // this._log(`Message ${id} ended with code ${useful.toHex(code)}.`);
         }
         if (finished.action && execute) {
           finished.action(code);
@@ -478,7 +483,7 @@ export class BaseAttach extends Mortal {
    * @returns True if the operation was successful, false otherwise.
    */
   async _saveItemGeneral(name: string, parameters: any[], query: string, id: number, nodeID: number): Promise<boolean> {
-    this._log(`Saved: ${name}`);
+    // this._log(`Saved: ${name}`);
     if (await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(query, nodeID), parameters)) {
       this._addResponse(id, codes.AIO_OK);
       return true;
@@ -646,25 +651,6 @@ export class BaseAttach extends Mortal {
 
   _notifyCard(serie: number, admin: number, authorized: number, date: string, p_id: number, ea_id: number, type: number, ctrl_id: number) {
     this._log("Notifying web about card.");
-    // const newEntry = new sm.RegistroAccesoSocketBad({
-    //   // ra_id: 1, // No va
-    //   serie: serie,
-    //   administrador: admin,
-    //   autorizacion: authorized ? 1 : 0,
-    //   fecha: date,
-    //   co_id: co_id, // Can be 0 or positive
-    //   ea_id: ea_id,
-    //   tipo: type,
-    //   sn_id: 1,
-    //   // contrata: DEF_TXT, // No va
-    //   ctrl_id: ctrl_id,
-    // });
-    // sm.RegistroAccesoMap.add(newEntry);
-
-    // **********Utilizar**********
-    // const newEntry: sm.RegistroAccesoDTO = {...}
-    // sm.RegistroAccesoManager.add(ctrl_id,newEntry)
-    // **********Utilizar**********
 
     const newEntry: sm.RegistroAccesoDTO = {
       serie: serie,
@@ -676,6 +662,7 @@ export class BaseAttach extends Mortal {
       tipo: type,
       sn_id: 1,
     }
+
     sm.RegistroAccesoManager.add(ctrl_id, newEntry);
   }
 
@@ -921,7 +908,7 @@ export class BaseAttach extends Mortal {
   }
 
   printKeyCount(selector: Selector) {
-    this._log(`Attachs: Node ${selector.nodeAttachments.length} Manager ${selector.managerConnections.length}`);
+    // this._log(`Attachs: Node ${selector.nodeAttachments.length} Manager ${selector.managerConnections.length}`);
   }
 }
 
@@ -931,7 +918,8 @@ export class BaseAttach extends Mortal {
 export class NodeAttach extends BaseAttach {
 
   static ticketsMap = new Map<number, NodeTickets>()
-
+  
+  private static readonly ALIVE_REQUEST_INTERVAL = 3;
   /**
    * The controller sends temperature readings in a periodo of 3 seconds.
    * Saving the readings each minute gives
@@ -945,6 +933,7 @@ export class NodeAttach extends BaseAttach {
   private lastPowerStamp = 0;
 
   private unreached = false;
+
 
   /**
    * Complete data of the node edition. This holds the new controller's connection data while we wait a response from the controller.
@@ -1003,7 +992,7 @@ export class NodeAttach extends BaseAttach {
         for (const ticket of partialNode.tickets) {
           ticket.sent = false
         }
-        this._log(`Tickets for node marked as not sent`)
+        // this._log(`Tickets for node marked as not sent`)
       } else {
         this._log(`No tickets for node ID ${this.controllerID}`);
       }
@@ -1048,6 +1037,30 @@ export class NodeAttach extends BaseAttach {
       return (date = 10);
     }
     return date;
+  }
+
+  /**
+   * Check if there is need to request a kee alive. If there is, request it.
+   */
+  tryRequestKeepalive(){
+    if(!Selector.isChannelConnected(this._currentSocket)){
+      return
+    }
+    if(!this._keepAliveRequestSent && this.hasBeenInactiveFor(NodeAttach.ALIVE_REQUEST_INTERVAL) && this.isBufferEmpty()){
+      this.requestKeepalive()
+      this._keepAliveRequestSent = true
+    }
+  }
+
+  /**
+   * Request a keepalive to the controller. This command does not expect an answer. Its use is only to request the controller to send something
+   * so the backend knows that the controller is still online. The controller should restart by code when there is a socket connected to a backend
+   * but it didn't receive ANYTHING (not only a keepalive request) from it in a period of time. Sending this request does not mean that the controller
+   * is alive, so {@linkcode Mortal.setAlive} should not be called here.
+   */
+  private requestKeepalive(){
+    this._addOne(new Message(codes.CMD_KEEP_ALIVE_REQUEST,-1))
+    this._log("Keep alive request added")
   }
 
   async _processMessage(selector: Selector, parts: string[], cmdOrValue: number, id: number, command: string, code: ResultCode, bundle: Bundle): Promise<boolean> {
@@ -1138,7 +1151,7 @@ export class NodeAttach extends BaseAttach {
         // useful.formatTimestamp(big))
         break;
       case codes.VALUE_ALL_ENABLES:
-        this._log(`Received all enables '${command}'`);
+        // this._log(`Received all enables '${command}'`);
         const enablesData = this._parseMessage(parts, queries.enablesParse, id);
         if (!enablesData) {
           break;
@@ -1247,7 +1260,7 @@ export class NodeAttach extends BaseAttach {
           this._notifyTemp(sensorID, this.controllerID, null, null, sensorAddress, null);
         }
         // this._log(`Parts remaining ${parts.length}: '${parts}'`)
-        this._log(`Received ${paramsForUpdate.length} temperature addresses.`)
+        // this._log(`Received ${paramsForUpdate.length} temperature addresses.`)
         await executeBatchForNode(queries.updateAddress, this.controllerID, paramsForUpdate);
         break
       case codes.VALUE_ADDRESS_CHANGED:
@@ -1312,7 +1325,7 @@ export class NodeAttach extends BaseAttach {
           case codes.VALUE_MODE:
             // Save and notify
             const mode = value == codes.VALUE_MODE_SECURITY
-            this._log(`Received mode: ${useful.toHex(value)}, notifying web.`)
+            // this._log(`Received mode: ${useful.toHex(value)}, notifying web.`)
             ControllerMapManager.updateController(this.controllerID, { modo: mode ? 1 : 0 })
             await this._saveItemGeneral("mode", [mode, this.controllerID], queries.modeUpdate, id, -1)
             break;
@@ -1450,12 +1463,12 @@ export class NodeAttach extends BaseAttach {
         }
         break;
       case codes.CMD_HELLO_FROM_CTRL:
-        this._log("Received hello from controller.");
+        this._log("Received hello from controller. Logged in.");
         this.setLogged(true);
 
         this.removePendingMessageByID(id, codes.AIO_OK);
         this.insertNet(true)
-        this._log("Logged in to controller");
+        // this._log("Logged in to controller");
         break;
       case codes.VALUE_ORDER_RESULT:
         this._log(`Received order result ${command}`);
@@ -1482,7 +1495,7 @@ export class NodeAttach extends BaseAttach {
         this._notifyOutput(orderData[0].getInt(), false, this.controllerID, null, null, null, null, newOrder);
         break;
       case codes.VALUE_SECURITY_STATE:
-        this._log(`Received security status from controller '${command}'`)
+        // this._log(`Received security status from controller '${command}'`)
         const securityData = this._parseMessage(parts, queries.securityStateParse, id, false);
         if (securityData) {
           const security = securityData[0].getInt() == codes.VALUE_ARM
@@ -1505,7 +1518,7 @@ export class NodeAttach extends BaseAttach {
         }
         break
       case codes.VALUE_SD_STATE:
-        this._log(`Received sd state from controller ${command}`)
+        // this._log(`Received sd state from controller ${command}`)
         const sdData = this._parseMessage(parts, queries.sdStateParse, id, false)
         if(sdData){
           const sdProgramming = sdData[1].getInt()
@@ -1721,7 +1734,7 @@ export class NodeAttach extends BaseAttach {
         }
         // Send all cards. Inactive cards will be send with an order to erase it in the
         // controller.
-        this._log("Sending cards");
+        // this._log("Sending cards");
         const cards = await executeQuery<db2.CardForController[]>(queries.cardSelectForController);
         if (cards) {
           for (const card of cards) {
@@ -1888,7 +1901,7 @@ export class ManagerAttach extends BaseAttach {
     // Operations without logging in
     switch (cmdOrValue) {
       case codes.CMD_HELLO_FROM_MNGR:
-        this._log("Received hello from " + this._tag);
+        // this._log("Received hello from " + this._tag);
         // For now, the response is not useful for the manager
         // this._addResponse(id, codes.AIO_OK)
         break;
@@ -1913,7 +1926,8 @@ export class ManagerAttach extends BaseAttach {
           //   break
           // }
           if (loggedResult > 0) {
-            this._log(`ID = ${loggedResult} Pwd = ${password}`);
+            // this._log(`ID = ${loggedResult} Pwd = ${password}`);
+            // this._log(`ID = ${loggedResult} Pwd = ***`);
             this.addHello(id, loggedResult);
             this.loggedIn = true;
             ManagerAttach.isAnotherLoggedIn = true;
@@ -1947,8 +1961,9 @@ export class ManagerAttach extends BaseAttach {
                   // to the manager. If
                   // the controller doesn't respond in a timeout the back end should answer
                   // automatically and delete the
-                  // corresponding pending message. For this, a timer should be started.
-                  this._log(`Received test connection '${command}'`);
+                  // corresponding pending message. For this, a timer can be started.
+
+                  // this._log(`Received test connection '${command}'`);
                   const state = selector.getNodeState(testNodeID);
                   this._addResponse(id, state);
                   this._log(`Node ID = ${testNodeID} is ${useful.getStateName(state)}.`);
@@ -2774,7 +2789,7 @@ export class ManagerAttach extends BaseAttach {
    * @param end   Header for the end message.
    */
   private async getDBNameExecuteSend(parts: string[], id: number, query: string, value: number, end: number, log: boolean, tableName: string | null = null) {
-    this._log(`Received get value ${useful.toHex(value)}`);
+    // this._log(`Received get value ${useful.toHex(value)}`);
     const nodeData = this._parseMessage(parts, queries.idParse, id);
     if (!nodeData) {
       this._log(`Node ID is missing. Message ID = ${id}`);

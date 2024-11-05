@@ -42,16 +42,16 @@ export class Main {
 
   private static readonly REQUEST_TIMEOUT = parseInt(process.env.CTRL_REQUEST_TIMEOUT??'9') * 1000;
 
-  private static readonly ALIVE_INTERVAL_MS = 2 * 1000;
+  private static readonly ALIVE_CHECK_INTERVAL_MS = 2 * 1000;
   private static readonly ALIVE_TIMEOUT = 15;
-  private static readonly MANAGER_ALIVE_TIMEOUT = parseInt(process.env.MANAGER_TIMEOUT??'9');
+  private static readonly ALIVE_MANAGER_TIMEOUT = parseInt(process.env.MANAGER_TIMEOUT??'9');
 
   private static readonly TICKET_CHECK_PERIOD = 1 * 1000;
 
   private static readonly ALIVE_CAMERA_INTERVAL_MS = 4 * 1000;
 
   private static readonly ALIVE_CAMERA_REACH_TIMEOUT_MS = 2 * 1000;
-  private static readonly ALIVE_CAMERA_TIMEOUT = 16;
+  // private static readonly ALIVE_CAMERA_TIMEOUT = 16;
 
   private static readonly MANAGER_TIMEOUT = 10 * 1000;
 
@@ -126,7 +126,7 @@ export class Main {
 
     /* Init messages */
 
-    this.log("█ Controller service v 0.2 █");
+    this.log("█ Controller service v 0.3 █");
     this.log(`Running on ${useful.isWindows() ? "Windows" : useful.isLinux() ? "Linux" : "Unknown OS"}`);
 
     /* Events to clean up */
@@ -181,7 +181,7 @@ export class Main {
     /* Start intervals to check states and send tickets */
 
     setTimeout(this.processOneFromAll, 1);
-    setTimeout(this.startDisconnectionDetection, Main.ALIVE_INTERVAL_MS, this.selector);
+    setTimeout(this.startDisconnectionDetection, Main.ALIVE_CHECK_INTERVAL_MS, this.selector);
     setTimeout(this.startCamerasCheck, Main.ALIVE_CAMERA_INTERVAL_MS);
 
     this.startTicketsCheck();
@@ -223,6 +223,7 @@ export class Main {
     this.sendMessagesTimer = setInterval(() => {
       // Send messages to controllers
       for (const node of this.selector.nodeAttachments) {
+        node.tryRequestKeepalive()
         node.sendOne(this.selector);
       }
 
@@ -985,8 +986,9 @@ export class Main {
    */
   private startDisconnectionDetection = async (selector: Selector) => {
     const nodeCopy = selector.nodeAttachments.slice();
+
     for (const node of nodeCopy) {
-      if (node.isDead(Main.ALIVE_TIMEOUT)) {
+      if (node.hasBeenInactiveFor(Main.ALIVE_TIMEOUT)) {
         if (node.isLogged()) {
           this.log(`Channel '${node}' ID = ${node.controllerID} is dead. Reconnecting...`);
           BaseAttach.simpleReconnect(this.selector, node);
@@ -996,10 +998,11 @@ export class Main {
         }
       }
     }
+
     let deleted = false;
     const mngrCopy = this.selector.managerConnections.slice();
     for (const manager of mngrCopy) {
-      if (manager.isDead(Main.MANAGER_ALIVE_TIMEOUT)) {
+      if (manager.hasBeenInactiveFor(Main.ALIVE_MANAGER_TIMEOUT)) {
         this.log("Manager keep alive timeout");
         manager.reconnect(selector);
         const mngrIndex = this.selector.managerConnections.indexOf(manager);
@@ -1012,7 +1015,7 @@ export class Main {
     if (deleted) {
       this.log(`Managers left: ${this.selector.managerConnections.length}`);
     }
-    setTimeout(this.startDisconnectionDetection, Main.ALIVE_INTERVAL_MS, selector);
+    setTimeout(this.startDisconnectionDetection, Main.ALIVE_CHECK_INTERVAL_MS, selector);
   };
 
   /**

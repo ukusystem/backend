@@ -10,25 +10,39 @@ import * as Useful from './useful'
 export class Mortal {
   static readonly DEFAULT_INITIAL_STATE = false;
 
+  /**
+   * Used to forbid sending more requests after one has been send but its response (or anything) has not been received yet.
+   */
+  _keepAliveRequestSent = false
+
   private lastTimeAlive = 0;
-  private previousState = Mortal.DEFAULT_INITIAL_STATE;
-  private currentState = Mortal.DEFAULT_INITIAL_STATE;
+  // private previousState = Mortal.DEFAULT_INITIAL_STATE;
+  // private currentState = Mortal.DEFAULT_INITIAL_STATE;
 
   /**
    * Save the current time as the last time that this object was 'alive'.
    */
   setAlive() {
     this.lastTimeAlive = Useful.timeInt();
+    this._keepAliveRequestSent = false
   }
+
+  /**
+   * 
+   * @returns The time that the object has been inactive in seconds.
+   */
+  // getTimeInactive(){
+  //   return Useful.timeInt() - this.lastTimeAlive
+  // }
 
   /**
    * Set the current state of the object. If the new state is active, also save the current time as the last time it was active.
    * @param state True to set the state as active, false for inactive.
    */
-  setState(state: boolean) {
-    this.previousState = this.currentState;
-    this.currentState = state;
-  }
+  // setState(state: boolean) {
+  //   // this.previousState = this.currentState;
+  //   this.currentState = state;
+  // }
 
   /**
    * Get if this object wasn't set as alive for a period of time, similar to a timeout.
@@ -36,7 +50,7 @@ export class Mortal {
    * @param maxDelay Maximum seconds without an update as alive that can pass to still consider this object as alive.
    * @return True if this object hasn't been set as active for `maxDelay` time.
    */
-  isDead(maxDelay: number): boolean {
+  hasBeenInactiveFor(maxDelay: number): boolean {
     return Useful.timeInt() > this.lastTimeAlive + maxDelay;
   }
 
@@ -44,12 +58,12 @@ export class Mortal {
    * Get the change in the state of this object. The states are updated by calling {@linkcode setState} or its overload.
    * @return The change in the state. After calling {@linkcode setState}, this method may return a different value.
    */
-  getChange(): number {
-    if (!this.previousState && this.currentState) {
-      return Changes.TO_ACTIVE;
-    } else if (this.previousState && !this.currentState) {
-      return Changes.TO_INACTIVE;
-    }
-    return Changes.NONE;
-  }
+  // getChange(): number {
+  //   if (!this.previousState && this.currentState) {
+  //     return Changes.TO_ACTIVE;
+  //   } else if (this.previousState && !this.currentState) {
+  //     return Changes.TO_INACTIVE;
+  //   }
+  //   return Changes.NONE;
+  // }
 }
