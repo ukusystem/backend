@@ -1,4 +1,3 @@
-import { Changes } from "./enums";
 import * as Useful from './useful'
 
 /**
@@ -10,11 +9,6 @@ import * as Useful from './useful'
 export class Mortal {
   static readonly DEFAULT_INITIAL_STATE = false;
 
-  /**
-   * Used to forbid sending more requests after one has been send but its response (or anything) has not been received yet.
-   */
-  _keepAliveRequestSent = false
-
   private lastTimeAlive = 0;
   // private previousState = Mortal.DEFAULT_INITIAL_STATE;
   // private currentState = Mortal.DEFAULT_INITIAL_STATE;
@@ -24,7 +18,16 @@ export class Mortal {
    */
   setAlive() {
     this.lastTimeAlive = Useful.timeInt();
-    this._keepAliveRequestSent = false
+  }
+
+  /**
+     * Get if this object wasn't set as alive for a period of time, similar to a timeout.
+     * This does not update the current state of this object.
+     * @param maxDelay Maximum seconds without an update as alive that can pass to still consider this object as alive.
+     * @return True if this object hasn't been set as active for `maxDelay` time.
+     */
+  hasBeenInactiveFor(maxDelay: number): boolean {
+    return Useful.timeInt() >= this.lastTimeAlive + maxDelay;
   }
 
   /**
@@ -44,15 +47,7 @@ export class Mortal {
   //   this.currentState = state;
   // }
 
-  /**
-   * Get if this object wasn't set as alive for a period of time, similar to a timeout.
-   * This does not update the current state of this object.
-   * @param maxDelay Maximum seconds without an update as alive that can pass to still consider this object as alive.
-   * @return True if this object hasn't been set as active for `maxDelay` time.
-   */
-  hasBeenInactiveFor(maxDelay: number): boolean {
-    return Useful.timeInt() > this.lastTimeAlive + maxDelay;
-  }
+  
 
   /**
    * Get the change in the state of this object. The states are updated by calling {@linkcode setState} or its overload.

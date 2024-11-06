@@ -1,5 +1,5 @@
 import { NodeAttach, ManagerAttach, Selector, BaseAttach } from "./baseAttach";
-import { Changes, States, getState } from "./enums";
+import { States, getState } from "./enums";
 import { PartialTicket } from "./partialTicket";
 import { RequestResult } from "./requestResult";
 import { AtomicNumber } from "./atomicNumber";
@@ -9,7 +9,7 @@ import { executeQuery } from "./dbManager";
 import { ResultCode } from "./resultCode";
 import { ResultSetHeader } from "mysql2";
 // import { CameraMotionManager } from "@models/camera";
-import { CameraMotionManager } from "../../../models/camera";
+// import { CameraMotionManager } from "../../../models/camera";
 // import { NodoCameraMapManager } from "@maps/nodo.camera";
 import { NodoCameraMapManager } from "../../maps/nodo.camera";
 // import { appConfig } from "@configs/index";
@@ -18,7 +18,7 @@ import { Ticket, type Personal, type Solicitante } from "./ticket";
 import { Logger } from "./logger";
 // import { Camera } from "./camera";
 import { Bundle } from "./bundle";
-import { Mortal } from "./mortal";
+// import { Mortal } from "./mortal";
 import { CameraToCheck, PinOrder } from "./types";
 import fs from "fs";
 import * as queries from "./queries";
@@ -223,8 +223,11 @@ export class Main {
     this.sendMessagesTimer = setInterval(() => {
       // Send messages to controllers
       for (const node of this.selector.nodeAttachments) {
-        node.tryRequestKeepalive()
-        node.sendOne(this.selector);
+        // node.tryRequestKeepalive()
+        node.sendOne(this.selector)
+        // if(node.sendOne(this.selector)){
+        //   node.setLastMessageTime()
+        // }
       }
 
       // Send messages to managers
@@ -975,13 +978,13 @@ export class Main {
   };
 
   /**
-   * Start one timer that will test if each channel IS STILL CONNECTED. It doesn't
-   * matter if the channel is logged in, only if it is connected. When the other
-   * end's address can not be reached, the channel will be closed, the key
-   * canceled and a new channel will be registered with the same attachment, thus
-   * 'reseting' the connection. This doesn't do anything if the channel was not
-   * connected in the first place, i.e. this method only acts on a 'falling edge'.
-   *
+   * Start a timer that will test if each channel IS STILL CONNECTED. The test is based on any data received from the
+   * channel. When a time has passed and no data has been received, the channel will be considered 'dead', it will be closed, the key
+   * canceled and a new channel will be registered with the same attachment, thus 'reseting' the connection from the backend. 
+   * To ensure that the controller will always send 'something', a keep alive request will be send to the
+   * controller periodically on certain conditions (see {@linkcode NodeAttach.tryRequestKeepalive}).
+   * 
+   * @see  {@linkcode NodeAttach.tryRequestKeepalive}
    * @param selector Selector with the registered keys.
    */
   private startDisconnectionDetection = async (selector: Selector) => {
@@ -992,6 +995,7 @@ export class Main {
         if (node.isLogged()) {
           this.log(`Channel '${node}' ID = ${node.controllerID} is dead. Reconnecting...`);
           BaseAttach.simpleReconnect(this.selector, node);
+          // node.resetKeepAliveRequest()
           await node.insertNet(false);
           node.printKeyCount(selector);
           ManagerAttach.connectedManager?.addNodeState(false,node.controllerID)

@@ -127,7 +127,7 @@ export class BaseAttach extends Mortal {
   }
 
   /**
-   * Add a message to the list of messages that expect a response.
+   * Add a message to the list of messages that expect a response. The message is only added if a response is expected or if adding it is forced.
    * @param message The message waiting for a response.
    * @returns True if the message was added, false otherwise.
    */
@@ -150,7 +150,7 @@ export class BaseAttach extends Mortal {
    *
    * @param selector
    */
-  sendOne(selector: Selector) {
+  sendOne(selector: Selector) :boolean{
 
     // Try send
     if (this.previousMessageSent && this.sendBuffer.length > 0 && Selector.isChannelConnected(this._currentSocket)) {
@@ -167,6 +167,7 @@ export class BaseAttach extends Mortal {
           }
           this.addPendingMessage(first);
           this.sendBuffer.shift();
+          return true
         }
       } catch (e: any) {
         this._log("IO Exception sending bytes. Message was not removed.");
@@ -177,6 +178,7 @@ export class BaseAttach extends Mortal {
         this._log("Channel was programmed to close on next send. Closed.");
       }
     }
+    return false
   }
 
   /**
@@ -220,6 +222,7 @@ export class BaseAttach extends Mortal {
         // Delay connection if was unreachable
         setTimeout(
           () => {
+            // console.log("Reconnecting simple")
             nodeAttach.tryConnectNode(selector, true);
           },
           unreachable ? this.UNREACHABLE_INTERVAL_MS : 1
@@ -917,6 +920,17 @@ export class BaseAttach extends Mortal {
  */
 export class NodeAttach extends BaseAttach {
 
+  /**
+   * Used to forbid sending more requests after one has been send but its response has not been received yet.
+   */
+  _keepAliveRequestSent = false
+
+  /**
+   * The last time that any message was written to the socket internal buffer. Used to start counting a delay 
+   * to send a keep alive request to the controller.
+   */
+  lastTimeMessageSent = useful.timeInt()
+
   static ticketsMap = new Map<number, NodeTickets>()
   
   private static readonly ALIVE_REQUEST_INTERVAL = 3;
@@ -982,6 +996,15 @@ export class NodeAttach extends BaseAttach {
     this.password = nodePassword;
   }
 
+  resetKeepAliveRequest(){
+    this._keepAliveRequestSent = false
+    this.setLastMessageTime()
+  }
+
+  setLastMessageTime(){
+    this.lastTimeMessageSent = useful.timeInt()
+  }
+
   setLogged(state: boolean) {
     if (this.loggedToController === state) {
       return
@@ -1040,27 +1063,27 @@ export class NodeAttach extends BaseAttach {
   }
 
   /**
-   * Check if there is need to request a kee alive. If there is, request it.
+   * Check if there is need to request a keep alive. If there is, request it. This command expects an answer. It is used to request the controller to 
+   * send something so the backend knows that the controller is still online and to let the controller know that its socket is still 'working' by receiving 'something'.
+   * The controller should restart by code when there is a socket connected to a backend but it didn't receive ANYTHING (not only a keepalive request) from it in 
+   * a period of time. Sending this request does not mean that the controller is alive, so {@linkcode Mortal.setAlive} should not be called here.
    */
   tryRequestKeepalive(){
     if(!Selector.isChannelConnected(this._currentSocket)){
       return
     }
-    if(!this._keepAliveRequestSent && this.hasBeenInactiveFor(NodeAttach.ALIVE_REQUEST_INTERVAL) && this.isBufferEmpty()){
-      this.requestKeepalive()
+    if(!this._keepAliveRequestSent && this.isBufferEmpty() && (useful.timeInt() >= this.lastTimeMessageSent + NodeAttach.ALIVE_REQUEST_INTERVAL)){
       this._keepAliveRequestSent = true
+      this._addOne(new Message(codes.CMD_KEEP_ALIVE_REQUEST,-1, [],(header)=>{
+        if(header == codes.CMD_KEEP_ALIVE){
+          this._keepAliveRequestSent = false
+          // this._log("Keep alive response received")
+        }
+      }))
+      this._log("Keep alive request added")
+    }else{
+      // this._log("Request not send")
     }
-  }
-
-  /**
-   * Request a keepalive to the controller. This command does not expect an answer. Its use is only to request the controller to send something
-   * so the backend knows that the controller is still online. The controller should restart by code when there is a socket connected to a backend
-   * but it didn't receive ANYTHING (not only a keepalive request) from it in a period of time. Sending this request does not mean that the controller
-   * is alive, so {@linkcode Mortal.setAlive} should not be called here.
-   */
-  private requestKeepalive(){
-    this._addOne(new Message(codes.CMD_KEEP_ALIVE_REQUEST,-1))
-    this._log("Keep alive request added")
   }
 
   async _processMessage(selector: Selector, parts: string[], cmdOrValue: number, id: number, command: string, code: ResultCode, bundle: Bundle): Promise<boolean> {
@@ -1068,7 +1091,8 @@ export class NodeAttach extends BaseAttach {
       case codes.CMD_KEEP_ALIVE:
         // It doesn't matter if setAlive() is called in this block, since any message
         // received from the channel is a signal that it is alive.
-        //this._log("Keep alive signal received %d.", lastTimeAlive)
+        this.removePendingMessageByID(id,cmdOrValue,false)
+        this._log("Keep alive response received")
         break;
       case codes.CMD_POWER:
         // this._log(`Received power measure '${command}'`);
@@ -2529,6 +2553,7 @@ export class ManagerAttach extends BaseAttach {
    * @param id             ID of the message being processed.
    */
   private async completeReconnect(selector: Selector, nodeID: number, forceReconnect: boolean, id: number, newCompleteData: DataStruct[] | null = null) {
+    this._log("Reconnecting completely the channel")
     // The channel must be reconnected anyways. This ensures that there will be a
     // channel for that controller after this method returns.
     const currentAttach = selector.getNodeAttachByID(nodeID);
