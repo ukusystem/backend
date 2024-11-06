@@ -1,5 +1,6 @@
-import { Namespace, Socket } from "socket.io";
-import { Controlador, EquipoSalida, PinesSalida } from "../../../types/db";
+import { Namespace, Socket } from 'socket.io';
+import { EquipoSalida, PinesSalida } from '../../../types/db';
+import { RowDataPacket } from 'mysql2';
 
 export enum ActionPinSal {
   Automatico = 0,
@@ -11,6 +12,7 @@ export interface OrdenPinSalida {
   action: ActionPinSal;
   ctrl_id: number;
   pin: number;
+  ps_id: number;
   es_id: number;
 }
 
@@ -20,68 +22,60 @@ export interface ResponseOrdenPinSalida {
   ordenSend: OrdenPinSalida;
 }
 
-export type IPinSalidaSocket = PinesSalida & Pick<Controlador, "ctrl_id"> & { automatico: boolean; orden: ActionPinSal };
+// export type IPinSalidaSocket = PinesSalida & Pick<Controlador, "ctrl_id"> & { automatico: boolean; orden: ActionPinSal };
 
-export interface IPinSalidaSocketBad {
+export type PinSalidaDTO = PinesSalida & {
+  automatico: boolean;
+  orden: ActionPinSal;
+};
+
+export type PinSalidaSocketDTO = PinSalidaDTO;
+
+export type PinSalidaAddUpdateDTO = {
   ps_id: number;
   pin: number;
-  es_id: number | null;
-  descripcion: string | null;
-  estado: number | null;
-  activo: number | null;
+  es_id: number | undefined;
+  descripcion: string | undefined;
+  estado: number | undefined;
+  activo: number | undefined;
+
   automatico: boolean;
-  ctrl_id: number;
-  orden: number | null;
-}
+  orden: ActionPinSal | undefined;
+};
+
+export interface PinSalidaRowData extends RowDataPacket, PinesSalida {}
+
+export type MapPinSalida = Map<number, PinSalidaDTO>; // key : ps_id;
+export type MapControladorPinSalida = Map<number, MapPinSalida>; // key: ctrl_id
 
 export interface PinSalidaObserver {
   updateEquiposSalida(data: EquipoSalida[]): void;
-  updateListPinesSalida(data: PinesSalida[], equipo_salida: EquipoSalida): void;
-  updateItemPinSalida(data: IPinSalidaSocket): void;
+  updateListPinesSalida(data: PinSalidaSocketDTO[], equipo_salida: EquipoSalida): void;
+  updateItemPinSalida(data: PinSalidaSocketDTO): void;
 }
+
+export type MapObserverPinSalida = Map<number, PinSalidaObserver>; // key: ctrl_id
 
 export interface PinesSalidaSubject {
-  registerObserver(ctrl_id: number, observer: PinSalidaObserver): void;
-  unregisterObserver(ctrl_id: number, observer: PinSalidaObserver): void;
+  registerObserver(ctrl_id: number, new_observer: PinSalidaObserver): void;
+  unregisterObserver(ctrl_id: number): void;
   notifyEquiposSalida(ctrl_id: number, data: EquipoSalida[]): void;
-  notifyListPinesSalida( ctrl_id: number, equipo_salida: EquipoSalida, data: PinesSalida[] ): void;
-  notifyItemPinSalida( ctrl_id: number, es_id: number, ps_id: number, data: IPinSalidaSocket ): void;
+  notifyListPinesSalida(ctrl_id: number, pin_salida: PinSalidaDTO): void;
+  notifyItemPinSalida(ctrl_id: number, pin_salida: PinSalidaDTO): void;
 }
-
-
-export interface IPinSalObject extends IPinSalidaSocket {
-  setPsId(ps_id: IPinSalidaSocket["ps_id"]): void;
-  setPin(pin: IPinSalidaSocket["pin"]): void;
-  setEsId(es_id: IPinSalidaSocket["es_id"]): void;
-  setDescripcion(descripcion: IPinSalidaSocket["descripcion"]): void;
-  setActivo(activo: IPinSalidaSocket["activo"]): void;
-  setEstado(estado: IPinSalidaSocket["estado"]): void;
-  setCtrlId(ctrl_id: IPinSalidaSocket["ctrl_id"]): void;
-  setAutomatico(automatico: IPinSalidaSocket["automatico"]): void;
-  setOrden(orden: IPinSalidaSocket["orden"]): void;
-  toJSON(): IPinSalidaSocket;
-}
-
-export interface EquSalPinSalida extends EquipoSalida {
-  pines_salida: {
-    [ps_id: number]: IPinSalObject;
-  };
-}
-
 
 // Socket
 
-
 interface ClientToServerEvents {
   initial_list_pines_salida: (es_id: number) => void;
-  initial_item_pin_salida: (es_id: number, ps_id: number) => void;
+  initial_item_pin_salida: (ps_id: number) => void;
   orden_pin_salida: (data: OrdenPinSalida) => void;
 }
 
 interface ServerToClientEvents {
   equipos_salida: (equiSal: EquipoSalida[]) => void;
-  item_pin_salida: (pinSal: IPinSalidaSocket) => void;
-  list_pines_salida: ( lisPinSal: IPinSalidaSocket[], equiSal: EquipoSalida ) => void;
+  item_pin_salida: (pinSal: PinSalidaDTO) => void;
+  list_pines_salida: (lisPinSal: PinSalidaDTO[], equiSal: EquipoSalida) => void;
   response_orden_pin_salida: (data: ResponseOrdenPinSalida) => void;
 }
 
@@ -89,16 +83,6 @@ interface InterServerEvents {}
 
 interface SocketData {}
 
-export type NamespacePinSalida = Namespace<
-  ClientToServerEvents,
-  ServerToClientEvents,
-  InterServerEvents,
-  SocketData
->;
+export type NamespacePinSalida = Namespace<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>;
 
-export type SocketPinSalida = Socket<
-  ClientToServerEvents,
-  ServerToClientEvents,
-  InterServerEvents,
-  SocketData
->;
+export type SocketPinSalida = Socket<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>;

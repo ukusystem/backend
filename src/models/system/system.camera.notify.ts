@@ -75,9 +75,11 @@ export class CameraNotifyManager {
     // notify Alarm
     CameraNotifyManager.#notifyUpdateToAlarm(ctrl_id, curCam, fieldsUpdate);
     // notify NVR
-    CameraNotifyManager.#notifyUpdateToNvr(ctrl_id, curCam, fieldsUpdate)
+    if(appConfig.system.start_nvr && NvrManager.is_init){
+      CameraNotifyManager.#notifyUpdateToNvr(ctrl_id, curCam, fieldsUpdate);
+    }
     // notify Motion
-    if(appConfig.system.start_motion){
+    if(appConfig.system.start_motion && CameraMotionManager.is_init ){
       CameraNotifyManager.#notifyUpdateToMotion(ctrl_id, curCam, fieldsUpdate)
       CameraNotifyManager.#notifyDeleteToMotion(ctrl_id, curCam, fieldsUpdate)
       CameraNotifyManager.#notifyReconnectToMotion(ctrl_id, curCam, fieldsUpdate)
@@ -88,8 +90,8 @@ export class CameraNotifyManager {
     // notify Alarm
     CameraNotifyManager.#notifyAddToAlarm(ctrl_id,newCam);
     // notify Motion
-    if(appConfig.system.start_motion){
-      CameraMotionManager.notifyAddUpdate(ctrl_id,newCam.cmr_id);
+    if (appConfig.system.start_motion && CameraMotionManager.is_init) {
+      CameraMotionManager.notifyAddUpdate(ctrl_id, newCam.cmr_id);
     }
 
   }

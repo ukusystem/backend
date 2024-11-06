@@ -49,7 +49,7 @@ export class Logger {
 
   #getFormatForConsole() {
     return format.combine(
-      format.timestamp({format: "YYYY-MM-DD hh:mm:ss"}),
+      format.timestamp({format: "YYYY-MM-DD HH:mm:ss"}),
       // format.align(),
       format.printf(
         info =>

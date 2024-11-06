@@ -13,6 +13,8 @@ import { CameraMotionMethods, CameraMotionProps, CameraProps } from "./camera.mo
 import { ControllerMapManager } from "../../maps";
 import { cameraLogger } from "../../../services/loggers";
 import { CameraMotionManager } from "./camera.motion.manager";
+import { NodoCameraMapManager } from "../../maps/nodo.camera";
+import { notifyCamDisconnect } from "../../controllerapp/controller";
 
 const TIMEOUT_DISCONNECT = 5;
 export class CameraMotionProcess implements CameraMotionProps, CameraMotionMethods {
@@ -133,18 +135,18 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
           }
         });
 
-        this.ffmpegProcessImage.on("error", (err) => {
-          cameraLogger.error(`CameraMotionProcess | snapshotMotion | Error en el proceso ffmpegImage | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`,err);
-          if (this.ffmpegProcessImage) {
-            this.ffmpegProcessImage.kill();
-            this.ffmpegProcessImage = null;
-          }
+        // this.ffmpegProcessImage.on("error", (err) => {
+        //   cameraLogger.error(`CameraMotionProcess | snapshotMotion | Error en el proceso ffmpegImage | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`,err);
+        //   if (this.ffmpegProcessImage) {
+        //     this.ffmpegProcessImage.kill();
+        //     this.ffmpegProcessImage = null;
+        //   }
 
-          // this.isActiveProccesImage = false;
+        //   // this.isActiveProccesImage = false;
 
-          this.imageBuffer = Buffer.alloc(0);
-          this.isInsideImage = false;
-        });
+        //   this.imageBuffer = Buffer.alloc(0);
+        //   this.isInsideImage = false;
+        // });
 
         this.ffmpegProcessImage.on("close", async (code) => {
           cameraLogger.debug(`CameraMotionProcess | snapshotMotion | Proceso ffmpegImage cerrado con código ${code} | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`);
@@ -164,6 +166,14 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
               return this.snapshotMotion(rtspUrl);
             } else {
               this.isActiveProccesImage = false;
+              // notificar deconexión
+              NodoCameraMapManager.update(this.ctrl_id, this.cmr_id, { conectado: 0 });
+              const camera = NodoCameraMapManager.getCamera(this.ctrl_id, this.cmr_id,);
+              if (camera !== undefined) {
+                cameraLogger.info(`CameraMotionProcess | snapshotMotion | Notify Camera Disconnect | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id}`);
+                notifyCamDisconnect(this.ctrl_id, { ...camera });
+              }
+
             }
           }
         });
@@ -182,13 +192,13 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
         const newVideoProcess = spawn("ffmpeg", argsVideoProcces,{stdio:["ignore","ignore","ignore"]});
         this.ffmpegProcessVideo = newVideoProcess;
 
-        this.ffmpegProcessVideo.on("error", (err) => {
-          cameraLogger.error(`CameraMotionProcess | captureMotion | Error en el proceso ffmpegVideo | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`,err);
-          if (this.ffmpegProcessVideo) {
-            this.ffmpegProcessVideo.kill();
-            this.ffmpegProcessVideo = null;
-          }
-        });
+        // this.ffmpegProcessVideo.on("error", (err) => {
+        //   cameraLogger.error(`CameraMotionProcess | captureMotion | Error en el proceso ffmpegVideo | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`,err);
+        //   if (this.ffmpegProcessVideo) {
+        //     this.ffmpegProcessVideo.kill();
+        //     this.ffmpegProcessVideo = null;
+        //   }
+        // });
 
         this.ffmpegProcessVideo.on("close", async (code) => {
           if (code === 0) {
@@ -219,6 +229,13 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
               return this.captureMotion(rtspUrl);
             } else {
               this.isActiveProccesVideo = false;
+              // notificar deconexión
+              NodoCameraMapManager.update(this.ctrl_id, this.cmr_id, { conectado: 0 });
+              const camera = NodoCameraMapManager.getCamera(this.ctrl_id, this.cmr_id,);
+              if (camera !== undefined) {
+                cameraLogger.info(`CameraMotionProcess | captureMotion | Notify Camera Disconnect | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id}`);
+                notifyCamDisconnect(this.ctrl_id, { ...camera });
+              }
             }
           }
         });
@@ -516,7 +533,11 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
       //   })
       // }
     } catch (error) {
-      cameraLogger.error(`CameraMotionProcess | execute | Error en CameraMotion.execute() :`, error);
+      if(error instanceof Error){
+        cameraLogger.error(`CameraMotionProcess | Execute Error | ctrl_id : ${this.ctrl_id} | cmr_id ${this.cmr_id}`, error.message);
+      }else{
+        cameraLogger.error(`CameraMotionProcess | Execute Error | ctrl_id : ${this.ctrl_id} | cmr_id ${this.cmr_id}`, error);
+      }
       // throw error
     }
   }

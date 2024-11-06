@@ -34,7 +34,7 @@ export const refreshToken = asyncErrorHandler(
     
     res.cookie(appConfig.cookie.access_token.name, newAccessToken, {
       httpOnly: true, // acceso solo del servidor
-      secure: process.env.NODE_ENV === "production", // acceso solo con https
+      // secure: process.env.NODE_ENV === "production", // acceso solo con https
       sameSite: "strict", // acceso del mismo dominio
       // maxAge: 1000*60*60 // expiracion 1h
       maxAge: appConfig.cookie.access_token.max_age, // expiracion 1m
@@ -42,7 +42,7 @@ export const refreshToken = asyncErrorHandler(
   
     res.cookie(appConfig.cookie.refresh_token.name, newRefreshToken, {
       httpOnly: true, // acceso solo del servidor
-      secure: process.env.NODE_ENV === "production", // acceso solo con https
+      // secure: process.env.NODE_ENV === "production", // acceso solo con https
       sameSite: "strict", // acceso del mismo dominio
       maxAge: appConfig.cookie.refresh_token.max_age, // expiracion 1d
     });

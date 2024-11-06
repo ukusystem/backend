@@ -1,13 +1,20 @@
-import { LastSnapShotManager } from "../../../controllers/socket/snapshot";
-import { cameraLogger } from "../../../services/loggers";
-import { decrypt } from "../../../utils/decrypt";
-import { Init } from "../../init";
-import { NodoCameraMapManager } from "../../maps/nodo.camera";
-import { CameraMotionProcess } from "./camera.motion.process";
-import { CameraReconnect } from "./camera.motion.reconnect";
+import { LastSnapShotManager } from '../../../controllers/socket/snapshot';
+import { MySQL2 } from '../../../database/mysql';
+import { cameraLogger } from '../../../services/loggers';
+import { decrypt } from '../../../utils/decrypt';
+import { Init } from '../../init';
+import { NodoCameraMapManager } from '../../maps/nodo.camera';
+import { CameraMotionProcess } from './camera.motion.process';
+import { CameraReconnect } from './camera.motion.reconnect';
+import { CameraRowData } from './camera.motion.types';
 
 export class CameraMotionManager {
   static map: { [ctrl_id: number]: { [cmr_id: number]: CameraMotionProcess } } = {};
+  static #IS_INIT: boolean = false;
+
+  static get is_init(): boolean {
+    return CameraMotionManager.#IS_INIT;
+  }
 
   public static notifyImageMotion(ctrl_id: number, imageBase64: string): void {
     LastSnapShotManager.notifyLastSnapshot(ctrl_id, imageBase64);
@@ -44,7 +51,7 @@ export class CameraMotionManager {
         try {
           CameraMotionManager.map[cam.ctrl_id][cam.cmr_id].execute();
         } catch (error) {
-          cameraLogger.error(`CameraMotionManager | Error #addcam | ctrl_id: ${cam.ctrl_id} | cmr_id: ${cam.cmr_id} | ip: ${cam.ip}`,error);
+          cameraLogger.error(`CameraMotionManager | Error #addcam | ctrl_id: ${cam.ctrl_id} | cmr_id: ${cam.cmr_id} | ip: ${cam.ip}`, error);
         }
       }
     }
@@ -54,11 +61,9 @@ export class CameraMotionManager {
     if (CameraMotionManager.map.hasOwnProperty(cam.ctrl_id)) {
       if (CameraMotionManager.map[cam.ctrl_id].hasOwnProperty(cam.cmr_id)) {
         const curCamMotion = CameraMotionManager.map[cam.ctrl_id][cam.cmr_id];
-        if ( curCamMotion.ip != cam.ip || curCamMotion.contraseña != cam.contraseña || curCamMotion.usuario != cam.usuario ) {
-          if (curCamMotion.ffmpegProcessImage != null)
-            curCamMotion.ffmpegProcessImage.kill();
-          if (curCamMotion.ffmpegProcessVideo != null)
-            curCamMotion.ffmpegProcessVideo.kill();
+        if (curCamMotion.ip != cam.ip || curCamMotion.contraseña != cam.contraseña || curCamMotion.usuario != cam.usuario) {
+          if (curCamMotion.ffmpegProcessImage != null) curCamMotion.ffmpegProcessImage.kill();
+          if (curCamMotion.ffmpegProcessVideo != null) curCamMotion.ffmpegProcessVideo.kill();
 
           delete CameraMotionManager.map[cam.ctrl_id][cam.cmr_id];
           // Agregar nuevo
@@ -68,10 +73,10 @@ export class CameraMotionManager {
     }
   }
 
-  static notifyAddUpdate(ctrl_id:number, cmr_id:number, execute:boolean = true){
-    const cam = NodoCameraMapManager.getCamera(ctrl_id,cmr_id);
-    const exists = CameraMotionManager.#exists({ ctrl_id, cmr_id});
-    if(cam !== undefined){
+  static notifyAddUpdate(ctrl_id: number, cmr_id: number, execute: boolean = true) {
+    const cam = NodoCameraMapManager.getCamera(ctrl_id, cmr_id);
+    const exists = CameraMotionManager.#exists({ ctrl_id, cmr_id });
+    if (cam !== undefined) {
       try {
         const contDecript = decrypt(cam.contraseña);
         const newCamMot = new CameraMotionProcess({
@@ -81,26 +86,24 @@ export class CameraMotionManager {
           cmr_id: cam.cmr_id,
           ctrl_id: ctrl_id,
         });
-
-        if(exists){
+        cameraLogger.info(`CameraMotionManager | notifyAddUpdate | ctrl_id:${ctrl_id} cmr_id:${cmr_id}`)
+        if (exists) {
           CameraMotionManager.#updatecam(newCamMot);
-        }else{
-          CameraMotionManager.#addcam(newCamMot,execute);
+        } else {
+          CameraMotionManager.#addcam(newCamMot, execute);
         }
       } catch (error) {
-        cameraLogger.error(`CameraMotionManager | notifyAddUpdate | ctrl_id:${ctrl_id} cmr_id:${cmr_id}`,error);
+        cameraLogger.error(`CameraMotionManager | notifyAddUpdate | ctrl_id:${ctrl_id} cmr_id:${cmr_id}`, error);
       }
     }
   }
 
-  static notifyDelete(ctrl_id:number, cmr_id:number){
+  static notifyDelete(ctrl_id: number, cmr_id: number) {
     if (CameraMotionManager.map.hasOwnProperty(ctrl_id)) {
       if (CameraMotionManager.map[ctrl_id].hasOwnProperty(cmr_id)) {
         const currentCamMot = CameraMotionManager.map[ctrl_id][cmr_id];
-        if (currentCamMot.ffmpegProcessImage != null)
-          currentCamMot.ffmpegProcessImage.kill();
-        if (currentCamMot.ffmpegProcessVideo != null)
-          currentCamMot.ffmpegProcessVideo.kill();
+        if (currentCamMot.ffmpegProcessImage != null) currentCamMot.ffmpegProcessImage.kill();
+        if (currentCamMot.ffmpegProcessVideo != null) currentCamMot.ffmpegProcessVideo.kill();
         delete CameraMotionManager.map[ctrl_id][cmr_id];
       }
     }
@@ -117,10 +120,8 @@ export class CameraMotionManager {
       const cur_contraseña = currCamMotion.contraseña;
       const cur_usuario = currCamMotion.usuario;
 
-      if (currCamMotion.ffmpegProcessImage !== null)
-        currCamMotion.ffmpegProcessImage.kill();
-      if (currCamMotion.ffmpegProcessVideo !== null)
-        currCamMotion.ffmpegProcessVideo.kill();
+      if (currCamMotion.ffmpegProcessImage !== null) currCamMotion.ffmpegProcessImage.kill();
+      if (currCamMotion.ffmpegProcessVideo !== null) currCamMotion.ffmpegProcessVideo.kill();
 
       delete CameraMotionManager.map[ctrl_id][cmr_id];
 
@@ -142,27 +143,36 @@ export class CameraMotionManager {
     if (CameraMotionManager.map.hasOwnProperty(ctrl_id)) {
       if (CameraMotionManager.map[ctrl_id].hasOwnProperty(cmr_id)) {
         const currentCamMot = CameraMotionManager.map[ctrl_id][cmr_id];
-        if (currentCamMot.ffmpegProcessImage != null)
-          currentCamMot.ffmpegProcessImage.kill();
-        if (currentCamMot.ffmpegProcessVideo != null)
-          currentCamMot.ffmpegProcessVideo.kill();
+        if (currentCamMot.ffmpegProcessImage != null) currentCamMot.ffmpegProcessImage.kill();
+        if (currentCamMot.ffmpegProcessVideo != null) currentCamMot.ffmpegProcessVideo.kill();
         // delete CameraMotionManager.map[ctrl_id][cmr_id];
       }
     }
   }
 
-  static async init(){
+  static async init() {
     try {
-      const camerasData = await Init.getAllCameras();
-      Object.keys(camerasData).forEach((ctrlIdKey) => {
-        camerasData[Number(ctrlIdKey)].forEach(async (cam) => {
-          const { cmr_id, ctrl_id } = cam;
-          CameraMotionManager.notifyAddUpdate(ctrl_id,cmr_id,false);
-        });
+      const regionNodos = await Init.getRegionNodos();
+
+      regionNodos.forEach(async ({ ctrl_id, nododb_name }) => {
+        try {
+          const camaras = await MySQL2.executeQuery<CameraRowData[]>({
+            sql: `SELECT * FROM ${nododb_name}.camara c WHERE c.activo = 1`,
+          });
+
+          for (const cam of camaras) {
+            CameraMotionManager.notifyAddUpdate(ctrl_id, cam.cmr_id, true);
+          }
+        } catch (error) {
+          cameraLogger.error(`CameraMotionManager | Error al inicializar deteccion de movimiento | ctrl_id : ${ctrl_id}`, error);
+        }
       });
+
+      CameraMotionManager.#IS_INIT = true;
     } catch (error) {
-      cameraLogger.error(`CameraMotionProcess | Ocurrio un error en DeteccionMovimiento`, error);
+      cameraLogger.error(`CameraMotionManager | Error al inicializar deteccion de movimiento`, error);
       throw error;
     }
   }
+  
 }

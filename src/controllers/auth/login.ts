@@ -65,7 +65,7 @@ export const login = asyncErrorHandler(
 
     res.cookie(appConfig.cookie.access_token.name, accessToken,{
       httpOnly: true , // acceso solo del servidor
-      secure: appConfig.node_env === "production", // acceso solo con https
+      // secure: appConfig.node_env === "production", // acceso solo con https
       sameSite: "strict", // acceso del mismo dominio
       // maxAge: 1000*60*60 // expiracion 1h
       maxAge: appConfig.cookie.access_token.max_age // expiracion 1m
@@ -73,7 +73,7 @@ export const login = asyncErrorHandler(
 
     res.cookie(appConfig.cookie.refresh_token.name, refreshToken,{
       httpOnly: true , // acceso solo del servidor
-      secure: appConfig.node_env === "production", // acceso solo con https
+      // secure: appConfig.node_env === "production", // acceso solo con https
       sameSite: "strict", // acceso del mismo dominio
       maxAge: appConfig.cookie.refresh_token.max_age// expiracion 1d,
     });

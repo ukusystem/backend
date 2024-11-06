@@ -773,24 +773,23 @@ export class BaseAttach extends Mortal {
     order: number | null = null
   ) {
     // this._log(`Notifying web about output.`);
-    const newOutput = new sm.PinSalidaSocketBad({
+    const newOutput : sm.PinSalidaAddUpdateDTO = {
       ps_id: pin,
       pin: pin,
-      es_id: es_id,
-      descripcion: desc,
-      estado: state,
-      activo: active,
+      es_id: es_id ?? undefined,
+      descripcion: desc ?? undefined,
+      estado: state ?? undefined,
+      activo: active ?? undefined,
       automatico: auto,
-      ctrl_id: nodeID,
-      orden: order,
-    });
+      orden: order ?? undefined,
+    }
     // To disable the pin
     if (active === 0) {
-      sm.PinSalidaManager.delete(newOutput);
+      sm.PinSalidaManager.delete(nodeID,pin);
     }
     // To enable or update data
     else {
-      sm.PinSalidaManager.add_update(newOutput);
+      sm.PinSalidaManager.add_update(nodeID,newOutput);
     }
 
     // Curently there is not a real time resgister for the outputs
