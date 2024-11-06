@@ -1,4 +1,6 @@
 import { ChildProcessByStdio } from "child_process";
+import { RowDataPacket } from "mysql2";
+import { Camara } from "../../../types/db";
 
 export interface CameraMotionProps {
   ip: string;
@@ -15,6 +17,8 @@ export interface CameraMotionProps {
   ffmpegProcessVideo: ChildProcessByStdio<null, null, null> | null;
   isActiveProccesVideo: boolean;
 }
+
+export interface CameraRowData extends RowDataPacket , Camara {}
 
 export type CameraProps = Pick<CameraMotionProps, "ip" | "usuario" | "contraseña" | "cmr_id" | "ctrl_id" >
 
