@@ -40,6 +40,7 @@ export const loginParse = [tupleUser, tuplePassword];
 export const valueDateParse = [tupleValue, tupleLong];
 export const cmdAndIDParse = [tupleInt, tupleCmd];
 export const tempParse = [tupleInt, tupleFloat];
+export const IDTextParse = [tupleValue, tupleTxt];
 export const valueParse = [tupleValue];
 export const bigParse = [tupleBig];
 export const longParse = [tupleLong];
@@ -51,6 +52,8 @@ export const pinParse = [tupleInt, tupleInt, tupleLong, tupleInt];
 export const cardReadParse = [tupleInt, tupleBig, tupleInt, tupleInt, tupleInt, tupleLong];
 export const powerParse = [tupleLong, tupleID, tupleFloat, tupleFloat, tupleFloat, tupleFloat, tupleFloat, tupleFloat];
 export const orderParse = [tupleInt, tupleInt, tupleLong]
+export const securityStateParse = [tupleInt, tupleInt, tupleInt, tupleLong]
+export const sdStateParse = [tupleInt, tupleInt, tupleInt, tupleLong]
 
 /* Manage tables */
 
@@ -174,14 +177,17 @@ export const updateAllInputsEnables = `
 			`;
 
 export const insertCard = `
-				INSERT INTO %s.registroacceso (serie, administrador, autorizacion, fecha, co_id, ea_id, tipo, sn_id)
+				INSERT INTO %s.registroacceso (serie, administrador, autorizacion, fecha, p_id, ea_id, tipo, sn_id)
 				VALUES (?,?,?,?,?,?,?,?);
 			`;
 
 export const getCardInfo = `
-				SELECT co_id, ea_id
-				FROM general.acceso
-				WHERE a_id =? AND activo=1;
+				SELECT A.p_id, A.ea_id
+				FROM general.acceso A
+				JOIN general.personal P
+				ON A.p_id = P.p_id
+				WHERE A.serie = ?
+				AND P.co_id = ?;
 			`;
 
 export const insertCtrlState = `
@@ -215,6 +221,12 @@ export const insertTemperature = `
 				INSERT INTO %s.registrotemperatura (st_id, valor, fecha)
 				VALUES (?, ?, ?);
 			`;
+
+export const updateAddress = `
+			UPDATE %s.sensortemperatura
+			SET serie = ?
+			WHERE st_id = ?;
+`
 
 // export const setCurrentTemperature = `
 // 				UPDATE %s.sensortemperatura
@@ -271,17 +283,27 @@ export const insertCameraState = `
 /**
  * rt_id, telefono, correo, descripcion, fechacomienzo, fechatermino, estd_id, fechaestadofinal, fechacreacion, 
  * prioridad, p_id, tt_id, sn_id, enviado, co_id, asistencia
+ * @deprecated
  */
 export const selectUnattendedTicket = `
 				SELECT rt_id AS entero FROM %s.registroticket
 				WHERE co_id = ? AND fechacomienzo < ? AND fechatermino > ? AND enviado = 1 AND asistencia = 0;
 			`;
 
+/**
+ * @deprecated
+ */
 export const updateAttendance = `
 				UPDATE %s.registroticket
 				SET asistencia = 1
 				WHERE rt_id = ?;
 				`;
+
+export const setAttended = `
+				UPDATE %s.registroticket
+				SET asistencia = 1
+				WHERE co_id = ? AND fechacomienzo < ? AND fechatermino > ? AND enviado = 1 AND asistencia = 0;
+`
 
 export const insertRequest = `
 				INSERT INTO %s.registropeticion ( pin, orden, fecha, estd_id)
@@ -320,7 +342,7 @@ export const insertWorker = `
 				INSERT INTO %s.actividadpersonal (nombre, apellido, telefono, dni, c_id, co_id, rt_id, foto)
 				VALUE (?, ?, ?, ?, ?, ?, ?, ?);
 			`;
-			
+
 /**
  * Removed:
  * WHERE enviado=0
@@ -437,15 +459,6 @@ export const nodeGetForUpdate = `
 				FROM general.controlador
 				WHERE ctrl_id=? AND activo=1;
 			`;
-
-// export const nodeSelect = `
-// 				SELECT ctrl_id, nodo, rgn_id, direccion, descripcion,
-// 					latitud, longitud, usuario, serie,
-// 					ip, mascara, puertaenlace, puerto, personalgestion,
-// 					personalimplementador, seguridad
-// 				FROM general.controlador
-// 				WHERE activo=1;
-// 			`;
 
 /**
  * ctrl_id, nodo, rgn_id, direccion, descripcion, 
@@ -673,6 +686,11 @@ export const userDateIndex = 3;
 
 /* Worker */
 
+export const selectWorkerCompany = `
+	SELECT co_id AS entero FROM general.personal
+	WHERE p_id = ?;
+`
+
 export const workersSelect = `
 				SELECT p_id, nombre, apellido, telefono, dni, c_id, co_id, foto, correo
 				FROM general.personal
@@ -708,13 +726,13 @@ export const workerIDIndex = 0;
  * items should be displayed in their original order.
  */
 export const cardSelect = `
-				SELECT a_id, serie, administrador, co_id, ea_id, activo
+				SELECT a_id, serie, administrador, p_id, ea_id, activo
 				FROM general.acceso;
 			`;
 
 export const cardUpdate = `
 				UPDATE general.acceso
-				SET serie=?, administrador=?, co_id=?, ea_id=?, activo=?
+				SET serie=?, administrador=?, p_id=?, ea_id=?, activo=?
 				WHERE a_id=?;
 			`;
 
@@ -727,7 +745,10 @@ export const cardDisable = `
 export const cardParse = [tupleInt, tupleBig, tupleInt, tupleInt, tupleInt, tupleInt];
 
 export const cardSelectForController = `
-				SELECT a_id, serie, administrador, co_id, activo FROM general.acceso;
+				SELECT A.a_id, A.serie, A.administrador, P.co_id, A.activo
+				FROM general.acceso A
+				JOIN general.personal P
+				ON A.p_id = P.p_id;
 			`;
 
 /* Energy */

@@ -4,6 +4,8 @@ import { controllerStateSocketSchema } from "./controller.state.schema";
 import { ControllerStateManager, ControllerStateSocketObserver } from "./controller.state.manager";
 import { ControllerMapManager } from "../../../models/maps";
 import { sendSecurity } from "../../../models/controllerapp/controller";
+import * as codes from '../../../models/controllerapp/src/codes'
+
 
 export const contollerStateSocket = async ( io: Server, socket: SocketControllerState ) => {
   const nspControllerState = socket.nsp;
@@ -40,8 +42,12 @@ export const contollerStateSocket = async ( io: Server, socket: SocketController
 
   socket.on("setSecurity", async (newSecurity) => {
     const res = await sendSecurity(ctrl_id, newSecurity===1)
-    if(res !== undefined && res.resultado){
-      ControllerMapManager.updateController(ctrl_id,{seguridad: newSecurity});
+    if(res && res.resultado){
+      if((res.codigo == codes.VALUE_ARM || res.codigo == codes.VALUE_DISARM)){
+        ControllerMapManager.updateController(ctrl_id,{seguridad: res.codigo == codes.VALUE_ARM?1:0});
+      }else{
+        console.log(`Response is not a final state 0x${res.codigo.toString(16)}`)
+      }
     }else{
       // 'No response or false'
     }

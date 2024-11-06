@@ -1,6 +1,5 @@
 import { RowDataPacket } from 'mysql2';
 import * as db from "../../../types/db";
-import { Row } from 'exceljs';
 
 /**
  * 
@@ -79,7 +78,7 @@ export interface Usuario2 extends RowDataPacket{
 }
 
 export interface CardInfo extends RowDataPacket{
-  co_id:number,
+  p_id:number,
   ea_id:number
 }
 

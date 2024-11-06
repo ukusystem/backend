@@ -19,7 +19,10 @@ import { TicketMap } from "./models/ticketschedule";
 
     // Iniciar dectecion de movimiento
     if(process.env.START_MOTION_DETECTION === "true"){
+      console.log("Detección de movimiento: ON")
       await server.motion()
+    }else{
+      console.log("Detección de movimiento: OFF")
     }
 
     // Iniciar modo nvr

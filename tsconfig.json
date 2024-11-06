@@ -1,5 +1,12 @@
 {
   "compilerOptions": {
+    "paths": {
+      // "@maps/*": ["./src/models/maps/*"],
+      // "@type/*": ["./src/types/*"],
+      // "@ctrls/*": ["./src/controllers/*"],
+      // "@models/*": ["./src/models/*"],
+      // "@configs/*": ["./src/configs/*"],
+    },
     /* Visit https://aka.ms/tsconfig to read more about this file */
 
     /* Projects */

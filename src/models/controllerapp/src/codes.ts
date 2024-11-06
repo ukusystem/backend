@@ -1,5 +1,5 @@
 export const RECONNECT_DELAY = 10 // Delay to reconnect socket. Used by the server.
-export const MAX_MSG_LENGTH = 254 // The maximum message length without the null character, i.e. the
+export const MAX_MSG_LENGTH = 511 // The maximum message length without the null character, i.e. the
 // buffer must be MAX_MSG_LENGTH+1 long.
 
 // Separators
@@ -174,8 +174,8 @@ export const VALUE_OUTPUT_ALARM_ONE = 0x259 // Get or set whether one output is 
 export const VALUE_VOLTAGE_ACTIVE = 0x25a // Output voltage is active
 export const VALUE_VOLTAGE_INACTIVE = 0x25b // Output voltage is inactive
 export const VALUE_CTRL_STATE = 0x25c // Get the controller state
-export const VALUE_SECURITY = 0x25d // Get or set the security status
-export const VALUE_SD = 0x25e // Get or set the SD card status
+export const VALUE_SECURITY = 0x25D   // Get the security on demand or as an event
+export const VALUE_SD = 0x25e // Event of the sd card
 export const VALUE_VOLTAGE = 0x25f // Get or set the output voltage mode
 export const VALUE_OFFSET = 0x260 // Get or set the temperature offset
 export const VALUE_INPUT_STATE_ONE = 0x261 // Get the state of one input
@@ -226,9 +226,21 @@ export const VALUE_MODE = 0x28D                // Controller mode
 export const VALUE_MODE_SECURITY = 0x28E       // Mode security
 export const VALUE_MODE_FREE = 0x28F       // Mode free
 export const VALUE_GENERAL = 0x290         // General info
-export const VALUE_SECURITY_WEB = 0x291     // Security from web
+export const VALUE_SECURITY_WEB = 0x291     // Program the security from the web
 export const VALUE_ARM_WEB = 0x292          // Security arm from web
 export const VALUE_DISARM_WEB = 0x293       // Security disarm from web
+export const VALUE_STRUCT_MODES = 0x294    // Structure of the mode and security
+export const VALUE_ALL_ADDRESSES = 0x295   // Send all temperature sensor addresses
+export const VALUE_ADDRESS_CHANGED = 0x296 // Temperature sensor address changed
+export const VALUE_DELAY_TO_ARM = 0x297             // Set or get the delay to arm
+export const VALUE_SECURITY_TECH = 0x298            // Program the security from the technician
+export const VALUE_SECURITY_STATE = 0x299           // Send the security state (one of the 4 states)
+export const VALUE_TICKET_DELAY_TO_ARM = 0x29A      // Set or get the delay to arm for tickets
+export const VALUE_SECURITY_TICKET = 0x29B          // The security was programmed from a ticket
+export const VALUE_MOUNTING = 0x29C                 // The sd card in being mounted
+export const VALUE_SD_TECH = 0X29D                  // Set or get the SD state from the technician
+export const VALUE_SD_STATE = 0x29E                 // Get the complete sd state
+export const VALUE_NODE_STATE = 0x29F               // Notify the controller state to the technicians
 
 export const VALUE_SOCKET_CLOSED = 0x400 // Socket was closed
 export const VALUE_AUTHORIZED = 0x401 // Card authorized
@@ -245,6 +257,10 @@ export const VALUE_FALSE = 0x40b
 export const VALUE_OUTPUT_TYPE_ALARM = 0x40C     // Alarm type
 export const VALUE_OUTPUT_TYPE_NO_ALARM = 0x40D  // Not alarm type
 export const VALUE_OUTPUT_TYPE_FREE = 0x40E      // Free type
+export const VALUE_ARMING = 0x40F                // Arming is programmed
+export const VALUE_DISARMING = 0x410             // Disarming is programmed
+export const VALUE_NONE = 0x411                  // None value. General use.
+export const VALUE_EJECTING = 0x412            // Unmounting sd card
 
 /**
  * Command to set the initial configuration in the controller once the socket is
@@ -510,3 +526,8 @@ export const CMD_TICKET_END = 0x619
  * Used to send the power levels measured by the PZEM-004T
  */
 export const CMD_POWER = 0x61a
+
+/**
+ * Request a keepalive
+ */
+export const CMD_KEEP_ALIVE_REQUEST = 0x61B

@@ -14,7 +14,10 @@ photos/*
 !photos/registered
 photos/registered/*
 !photos/registered/foto1.png
-
+!photos/registered/foto2.png
+!photos/registered/foto3.png
+!photos/registered/foto4.png
+!photos/registered/foto5.png
 
 dist
 dist-ssr

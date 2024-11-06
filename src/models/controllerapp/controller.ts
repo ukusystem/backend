@@ -30,5 +30,5 @@ export async function sendSecurity(controllerID:number, security:boolean):Promis
 }
 
 export function notifyCamDisconnect(ctrl_id:number,cam: Camara):void{
-
+  mainService?.addDisconnectedCamera(ctrl_id,cam)
 }

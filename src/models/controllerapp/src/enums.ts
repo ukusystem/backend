@@ -45,6 +45,8 @@ export const States = {
   FINISHED: 16,
   NULLIFIED: 17,
   UNATTENDED: 18,
+  MOUNTING: 19,
+  EJECTING: 20
 };
 
 export function getState(id: number): number {
