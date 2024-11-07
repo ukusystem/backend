@@ -40,20 +40,17 @@ export class Main {
   // month in seconds 2,628,000
   // private static readonly TABLES_INTERVAL = 2628000;
 
-  private static readonly REQUEST_TIMEOUT = parseInt(process.env.CTRL_REQUEST_TIMEOUT??'9') * 1000;
+  private static readonly REQUEST_TIMEOUT = parseInt(process.env.CTRL_REQUEST_TIMEOUT??'5') * 1000;
 
   private static readonly ALIVE_CHECK_INTERVAL_MS = 2 * 1000;
-  private static readonly ALIVE_TIMEOUT = 15;
-  private static readonly ALIVE_MANAGER_TIMEOUT = parseInt(process.env.MANAGER_TIMEOUT??'9');
+  public  static readonly ALIVE_REQUEST_INTERVAL = 3;
+  private static readonly ALIVE_CONTROLLER_TIMEOUT = parseInt(process.env.CONTROLLER_TIMEOUT??'5');
+  private static readonly ALIVE_MANAGER_TIMEOUT = parseInt(process.env.MANAGER_TIMEOUT??'5');
 
   private static readonly TICKET_CHECK_PERIOD = 1 * 1000;
 
-  private static readonly ALIVE_CAMERA_INTERVAL_MS = 4 * 1000;
-
-  private static readonly ALIVE_CAMERA_REACH_TIMEOUT_MS = 2 * 1000;
-  // private static readonly ALIVE_CAMERA_TIMEOUT = 16;
-
-  private static readonly MANAGER_TIMEOUT = 10 * 1000;
+  private static readonly ALIVE_CAMERA_PING_INTERVAL_MS = parseInt(process.env.CAMERA_PING_INTERVAL??'4') * 1000;
+  private static readonly ALIVE_CAMERA_PING_TIMEOUT_MS = parseInt(process.env.CAMERA_PING_TIMEOUT??'2') * 1000;
 
   private static readonly LOGGER_RELATIVE_PATH = "./logs";
   private readonly tag = "█ ";
@@ -95,6 +92,8 @@ export class Main {
   // static readonly isWindows2 = useful.isWindows();
   // static readonly isWindows2 = true;
   static isWindows = false
+
+  flag = true
 
   constructor() {
     // const enc = Encryption.encrypt("admin",true)
@@ -182,7 +181,7 @@ export class Main {
 
     setTimeout(this.processOneFromAll, 1);
     setTimeout(this.startDisconnectionDetection, Main.ALIVE_CHECK_INTERVAL_MS, this.selector);
-    setTimeout(this.startCamerasCheck, Main.ALIVE_CAMERA_INTERVAL_MS);
+    setTimeout(this.startCamerasCheck, Main.ALIVE_CAMERA_PING_INTERVAL_MS);
 
     this.startTicketsCheck();
   }
@@ -191,6 +190,18 @@ export class Main {
    * Process one cashed message from all sockets registered. Af the end of the method, a timeout is set to call it again, thus simulating a loop.
    */
   private processOneFromAll = async () => {
+
+    // Check channels count
+    // if(useful.timeInt() % 10 == 0){
+    //   if(this.flag){
+    //     console.log(this.selector.nodeAttachments[0]?.printKeyCount(this.selector))
+    //     this.flag = false
+    //   }
+    // }else{
+    //   this.flag = true
+    // }
+
+    // Process messages from nodes
     for (const node of this.selector.nodeAttachments) {
       const code = new ResultCode();
       const bundle = new Bundle();
@@ -223,11 +234,11 @@ export class Main {
     this.sendMessagesTimer = setInterval(() => {
       // Send messages to controllers
       for (const node of this.selector.nodeAttachments) {
-        // node.tryRequestKeepalive()
-        node.sendOne(this.selector)
-        // if(node.sendOne(this.selector)){
-        //   node.setLastMessageTime()
-        // }
+        node.tryRequestKeepalive()
+        // node.sendOne(this.selector)
+        if(node.sendOne(this.selector)){
+          node.setLastMessageTime()
+        }
       }
 
       // Send messages to managers
@@ -247,7 +258,7 @@ export class Main {
         this.selector.managerConnections.push(newManagerSocket);
         this.log(`Managers after push: ${this.selector.managerConnections.length}`);
 
-        connection.setTimeout(Main.MANAGER_TIMEOUT, () => {
+        connection.setTimeout(Main.ALIVE_MANAGER_TIMEOUT, () => {
           this.log("Manager idle timeout");
           // Activate when the manager sends keep alives to the server. Managers should not reconnect automaticaly
           // newManagerSocket.reconnect(this.selector)
@@ -947,7 +958,7 @@ export class Main {
         try {
           // Send ping or try to reach address
           if (Main.isWindows) {
-            cp.exec(`ping ${tempCamera.camara.ip} -n 1`, { timeout: Main.ALIVE_CAMERA_REACH_TIMEOUT_MS }, async (error, stdout, stderror) => {
+            cp.exec(`ping ${tempCamera.camara.ip} -n 1`, { timeout: Main.ALIVE_CAMERA_PING_TIMEOUT_MS }, async (error, stdout, stderror) => {
               if (error) {
                 // this.log(`Error sending ping to ${cam.cameraIP}. Code ${error.code}`);
                 // this.log(`Error output\n ${stderror}\nStdout\n${stdout}`)
@@ -974,7 +985,7 @@ export class Main {
         }
       }
     }
-    setTimeout(this.startCamerasCheck, Main.ALIVE_CAMERA_INTERVAL_MS);
+    setTimeout(this.startCamerasCheck, Main.ALIVE_CAMERA_PING_INTERVAL_MS);
   };
 
   /**
@@ -991,11 +1002,11 @@ export class Main {
     const nodeCopy = selector.nodeAttachments.slice();
 
     for (const node of nodeCopy) {
-      if (node.hasBeenInactiveFor(Main.ALIVE_TIMEOUT)) {
+      if (node.hasBeenInactiveFor(Main.ALIVE_CONTROLLER_TIMEOUT)) {
         if (node.isLogged()) {
           this.log(`Channel '${node}' ID = ${node.controllerID} is dead. Reconnecting...`);
           BaseAttach.simpleReconnect(this.selector, node);
-          // node.resetKeepAliveRequest()
+          node.resetKeepAliveRequest()
           await node.insertNet(false);
           node.printKeyCount(selector);
           ManagerAttach.connectedManager?.addNodeState(false,node.controllerID)
