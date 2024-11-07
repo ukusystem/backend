@@ -47,8 +47,6 @@ export class Mortal {
   //   this.currentState = state;
   // }
 
-  
-
   /**
    * Get the change in the state of this object. The states are updated by calling {@linkcode setState} or its overload.
    * @return The change in the state. After calling {@linkcode setState}, this method may return a different value.

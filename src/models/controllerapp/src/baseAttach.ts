@@ -193,6 +193,7 @@ export class BaseAttach extends Mortal {
     if (!this._currentSocket) {
       return;
     }
+    // console.log("Reconnect function")
     if (BaseAttach.simpleReconnect(selector, this)) {
       this._log("Manager can now be accepted.");
     }
@@ -222,7 +223,7 @@ export class BaseAttach extends Mortal {
         // Delay connection if was unreachable
         setTimeout(
           () => {
-            // console.log("Reconnecting simple")
+            // console.log("Simple reconnect")
             nodeAttach.tryConnectNode(selector, true);
           },
           unreachable ? this.UNREACHABLE_INTERVAL_MS : 1
@@ -300,6 +301,7 @@ export class BaseAttach extends Mortal {
       // this._log(`Received decoded '${received}'`)
       // It is still alive
       this.setAlive();
+      // console.log(".")
       // Use data
       this._buffer += received;
       // this._log(`Buffer to process: '${this._buffer}'`)
@@ -910,7 +912,7 @@ export class BaseAttach extends Mortal {
   }
 
   printKeyCount(selector: Selector) {
-    // this._log(`Attachs: Node ${selector.nodeAttachments.length} Manager ${selector.managerConnections.length}`);
+    this._log(`Attachs: Node ${selector.nodeAttachments.length} Manager ${selector.managerConnections.length}`);
   }
 }
 
@@ -932,7 +934,6 @@ export class NodeAttach extends BaseAttach {
 
   static ticketsMap = new Map<number, NodeTickets>()
   
-  private static readonly ALIVE_REQUEST_INTERVAL = 3;
   /**
    * The controller sends temperature readings in a periodo of 3 seconds.
    * Saving the readings each minute gives
@@ -985,6 +986,8 @@ export class NodeAttach extends BaseAttach {
    */
   private loggedToController = false;
 
+  // private printFlag = true
+
   constructor(nodeID: number, nodeName: string, nodeIP: string, nodePort: number, nodeUser: string, nodePassword: string, currentLogger: Logger) {
     super(currentLogger);
     this.controllerID = nodeID;
@@ -1022,6 +1025,10 @@ export class NodeAttach extends BaseAttach {
     this.loggedToController = state
   }
 
+  /**
+   * 
+   * @returns Whether the node is logged to the controller or not.
+   */
   isLogged() {
     return this.loggedToController
   }
@@ -1071,17 +1078,28 @@ export class NodeAttach extends BaseAttach {
     if(!Selector.isChannelConnected(this._currentSocket)){
       return
     }
-    if(!this._keepAliveRequestSent && this.isBufferEmpty() && (useful.timeInt() >= this.lastTimeMessageSent + NodeAttach.ALIVE_REQUEST_INTERVAL)){
+    if(!this._keepAliveRequestSent && this.isBufferEmpty() && (useful.timeInt() >= this.lastTimeMessageSent + Main.ALIVE_REQUEST_INTERVAL)){
       this._keepAliveRequestSent = true
-      this._addOne(new Message(codes.CMD_KEEP_ALIVE_REQUEST,-1, [],(header)=>{
-        if(header == codes.CMD_KEEP_ALIVE){
-          this._keepAliveRequestSent = false
-          // this._log("Keep alive response received")
-        }
-      }))
-      this._log("Keep alive request added")
+      this._addOne(new Message(codes.CMD_KEEP_ALIVE_REQUEST,0
+        // , [] ,
+        // (header)=>{
+        //   if(header == codes.CMD_KEEP_ALIVE){
+        //     this._keepAliveRequestSent = false
+        //     // this._log("Keep alive response received")
+        //   }
+        // }
+      ))
+      // this._log("Keep alive request added")
     }else{
       // this._log("Request not send")
+      // if(useful.timeInt() % 10 === 0){
+      //   if(this.printFlag){
+      //     console.log(this._keepAliveRequestSent)
+      //     this.printFlag = false
+      //   }
+      // }else{
+      //   this.printFlag = true
+      // }
     }
   }
 
@@ -1090,8 +1108,9 @@ export class NodeAttach extends BaseAttach {
       case codes.CMD_KEEP_ALIVE:
         // It doesn't matter if setAlive() is called in this block, since any message
         // received from the channel is a signal that it is alive.
-        this.removePendingMessageByID(id,cmdOrValue,false)
-        this._log("Keep alive response received")
+        // this.removePendingMessageByID(id,cmdOrValue,false)
+        this._keepAliveRequestSent = false
+        // this._log("Keep alive response received")
         break;
       case codes.CMD_POWER:
         // this._log(`Received power measure '${command}'`);
@@ -1777,7 +1796,7 @@ export class NodeAttach extends BaseAttach {
     });
 
     controllerSocket.on("data", (data: Buffer) => {
-      const a = [...data]
+      // const a = [...data]
       // this._log(`Received buffer '${a.map((s)=>s.toString(16)).join(" ")}' from controller ID ${this.controllerID}`)
       // this._log(`Received buffer '${data}' from controller ID ${this.controllerID}`)
       this.addData(data);
@@ -1823,7 +1842,7 @@ export class NodeAttach extends BaseAttach {
 
     // Close is emitted after the error event
     // Also emitted when the controller resets manually?
-    controllerSocket.on("close", () => {
+    controllerSocket.on("close", async () => {
       // this._log(`Socket close callback`);
       controllerSocket.end(() => {
         // this._log(`Socket end in close callback`);
@@ -1831,6 +1850,14 @@ export class NodeAttach extends BaseAttach {
 
       // controllerSocket.destroy();
 
+      // console.log("Try connect node, close event")
+      if(this.isLogged()){
+        this._log(`The node ID = ${this.controllerID} (${this.node}) closed its socket. Reconnecting ...`)
+        this.resetKeepAliveRequest()
+        await this.insertNet(false);
+        this.printKeyCount(selector);
+        ManagerAttach.connectedManager?.addNodeState(false,this.controllerID)
+      }
       BaseAttach.simpleReconnect(selector, this, this.unreached);
     });
 
