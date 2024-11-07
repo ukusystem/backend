@@ -1,392 +1,176 @@
+import { MySQL2 } from '../../../database/mysql';
+import { Init } from '../../../models/init';
+import { genericLogger } from '../../../services/loggers';
+import { filterUndefined } from '../../../utils/filterUndefined';
+import { MedEneListAction, MedEnergiaSocketDTO, MedEnergiaObserver, SocketMedEnergia, CtrlMedEnergiaMap, ObserverMedEnergiaMap, MedEnergiaObj, MedEnergiaMap, MedEnergiaAddUpdateDTO, MedEneState, MedidorEnergiaRowData } from './modulo.energia.types';
 
-import { Energia } from "../../../models/site/energia";
-import { genericLogger } from "../../../services/loggers";
-import {  MedEneListAction, MedEneState, MedidorEnergiaSocket, MedidorEnergiaSocketBad, ModEnergiaObserver, ModEnergiaSubject, SocketModEnergia } from "./modulo.energia.types";
+export class ModuloEnergiaObserver implements MedEnergiaObserver {
+  #socket: SocketMedEnergia;
 
-export class ModuloEnergiaObserver implements ModEnergiaObserver {
-  #socket: SocketModEnergia;
-
-  constructor(socket: SocketModEnergia) {
+  constructor(socket: SocketMedEnergia) {
     this.#socket = socket;
   }
-  updateListModEnergia( data: MedidorEnergiaSocket, action: MedEneListAction ): void {
-    this.#socket.nsp.emit("list_energia", data, action);
+
+  updateListModEnergia(data: MedEnergiaSocketDTO, action: MedEneListAction): void {
+    this.#socket.nsp.emit('list_energia', data, action);
   }
 
-  updateModEnergia(data: MedidorEnergiaSocket): void {
-    this.#socket.nsp.emit("energia", data);
+  updateModEnergia(data: MedEnergiaSocketDTO): void {
+    this.#socket.nsp.emit('energia', data);
   }
 }
 
+export class MedidorEnergiaManager {
+  static #medidor: CtrlMedEnergiaMap = new Map();
+  static #observers: ObserverMedEnergiaMap = new Map();
 
-export class MedEnergiaVO implements MedidorEnergiaSocket {
-  ctrl_id: number;
-  me_id: number;
-  descripcion: string;
-  voltaje: number;
-  amperaje: number;
-  fdp: number;
-  frecuencia: number;
-  potenciaw: number;
-  potenciakwh: number;
-  activo: number;
-
-  constructor(props: MedidorEnergiaSocket) {
-    const {ctrl_id,me_id,voltaje,amperaje,fdp,frecuencia,potenciaw,potenciakwh,activo,descripcion,} = props;
-    this.ctrl_id = ctrl_id;
-    this.me_id = me_id;
-    this.voltaje = voltaje;
-    this.amperaje = amperaje;
-    this.fdp = fdp;
-    this.frecuencia = frecuencia;
-    this.potenciaw = potenciaw;
-    this.potenciakwh = potenciakwh;
-    this.activo = activo;
-    this.descripcion = descripcion;
-  }
-
-  public setCtrlId(ctrl_id: MedidorEnergiaSocket["ctrl_id"]): void {
-    this.ctrl_id = ctrl_id;
-  }
-  public setMeId(me_id: MedidorEnergiaSocket["me_id"]): void {
-    this.me_id = me_id;
-  }
-  public setVoltaje(voltaje: MedidorEnergiaSocket["voltaje"]): void {
-    this.voltaje = voltaje;
-  }
-  public setAmperaje(amperaje: MedidorEnergiaSocket["amperaje"]): void {
-    this.amperaje = amperaje;
-  }
-  public setFdp(fdp: MedidorEnergiaSocket["fdp"]): void {
-    this.fdp = fdp;
-  }
-  public setFrecuencia(frecuencia: MedidorEnergiaSocket["frecuencia"]): void {
-    this.frecuencia = frecuencia;
-  }
-  public setPotenciaw(potenciaw: MedidorEnergiaSocket["potenciaw"]): void {
-    this.potenciaw = potenciaw;
-  }
-  public setPotenciakwh(potenciakwh: MedidorEnergiaSocket["potenciakwh"]): void {
-    this.potenciakwh = potenciakwh;
-  }
-  public setActivo(activo: MedidorEnergiaSocket["activo"]): void {
-    this.activo = activo;
-  }
-  public setDescripcion(descripcion: MedidorEnergiaSocket["descripcion"]): void {
-    this.descripcion = descripcion;
-  }
-
-  public toJSON(): MedidorEnergiaSocket {
-    const result: MedidorEnergiaSocket = {
-      ctrl_id: this.ctrl_id,
-      me_id: this.me_id,
-      voltaje: this.voltaje,
-      amperaje: this.amperaje,
-      fdp: this.fdp,
-      frecuencia: this.frecuencia,
-      potenciaw: this.potenciaw,
-      potenciakwh: this.potenciakwh,
-      activo: this.activo,
-      descripcion: this.descripcion,
-    };
-    return result;
-  }
-}
-  
-export class MedEnergiaBadVO implements MedidorEnergiaSocketBad {
-  ctrl_id: number;
-  me_id: number;
-  voltaje: number | null;
-  amperaje: number | null;
-  fdp: number | null;
-  frecuencia: number | null;
-  potenciaw: number | null;
-  potenciakwh: number | null;
-  activo: number | null;
-  descripcion: string | null;
-
-  constructor(props: MedidorEnergiaSocketBad) {
-    const {ctrl_id,me_id,voltaje,amperaje,fdp,frecuencia,potenciaw,potenciakwh,activo,descripcion,} = props;
-    this.ctrl_id = ctrl_id;
-    this.me_id = me_id;
-    this.voltaje = voltaje;
-    this.amperaje = amperaje;
-    this.fdp = fdp;
-    this.frecuencia = frecuencia;
-    this.potenciaw = potenciaw;
-    this.potenciakwh = potenciakwh;
-    this.activo = activo;
-    this.descripcion = descripcion;
-  }
-
-  public setCtrlId(ctrl_id: MedidorEnergiaSocketBad["ctrl_id"]): void {
-    this.ctrl_id = ctrl_id;
-  }
-  public setMeId(me_id: MedidorEnergiaSocketBad["me_id"]): void {
-    this.me_id = me_id;
-  }
-  public setVoltaje(voltaje: MedidorEnergiaSocketBad["voltaje"]): void {
-    this.voltaje = voltaje;
-  }
-  public setAmperaje(amperaje: MedidorEnergiaSocketBad["amperaje"]): void {
-    this.amperaje = amperaje;
-  }
-  public setFdp(fdp: MedidorEnergiaSocketBad["fdp"]): void {
-    this.fdp = fdp;
-  }
-  public setFrecuencia(frecuencia: MedidorEnergiaSocketBad["frecuencia"]): void {
-    this.frecuencia = frecuencia;
-  }
-  public setPotenciaw(potenciaw: MedidorEnergiaSocketBad["potenciaw"]): void {
-    this.potenciaw = potenciaw;
-  }
-  public setPotenciakwh(potenciakwh: MedidorEnergiaSocketBad["potenciakwh"]): void {
-    this.potenciakwh = potenciakwh;
-  }
-  public setActivo(activo: MedidorEnergiaSocketBad["activo"]): void {
-    this.activo = activo;
-  }
-  public setDescripcion(descripcion: MedidorEnergiaSocketBad["descripcion"]): void {
-    this.descripcion = descripcion;
-  }
-
-  public toJSON(): MedidorEnergiaSocketBad {
-    const result: MedidorEnergiaSocketBad = {
-      ctrl_id: this.ctrl_id,
-      me_id: this.me_id,
-      voltaje: this.voltaje,
-      amperaje: this.amperaje,
-      fdp: this.fdp,
-      frecuencia: this.frecuencia,
-      potenciaw: this.potenciaw,
-      potenciakwh: this.potenciakwh,
-      activo: this.activo,
-      descripcion: this.descripcion,
-
-    };
-    return result;
-  }
-}
-
-export class ModuloEnergiaManager {
-  
-  static map: { [ctrl_id: number]: { [me_id: number]: MedEnergiaVO } } = {};
-
-  static observers: { [ctrl_id: string]: ModEnergiaObserver } = {};
-
-  static registerObserver( ctrl_id: number, observer: ModEnergiaObserver ): void {
-    if (!ModuloEnergiaManager.observers[ctrl_id]) {
-      ModuloEnergiaManager.observers[ctrl_id] = observer;
+  static registerObserver(ctrl_id: number, new_observer: MedEnergiaObserver): void {
+    const observer = MedidorEnergiaManager.#observers.get(ctrl_id);
+    if (observer === undefined) {
+      MedidorEnergiaManager.#observers.set(ctrl_id, new_observer);
     }
   }
-
   static unregisterObserver(ctrl_id: number): void {
-    if (ModuloEnergiaManager.observers[ctrl_id]) {
-        delete ModuloEnergiaManager.observers[ctrl_id];
+    MedidorEnergiaManager.#observers.delete(ctrl_id);
+  }
+
+  static notifyListMedEnergia(ctrl_id: number, data: MedEnergiaSocketDTO, action: MedEneListAction): void {
+    const observer = MedidorEnergiaManager.#observers.get(ctrl_id);
+    if (observer !== undefined) {
+      observer.updateListModEnergia(data, action);
     }
   }
 
-  static notifyModEnergia(ctrl_id: number, data: MedidorEnergiaSocket): void {
-    if (ModuloEnergiaManager.observers[ctrl_id]) {
-        ModuloEnergiaManager.observers[ctrl_id].updateModEnergia(data);
+  static notifyMedEnergia(ctrl_id: number, data: MedEnergiaSocketDTO): void {
+    const observer = MedidorEnergiaManager.#observers.get(ctrl_id);
+    if (observer !== undefined) {
+      observer.updateModEnergia(data);
     }
   }
 
-  static notifyListModEnergia(ctrl_id: number, data: MedidorEnergiaSocket , action: MedEneListAction ): void {
-    if (ModuloEnergiaManager.observers[ctrl_id]) {
-        ModuloEnergiaManager.observers[ctrl_id].updateListModEnergia(data, action);
+  static #add(ctrl_id: number, medidor: MedEnergiaObj) {
+    const currController = MedidorEnergiaManager.#medidor.get(ctrl_id);
+    if (currController === undefined) {
+      const newMedEnergiaMap: MedEnergiaMap = new Map();
+      newMedEnergiaMap.set(medidor.me_id, medidor);
+
+      MedidorEnergiaManager.#medidor.set(ctrl_id, newMedEnergiaMap);
+    } else {
+      currController.set(medidor.me_id, medidor);
+    }
+    // notifications:
+    if (medidor.activo === MedEneState.Activo) {
+      MedidorEnergiaManager.notifyListMedEnergia(ctrl_id, medidor, 'add');
     }
   }
 
-  private static exists(args: { ctrl_id: number; me_id: number }) {
-    const { ctrl_id, me_id } = args;
+  static #update(ctrl_id: number, me_id_update: number, fieldsToUpdate: Partial<MedEnergiaObj>) {
+    const currController = MedidorEnergiaManager.#medidor.get(ctrl_id);
+    if (currController !== undefined) {
+      const medEnergia = currController.get(me_id_update);
+      if (medEnergia !== undefined) {
+        const { me_id, ...fieldsFiltered } = filterUndefined<MedEnergiaObj>(fieldsToUpdate);
 
-    let is_ctrl_id: boolean = false;
-    let is_me_id: boolean = false;
+        const { activo } = fieldsFiltered;
+        const hasChangeActivo = activo !== undefined && medEnergia.activo !== activo;
 
-    for (const ctrl_id_key in ModuloEnergiaManager.map) {
-      if (Number(ctrl_id_key) == ctrl_id) {
-        is_ctrl_id = true;
-        for (const me_id_key in ModuloEnergiaManager.map[ctrl_id_key]) {
-          if (Number(me_id_key) == me_id) {
-            is_me_id = true;
-            return is_ctrl_id && is_me_id;
+        Object.assign(medEnergia, fieldsFiltered);
+
+        // notifications:
+        if (hasChangeActivo) {
+          if (activo === MedEneState.Activo) {
+            MedidorEnergiaManager.notifyListMedEnergia(ctrl_id, medEnergia, 'delete');
+          }
+          if (activo === MedEneState.Desactivado) {
+            MedidorEnergiaManager.notifyListMedEnergia(ctrl_id, medEnergia, 'add');
           }
         }
+        MedidorEnergiaManager.notifyMedEnergia(ctrl_id, medEnergia);
       }
     }
-
-    return is_ctrl_id && is_me_id;
   }
 
-  static #add(medidor: MedEnergiaVO) {
-    const { ctrl_id, me_id } = medidor.toJSON();
-
-    if (!ModuloEnergiaManager.map.hasOwnProperty(ctrl_id)) {
-      ModuloEnergiaManager.map[ctrl_id] = {};
-    }
-
-    if (!ModuloEnergiaManager.map[ctrl_id].hasOwnProperty(me_id)) {
-      ModuloEnergiaManager.map[ctrl_id][me_id] = medidor;
-      if(medidor.activo === MedEneState.Activo){
-        ModuloEnergiaManager.notifyListModEnergia(ctrl_id, medidor, "add");
-      }
-
-    }
-  }
-
-  static #getListMedEnergia(ctrl_id:number){
-    const result : MedidorEnergiaSocket[] = [];
-    if (ModuloEnergiaManager.map.hasOwnProperty(ctrl_id)) {
-      Object.values(ModuloEnergiaManager.map[ctrl_id]).forEach((medidor) => {
-        result.push(medidor.toJSON());
-      });
-    }
-    return result;
-  }
-
-  static #update(medidor: MedEnergiaVO) {
-    const { ctrl_id, me_id, activo, amperaje, fdp, frecuencia, potenciakwh, potenciaw, voltaje, descripcion, } = medidor.toJSON();
-    if (ModuloEnergiaManager.map.hasOwnProperty(ctrl_id)) {
-      if (ModuloEnergiaManager.map[ctrl_id].hasOwnProperty(me_id)) {
-        const currentMedEnergia = ModuloEnergiaManager.map[ctrl_id][me_id];
-        // if (currentMedEnergia.ctrl_id != ctrl_id) currentMedEnergia.setCtrlId(ctrl_id);
-        // if (currentMedEnergia.me_id != me_id) currentMedEnergia.setMeId(me_id);
-        if (currentMedEnergia.amperaje != amperaje) currentMedEnergia.setAmperaje(amperaje);
-        if (currentMedEnergia.fdp != fdp) currentMedEnergia.setFdp(fdp);
-        if (currentMedEnergia.frecuencia != frecuencia) currentMedEnergia.setFrecuencia(frecuencia);
-        if (currentMedEnergia.potenciakwh != potenciakwh) currentMedEnergia.setPotenciakwh(potenciakwh);
-        if (currentMedEnergia.potenciaw != potenciaw) currentMedEnergia.setPotenciaw(potenciaw);
-        if (currentMedEnergia.voltaje != voltaje) currentMedEnergia.setVoltaje(voltaje);
-        if (currentMedEnergia.descripcion != descripcion) currentMedEnergia.setDescripcion(descripcion);
-        if (currentMedEnergia.activo != activo) { 
-            if(currentMedEnergia.activo === MedEneState.Activo){
-                ModuloEnergiaManager.notifyListModEnergia(ctrl_id, medidor.toJSON(),"delete");
-            }
-            if(currentMedEnergia.activo === MedEneState.Desactivado){
-                ModuloEnergiaManager.notifyListModEnergia(ctrl_id, medidor.toJSON(),"add");
-            }
-            currentMedEnergia.setActivo(activo);
+  static delete(ctrl_id: number, me_id: number): boolean {
+    const currController = MedidorEnergiaManager.#medidor.get(ctrl_id);
+    if (currController !== undefined) {
+      const medEnergia = currController.get(me_id);
+      if (medEnergia !== undefined) {
+        const hasDeleted = currController.delete(me_id);
+        if (hasDeleted) {
+          // notifications:
+          MedidorEnergiaManager.notifyListMedEnergia(ctrl_id, medEnergia, 'delete');
         }
-
-        ModuloEnergiaManager.notifyModEnergia(ctrl_id , medidor.toJSON());
+        return hasDeleted;
       }
     }
+
+    return false;
   }
 
-  public static async init() {
+  static async init() {
     try {
-      let initData = await Energia.getAllModuloEnergia();
-      for (let medidor of initData) {
-        let newMedEnergia = new MedEnergiaVO(medidor);
-        ModuloEnergiaManager.add_update(newMedEnergia);
-      }
+      const regionNodos = await Init.getRegionNodos();
+      regionNodos.forEach(async ({ ctrl_id, nododb_name }) => {
+        try {
+          const medidoresEnergia = await MySQL2.executeQuery<MedidorEnergiaRowData[]>({
+            sql: `SELECT * from ${nododb_name}.medidorenergia WHERE activo = 1`,
+          });
+
+          for (const medidor of medidoresEnergia) {
+            MedidorEnergiaManager.#add(ctrl_id, medidor);
+          }
+        } catch (error) {
+          genericLogger.error(`MedidorEnergiaManager | Error al inicializar medidor | ctrl_id : ${ctrl_id}`, error);
+        }
+      });
     } catch (error) {
-      genericLogger.error("Error al inicializar modulos de energia",error);
+      genericLogger.error('MedidorEnergiaManager| Error al inicializar medidores', error);
       throw error;
     }
   }
 
-  public static delete( medidor: MedEnergiaVO | MedEnergiaBadVO ) {
-    if (medidor instanceof MedEnergiaVO) {
-      const { ctrl_id, me_id } = medidor.toJSON();
-      if (ModuloEnergiaManager.map.hasOwnProperty(ctrl_id)) {
-        if (ModuloEnergiaManager.map[ctrl_id].hasOwnProperty(me_id)) {
-          ModuloEnergiaManager.map[ctrl_id][me_id].setActivo(0);
-          ModuloEnergiaManager.notifyListModEnergia(ctrl_id, medidor.toJSON(),"delete");
-        }
+  static add_update(ctrl_id: number, medidor: MedEnergiaAddUpdateDTO) {
+    const currController = MedidorEnergiaManager.#medidor.get(ctrl_id);
+    const { me_id, activo, amperaje, descripcion, fdp, frecuencia, potenciakwh, potenciaw, voltaje } = medidor;
+
+    if (currController === undefined) {
+      //  only add
+      if (activo !== undefined && amperaje !== undefined && descripcion !== undefined && fdp !== undefined && frecuencia !== undefined && potenciakwh !== undefined && potenciaw !== undefined && voltaje !== undefined) {
+        MedidorEnergiaManager.#add(ctrl_id, { me_id, activo, amperaje, descripcion, fdp, frecuencia, potenciakwh, potenciaw, voltaje });
       }
     } else {
-      const { ctrl_id, me_id } = medidor.toJSON();
-      if (ctrl_id != null && me_id != null) {
-        const curMedEnergia = ModuloEnergiaManager.getDataByCtrlIDAndMeID(ctrl_id, me_id);
-        if (curMedEnergia !== null) {
-          curMedEnergia.setActivo(0);
-          ModuloEnergiaManager.notifyListModEnergia(ctrl_id,curMedEnergia.toJSON(),"delete");
-        }
-      }
-    }
-  }
-
-  public static add_update( medidor: MedEnergiaVO | MedEnergiaBadVO ) {
-    if (medidor instanceof MedEnergiaVO) {
-      const { me_id, ctrl_id } = medidor.toJSON();
-      const exists = ModuloEnergiaManager.exists({me_id, ctrl_id});
-
-      if (!exists) {
-        ModuloEnergiaManager.#add(medidor);
+      const hasMedEnergia = currController.has(me_id);
+      if (hasMedEnergia) {
+        MedidorEnergiaManager.#update(ctrl_id, me_id, medidor);
       } else {
-        ModuloEnergiaManager.#update(medidor);
-      }
-    } else {
-      const {me_id,ctrl_id,activo,amperaje,descripcion,fdp,frecuencia,potenciakwh,potenciaw,voltaje,} = medidor.toJSON();
-      if (me_id != null && ctrl_id != null) {
-        const currentMedidor = ModuloEnergiaManager.getDataByCtrlIDAndMeID(ctrl_id,me_id);
-        if (currentMedidor) {
-          // existe modulo energia
-          // actualizar
-          if (amperaje !== null && currentMedidor.amperaje != amperaje)
-            currentMedidor.setAmperaje(amperaje);
-          if (descripcion !== null && currentMedidor.descripcion != descripcion)
-            currentMedidor.setDescripcion(descripcion);
-          if (fdp !== null && currentMedidor.fdp != fdp)
-            currentMedidor.setFdp(fdp);
-          if (frecuencia !== null && currentMedidor.frecuencia != frecuencia)
-            currentMedidor.setFrecuencia(frecuencia);
-          if (potenciakwh !== null && currentMedidor.potenciakwh != potenciakwh)
-            currentMedidor.setPotenciakwh(potenciakwh);
-          if (potenciaw !== null && currentMedidor.potenciaw != potenciaw)
-            currentMedidor.setPotenciaw(potenciaw);
-          if (voltaje !== null && currentMedidor.voltaje != voltaje)
-            currentMedidor.setVoltaje(voltaje);
-          if (activo !== null && currentMedidor.activo != activo) {
-              if(currentMedidor.activo === MedEneState.Activo){
-                  ModuloEnergiaManager.notifyListModEnergia(ctrl_id, currentMedidor.toJSON(),"delete");
-                }
-              if(currentMedidor.activo === MedEneState.Desactivado){
-                  ModuloEnergiaManager.notifyListModEnergia(ctrl_id, currentMedidor.toJSON(),"add");
-              }
-              currentMedidor.setActivo(activo);
-          }
-
-          ModuloEnergiaManager.notifyModEnergia(ctrl_id , currentMedidor.toJSON());
-
-        } else {
-          // agregar
-          if ( activo != null && amperaje != null && descripcion != null && fdp != null && frecuencia != null && potenciakwh != null && potenciaw != null && voltaje != null ) {
-            const newMedEnerSocket = new MedEnergiaVO({me_id,ctrl_id,activo,amperaje,descripcion,fdp,frecuencia,potenciakwh,potenciaw,voltaje,});
-            ModuloEnergiaManager.#add(newMedEnerSocket);
-          }
+        if (activo !== undefined && amperaje !== undefined && descripcion !== undefined && fdp !== undefined && frecuencia !== undefined && potenciakwh !== undefined && potenciaw !== undefined && voltaje !== undefined) {
+          MedidorEnergiaManager.#add(ctrl_id, { me_id, activo, amperaje, descripcion, fdp, frecuencia, potenciakwh, potenciaw, voltaje });
         }
       }
     }
   }
 
-  public static getDataByCtrlID(ctrl_id: number) {
-    let resultData: MedidorEnergiaSocket[] = [];
-    if (ModuloEnergiaManager.map.hasOwnProperty(ctrl_id)) {
-      for (const st_id_key in ModuloEnergiaManager.map[ctrl_id]) {
-        let sensorData = ModuloEnergiaManager.map[ctrl_id][st_id_key].toJSON();
-        if (sensorData.activo == MedEneState.Activo) {
-          resultData.push(sensorData);
-        }
-      }
+  static getListMedEnergia(ctrl_id: number): MedEnergiaObj[] {
+    const currController = MedidorEnergiaManager.#medidor.get(ctrl_id);
+    if (currController !== undefined) {
+      const listMedEn = Array.from(currController.values());
+      const listMedEnActives = listMedEn.filter((medidor) => medidor.activo === MedEneState.Activo);
+      return listMedEnActives.sort((a, b) => a.me_id - b.me_id);
     }
-    let sortedData = resultData.sort((r1, r2) => r1.me_id - r2.me_id); // ordenamiento ascendente
-    return sortedData;
+    return [];
   }
 
-  public static getDataByCtrlIDAndMeID(ctrl_id: number, me_id: number) {
-    let resultData: MedEnergiaVO | null = null;
-    if (ModuloEnergiaManager.map.hasOwnProperty(ctrl_id)) {
-      if (ModuloEnergiaManager.map[ctrl_id].hasOwnProperty(me_id)) {
-        resultData = ModuloEnergiaManager.map[ctrl_id][me_id];
+  static getMedEnergiaItem(ctrl_id: number, me_id: number): MedEnergiaObj | undefined {
+    const currController = MedidorEnergiaManager.#medidor.get(ctrl_id);
+    if (currController !== undefined) {
+      const medEnergia = currController.get(me_id);
+      if (medEnergia !== undefined && medEnergia.activo === MedEneState.Activo) {
+        return medEnergia;
       }
     }
-    return resultData;
+    return undefined;
   }
 }
-
 
 // (async ()=>{
 //     // setInterval(()=>{
@@ -408,7 +192,7 @@ export class ModuloEnergiaManager {
 //     //     });
 //     //     console.log("actulizando: ", newMedEnergia.ctrl_id, newMedEnergia.me_id, newMedEnergia.voltaje)
 //     //     ModuloEnergiaManager.add_update(newMedEnergia)
-        
+
 //     // },10000);
 
 //     // setTimeout(() => {

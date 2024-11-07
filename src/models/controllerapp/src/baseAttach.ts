@@ -684,22 +684,21 @@ export class BaseAttach extends Mortal {
     potenciaw: number | null = null,
     potenciakwh: number | null = null
   ) {
-    const newEnergy = new sm.MedEnergiaBadVO({
+    const newEnergy : sm.MedEnergiaAddUpdateDTO = {
       me_id: meID,
-      descripcion: desc,
-      voltaje: voltaje,
-      amperaje: amperaje,
-      fdp: fdp,
-      frecuencia: frecuencia,
-      potenciaw: potenciaw,
-      potenciakwh: potenciakwh,
-      activo: active,
-      ctrl_id: nodeID,
-    });
+      descripcion: desc ?? undefined,
+      voltaje: voltaje ?? undefined,
+      amperaje: amperaje ?? undefined,
+      fdp: fdp ?? undefined,
+      frecuencia: frecuencia ?? undefined,
+      potenciaw: potenciaw ?? undefined,
+      potenciakwh: potenciakwh ?? undefined,
+      activo: active ?? undefined,
+    }
     if (active === 0) {
-      sm.ModuloEnergiaManager.delete(newEnergy);
+      sm.MedidorEnergiaManager.delete(nodeID,meID);
     } else {
-      sm.ModuloEnergiaManager.add_update(newEnergy);
+      sm.MedidorEnergiaManager.add_update(nodeID,newEnergy);
     }
   }
 

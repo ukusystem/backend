@@ -1,5 +1,5 @@
 import z from "zod";
 
-export const modEnerNamespaceSchema = z.object({
+export const medEnerNamespaceSchema = z.object({
   ctrl_id: z.coerce.number().int().nonnegative(),
 });

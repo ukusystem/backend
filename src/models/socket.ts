@@ -1,23 +1,8 @@
 import { Server as HttpServer } from "http";
 import { Server } from "socket.io";
-import {  ticketSocket , streamRecordSocket, lastSnapshotSocket, pinEntradaSocket, registroEntradaSocket, voiceStreamSocket, NamespaceControllerState, contollerStateSocket, NamespacePinSalida, pinSalidaSocket, NamespaceModEnergia, modEnergiaSocket, senTemperaturaSocket, NamespaceSenTemperature, NamespaceSidebarNav, navbarNavSocket, NamespaceLastSnapshot, NamespaceAlarm, alarmSocket, NamespaceRegistroEntrada, NamespacePinEntrada } from "../controllers/socket";
+import {  ticketSocket , streamRecordSocket, lastSnapshotSocket, pinEntradaSocket, registroEntradaSocket, voiceStreamSocket, NamespaceControllerState, contollerStateSocket, NamespacePinSalida, pinSalidaSocket, NamespaceMedEnergia, medEnergiaSocket, senTemperaturaSocket, NamespaceSenTemperature, NamespaceSidebarNav, navbarNavSocket, NamespaceLastSnapshot, NamespaceAlarm, alarmSocket, NamespaceRegistroEntrada, NamespacePinEntrada } from "../controllers/socket";
 import { camStreamSocket } from "../controllers/socket/stream/camera.stream.socket";
 import { NamespaceRegistroAcceso, registroAccesoSocket } from "../controllers/socket/registro.acceso";
-
-
-function parserCookie(cookies: string | undefined) {
-  if (cookies === undefined) {
-    return {};
-  }
-  const cookieSplit = cookies.split("; ");
-  const cookieObject = cookieSplit.reduce<Record<any, string>>((acc, curr) => {
-    const result = acc;
-    const tokenSplit = curr.split("=");
-    result[tokenSplit[0]] = tokenSplit[1] ? tokenSplit[1] : "";
-    return result;
-  }, {});
-  return cookieObject;
-}
 
 export class Sockets {
   #io: Server;
@@ -90,8 +75,8 @@ export class Sockets {
     SenTempNSP.on("connection", (socket)=>{senTemperaturaSocket(this.#io,socket)})
 
     // Namespace : "/modulo_energia/ctrl_id"
-    const ModEnergiaNSP: NamespaceModEnergia = this.#io.of(/^\/modulo_energia\/\d+$/);
-    ModEnergiaNSP.on("connection", (socket) => { modEnergiaSocket(this.#io, socket); });
+    const ModEnergiaNSP: NamespaceMedEnergia = this.#io.of(/^\/modulo_energia\/\d+$/);
+    ModEnergiaNSP.on("connection", (socket) => { medEnergiaSocket(this.#io, socket); });
 
     // Namespace: /sidebar_nav
     const SidebarNavNSP: NamespaceSidebarNav = this.#io.of("/sidebar_nav");
