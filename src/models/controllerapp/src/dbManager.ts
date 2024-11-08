@@ -1,13 +1,14 @@
-import {  ResultSetHeader, RowDataPacket, format } from "mysql2";
-import { MySQL2 } from "../../../database/mysql";
-import { BaseAttach } from "./baseAttach";
-import bcrypt from "bcrypt";
-import * as queries from "./queries";
-import * as useful from './useful'
-import * as db2 from "./db2";
-import * as util from 'util'
+import { ResultSetHeader, RowDataPacket, format } from 'mysql2';
+import { MySQL2 } from '../../../database/mysql';
+import { BaseAttach } from './baseAttach';
+import bcrypt from 'bcrypt';
+import * as queries from './queries';
+// import * as useful from './useful'
+import * as db2 from './db2';
+import * as util from 'util';
 
-export async function executeQuery<T extends RowDataPacket[] | ResultSetHeader>(sql: string, values: any[] | null = null, config:boolean = false) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function executeQuery<T extends RowDataPacket[] | ResultSetHeader>(sql: string, values: any[] | null = null, config: boolean = false) {
   try {
     return await MySQL2.executeQuery<T>({ sql: sql, values: values }, config);
   } catch (e) {
@@ -23,18 +24,19 @@ export async function executeQuery<T extends RowDataPacket[] | ResultSetHeader>(
  * @param parameters Array of parameters. Each element is an array of parameters for the query.
  * @param extra If not null, format the query once more with this value.
  */
-export async function executeBatchForNode(query: string, nodeID: number, parameters: any[][], extra:string|null = null) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function executeBatchForNode(query: string, nodeID: number, parameters: any[][], extra: string | null = null) {
   // console.log(parameters);
   let fullQuery = BaseAttach.formatQueryWithNode(query, nodeID);
-  if(extra){
-    fullQuery = util.format(fullQuery,extra)
+  if (extra) {
+    fullQuery = util.format(fullQuery, extra);
   }
   // console.log(batchQuery);
-    for(const parameter of parameters){
-      const q = format(fullQuery, parameter)
-      // console.log('Query: \n'+q)
-      await executeQuery<ResultSetHeader>(q);
-    }
+  for (const parameter of parameters) {
+    const q = format(fullQuery, parameter);
+    // console.log('Query: \n'+q)
+    await executeQuery<ResultSetHeader>(q);
+  }
 }
 
 /**
@@ -52,7 +54,7 @@ export async function userExist(loginUser: string, loginPassword: string): Promi
   // log("Password: %s", loginPassword);
   const users = await executeQuery<db2.UserPassword[]>(queries.loginManager, [loginUser]);
   if (!users) return -1;
-  for (let user of users) {
+  for (const user of users) {
     const match = await bcrypt.compare(loginPassword, user.contraseña);
     if (match) {
       return user.u_id;
@@ -60,5 +62,3 @@ export async function userExist(loginUser: string, loginPassword: string): Promi
   }
   return 0;
 }
-
-
