@@ -4,7 +4,17 @@ import { EquipoSalidaMapManager } from '../../../models/maps';
 import { genericLogger } from '../../../services/loggers';
 import { EquipoSalida } from '../../../types/db';
 import { filterUndefined } from '../../../utils/filterUndefined';
-import { MapControladorPinSalida, MapObserverPinSalida, MapPinSalida, PinSalidaAddUpdateDTO, PinSalidaDTO, PinSalidaObserver, PinSalidaRowData, PinSalidaSocketDTO, SocketPinSalida } from './pinsalida.types';
+import {
+  MapControladorPinSalida,
+  MapObserverPinSalida,
+  MapPinSalida,
+  PinSalidaAddUpdateDTO,
+  PinSalidaDTO,
+  PinSalidaObserver,
+  PinSalidaRowData,
+  PinSalidaSocketDTO,
+  SocketPinSalida,
+} from './pinsalida.types';
 
 export class PinSalidaSocketObserver implements PinSalidaObserver {
   #socket: SocketPinSalida;
@@ -39,13 +49,10 @@ export class PinSalidaManager {
   static unregisterObserver(ctrl_id: number): void {
     PinSalidaManager.#observers.delete(ctrl_id);
   }
-  static notifyEquiposSalida(ctrl_id: number, data: EquipoSalida[]): void {
-    // unused
-    const observer = PinSalidaManager.#observers.get(ctrl_id);
-    if (observer !== undefined) {
-      
-    }
-  }
+
+  // static notifyEquiposSalida(ctrl_id: number, data: EquipoSalida[]): void {
+  //   // unused
+  // }
 
   static notifyListPinesSalida(ctrl_id: number, pin_salida: PinSalidaDTO): void {
     const observer = PinSalidaManager.#observers.get(ctrl_id);
@@ -85,16 +92,17 @@ export class PinSalidaManager {
     if (currController !== undefined) {
       const pinSalida = currController.get(ps_id_update);
       if (pinSalida !== undefined) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { ps_id, ...fieldsFiltered } = filterUndefined<PinSalidaDTO>(fieldsToUpdate);
 
-        const { activo ,es_id } = fieldsFiltered;
-        const hasChangesActive = (activo !== undefined && pinSalida.activo !== activo) ;
-        const hasChangeEqSal = (es_id !== undefined && pinSalida.es_id !== es_id);
-        const currPinSalCopy = {...pinSalida}
+        const { activo, es_id } = fieldsFiltered;
+        const hasChangesActive = activo !== undefined && pinSalida.activo !== activo;
+        const hasChangeEqSal = es_id !== undefined && pinSalida.es_id !== es_id;
+        const currPinSalCopy = { ...pinSalida };
 
         Object.assign(pinSalida, fieldsFiltered);
 
-        if(hasChangeEqSal){
+        if (hasChangeEqSal) {
           PinSalidaManager.notifyListPinesSalida(ctrl_id, currPinSalCopy);
           PinSalidaManager.notifyListPinesSalida(ctrl_id, pinSalida);
         }

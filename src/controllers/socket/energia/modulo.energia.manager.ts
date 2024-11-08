@@ -2,7 +2,19 @@ import { MySQL2 } from '../../../database/mysql';
 import { Init } from '../../../models/init';
 import { genericLogger } from '../../../services/loggers';
 import { filterUndefined } from '../../../utils/filterUndefined';
-import { MedEneListAction, MedEnergiaSocketDTO, MedEnergiaObserver, SocketMedEnergia, CtrlMedEnergiaMap, ObserverMedEnergiaMap, MedEnergiaObj, MedEnergiaMap, MedEnergiaAddUpdateDTO, MedEneState, MedidorEnergiaRowData } from './modulo.energia.types';
+import {
+  MedEneListAction,
+  MedEnergiaSocketDTO,
+  MedEnergiaObserver,
+  SocketMedEnergia,
+  CtrlMedEnergiaMap,
+  ObserverMedEnergiaMap,
+  MedEnergiaObj,
+  MedEnergiaMap,
+  MedEnergiaAddUpdateDTO,
+  MedEneState,
+  MedidorEnergiaRowData,
+} from './modulo.energia.types';
 
 export class ModuloEnergiaObserver implements MedEnergiaObserver {
   #socket: SocketMedEnergia;
@@ -69,6 +81,7 @@ export class MedidorEnergiaManager {
     if (currController !== undefined) {
       const medEnergia = currController.get(me_id_update);
       if (medEnergia !== undefined) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { me_id, ...fieldsFiltered } = filterUndefined<MedEnergiaObj>(fieldsToUpdate);
 
         const { activo } = fieldsFiltered;
@@ -135,7 +148,16 @@ export class MedidorEnergiaManager {
 
     if (currController === undefined) {
       //  only add
-      if (activo !== undefined && amperaje !== undefined && descripcion !== undefined && fdp !== undefined && frecuencia !== undefined && potenciakwh !== undefined && potenciaw !== undefined && voltaje !== undefined) {
+      if (
+        activo !== undefined &&
+        amperaje !== undefined &&
+        descripcion !== undefined &&
+        fdp !== undefined &&
+        frecuencia !== undefined &&
+        potenciakwh !== undefined &&
+        potenciaw !== undefined &&
+        voltaje !== undefined
+      ) {
         MedidorEnergiaManager.#add(ctrl_id, { me_id, activo, amperaje, descripcion, fdp, frecuencia, potenciakwh, potenciaw, voltaje });
       }
     } else {
@@ -143,7 +165,16 @@ export class MedidorEnergiaManager {
       if (hasMedEnergia) {
         MedidorEnergiaManager.#update(ctrl_id, me_id, medidor);
       } else {
-        if (activo !== undefined && amperaje !== undefined && descripcion !== undefined && fdp !== undefined && frecuencia !== undefined && potenciakwh !== undefined && potenciaw !== undefined && voltaje !== undefined) {
+        if (
+          activo !== undefined &&
+          amperaje !== undefined &&
+          descripcion !== undefined &&
+          fdp !== undefined &&
+          frecuencia !== undefined &&
+          potenciakwh !== undefined &&
+          potenciaw !== undefined &&
+          voltaje !== undefined
+        ) {
           MedidorEnergiaManager.#add(ctrl_id, { me_id, activo, amperaje, descripcion, fdp, frecuencia, potenciakwh, potenciaw, voltaje });
         }
       }

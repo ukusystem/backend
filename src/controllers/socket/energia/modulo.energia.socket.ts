@@ -25,12 +25,12 @@ export const medEnergiaSocket = async (io: Server, socket: SocketMedEnergia) => 
 
   socket.on('disconnect', () => {
     const clientsCount = io.of(`/modulo_enegia/${ctrl_id}`).sockets.size;
-    if (clientsCount == 0) {
+    if (clientsCount === 0) {
       MedidorEnergiaManager.unregisterObserver(ctrl_id);
     }
   });
 
-  socket.on('error', (error: any) => {
+  socket.on('error', (error) => {
     genericLogger.error(`Error en el namespace de modulos de energia | ${ctrl_id}`, error);
   });
 };

@@ -3,7 +3,17 @@ import { Init } from '../../../models/init';
 import { genericLogger } from '../../../services/loggers';
 import { filterUndefined } from '../../../utils/filterUndefined';
 import { AlarmManager } from '../alarm';
-import { MapControladorPinEntrada, MapObserverPinEntrada, MapPinEntrada, PinEntradaAddUpdateDTO, PinEntradaDTO, PinEntradaDTORowData, PinEntradaSocketDTO, PinesEntradaObserver, SocketPinEntrada } from './pinentrada.types';
+import {
+  MapControladorPinEntrada,
+  MapObserverPinEntrada,
+  MapPinEntrada,
+  PinEntradaAddUpdateDTO,
+  PinEntradaDTO,
+  PinEntradaDTORowData,
+  PinEntradaSocketDTO,
+  PinesEntradaObserver,
+  SocketPinEntrada,
+} from './pinentrada.types';
 
 export class PinesSalidaSocketObserver implements PinesEntradaObserver {
   #socket: SocketPinEntrada;
@@ -40,7 +50,7 @@ export class PinEntradaManager {
     PinEntradaManager.#observers.delete(ctrl_id);
   }
 
-  static notifyListPinesEntrada(ctrl_id: number, data: PinEntradaDTO): void {
+  static notifyListPinesEntrada(ctrl_id: number, _data: PinEntradaDTO): void {
     const observer = PinEntradaManager.#observers.get(ctrl_id);
     if (observer !== undefined) {
       const listPinEntrada = PinEntradaManager.getListPinesEntrada(ctrl_id);
@@ -86,6 +96,7 @@ export class PinEntradaManager {
     if (currController !== undefined) {
       const pinEntrada = currController.get(pe_id_update);
       if (pinEntrada !== undefined) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { pe_id, ...fieldsFiltered } = filterUndefined<PinEntradaDTO>(fieldsToUpdate);
 
         const { activo } = fieldsFiltered;

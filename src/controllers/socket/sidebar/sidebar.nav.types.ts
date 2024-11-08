@@ -1,27 +1,14 @@
-import { Namespace, Socket } from "socket.io";
-import { Controlador, Region } from "../../../types/db";
+import { Namespace, Socket } from 'socket.io';
+import { Controlador, Region } from '../../../types/db';
 
-export type SidebarNavControllerData = Pick<
-  Controlador,
-  | "rgn_id"
-  | "ctrl_id"
-  | "nodo"
-  | "activo"
-  | "conectado"
-  | "seguridad"
-  | "modo"
-  | "descripcion"
-> &
-  Pick<Region, "region">;
+export type SidebarNavControllerData = Pick<Controlador, 'rgn_id' | 'ctrl_id' | 'nodo' | 'activo' | 'conectado' | 'seguridad' | 'modo' | 'descripcion'> & Pick<Region, 'region'>;
 
 export interface ErrorSidebarNav {
   message: string;
 }
 
 // socket
-interface ClientToServerEvents {
-
-}
+interface ClientToServerEvents {}
 
 interface ServerToClientEvents {
   controllers: (controllers: SidebarNavControllerData[]) => void;
@@ -35,19 +22,9 @@ interface InterServerEvents {}
 
 interface SocketData {}
 
-export type NamespaceSidebarNav = Namespace<
-  ClientToServerEvents,
-  ServerToClientEvents,
-  InterServerEvents,
-  SocketData
->;
+export type NamespaceSidebarNav = Namespace<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>;
 
-export type SocketSidebarNav = Socket<
-  ClientToServerEvents,
-  ServerToClientEvents,
-  InterServerEvents,
-  SocketData
->;
+export type SocketSidebarNav = Socket<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>;
 
 // Observer
 export interface SidebarNavObserver {
