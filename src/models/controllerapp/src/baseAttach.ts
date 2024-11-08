@@ -706,19 +706,19 @@ export class BaseAttach extends Mortal {
   }
 
   _notifyTemp(stID: number, nodeID: number, active: number | null = null, current: number | null = null, serie: string | null = null, desc: string | null = null) {
-    const newTemp = new sm.SenTemperaturaBadVO({
-      activo: active,
-      actual: current,
-      ctrl_id: nodeID,
-      serie: serie,
+    const newTemp: sm.SenTemperaturaAddUpdateDTO = {
       st_id: stID,
-      ubicacion: desc,
-    });
+      activo: active ?? undefined,
+      actual: current ?? undefined,
+      // ctrl_id: nodeID,
+      serie: serie ?? undefined,
+      ubicacion: desc ?? undefined,
+    };
     // this._log(`Notifying web about tempertaure ${newTemp.ctrl_id}.`)
     if (active === 0) {
-      sm.SensorTemperaturaManager.delete(newTemp);
+      sm.SensorTemperaturaManager.delete(nodeID, stID);
     } else {
-      sm.SensorTemperaturaManager.add_update(newTemp);
+      sm.SensorTemperaturaManager.add_update(nodeID, newTemp);
     }
   }
 
@@ -733,16 +733,7 @@ export class BaseAttach extends Mortal {
    * @param active Enable state of the pin.
    * @param date Date of the event.
    */
-  _notifyInput(
-    resgister: boolean,
-    pin: number,
-    nodeID: number,
-    ee_id: number | null = null,
-    desc: string | null = null,
-    state: number | null = null,
-    active: number | null = null,
-    date: string | null = null,
-  ) {
+  _notifyInput(resgister: boolean, pin: number, nodeID: number, ee_id: number | null = null, desc: string | null = null, state: number | null = null, active: number | null = null, date: string | null = null) {
     // this._log(`Notifying web about input.`);
     const newInput: sm.PinEntradaAddUpdateDTO = {
       pe_id: pin,
@@ -766,16 +757,7 @@ export class BaseAttach extends Mortal {
     }
   }
 
-  _notifyOutput(
-    pin: number,
-    auto: boolean,
-    nodeID: number,
-    es_id: number | null = null,
-    desc: string | null = null,
-    state: number | null = null,
-    active: number | null = null,
-    order: number | null = null,
-  ) {
+  _notifyOutput(pin: number, auto: boolean, nodeID: number, es_id: number | null = null, desc: string | null = null, state: number | null = null, active: number | null = null, order: number | null = null) {
     // this._log(`Notifying web about output.`);
     const newOutput: sm.PinSalidaAddUpdateDTO = {
       ps_id: pin,
@@ -1456,9 +1438,7 @@ export class NodeAttach extends BaseAttach {
             break;
         }
         // Log event
-        this._log(
-          `(${useful.formatTimestamp(this.fixDateNumber(pinData[2].getInt()))}) ${cmdOrValue === codes.CMD_INPUT_CHANGED ? 'Input' : 'Output'} ${pin} changed to ${state ? 'active' : 'inactive'}.`,
-        );
+        this._log(`(${useful.formatTimestamp(this.fixDateNumber(pinData[2].getInt()))}) ${cmdOrValue === codes.CMD_INPUT_CHANGED ? 'Input' : 'Output'} ${pin} changed to ${state ? 'active' : 'inactive'}.`);
         break;
       case codes.CMD_CARD_READ:
         // this._log(`Received card read '${command}'`);
@@ -1627,15 +1607,7 @@ export class NodeAttach extends BaseAttach {
     // Format the query since this kind has three format specifiers
     const fullQuery = util.format(isInput ? queries.insertInputChanged : queries.insertOutputChanged, dbName, dbName);
     const isAlarm = pinData[3].getInt();
-    if (
-      await executeQuery<ResultSetHeader>(fullQuery, [
-        pinData[0].getInt(),
-        pinData[1].getInt() === codes.VALUE_TO_ACTIVE ? 1 : 0,
-        useful.formatTimestamp(this.fixDateNumber(pinData[2].getInt())),
-        pinData[0].getInt(),
-        isAlarm,
-      ])
-    ) {
+    if (await executeQuery<ResultSetHeader>(fullQuery, [pinData[0].getInt(), pinData[1].getInt() === codes.VALUE_TO_ACTIVE ? 1 : 0, useful.formatTimestamp(this.fixDateNumber(pinData[2].getInt())), pinData[0].getInt(), isAlarm])) {
       // this._log(`Inserted: ${name}`);
     } else {
       this._log(`Error saving silent: ${name}`);
@@ -1795,15 +1767,7 @@ export class NodeAttach extends BaseAttach {
         const cards = await executeQuery<db2.CardForController[]>(queries.cardSelectForController);
         if (cards) {
           for (const card of cards) {
-            this.addCommandForControllerBody(
-              codes.CMD_CONFIG_SET,
-              -1,
-              card.activo
-                ? [codes.VALUE_CARD_SYNC.toString(), card.a_id.toString(), card.co_id.toString(), card.serie.toString(), card.administrador.toString()]
-                : [codes.VALUE_CARD_EMPTY_SYNC.toString(), card.a_id.toString()],
-              false,
-              false,
-            );
+            this.addCommandForControllerBody(codes.CMD_CONFIG_SET, -1, card.activo ? [codes.VALUE_CARD_SYNC.toString(), card.a_id.toString(), card.co_id.toString(), card.serie.toString(), card.administrador.toString()] : [codes.VALUE_CARD_EMPTY_SYNC.toString(), card.a_id.toString()], false, false);
           }
         }
       });
@@ -2804,11 +2768,7 @@ export class ManagerAttach extends BaseAttach {
     }
     for (const nodeAttach of selector.nodeAttachments) {
       if (nodeAttach.isLogged()) {
-        nodeAttach.addCommandForControllerBody(
-          codes.CMD_CONFIG_SET,
-          -1,
-          remove ? [codes.VALUE_CARD_EMPTY.toString(), cardID.toString()] : [codes.VALUE_CARD.toString(), cardID.toString(), companyID.toString(), serial.toString(), isAdmin ? '1' : '0'],
-        );
+        nodeAttach.addCommandForControllerBody(codes.CMD_CONFIG_SET, -1, remove ? [codes.VALUE_CARD_EMPTY.toString(), cardID.toString()] : [codes.VALUE_CARD.toString(), cardID.toString(), companyID.toString(), serial.toString(), isAdmin ? '1' : '0']);
       }
     }
   }
