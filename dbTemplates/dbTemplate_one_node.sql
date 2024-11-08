@@ -760,6 +760,35 @@ INSERT INTO `medidorenergia` VALUES (1,'Medidor 1',0),(2,'Medidor 2',0),(3,'Medi
 UNLOCK TABLES;
 
 --
+-- Table structure for table `nvrpreferencia`
+--
+
+DROP TABLE IF EXISTS `nvrpreferencia`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `nvrpreferencia` (
+  `nvrpref_id` int NOT NULL AUTO_INCREMENT,
+  `dia` tinyint unsigned NOT NULL,
+  `tiempo_inicio` time NOT NULL,
+  `tiempo_final` time NOT NULL,
+  `cmr_id` int NOT NULL,
+  `activo` tinyint unsigned NOT NULL,
+  PRIMARY KEY (`nvrpref_id`),
+  KEY `cmr_id` (`cmr_id`),
+  CONSTRAINT `nvrpreferencia_ibfk_1` FOREIGN KEY (`cmr_id`) REFERENCES `camara` (`cmr_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `nvrpreferencia`
+--
+
+LOCK TABLES `nvrpreferencia` WRITE;
+/*!40000 ALTER TABLE `nvrpreferencia` DISABLE KEYS */;
+/*!40000 ALTER TABLE `nvrpreferencia` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `pinesentrada`
 --
 
@@ -1360,6 +1389,35 @@ INSERT INTO `medidorenergia` VALUES (1,'Medidor 1',0),(2,'Medidor 2',0),(3,'Medi
 UNLOCK TABLES;
 
 --
+-- Table structure for table `nvrpreferencia`
+--
+
+DROP TABLE IF EXISTS `nvrpreferencia`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `nvrpreferencia` (
+  `nvrpref_id` int NOT NULL AUTO_INCREMENT,
+  `dia` tinyint unsigned NOT NULL,
+  `tiempo_inicio` time NOT NULL,
+  `tiempo_final` time NOT NULL,
+  `cmr_id` int NOT NULL,
+  `activo` tinyint unsigned NOT NULL,
+  PRIMARY KEY (`nvrpref_id`),
+  KEY `cmr_id` (`cmr_id`),
+  CONSTRAINT `nvrpreferencia_ibfk_1` FOREIGN KEY (`cmr_id`) REFERENCES `camara` (`cmr_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `nvrpreferencia`
+--
+
+LOCK TABLES `nvrpreferencia` WRITE;
+/*!40000 ALTER TABLE `nvrpreferencia` DISABLE KEYS */;
+/*!40000 ALTER TABLE `nvrpreferencia` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `pinesentrada`
 --
 
@@ -1807,4 +1865,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-11-04 12:46:37
+-- Dump completed on 2024-11-08 12:34:12

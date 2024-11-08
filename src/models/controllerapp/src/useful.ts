@@ -1,26 +1,26 @@
-import { AtomicNumber } from "./atomicNumber";
-import { BaseAttach } from "./baseAttach";
-import fs from "fs/promises";
-import fsNormal from "fs";
-import crypto from "crypto";
-import bcrypt from "bcrypt";
-import dayjs from "dayjs";
-import path from "path";
-import * as codes from "./codes";
+import { AtomicNumber } from './atomicNumber';
+import { BaseAttach } from './baseAttach';
+import fs from 'fs/promises';
+import fsNormal from 'fs';
+import crypto from 'crypto';
+import bcrypt from 'bcrypt';
+import dayjs from 'dayjs';
+import path from 'path';
+import * as codes from './codes';
 // import process from 'node:process'
 const BCRYPT_STRENGTH = 12;
 const MAX_FILE_SIZE_B = 5 * 1000 * 1000;
-const PHOTO_BASE_NAME = "foto";
-const PHOTO_NEW_BASE_NAME = "foto_new_";
-const PHOTO_FORMAT = ".png";
-const DATE_FORMAT = "YYYY-MM-DD HH:mm:ss";
-const YEAR_FORMAT = "YYYY";
-const MONTH_FORMAT = "MM";
+const PHOTO_BASE_NAME = 'foto';
+const PHOTO_NEW_BASE_NAME = 'foto_new_';
+const PHOTO_FORMAT = '.png';
+const DATE_FORMAT = 'YYYY-MM-DD HH:mm:ss';
+const YEAR_FORMAT = 'YYYY';
+const MONTH_FORMAT = 'MM';
 
 // export const DUMMY_DATE = "2000-01-01 00:00:00";
 
-const PHOTOS_RELATIVE_PATH = "photos";
-const REGISTERED_RELATIVE_PATH = "registered";
+const PHOTOS_RELATIVE_PATH = 'photos';
+const REGISTERED_RELATIVE_PATH = 'registered';
 const MAX_LOG_LINE_LENGTH = 120;
 
 let osName: string | null = null;
@@ -38,7 +38,7 @@ export function isWindows(): boolean {
   if (osName === null) {
     osName = process.platform;
   }
-  return osName === "win32";
+  return osName === 'win32';
   // return true
 }
 
@@ -50,11 +50,11 @@ export function isLinux(): boolean {
   if (osName === null) {
     osName = process.platform;
   }
-  return osName === "linux";
+  return osName === 'linux';
 }
 
-export function toHex(number:number):string{
-  return "0x"+number.toString(16);
+export function toHex(number: number): string {
+  return '0x' + number.toString(16);
 }
 
 /**
@@ -67,13 +67,13 @@ export function toHex(number:number):string{
 export function datetimeToLong(date: string) {
   const curDate = new Date(date);
   if (!isNaN(curDate.getTime())) {
-    return curDate.getTime()/1000;
+    return curDate.getTime() / 1000;
   }
   return -1;
 }
 
 export function lastPart(text: string): string {
-  return text.length >= MAX_LOG_LINE_LENGTH ? " ... " + text.substring(text.length - MAX_LOG_LINE_LENGTH) : text;
+  return text.length >= MAX_LOG_LINE_LENGTH ? ' ... ' + text.substring(text.length - MAX_LOG_LINE_LENGTH) : text;
 }
 
 /**
@@ -83,7 +83,7 @@ export function lastPart(text: string): string {
  * @returns The trimmed text.
  */
 export function trimString(text: string): string {
-  return text.length >= MAX_LOG_LINE_LENGTH ? text.substring(0, MAX_LOG_LINE_LENGTH) + " ... " : text;
+  return text.length >= MAX_LOG_LINE_LENGTH ? text.substring(0, MAX_LOG_LINE_LENGTH) + ' ... ' : text;
 }
 
 /**
@@ -93,12 +93,12 @@ export function trimString(text: string): string {
  * @returns The name of the state.
  */
 export function getStateName(state: number): string {
-  return state === codes.VALUE_CONNECTED ? "connected" : state === codes.VALUE_DISCONNECTED ? "disconnected" : state === codes.VALUE_DENIED ? "denied" : "unknownState";
+  return state === codes.VALUE_CONNECTED ? 'connected' : state === codes.VALUE_DISCONNECTED ? 'disconnected' : state === codes.VALUE_DENIED ? 'denied' : 'unknownState';
 }
 
 export async function readFileAsBase64(path: string): Promise<string | null> {
   try {
-    return (await fs.readFile(path)).toString("base64");
+    return (await fs.readFile(path)).toString('base64');
   } catch (e) {
     console.log(e);
   }
@@ -119,7 +119,7 @@ export async function readWorkerPhotoAsBase64(filename: string): Promise<string 
  */
 async function writeFileFromBase64(base64: string, filePath: string, byteSize: AtomicNumber): Promise<boolean> {
   try {
-    const temp = Buffer.from(base64, "base64");
+    const temp = Buffer.from(base64, 'base64');
     if (temp.length <= MAX_FILE_SIZE_B) {
       const parent = path.dirname(filePath);
       if (!fsNormal.existsSync(parent)) {
@@ -214,7 +214,7 @@ export async function writePhotoFromBase64(base64: string, workerID: number, byt
  * @returns The replaced string.
  */
 export function getReplacedPath(path: string): string {
-  return path.replace("\\", "/");
+  return path.replace('\\', '/');
 }
 
 /**
@@ -224,7 +224,7 @@ export function getReplacedPath(path: string): string {
  * @returns The hashed string (hexadecimal values), or null if an error occurred.
  */
 export function hash(text: string): string {
-  const hash = crypto.createHash("sha256").update(text).digest("hex");
+  const hash = crypto.createHash('sha256').update(text).digest('hex');
   return hash;
 }
 
@@ -240,7 +240,7 @@ export async function bCryptEncode(original: string): Promise<string | null> {
     .then((salt) => {
       return bcrypt.hash(original, salt);
     })
-    .catch((error) => {
+    .catch((_error) => {
       // console.log('Error encoding with BCrypt')
       return null;
     });

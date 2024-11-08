@@ -1,15 +1,15 @@
 export class ParseType {
-  static TYPE_INT = 0
-  static TYPE_BIG = 1
-  static TYPE_FLOAT = 2
-  static TYPE_STR = 3
-  static TYPE_LONG = 4
+  static TYPE_INT = 0;
+  static TYPE_BIG = 1;
+  static TYPE_FLOAT = 2;
+  static TYPE_STR = 3;
+  static TYPE_LONG = 4;
 }
 
 export class Changes {
-  static NONE = 0
-  static TO_ACTIVE = 1
-  static TO_INACTIVE = 2
+  static NONE = 0;
+  static TO_ACTIVE = 1;
+  static TO_INACTIVE = 2;
 }
 
 export class Result {
@@ -46,11 +46,11 @@ export const States = {
   NULLIFIED: 17,
   UNATTENDED: 18,
   MOUNTING: 19,
-  EJECTING: 20
+  EJECTING: 20,
 };
 
 export function getState(id: number): number {
-  for (const [k, v] of Object.entries(States)) {
+  for (const [, v] of Object.entries(States)) {
     if (v === id) {
       return v;
     }

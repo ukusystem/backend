@@ -1,34 +1,34 @@
-import { NodeAttach, ManagerAttach, Selector, BaseAttach } from "./baseAttach";
-import { States, getState } from "./enums";
-import { PartialTicket } from "./partialTicket";
-import { RequestResult } from "./requestResult";
-import { AtomicNumber } from "./atomicNumber";
-import { FinishTicket } from "./finishTicket";
-import { NodeTickets } from "./nodeTickets";
-import { executeQuery } from "./dbManager";
-import { ResultCode } from "./resultCode";
-import { ResultSetHeader } from "mysql2";
+import { NodeAttach, ManagerAttach, Selector, BaseAttach } from './baseAttach';
+import { States, getState } from './enums';
+import { PartialTicket } from './partialTicket';
+import { RequestResult } from './requestResult';
+import { AtomicNumber } from './atomicNumber';
+import { FinishTicket } from './finishTicket';
+import { NodeTickets } from './nodeTickets';
+import { executeQuery } from './dbManager';
+import { ResultCode } from './resultCode';
+import { ResultSetHeader } from 'mysql2';
 // import { CameraMotionManager } from "@models/camera";
 // import { CameraMotionManager } from "../../../models/camera";
 // import { NodoCameraMapManager } from "@maps/nodo.camera";
-import { NodoCameraMapManager } from "../../maps/nodo.camera";
+import { NodoCameraMapManager } from '../../maps/nodo.camera';
 // import { appConfig } from "@configs/index";
-import { appConfig } from "../../../configs";
-import { Ticket, type Personal, type Solicitante } from "./ticket";
-import { Logger } from "./logger";
+import { appConfig } from '../../../configs';
+import { Ticket, type Personal, type Solicitante } from './ticket';
+import { Logger } from './logger';
 // import { Camera } from "./camera";
-import { Bundle } from "./bundle";
+import { Bundle } from './bundle';
 // import { Mortal } from "./mortal";
-import { CameraToCheck, PinOrder } from "./types";
-import fs from "fs";
-import * as queries from "./queries";
-import * as useful from "./useful";
-import * as codes from "./codes";
-import * as db2 from "./db2";
+import { CameraToCheck, PinOrder } from './types';
+import fs from 'fs';
+import * as queries from './queries';
+import * as useful from './useful';
+import * as codes from './codes';
+import * as db2 from './db2';
 // import * as util from "util";
-import * as net from "net";
-import * as cp from "child_process";
-import { Camara } from "../../../types/db";
+import * as net from 'net';
+import * as cp from 'child_process';
+import { Camara } from '../../../types/db';
 
 export class Main {
   /**
@@ -40,20 +40,20 @@ export class Main {
   // month in seconds 2,628,000
   // private static readonly TABLES_INTERVAL = 2628000;
 
-  private static readonly REQUEST_TIMEOUT = parseInt(process.env.CTRL_REQUEST_TIMEOUT??'5') * 1000;
+  private static readonly REQUEST_TIMEOUT = parseInt(process.env.CTRL_REQUEST_TIMEOUT ?? '5') * 1000;
 
   private static readonly ALIVE_CHECK_INTERVAL_MS = 2 * 1000;
-  public  static readonly ALIVE_REQUEST_INTERVAL = 3;
-  private static readonly ALIVE_CONTROLLER_TIMEOUT = parseInt(process.env.CONTROLLER_TIMEOUT??'5');
-  private static readonly ALIVE_MANAGER_TIMEOUT = parseInt(process.env.MANAGER_TIMEOUT??'5');
+  public static readonly ALIVE_REQUEST_INTERVAL = 3;
+  private static readonly ALIVE_CONTROLLER_TIMEOUT = parseInt(process.env.CONTROLLER_TIMEOUT ?? '5');
+  private static readonly ALIVE_MANAGER_TIMEOUT = parseInt(process.env.MANAGER_TIMEOUT ?? '5');
 
   private static readonly TICKET_CHECK_PERIOD = 1 * 1000;
 
-  private static readonly ALIVE_CAMERA_PING_INTERVAL_MS = parseInt(process.env.CAMERA_PING_INTERVAL??'4') * 1000;
-  private static readonly ALIVE_CAMERA_PING_TIMEOUT_MS = parseInt(process.env.CAMERA_PING_TIMEOUT??'2') * 1000;
+  private static readonly ALIVE_CAMERA_PING_INTERVAL_MS = parseInt(process.env.CAMERA_PING_INTERVAL ?? '4') * 1000;
+  private static readonly ALIVE_CAMERA_PING_TIMEOUT_MS = parseInt(process.env.CAMERA_PING_TIMEOUT ?? '2') * 1000;
 
-  private static readonly LOGGER_RELATIVE_PATH = "./logs";
-  private readonly tag = "█ ";
+  private static readonly LOGGER_RELATIVE_PATH = './logs';
+  private readonly tag = '█ ';
   private readonly logger: Logger;
 
   /* Container of `net.Socket` */
@@ -87,13 +87,13 @@ export class Main {
    * - The service is not running
    * - The required folders have been created
    */
-  #conditionsMet = true;
+  private conditionsMet = true;
 
   // static readonly isWindows2 = useful.isWindows();
   // static readonly isWindows2 = true;
-  static isWindows = false
+  static isWindows = false;
 
-  flag = true
+  flag = true;
 
   constructor() {
     // const enc = Encryption.encrypt("admin",true)
@@ -103,13 +103,13 @@ export class Main {
     Main.isWindows = useful.isWindows();
     /* Logger */
 
-    this.logger = new Logger("msControllerService", Main.LOGGER_RELATIVE_PATH);
+    this.logger = new Logger('msControllerService', Main.LOGGER_RELATIVE_PATH);
 
     /* Check for double running */
 
     if (Main.running) {
-      this.log("Already created and running");
-      this.#conditionsMet = false;
+      this.log('Already created and running');
+      this.conditionsMet = false;
       return;
     }
 
@@ -117,33 +117,33 @@ export class Main {
 
     try {
       fs.mkdirSync(Main.LOGGER_RELATIVE_PATH, { recursive: true });
-      this.log("Directories created");
-    } catch (e) {
-      this.#conditionsMet = false;
-      this.log("Error creating directories");
+      this.log('Directories created');
+    } catch {
+      this.conditionsMet = false;
+      this.log('Error creating directories');
     }
 
     /* Init messages */
 
-    this.log("█ Controller service v 0.3 █");
-    this.log(`Running on ${useful.isWindows() ? "Windows" : useful.isLinux() ? "Linux" : "Unknown OS"}`);
+    this.log('█ Controller service v 0.3 █');
+    this.log(`Running on ${useful.isWindows() ? 'Windows' : useful.isLinux() ? 'Linux' : 'Unknown OS'}`);
 
     /* Events to clean up */
 
-    process.once("SIGINT", (signal) => {
+    process.once('SIGINT', (signal) => {
       this.end(signal);
     });
 
-    process.once("SIGTERM", (signal) => {
+    process.once('SIGTERM', (signal) => {
       this.end(signal);
     });
 
-    process.once("SIGHUP", (signal) => {
+    process.once('SIGHUP', (signal) => {
       this.end(signal);
     });
 
     /* Assign map */
-    NodeAttach.ticketsMap = this.ticketsBuffer
+    NodeAttach.ticketsMap = this.ticketsBuffer;
 
     /* Database manager */
 
@@ -151,7 +151,7 @@ export class Main {
   }
 
   async run() {
-    if (this.#conditionsMet) {
+    if (this.conditionsMet) {
       Main.running = true;
     } else {
       this.log("Conditions are not met. Can't continue.");
@@ -190,9 +190,8 @@ export class Main {
    * Process one cashed message from all sockets registered. Af the end of the method, a timeout is set to call it again, thus simulating a loop.
    */
   private processOneFromAll = async () => {
-
     // Check channels count
-    // if(useful.timeInt() % 10 == 0){
+    // if(useful.timeInt() % 10 === 0){
     //   if(this.flag){
     //     console.log(this.selector.nodeAttachments[0]?.printKeyCount(this.selector))
     //     this.flag = false
@@ -234,10 +233,10 @@ export class Main {
     this.sendMessagesTimer = setInterval(() => {
       // Send messages to controllers
       for (const node of this.selector.nodeAttachments) {
-        node.tryRequestKeepalive()
+        node.tryRequestKeepalive();
         // node.sendOne(this.selector)
-        if(node.sendOne(this.selector)){
-          node.setLastMessageTime()
+        if (node.sendOne(this.selector)) {
+          node.setLastMessageTime();
         }
       }
 
@@ -259,39 +258,40 @@ export class Main {
         this.log(`Managers after push: ${this.selector.managerConnections.length}`);
 
         connection.setTimeout(Main.ALIVE_MANAGER_TIMEOUT, () => {
-          this.log("Manager idle timeout");
+          this.log('Manager idle timeout');
           // Activate when the manager sends keep alives to the server. Managers should not reconnect automaticaly
           // newManagerSocket.reconnect(this.selector)
         });
 
-        connection.on("data", (data: Buffer) => {
+        connection.on('data', (data: Buffer) => {
           // this.log(`Received '${data}'`);
           newManagerSocket.addData(data);
         });
 
-        connection.on("end", () => {
-          this.log("Manager disconnected");
+        connection.on('end', () => {
+          this.log('Manager disconnected');
           newManagerSocket.reconnect(this.selector);
         });
 
         // Triggers 'end' and 'close' events
-        connection.on("error", () => {
-          this.log("Manager error");
+        connection.on('error', () => {
+          this.log('Manager error');
           // newManagerSocket.reconnect(this.selector);
         });
 
-        connection.on("close", (hadError) => {
-          this.log(`Manager closed. ${hadError ? "With" : "No"} error.`);
+        connection.on('close', (hadError) => {
+          this.log(`Manager closed. ${hadError ? 'With' : 'No'} error.`);
           newManagerSocket.reconnect(this.selector);
         });
 
-        this.log("Manager accepted and events set.");
-      } catch (e) {
-        this.log("Error setting object for manager");
+        this.log('Manager accepted and events set.');
+      } catch {
+        this.log('Error setting object for manager');
       }
     });
 
-    this.managerServer.on("error", (e: any) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    this.managerServer.on('error', (e: any) => {
       this.log(`ERROR listening to managers. Code ${e.code}`);
     });
 
@@ -305,11 +305,10 @@ export class Main {
    * @returns False if the nodes could not be read from the database or if some tables could not be created, true otherwise.
    */
   private async loadNodes(): Promise<boolean> {
-
     // Get nodes
     const res = await executeQuery<db2.Controlador2[]>(queries.nodeGetForSocket);
     if (!res) {
-      this.log("ERROR Querying nodes.");
+      this.log('ERROR Querying nodes.');
       return false;
     }
 
@@ -334,7 +333,7 @@ export class Main {
       await node.insertNet(false);
       node.tryConnectNode(this.selector, true, false);
     }
-    this.log("Nodes started.");
+    this.log('Nodes started.');
   }
 
   /**
@@ -345,7 +344,7 @@ export class Main {
    * @param ticketID
    */
   private removeTicket(nodeID: number, ticketID: number, fromController = true) {
-    this.log("Removing ticket...");
+    this.log('Removing ticket...');
     const partialNode = this.ticketsBuffer.get(nodeID);
     if (!partialNode) {
       this.log(`Ticket ID = ${ticketID} has no partial node ID ${nodeID}`);
@@ -356,7 +355,7 @@ export class Main {
 
     // Remove from pending
     for (let i = 0; i < tickets.length; i++) {
-      if (tickets[i].ticketID == ticketID) {
+      if (tickets[i].ticketID === ticketID) {
         found = true;
         tickets.splice(i, 1);
         this.log(`Ticket ID = ${ticketID} removed from pending`);
@@ -372,7 +371,7 @@ export class Main {
       } else {
         if (nodeOptional.isLogged()) {
           nodeOptional.addCommandForControllerBody(codes.CMD_TICKET_REMOVE, -1, [ticketID.toString()]);
-          this.log("Added command for controller.");
+          this.log('Added command for controller.');
         } else {
           this.log(`Node ID = ${nodeID} was not connected.`);
         }
@@ -430,6 +429,7 @@ export class Main {
    * @param filename Value to fill in the column called 'foto'.
    * @returns Array of parameters.
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private workerToArrayForQuery(worker: Personal, ticketID: number, filename: string | null): any[] {
     return [worker.nombre, worker.apellido, worker.telefono, worker.dni, worker.c_id, worker.co_id, ticketID, filename];
   }
@@ -440,13 +440,13 @@ export class Main {
   }
 
   public async sendSecurity(controllerID: number, security: boolean): Promise<RequestResult> {
-    const node = this.selector.getNodeAttachByID(controllerID)
+    const node = this.selector.getNodeAttachByID(controllerID);
     if (!node) {
-      this.log(`The node ${controllerID} does not exist.`)
+      this.log(`The node ${controllerID} does not exist.`);
       return new RequestResult(false, `El nodo ID = ${controllerID} no existe`);
     }
     // Asynchronous task
-    const myPromise: Promise<RequestResult> = new Promise(async (resolve, reject) => {
+    const myPromise: Promise<RequestResult> = new Promise((resolve, _reject) => {
       let ignoreTimeout = false;
       if (Selector.isChannelConnected(node._currentSocket)) {
         // Timeout for this operation
@@ -460,26 +460,25 @@ export class Main {
           resolve(new RequestResult(false, `El controlador ID = ${controllerID} no ha respondido a tiempo.`));
         }, Main.REQUEST_TIMEOUT);
         // Send order to controller
-        const codeToSend = security ? codes.VALUE_ARM : codes.VALUE_DISARM
-        const msgID = node.addCommandForControllerBody(codes.CMD_CONFIG_SET, -1, 
-          [codes.VALUE_SECURITY_WEB.toString(), codeToSend.toString()], true, true, (receivedCode) => {
+        const codeToSend = security ? codes.VALUE_ARM : codes.VALUE_DISARM;
+        const msgID = node.addCommandForControllerBody(codes.CMD_CONFIG_SET, -1, [codes.VALUE_SECURITY_WEB.toString(), codeToSend.toString()], true, true, (receivedCode) => {
           ignoreTimeout = true;
           clearTimeout(securityHandle);
           // Valid responses
-          if(receivedCode == codes.VALUE_ARM || receivedCode == codes.VALUE_DISARM || receivedCode == codes.VALUE_ARMING || receivedCode == codes.VALUE_DISARMING){
+          if (receivedCode === codes.VALUE_ARM || receivedCode === codes.VALUE_DISARM || receivedCode === codes.VALUE_ARMING || receivedCode === codes.VALUE_DISARMING) {
             resolve(new RequestResult(true, `Orden de seguridad recibida.`, receivedCode));
-          }else{
-            resolve(new RequestResult(false, `La order no se pudo confirmar.`, receivedCode))
+          } else {
+            resolve(new RequestResult(false, `La order no se pudo confirmar.`, receivedCode));
           }
           this.log(`Response from controller ${useful.toHex(receivedCode)}`);
         });
-        this.log("Added order for controller. Waiting response...");
+        this.log('Added order for controller. Waiting response...');
       } else {
         this.log(`Controller ${controllerID} disconnected.`);
         resolve(new RequestResult(false, `El controlador ID = ${controllerID} no está conectado.`));
       }
     });
-    return myPromise
+    return myPromise;
   }
 
   /**
@@ -535,13 +534,13 @@ export class Main {
     const isExpected = isFinal || second;
     // Check illegal states
     if (!isExpected) {
-      this.log("Error getting current ticket state. Unknown state.");
+      this.log('Error getting current ticket state. Unknown state.');
       return new RequestResult(false, `El ticket ID = ${ticketID} tiene un estado inválido.`);
       // return States.ILLEGAL;
     }
     const newAction = getState(newFinish.action);
-    if (newAction == States.IMPOSSIBLE) {
-      this.log("Unknown new action.");
+    if (newAction === States.IMPOSSIBLE) {
+      this.log('Unknown new action.');
       return new RequestResult(false, `Acción inválida para el ticket.`);
       // return States.ILLEGAL;
     }
@@ -555,7 +554,7 @@ export class Main {
       // return States.EXECUTED;
     } else {
       // Can only request to accept, reject, cancel or unattended.
-      if (currentState == States.WAITING_APPROVE) {
+      if (currentState === States.WAITING_APPROVE) {
         // These events can happen only when the ticket is waiting for approve.
         switch (newAction) {
           case States.ACCEPTED:
@@ -583,7 +582,7 @@ export class Main {
             monitor = States.ILLEGAL;
             break;
         }
-      } else if (currentState == States.ACCEPTED) {
+      } else if (currentState === States.ACCEPTED) {
         switch (newAction) {
           // These events can happen only if the ticket is accepted.
           // FINISHED, NULLIFIED can happen only if the ticket is also in time.
@@ -621,9 +620,9 @@ export class Main {
   async onTicket(newTicket: Ticket): Promise<RequestResult> {
     const solicitor = newTicket.solicitante;
     if (!Main.validateSolicitor(solicitor)) {
-      this.log("Solicitor is not valid");
+      this.log('Solicitor is not valid');
       // return States.ILLEGAL;
-      return new RequestResult(false, "Algún campo contiene un valor fuera de rango.");
+      return new RequestResult(false, 'Algún campo contiene un valor fuera de rango.');
     }
     const nodeID = solicitor.ctrl_id;
     if (!this.selector.getNodeAttachByID(nodeID)) {
@@ -633,7 +632,7 @@ export class Main {
     }
     const insertedTicket = await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.insertTicket, nodeID), newTicket.toArrayForQuery());
     if (!insertedTicket) {
-      this.log("Error inserting ticket");
+      this.log('Error inserting ticket');
       // return States.ERROR;
       return new RequestResult(false, `Error creando ticket`);
     }
@@ -646,8 +645,8 @@ export class Main {
       }
       // Write photo, if conditions are met
       const byteSize = new AtomicNumber();
-      const newFileName = useful.getReplacedPath(await this.processPhotoField(worker, byteSize, nodeID) ?? "error");
-      this.log(`File writing result: Filename = '${newFileName ?? "<photo not present>"}' Written = ${byteSize.inner} bytes`);
+      const newFileName = useful.getReplacedPath((await this.processPhotoField(worker, byteSize, nodeID)) ?? 'error');
+      this.log(`File writing result: Filename = '${newFileName ?? '<photo not present>'}' Written = ${byteSize.inner} bytes`);
       // Save worker. All workers who are going to visit the node must have been sent
       // in the JSON.
       if (await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.insertWorker, nodeID), this.workerToArrayForQuery(worker, insertedID, newFileName))) {
@@ -678,9 +677,9 @@ export class Main {
   async onOrder(newOrder: PinOrder): Promise<RequestResult> {
     // Validate order
     if (newOrder.pin <= 0 || newOrder.ctrl_id <= 0) {
-      this.log("Pin or node ID negative.");
+      this.log('Pin or node ID negative.');
       // return States.ILLEGAL;
-      return new RequestResult(false, "Algún campo contiene un valor fuera de rango.");
+      return new RequestResult(false, 'Algún campo contiene un valor fuera de rango.');
     }
     let newState = codes.VALUE_TO_AUTO; // Automatic state by default.
     switch (newOrder.action) {
@@ -696,7 +695,7 @@ export class Main {
       default:
         this.log(`Invalid action number '${newOrder.action}'.`);
         // return States.ILLEGAL;
-        return new RequestResult(false, "Algún campo contiene un valor fuera de rango.");
+        return new RequestResult(false, 'Algún campo contiene un valor fuera de rango.');
     }
 
     // Check node connection
@@ -707,12 +706,13 @@ export class Main {
     }
 
     // Asynchronous task
-    const myPromise: Promise<RequestResult> = new Promise(async (resolve, reject) => {
+    // eslint-disable-next-line no-async-promise-executor
+    const myPromise: Promise<RequestResult> = new Promise(async (resolve, _reject) => {
       let monitor = States.ERROR;
       let ignoreTimeout = false;
       if (Selector.isChannelConnected(nodeKey._currentSocket)) {
         // Timeout for this operation
-        const reqHandle = setTimeout(() => {
+        const reqHandle = setTimeout(async () => {
           if (ignoreTimeout) {
             return;
           }
@@ -720,25 +720,25 @@ export class Main {
           // Message has to be removed anyways
           nodeKey.removePendingMessageByID(msgID, codes.ERR_TIMEOUT, true, false);
           monitor = States.TIMEOUT;
-          this.registerOrder(newOrder, monitor);
+          await this.registerOrder(newOrder, monitor);
           // resolve(monitor)
           resolve(new RequestResult(false, `El controlador ID = ${newOrder.ctrl_id} no ha respondido a tiempo.`));
         }, Main.REQUEST_TIMEOUT);
         // Send order to controller
-        const msgID = nodeKey.addCommandForControllerBody(codes.CMD_PIN_CONFIG_SET, -1, [newOrder.pin.toString(), newState.toString()], true, true, (code) => {
+        const msgID = nodeKey.addCommandForControllerBody(codes.CMD_PIN_CONFIG_SET, -1, [newOrder.pin.toString(), newState.toString()], true, true, async (code) => {
           ignoreTimeout = true;
           clearTimeout(reqHandle);
           monitor = States.EXECUTED;
-          this.registerOrder(newOrder, monitor);
+          await this.registerOrder(newOrder, monitor);
           // resolve(monitor)
           resolve(new RequestResult(true, `Orden para pines ejecutada.`));
           this.log(`Response from controller ${useful.toHex(code)}`);
         });
-        this.log("Added order for controller. Waiting response...");
+        this.log('Added order for controller. Waiting response...');
       } else {
         this.log(`Controller ${newOrder.ctrl_id} disconnected.`);
         monitor = States.DISCONNECTED;
-        this.registerOrder(newOrder, monitor);
+        await this.registerOrder(newOrder, monitor);
         // resolve(monitor)
         resolve(new RequestResult(false, `El controlador ID = ${newOrder.ctrl_id} no está conectado.`));
       }
@@ -776,7 +776,7 @@ export class Main {
     // Initial state. the case where (isNew && fotoOptional.isPresent()) can still
     // change, depending on the success of the file written and that value is set
     // inside the writing function.
-    byteSize.inner = !worker.isNew != !fotoOptional ? 0 : -1;
+    byteSize.inner = !worker.isNew !== !fotoOptional ? 0 : -1;
     // Photo can be optional
     if (worker.isNew) {
       if (fotoOptional) {
@@ -784,7 +784,7 @@ export class Main {
         if (await useful.writeNewTicketPhotoFromBase64(fotoOptional, millis, nodeID, byteSize)) {
           return useful.getReplacedPath(useful.getPathForNewWorkerPhoto(nodeID, millis));
         } else {
-          return "error-WritingFile";
+          return 'error-WritingFile';
         }
       } else {
         //				return "error-PhotoWasOptional";
@@ -793,7 +793,7 @@ export class Main {
     }
     // Photo file name is mandatory
     else {
-      return fotoOptional ?? "error-NoFotoOfExistingWorker";
+      return fotoOptional ?? 'error-NoFotoOfExistingWorker';
     }
   }
 
@@ -802,7 +802,7 @@ export class Main {
    * of the program to load a buffer of pending tickets to send.
    */
   private async loadAcceptedTickets() {
-    this.log("Loading approved tickets...");
+    this.log('Loading approved tickets...');
     let nodes = 0;
     let tickets = 0;
     const nodesData = await executeQuery<db2.GeneralNumber[]>(queries.nodeSelectID);
@@ -839,14 +839,13 @@ export class Main {
    * controller can accept a ticket. If a controller has space for tickets and
    * there are tickets pending for that controller, the ticket is send and removed
    * from the buffer.
-   * 
+   *
    * NEXT UPDATE: For the controller to always get the valid tickets on every connection, this function should not remove the tickets when they are sent,
    * but only when they expire. Expiration task should be performed here too.
    */
   private startTicketsCheck() {
     this.ticketsTimer = setInterval(() => {
       for (const ticket of this.ticketsBuffer) {
-
         const nodeID = ticket[0];
         const ticketList = ticket[1].tickets;
 
@@ -854,8 +853,8 @@ export class Main {
         for (const ticket of ticketList) {
           if (ticket.endTime < useful.timeInt()) {
             // The controller should also delete expired tickets by its own
-            this.removeTicket(nodeID, ticket.ticketID, false)
-            this.log(`Ticket ID = ${ticket.ticketID} removed from buffer of node ${nodeID}`)
+            this.removeTicket(nodeID, ticket.ticketID, false);
+            this.log(`Ticket ID = ${ticket.ticketID} removed from buffer of node ${nodeID}`);
           }
         }
 
@@ -866,15 +865,15 @@ export class Main {
         }
 
         // Check if at least one is not yet sent
-        let atLeastOne = false
+        let atLeastOne = false;
         for (const ticket of ticketList) {
           if (!ticket.sent) {
-            atLeastOne = true
-            break
+            atLeastOne = true;
+            break;
           }
         }
         if (!atLeastOne) {
-          continue
+          continue;
         }
 
         // If node is registered
@@ -897,14 +896,13 @@ export class Main {
           let count = 0;
           for (const ticket of ticketList) {
             if (ticket.sent) {
-              continue
+              continue;
             }
-            ticket.sent = true
+            ticket.sent = true;
             attach.addCommandForControllerBody(codes.CMD_TICKET_ADD, -1, ticket.getBody(), true, true, async (rsp: number) => {
               if (rsp === codes.AIO_OK || rsp === codes.ERR_NO_CHANGE) {
-
                 await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.ticketSetSent, nodeID), [ticket.ticketID]);
-                this.log(`Ticket ID = ${ticket.ticketID} ${rsp === codes.AIO_OK ? "added to" : "was already in the"} controller.`);
+                this.log(`Ticket ID = ${ticket.ticketID} ${rsp === codes.AIO_OK ? 'added to' : 'was already in the'} controller.`);
               } else {
                 this.log(`Couldn't add ticket ID = ${ticket.ticketID}. Error ${useful.toHex(rsp)}. Not removed.`);
               }
@@ -919,57 +917,57 @@ export class Main {
     }, Main.TICKET_CHECK_PERIOD);
   }
 
-  private async registerCameraEvent(state:boolean, camera:CameraToCheck){
+  private async registerCameraEvent(state: boolean, camera: CameraToCheck) {
     await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.insertCameraState, camera.nodeID), [camera.camara.cmr_id, useful.getCurrentDate(), state]);
-    await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.cameraSetNet, camera.nodeID), [state, camera.camara.cmr_id])
+    await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.cameraSetNet, camera.nodeID), [state, camera.camara.cmr_id]);
     this.log(`Camera ID = ${camera.camara.cmr_id} in node ID = ${camera.nodeID} changed state to ACTIVO`);
   }
 
-  addDisconnectedCamera(nodeID:number, newCamera:Camara):boolean{
-    const alreadyPresent = this.cameras.some((e)=>nodeID == e.nodeID && newCamera.cmr_id == e.camara.cmr_id)
-    if(!alreadyPresent && newCamera.conectado === 0 && newCamera.activo === 1){
-      this.cameras.push(new CameraToCheck(nodeID, newCamera))
-      this.log(`Camera aded to check connection. Node ID ${nodeID}, camera ID ${newCamera.cmr_id}`)
-      return true
-    }else{
-      this.log(`Camera already present. Node ID ${nodeID}, camera ID ${newCamera.cmr_id}`)
+  addDisconnectedCamera(nodeID: number, newCamera: Camara): boolean {
+    const alreadyPresent = this.cameras.some((e) => nodeID === e.nodeID && newCamera.cmr_id === e.camara.cmr_id);
+    if (!alreadyPresent && newCamera.conectado === 0 && newCamera.activo === 1) {
+      this.cameras.push(new CameraToCheck(nodeID, newCamera));
+      this.log(`Camera aded to check connection. Node ID ${nodeID}, camera ID ${newCamera.cmr_id}`);
+      return true;
+    } else {
+      this.log(`Camera already present. Node ID ${nodeID}, camera ID ${newCamera.cmr_id}`);
     }
-    return false
+    return false;
   }
 
   private startCamerasCheck = async () => {
-    const tempCams = this.cameras.slice()
-    for (let i = 0; i<tempCams.length; i++) {
-      const tempCamera = this.cameras[i]
+    const tempCams = this.cameras.slice();
+    for (let i = 0; i < tempCams.length; i++) {
+      const tempCamera = this.cameras[i];
 
       // Check in camera
-      if(!tempCamera.checkedIn){
-        await this.registerCameraEvent(false, tempCamera)
-        tempCamera.checkedIn = true
+      if (!tempCamera.checkedIn) {
+        await this.registerCameraEvent(false, tempCamera);
+        tempCamera.checkedIn = true;
       }
 
       // Remove inactive camera
-      if(tempCamera.camara.activo === 0){
-        this.cameras.splice(i,1)
+      if (tempCamera.camara.activo === 0) {
+        this.cameras.splice(i, 1);
       }
 
       // Try to reach
-      else if(tempCamera.camara.conectado === 0){
+      else if (tempCamera.camara.conectado === 0) {
         try {
           // Send ping or try to reach address
           if (Main.isWindows) {
-            cp.exec(`ping ${tempCamera.camara.ip} -n 1`, { timeout: Main.ALIVE_CAMERA_PING_TIMEOUT_MS }, async (error, stdout, stderror) => {
+            cp.exec(`ping ${tempCamera.camara.ip} -n 1`, { timeout: Main.ALIVE_CAMERA_PING_TIMEOUT_MS }, async (error, stdout, _stderror) => {
               if (error) {
                 // this.log(`Error sending ping to ${cam.cameraIP}. Code ${error.code}`);
                 // this.log(`Error output\n ${stderror}\nStdout\n${stdout}`)
               } else {
-                const res = stdout.includes("TTL");
+                const res = stdout.includes('TTL');
                 // this.log(`Output\n${ res}`);
                 if (res) {
                   // cam.setAlive();
-                  await this.registerCameraEvent(true, tempCamera)
-                  NodoCameraMapManager.update(tempCamera.nodeID, tempCamera.camara.cmr_id, {conectado:1})
-                  this.cameras.splice(i,1)
+                  await this.registerCameraEvent(true, tempCamera);
+                  NodoCameraMapManager.update(tempCamera.nodeID, tempCamera.camara.cmr_id, { conectado: 1 });
+                  this.cameras.splice(i, 1);
                 }
               }
             });
@@ -991,10 +989,10 @@ export class Main {
   /**
    * Start a timer that will test if each channel IS STILL CONNECTED. The test is based on any data received from the
    * channel. When a time has passed and no data has been received, the channel will be considered 'dead', it will be closed, the key
-   * canceled and a new channel will be registered with the same attachment, thus 'reseting' the connection from the backend. 
+   * canceled and a new channel will be registered with the same attachment, thus 'reseting' the connection from the backend.
    * To ensure that the controller will always send 'something', a keep alive request will be send to the
    * controller periodically on certain conditions (see {@linkcode NodeAttach.tryRequestKeepalive}).
-   * 
+   *
    * @see  {@linkcode NodeAttach.tryRequestKeepalive}
    * @param selector Selector with the registered keys.
    */
@@ -1006,10 +1004,10 @@ export class Main {
         if (node.isLogged()) {
           this.log(`Channel '${node}' ID = ${node.controllerID} is dead. Reconnecting...`);
           BaseAttach.simpleReconnect(this.selector, node);
-          node.resetKeepAliveRequest()
+          node.resetKeepAliveRequest();
           await node.insertNet(false);
           node.printKeyCount(selector);
-          ManagerAttach.connectedManager?.addNodeState(false,node.controllerID)
+          ManagerAttach.connectedManager?.addNodeState(false, node.controllerID);
         }
       }
     }
@@ -1018,7 +1016,7 @@ export class Main {
     const mngrCopy = this.selector.managerConnections.slice();
     for (const manager of mngrCopy) {
       if (manager.hasBeenInactiveFor(Main.ALIVE_MANAGER_TIMEOUT)) {
-        this.log("Manager keep alive timeout");
+        this.log('Manager keep alive timeout');
         manager.reconnect(selector);
         const mngrIndex = this.selector.managerConnections.indexOf(manager);
         if (mngrIndex >= 0) {
@@ -1072,7 +1070,7 @@ export class Main {
       if (err) {
         this.log(`Server for manager was not started.`);
       } else {
-        this.log("Server for manager closed.");
+        this.log('Server for manager closed.');
       }
     });
 
