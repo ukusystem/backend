@@ -158,10 +158,10 @@ export class SensorTemperaturaManager {
     return [];
   }
 
-  static getSenTempItem(ctrl_id: number, me_id: number) {
+  static getSenTempItem(ctrl_id: number, st_id: number) {
     const currController = SensorTemperaturaManager.#sensores.get(ctrl_id);
     if (currController !== undefined) {
-      const senTemperatura = currController.get(me_id);
+      const senTemperatura = currController.get(st_id);
       if (senTemperatura !== undefined && senTemperatura.activo === SenTempState.Activo) {
         return senTemperatura;
       }

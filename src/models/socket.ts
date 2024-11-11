@@ -2,7 +2,6 @@ import { Server as HttpServer } from 'http';
 import { Server } from 'socket.io';
 import {
   ticketSocket,
-  streamRecordSocket,
   lastSnapshotSocket,
   pinEntradaSocket,
   registroEntradaSocket,
@@ -22,6 +21,8 @@ import {
   NamespaceRegistroEntrada,
   NamespacePinEntrada,
   NamespaceSenTemperatura,
+  NamespaceRecordStream,
+  recordStreamSocket,
 } from '../controllers/socket';
 import { camStreamSocket } from '../controllers/socket/stream/camera.stream.socket';
 import { NamespaceRegistroAcceso, registroAccesoSocket } from '../controllers/socket/registro.acceso';
@@ -113,8 +114,9 @@ export class Sockets {
     });
 
     // Namespace: "/record_stream/ctrl_id/cmr_id"
-    this.#io.of(/^\/record_stream\/(\d+)\/\d+$/).on('connection', (socket) => {
-      streamRecordSocket(this.#io, socket);
+    const StreamRecordNSP: NamespaceRecordStream = this.#io.of(/^\/record_stream\/(\d+)\/\d+$/);
+    StreamRecordNSP.on('connection', (socket) => {
+      recordStreamSocket(this.#io, socket);
     });
 
     // Namespace : "/last_snapshot/ctrl_id"

@@ -26,28 +26,8 @@ export class NvrManager {
     const [hr_inicio, min_inicio, sec_inicio] = times.tiempo_inicio.split(':'); // "hh:mm:ss";
     const [hr_final, min_final, sec_final] = times.tiempo_final.split(':');
 
-    let cronStartTime: string = `${parseInt(sec_inicio, 10)} ${parseInt(min_inicio, 10)} ${parseInt(hr_inicio, 10)} * * ${times.dia}`;
-
-    // const currStartDateTime = dayjs().set("hour",parseInt(hr_inicio, 10)).set("minute",parseInt(min_inicio,10)).set("second",parseInt(sec_inicio, 10));
-    // const currStartDateTimeAjusted = currStartDateTime.subtract(NvrManager.#HLS_TIME,"second");
-
-    // if(currStartDateTime.format("YYYY-MM-DD") === currStartDateTimeAjusted.format("YYYY-MM-DD")){
-    //   cronStartTime = `${currStartDateTimeAjusted.second()} ${currStartDateTimeAjusted.minute()} ${currStartDateTimeAjusted.hour()} * * ${times.dia}`;
-    // }else{
-    //   const currStartDayTime = currStartDateTime.startOf("day")
-    //   cronStartTime = `${currStartDayTime.second()} ${currStartDayTime.minute()} ${currStartDayTime.hour()} * * ${times.dia}`;
-    // }
-
-    let cronEndTime: string = `${parseInt(sec_final, 10)} ${parseInt(min_final, 10)} ${parseInt(hr_final, 10)} * * ${times.dia}`;
-    // const currEndDateTime = dayjs().set("hour",parseInt(hr_final, 10)).set("minute",parseInt(min_final,10)).set("second",parseInt(sec_final, 10));
-    // const currEndDateTimeAjusted = currEndDateTime.add(NvrManager.#HLS_TIME,"second");
-
-    // if(currEndDateTime.format("YYYY-MM-DD") === currEndDateTimeAjusted.format("YYYY-MM-DD")){
-    //   cronEndTime = `${currEndDateTimeAjusted.second()} ${currEndDateTimeAjusted.minute()} ${currEndDateTimeAjusted.hour()} * * ${times.dia}`;
-    // }else{
-    //   const currEndDayTime = currEndDateTime.endOf("day")
-    //   cronEndTime = `${currEndDayTime.second()} ${currEndDayTime.minute()} ${currEndDayTime.hour()} * * ${times.dia}`;
-    // }
+    const cronStartTime: string = `${parseInt(sec_inicio, 10)} ${parseInt(min_inicio, 10)} ${parseInt(hr_inicio, 10)} * * ${times.dia}`;
+    const cronEndTime: string = `${parseInt(sec_final, 10)} ${parseInt(min_final, 10)} ${parseInt(hr_final, 10)} * * ${times.dia}`;
 
     return {
       cron_tiempo_inicio: cronStartTime,
@@ -171,6 +151,7 @@ export class NvrManager {
       if (currPrefStructure !== undefined) {
         const currCamJob = currPrefStructure.get(nvrpref_id_update);
         if (currCamJob !== undefined) {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
           const { nvrpref_id, ...fieldsFiletered } = filterUndefined<NvrPreferencia>(fieldsToUpdate);
           const { activo, cmr_id, dia, tiempo_final, tiempo_inicio } = fieldsFiletered;
 
@@ -224,9 +205,7 @@ export class NvrManager {
       const currCamJob = currPrefStructure.get(context.nvrpref_id);
       if (currCamJob !== undefined) {
         if (currCamJob.ffmpegProcess !== undefined) {
-          if (!currCamJob.ffmpegProcess.killed) {
-            currCamJob.ffmpegProcess.kill();
-          }
+          // currCamJob.ffmpegProcess.kill();
           delete currCamJob.ffmpegProcess;
 
           currPrefStructure.set(context.nvrpref_id, currCamJob);
@@ -282,6 +261,7 @@ export class NvrManager {
               try {
                 const ffmpegCli = await NvrManager.#getFfmpegCLI(this.ctrl_id, this.cmr_id, { tiempo_inicio: this.tiempo_inicio, tiempo_final: this.tiempo_final });
 
+                // eslint-disable-next-line @typescript-eslint/no-this-alias
                 const contextJob = this;
 
                 const newFfmpegProcess = spawn('ffmpeg', ffmpegCli, { stdio: ['ignore', 'ignore', 'ignore'] });
@@ -433,7 +413,6 @@ export class NvrManager {
       });
 
       NvrManager.#IS_INIT = true;
-
     } catch (error) {
       genericLogger.error(`NvrManager | Error al inicializar`, error);
       throw error;

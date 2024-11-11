@@ -39,6 +39,7 @@ export const contollerStateSocket = async (io: Server, socket: SocketControllerS
   });
 
   socket.on('setSecurity', async (newSecurity) => {
+    console.log('setSecurity', newSecurity);
     const res = await sendSecurity(ctrl_id, newSecurity === 1);
     if (res && res.resultado) {
       if (res.codigo === codes.VALUE_ARM || res.codigo === codes.VALUE_DISARM) {
