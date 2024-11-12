@@ -1362,14 +1362,14 @@ export class NodeAttach extends BaseAttach {
             // Save and notify
             const mode = value === codes.VALUE_MODE_SECURITY;
             // this._log(`Received mode: ${useful.toHex(value)}, notifying web.`)
-            ControllerMapManager.updateController(this.controllerID, { modo: mode ? 1 : 0 });
+            ControllerMapManager.update(this.controllerID, { modo: mode ? 1 : 0 });
             await this._saveItemGeneral('mode', [mode, this.controllerID], queries.modeUpdate, id, -1);
             break;
           case codes.VALUE_SECURITY:
             // Save and notify
             const security = value === codes.VALUE_ARM;
             this._log(`Received security: ${useful.toHex(value)}`);
-            ControllerMapManager.updateController(this.controllerID, { seguridad: security ? 1 : 0 });
+            ControllerMapManager.update(this.controllerID, { seguridad: security ? 1 : 0 });
             await this.saveSecurity(this.controllerID, security, eventDate, id);
             break;
           case codes.VALUE_SECURITY_TECH:
@@ -1549,7 +1549,7 @@ export class NodeAttach extends BaseAttach {
           // Notify web
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
           const enableButton = definite; // Add to isButtonActive when the function is updated.
-          ControllerMapManager.updateController(this.controllerID, { seguridad: security ? 1 : 0 });
+          ControllerMapManager.update(this.controllerID, { seguridad: security ? 1 : 0 });
         }
         break;
       case codes.VALUE_SD_STATE:
@@ -2682,7 +2682,7 @@ export class ManagerAttach extends BaseAttach {
 
         // this._log('Notifying web about controller');
         const cd = currentAttach.completeData;
-        ControllerMapManager.updateController(currentAttach.controllerID, {
+        ControllerMapManager.update(currentAttach.controllerID, {
           nodo: cd[1].getString(),
           rgn_id: cd[2].getInt(),
           direccion: cd[3].getString(),

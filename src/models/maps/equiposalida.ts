@@ -21,6 +21,8 @@ export class EquipoSalidaMapManager {
     const curEqSal = EquipoSalidaMapManager.#equipos.get(es_id);
     if (curEqSal !== undefined) {
       // const curEqSalCopy = {...curEqSal}
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { es_id, ...fieldsFiltered } = filterUndefined<EquipoSalida>(fieldsUpdate);
       Object.assign(curEqSal, fieldsFiltered);
       // notify update (curEqSalCopy,fieldsFiltered)

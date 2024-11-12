@@ -1,10 +1,10 @@
-import { MySQL2 } from "../database/mysql";
-import jwt from "jsonwebtoken";
-import { RowDataPacket } from "mysql2";
-import { simpleErrorHandler } from "../utils/simpleErrorHandler";
+import { MySQL2 } from '../database/mysql';
+import jwt from 'jsonwebtoken';
+import { RowDataPacket } from 'mysql2';
+import { simpleErrorHandler } from '../utils/simpleErrorHandler';
 
-import {Contrata, Personal, Rol, Rubro, Usuario} from '../types/db'
-import { appConfig } from "../configs";
+import { Contrata, Personal, Rol, Rubro, Usuario } from '../types/db';
+import { appConfig } from '../configs';
 
 interface JwtPayload {
   sub: string;
@@ -13,94 +13,81 @@ interface JwtPayload {
   rol: string;
 }
 
-export type UserInfo = Pick<Usuario,"u_id"|"usuario"|"contraseña"|"rl_id"|"fecha"|"p_id"> & Pick<Personal,"nombre"|"apellido"|"dni"|"telefono"|"correo"|"c_id"|"foto"> & Pick<Contrata,"contrata"|"co_id"> & Pick<Rubro,"rubro"> & Pick<Rol,"rl_id"|"rol"|"descripcion">
+export type UserInfo = Pick<Usuario, 'u_id' | 'usuario' | 'contraseña' | 'rl_id' | 'fecha' | 'p_id'> & Pick<Personal, 'nombre' | 'apellido' | 'dni' | 'telefono' | 'correo' | 'c_id' | 'foto'> & Pick<Contrata, 'contrata' | 'co_id'> & Pick<Rubro, 'rubro'> & Pick<Rol, 'rl_id' | 'rol' | 'descripcion'>;
 
-interface UserFound extends RowDataPacket,UserInfo  {}
+interface UserFound extends RowDataPacket, UserInfo {}
 
 export class Auth {
-
-  static findUser = simpleErrorHandler<UserInfo | null,Pick<Usuario, "usuario"> >(async ({ usuario }) => {
-    const userFound = await MySQL2.executeQuery<UserFound[]>({sql:`SELECT u.u_id, u.usuario, u.contraseña, u.rl_id, u.fecha, u.p_id, p.nombre, p.apellido, p.dni, p.telefono, p.correo, p.c_id, p.foto, c.contrata , c.co_id, c.r_id, ru.rubro, r.rol, r.descripcion FROM general.usuario u INNER JOIN general.rol r ON u.rl_id = r.rl_id INNER JOIN general.personal p ON u.p_id = p.p_id INNER JOIN general.contrata c ON p.co_id = c.co_id INNER JOIN general.rubro ru ON c.r_id = ru.r_id  WHERE u.usuario = ? `,values:[usuario]})
+  static findUser = simpleErrorHandler<UserInfo | null, Pick<Usuario, 'usuario'>>(async ({ usuario }) => {
+    const userFound = await MySQL2.executeQuery<UserFound[]>({
+      sql: `SELECT u.u_id, u.usuario, u.contraseña, u.rl_id, u.fecha, u.p_id, p.nombre, p.apellido, p.dni, p.telefono, p.correo, p.c_id, p.foto, c.contrata , c.co_id, c.r_id, ru.rubro, r.rol, r.descripcion FROM general.usuario u INNER JOIN general.rol r ON u.rl_id = r.rl_id INNER JOIN general.personal p ON u.p_id = p.p_id INNER JOIN general.contrata c ON p.co_id = c.co_id INNER JOIN general.rubro ru ON c.r_id = ru.r_id  WHERE u.usuario = ? `,
+      values: [usuario],
+    });
 
     if (userFound.length > 0) {
       return userFound[0];
     }
 
     return null;
-  }, "Auth.findUser");
+  }, 'Auth.findUser');
 
-  static findUserById = simpleErrorHandler<UserInfo | null, Pick<Usuario, "u_id">>( async ({ u_id }) => {
-    
-    const userFound = await MySQL2.executeQuery<UserFound[]>({sql:`SELECT u.u_id, u.usuario, u.contraseña, u.rl_id, u.fecha, u.p_id, p.nombre, p.apellido, p.dni, p.telefono, p.correo, p.c_id, p.foto, c.contrata , c.co_id, c.r_id, r.rol, r.descripcion FROM general.usuario u INNER JOIN general.rol r ON u.rl_id = r.rl_id INNER JOIN general.personal p ON u.p_id = p.p_id INNER JOIN general.contrata c ON p.co_id = c.co_id WHERE u.u_id = ?`,values:[u_id]})
+  static findUserById = simpleErrorHandler<UserInfo | null, Pick<Usuario, 'u_id'>>(async ({ u_id }) => {
+    const userFound = await MySQL2.executeQuery<UserFound[]>({
+      sql: `SELECT u.u_id, u.usuario, u.contraseña, u.rl_id, u.fecha, u.p_id, p.nombre, p.apellido, p.dni, p.telefono, p.correo, p.c_id, p.foto, c.contrata , c.co_id, c.r_id, r.rol, r.descripcion FROM general.usuario u INNER JOIN general.rol r ON u.rl_id = r.rl_id INNER JOIN general.personal p ON u.p_id = p.p_id INNER JOIN general.contrata c ON p.co_id = c.co_id WHERE u.u_id = ?`,
+      values: [u_id],
+    });
 
     if (userFound.length > 0) {
       return userFound[0];
     }
 
     return null;
-    
-    },
-    "Auth.findUserById"
-  );
+  }, 'Auth.findUserById');
 
-  static generateAccessToken = simpleErrorHandler<string,string | object | Buffer>((payload) => {
+  static generateAccessToken = simpleErrorHandler<string, string | object | Buffer>((payload) => {
     return new Promise<string>((resolve, reject) => {
-      jwt.sign(
-        payload,
-        appConfig.jwt.access_token.secret,
-        { expiresIn: appConfig.jwt.access_token.expire },
-        (err, token) => {
-          if (err) reject(err);
-          if(token !== undefined){
-            resolve(token);
-          }else{
-            reject(new Error("Token is undefined"));
-          }
+      jwt.sign(payload, appConfig.jwt.access_token.secret, { expiresIn: appConfig.jwt.access_token.expire }, (err, token) => {
+        if (err) reject(err);
+        if (token !== undefined) {
+          resolve(token);
+        } else {
+          reject(new Error('Token is undefined'));
         }
-      );
+      });
     });
-  }, "Auth.generateAccessToken");
-  
-  static generateRefreshToken = simpleErrorHandler<string,string | object | Buffer>((payload) => {
+  }, 'Auth.generateAccessToken');
+
+  static generateRefreshToken = simpleErrorHandler<string, string | object | Buffer>((payload) => {
     return new Promise<string>((resolve, reject) => {
-      jwt.sign(
-        payload,
-        appConfig.jwt.refresh_token.secret,
-        { expiresIn: appConfig.jwt.refresh_token.expire },
-        (err, token) => {
-          if (err) reject(err);
-          if(token !== undefined){
-            resolve(token);
-          }else{
-            reject(new Error("Token is undefined"));
-          }
+      jwt.sign(payload, appConfig.jwt.refresh_token.secret, { expiresIn: appConfig.jwt.refresh_token.expire }, (err, token) => {
+        if (err) reject(err);
+        if (token !== undefined) {
+          resolve(token);
+        } else {
+          reject(new Error('Token is undefined'));
         }
-      );
+      });
     });
-  }, "Auth.generateRefreshToken");
+  }, 'Auth.generateRefreshToken');
 
   static verifyAccessToken = simpleErrorHandler<JwtPayload | null, string>((token) => {
-      return new Promise((resolve, _reject) => {
-        jwt.verify(token, appConfig.jwt.access_token.secret, (err, user) => {
-          if (err) {
-            resolve(null);
-          }
-          resolve(user as JwtPayload);
-        });
+    return new Promise((resolve, _reject) => {
+      jwt.verify(token, appConfig.jwt.access_token.secret, (err, user) => {
+        if (err) {
+          resolve(null);
+        }
+        resolve(user as JwtPayload);
       });
-    },
-    "Auth.verifyAccessToken"
-  );
+    });
+  }, 'Auth.verifyAccessToken');
   static verifyRefreshToken = simpleErrorHandler<JwtPayload | null, string>((token) => {
-      return new Promise((resolve, _reject) => {
-        jwt.verify(token, appConfig.jwt.refresh_token.secret, (err, user) => {
-          if (err) {
-            resolve(null);
-          }
-          resolve(user as JwtPayload);
-        });
+    return new Promise((resolve, _reject) => {
+      jwt.verify(token, appConfig.jwt.refresh_token.secret, (err, user) => {
+        if (err) {
+          resolve(null);
+        }
+        resolve(user as JwtPayload);
       });
-    },
-    "Auth.verifyAccessToken"
-  );
+    });
+  }, 'Auth.verifyAccessToken');
 }

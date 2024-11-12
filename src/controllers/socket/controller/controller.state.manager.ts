@@ -1,13 +1,18 @@
-import { ControllerStateInfo, ControllerStateObserver, SocketControllerState } from './controller.state.types';
+import { ControllerStateInfo, ControllerStateObserver, NewStateControllerMap, NewStatesController, SocketControllerState } from './controller.state.types';
 
 import { ControllerMapManager, RegionMapManager } from '../../../models/maps';
 import { Region } from '../../../types/db';
+import { filterUndefined } from '../../../utils/filterUndefined';
 
 export class ControllerStateSocketObserver implements ControllerStateObserver {
   #socket: SocketControllerState;
 
   constructor(socket: SocketControllerState) {
     this.#socket = socket;
+  }
+
+  updateSecurityButton(data: boolean): void {
+    this.#socket.nsp.emit('update_security_button', data);
   }
 
   updateRegion(region: Region): void {
@@ -21,6 +26,7 @@ export class ControllerStateSocketObserver implements ControllerStateObserver {
 
 export class ControllerStateManager {
   static observer: { [ctrl_id: number]: ControllerStateObserver } = {};
+  static #newStates: NewStateControllerMap = new Map();
 
   static registerObserver(ctrl_id: number, observer: ControllerStateObserver): void {
     if (!ControllerStateManager.observer[ctrl_id]) {
@@ -57,11 +63,11 @@ export class ControllerStateManager {
     }
   }
 
-  // static notifyUpdateSecurityButton(ctrl_id: number, data: boolean): void{
-  //   if (ControllerStateManager.observer[ctrl_id]){
-
-  //   }
-  // }
+  static #notifyUpdateSecurityButton(ctrl_id: number, data: boolean): void {
+    if (ControllerStateManager.observer[ctrl_id]) {
+      ControllerStateManager.observer[ctrl_id].updateSecurityButton(data);
+    }
+  }
 
   static getController(ctrl_id: number): ControllerStateInfo | undefined {
     const controller = ControllerMapManager.getController(ctrl_id, true);
@@ -74,6 +80,8 @@ export class ControllerStateManager {
       return undefined;
     }
 
+    const newStates = ControllerStateManager.getNewState(ctrl_id);
+
     const controllerInfo: ControllerStateInfo = {
       activo: controller.activo,
       conectado: controller.conectado,
@@ -84,13 +92,33 @@ export class ControllerStateManager {
       region: region.region,
       rgn_id: controller.rgn_id,
       seguridad: controller.seguridad,
+      disableSecurityButton: newStates?.disableSecurityButton,
     };
 
     return controllerInfo;
   }
 
-  // static updateNewState(ctrl_id:number,fieldsToUpdate : Partial<NewStatesController>){
-  //   const filte
+  static socketAddUpdate(ctrl_id: number, data: NewStatesController) {
+    const dataFiltered = filterUndefined<NewStatesController>(data);
+    ControllerStateManager.#newStates.set(ctrl_id, dataFiltered);
 
-  // }
+    if (dataFiltered.disableSecurityButton !== undefined) {
+      ControllerStateManager.#notifyUpdateSecurityButton(ctrl_id, dataFiltered.disableSecurityButton);
+    }
+  }
+
+  static getNewState(ctrl_id: number): NewStatesController | undefined {
+    return ControllerStateManager.#newStates.get(ctrl_id);
+  }
 }
+
+// (() => {
+//   setTimeout(() => {
+//     ControllerStateManager.socketAddUpdate(1, { disableSecurityButton: false });
+//     console.log({ disableSecurityButton: false });
+//   }, 20000);
+//   setTimeout(() => {
+//     ControllerStateManager.socketAddUpdate(1, { disableSecurityButton: true });
+//     console.log({ disableSecurityButton: false });
+//   }, 40000);
+// })();

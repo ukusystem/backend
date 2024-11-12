@@ -80,7 +80,7 @@ export class ControllerMapManager {
     return undefined;
   }
 
-  static addController(ctrl_id: number, newController: ControllerData): void {
+  static add(ctrl_id: number, newController: ControllerData): void {
     const existController = ControllerMapManager.#controllers.has(ctrl_id);
     if (!existController) {
       ControllerMapManager.#controllers.set(ctrl_id, newController);
@@ -88,12 +88,11 @@ export class ControllerMapManager {
     }
   }
 
-  static updateController(ictrl_id: number, fieldsUpdate: Partial<ControllerData>): void {
-    const currController = ControllerMapManager.#controllers.get(ictrl_id);
-    if (currController) {
+  static update(ctrl_id_update: number, fieldsUpdate: Partial<ControllerData>): void {
+    const currController = ControllerMapManager.#controllers.get(ctrl_id_update);
+    if (currController !== undefined) {
       const curControllerCopy = { ...currController };
       const fieldsFiltered = filterUndefined<ControllerData>(fieldsUpdate);
-      // ctrl_id no se esta actulizando!
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { res_id_motionrecord, res_id_motionsnapshot, res_id_streamauxiliary, res_id_streamprimary, res_id_streamsecondary, ctrl_id, rgn_id, ...rest } = fieldsFiltered;
       const resolutionFieldsUpdate = ControllerMapManager.#updateResolution({ res_id_motionrecord, res_id_motionsnapshot, res_id_streamauxiliary, res_id_streamprimary, res_id_streamsecondary }, currController);
@@ -111,7 +110,7 @@ export class ControllerMapManager {
     }
   }
 
-  static deleteController(ctrl_id: number): boolean {
+  static delete(ctrl_id: number): boolean {
     const deleteSuccessful = ControllerMapManager.#controllers.delete(ctrl_id);
     return deleteSuccessful;
   }
@@ -119,10 +118,10 @@ export class ControllerMapManager {
   static async init() {
     try {
       const controllers = await MySQL2.executeQuery<ControllerRowData[]>({
-        sql: `SELECT * FROM general.controlador`,
+        sql: `SELECT * FROM general.controlador WHERE activo = 1`,
       });
       controllers.forEach((controller) => {
-        ControllerMapManager.addController(controller.ctrl_id, controller);
+        ControllerMapManager.add(controller.ctrl_id, controller);
       });
     } catch (error) {
       genericLogger.error(`ControllerMapManager | init | Error al inicializar controladores`, error);

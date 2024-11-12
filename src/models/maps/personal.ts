@@ -21,6 +21,8 @@ export class PersonalMapManager {
     const curPersonal = PersonalMapManager.#personales.get(p_id);
     if (curPersonal !== undefined) {
       // const curPersonalCopy = {...curPersonal}
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { p_id, ...fieldsFiltered } = filterUndefined<Personal>(fieldsUpdate);
       Object.assign(curPersonal, fieldsFiltered);
       // notify update (curPersonalCopy,fieldsFiltered)

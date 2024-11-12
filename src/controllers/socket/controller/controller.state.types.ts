@@ -4,15 +4,14 @@ import { Controlador, Region } from '../../../types/db';
 
 export type KeyControllerConfig = keyof ControllerConfig;
 
-export type ControllerStateInfo = Pick<Controlador, 'ctrl_id' | 'nodo' | 'rgn_id' | 'descripcion' | 'seguridad' | 'modo' | 'conectado' | 'activo'> & Pick<Region, 'region'>;
-
 export interface ErrorControllerState {
   message: string;
 }
 
 export interface NewStatesController {
-  securityButtonDisabled: boolean;
+  disableSecurityButton?: boolean;
 }
+export type ControllerStateInfo = Pick<Controlador, 'ctrl_id' | 'nodo' | 'rgn_id' | 'descripcion' | 'seguridad' | 'modo' | 'conectado' | 'activo'> & Pick<Region, 'region'> & Pick<NewStatesController, 'disableSecurityButton'>;
 
 export type NewStateControllerMap = Map<number, NewStatesController>; // key : ctrl_id
 
@@ -20,6 +19,7 @@ export type NewStateControllerMap = Map<number, NewStatesController>; // key : c
 export interface ControllerStateObserver {
   updateController(newCtrl: ControllerStateInfo): void;
   updateRegion(region: Region): void;
+  updateSecurityButton(data: boolean): void;
 }
 
 export interface ControllerStateSubject {

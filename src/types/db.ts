@@ -1,21 +1,21 @@
 export interface Resolucion {
-  res_id: number,
-  nombre: string,
-  relacionaspecto: string,
-  ancho: number,
-  altura: number,
-  activo: 0 | 1
+  res_id: number;
+  nombre: string;
+  relacionaspecto: string;
+  ancho: number;
+  altura: number;
+  activo: 0 | 1;
 }
 export interface ConfigDataPreferencia {
-  streams : ({ctrl_id:number , cmr_id:number}| null)[],
-  gridOption: 1 | 2 | 3 | "c3" | "c4"
+  streams: ({ ctrl_id: number; cmr_id: number } | null)[];
+  gridOption: 1 | 2 | 3 | 'c3' | 'c4';
 }
 export interface PreferenciasVms {
   prfvms_id: number;
   preferencia: string;
   u_id: number;
   configdata: ConfigDataPreferencia;
-  activo:number
+  activo: number;
 }
 
 export interface Rol {
@@ -70,7 +70,7 @@ export interface Marca {
 export interface Personal {
   p_id: number;
   nombre: string;
-  apellido:string;
+  apellido: string;
   telefono: string;
   dni: string;
   c_id: number;
@@ -98,7 +98,7 @@ export interface Acceso {
   serie: string;
   ea_id: number;
   administrador: number;
-  co_id: number;
+  p_id: number;
 }
 
 export interface Estado {
@@ -319,7 +319,7 @@ export interface MedidorEnergia {
   frecuencia: number;
   potenciaw: number;
   potenciakwh: number;
-  activo: number
+  activo: number;
 }
 
 export interface RegistroEnergia {
@@ -351,7 +351,7 @@ export interface SensorTemperatura {
   serie: string;
   ubicacion: string;
   actual: number;
-  activo: number
+  activo: number;
 }
 
 export interface RegistroSeguridad {

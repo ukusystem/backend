@@ -35,15 +35,16 @@ export const contollerStateSocket = async (io: Server, socket: SocketControllerS
   ControllerStateManager.registerObserver(ctrl_id, observer);
 
   socket.on('setMode', (newMode) => {
-    ControllerMapManager.updateController(ctrl_id, { modo: newMode });
+    ControllerMapManager.update(ctrl_id, { modo: newMode });
   });
 
   socket.on('setSecurity', async (newSecurity) => {
-    console.log('setSecurity', newSecurity);
+    // console.log('setSecurity', newSecurity);
+    ControllerStateManager.socketAddUpdate(ctrl_id, { disableSecurityButton: true });
     const res = await sendSecurity(ctrl_id, newSecurity === 1);
     if (res && res.resultado) {
       if (res.codigo === codes.VALUE_ARM || res.codigo === codes.VALUE_DISARM) {
-        ControllerMapManager.updateController(ctrl_id, { seguridad: res.codigo === codes.VALUE_ARM ? 1 : 0 });
+        ControllerMapManager.update(ctrl_id, { seguridad: res.codigo === codes.VALUE_ARM ? 1 : 0 });
       } else {
         console.log(`Response is not a final state 0x${res.codigo.toString(16)}`);
       }
