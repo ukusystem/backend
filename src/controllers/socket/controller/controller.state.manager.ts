@@ -101,6 +101,7 @@ export class ControllerStateManager {
   static socketAddUpdate(ctrl_id: number, data: NewStatesController) {
     const dataFiltered = filterUndefined<NewStatesController>(data);
     ControllerStateManager.#newStates.set(ctrl_id, dataFiltered);
+    // console.log(data.disableSecurityButton);
 
     if (dataFiltered.disableSecurityButton !== undefined) {
       ControllerStateManager.#notifyUpdateSecurityButton(ctrl_id, dataFiltered.disableSecurityButton);

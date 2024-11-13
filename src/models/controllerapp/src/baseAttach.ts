@@ -1377,11 +1377,13 @@ export class NodeAttach extends BaseAttach {
             // Update the button state
             this._log(`Received security programmed from technician or ticket: ${useful.toHex(cmdOrValue)}, ${useful.toHex(value)}`);
             // ControllerMapManager.updateController(this.controllerID, { isButtonActive : 0 })
+            this.disableArmButton(true);
             break;
           case codes.VALUE_SECURITY_WEB:
             // Cancel timeout and resolve
             this._log(`Received security programmed from web: ${useful.toHex(value)}`);
             this.removePendingMessageByID(id, value);
+            this.disableArmButton(true);
             break;
           case codes.VALUE_SD:
             this._log(`Received sd event ${useful.toHex(value)}.`);
@@ -1558,9 +1560,9 @@ export class NodeAttach extends BaseAttach {
           // const transitory = programming  === codes.VALUE_DISARMING || programming  === codes.VALUE_ARMING
 
           // Notify web
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const enableButton = definite; // Add to isButtonActive when the function is updated.
+          // const enableButton = definite;
           ControllerMapManager.update(this.controllerID, { seguridad: security ? 1 : 0 });
+          this.disableArmButton(!definite);
         }
         break;
       case codes.VALUE_SD_STATE:
@@ -1597,6 +1599,11 @@ export class NodeAttach extends BaseAttach {
         return false;
     }
     return true;
+  }
+
+  disableArmButton(state: boolean) {
+    this._log(`Setting button disable to '${state}'`);
+    sm.ControllerStateManager.socketAddUpdate(this.controllerID, { disableSecurityButton: state });
   }
 
   private async saveSecurity(nodeID: number, security: boolean, date: number, msgID: number) {
