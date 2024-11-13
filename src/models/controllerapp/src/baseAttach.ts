@@ -1498,6 +1498,17 @@ export class NodeAttach extends BaseAttach {
         this.insertSilent('card', params, queries.insertCard, this.controllerID, false);
         this._notifyCard(serial, isAdmin, autorizado ? 1 : 0, date, workerID, deviceID, isEntrance, this.controllerID);
         break;
+      case codes.CMD_AUTHORIZATION_CHANGED:
+        // this._log(`Received pin changed '${command}'`);
+        const authData = this._parseMessage(parts, queries.authParse, id);
+        if (!authData) break;
+        // const authpin = authData[0].getInt();
+        // const auth = authData[1].getInt() === codes.VALUE_TO_ACTIVE ? 1 : 0;
+        // const authdate = authData[2].getInt();
+
+        // Send to technician (s)
+        this.mirrorMessage(this._appendPart(command, this.controllerID.toString()), true);
+        break;
       case codes.CMD_ERR:
         this._log(`Received internal error '${command}'`);
         const errorData = this._parseMessage(parts, queries.valueParse);
