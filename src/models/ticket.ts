@@ -70,7 +70,7 @@ export class Ticket {
   }, 'Ticket.getTiposTrabajo');
 
   static getPersonalesByContrataId = handleErrorWithArgument<PersonalInfo[], Pick<Contrata, 'co_id'>>(async ({ co_id }) => {
-    const personalesContrata = await MySQL2.executeQuery<PersonalRowData[]>({ sql: `SELECT p_id, nombre,apellido, telefono, dni, c_id , co_id, foto FROM general.personal p WHERE p.co_id = ? AND nombre IS NOT NULL`, values: [co_id] });
+    const personalesContrata = await MySQL2.executeQuery<PersonalRowData[]>({ sql: `SELECT p_id, nombre,apellido, telefono, dni, c_id , co_id, foto FROM general.personal p WHERE p.co_id = ? AND p.activo = 1`, values: [co_id] });
 
     if (personalesContrata.length > 0) {
       return personalesContrata;
@@ -79,7 +79,7 @@ export class Ticket {
   }, 'Ticket.getPersonalesByContrataId');
 
   static getNodos = handleErrorWithoutArgument<RegionNodo[]>(async () => {
-    const regionNodo = await MySQL2.executeQuery<RegionNodoRowData[]>({ sql: `SELECT r.region, c.nodo, c.ctrl_id  FROM general.controlador c INNER JOIN general.region r ON c.rgn_id = r.rgn_id WHERE c.nodo IS NOT NULL` });
+    const regionNodo = await MySQL2.executeQuery<RegionNodoRowData[]>({ sql: `SELECT r.region, c.nodo, c.ctrl_id  FROM general.controlador c INNER JOIN general.region r ON c.rgn_id = r.rgn_id WHERE c.activo = 1` });
 
     if (regionNodo.length > 0) {
       return regionNodo;

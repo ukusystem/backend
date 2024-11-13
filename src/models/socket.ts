@@ -5,7 +5,6 @@ import {
   lastSnapshotSocket,
   pinEntradaSocket,
   registroEntradaSocket,
-  voiceStreamSocket,
   NamespaceControllerState,
   contollerStateSocket,
   NamespacePinSalida,
@@ -126,10 +125,9 @@ export class Sockets {
     });
 
     // Namespace: "/voice_stream/ctrl_id/ip"
-    // eslint-disable-next-line no-useless-escape
-    this.#io.of(/^\/voice_stream\/(\d+)\/([\d\.]+)$/).on('connection', (socket) => {
-      voiceStreamSocket(this.#io, socket);
-    });
+    // this.#io.of(/^\/voice_stream\/(\d+)\/([\d\.]+)$/).on('connection', (socket) => {
+    //   voiceStreamSocket(this.#io, socket);
+    // });
 
     // Namespace : "/last_snapshot/ctrl_id"
     const AlarmNSP: NamespaceAlarm = this.#io.of('/alarm_notification');

@@ -1,5 +1,5 @@
 export * from './ticket';
-export * from './voicestream';
+// export * from './voicestream';
 export * from './stream';
 export * from './pinentrada';
 export * from './controller';
