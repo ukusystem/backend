@@ -13,6 +13,7 @@ export class ControllerStateSocketObserver implements ControllerStateObserver {
 
   updateSecurityButton(data: boolean): void {
     this.#socket.nsp.emit('update_security_button', data);
+    console.log(`Data ${data}`);
   }
 
   updateRegion(region: Region): void {
@@ -101,7 +102,7 @@ export class ControllerStateManager {
   static socketAddUpdate(ctrl_id: number, data: NewStatesController) {
     const dataFiltered = filterUndefined<NewStatesController>(data);
     ControllerStateManager.#newStates.set(ctrl_id, dataFiltered);
-    // console.log(data.disableSecurityButton);
+    console.log('Disable ' + data.disableSecurityButton);
 
     if (dataFiltered.disableSecurityButton !== undefined) {
       ControllerStateManager.#notifyUpdateSecurityButton(ctrl_id, dataFiltered.disableSecurityButton);

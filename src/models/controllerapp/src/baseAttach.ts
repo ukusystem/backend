@@ -1370,6 +1370,7 @@ export class NodeAttach extends BaseAttach {
             const security = value === codes.VALUE_ARM;
             this._log(`Received security: ${useful.toHex(value)}`);
             ControllerMapManager.update(this.controllerID, { seguridad: security ? 1 : 0 });
+            this.disableArmButton(false);
             await this.saveSecurity(this.controllerID, security, eventDate, id);
             break;
           case codes.VALUE_SECURITY_TECH:
