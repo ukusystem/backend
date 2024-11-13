@@ -29,6 +29,7 @@ import * as db2 from './db2';
 import * as net from 'net';
 import * as cp from 'child_process';
 import { Camara } from '../../../types/db';
+// import { ControllerStateManager } from '../../../controllers/socket';
 
 export class Main {
   /**
@@ -449,6 +450,7 @@ export class Main {
     const myPromise: Promise<RequestResult> = new Promise((resolve, _reject) => {
       let ignoreTimeout = false;
       if (Selector.isChannelConnected(node._currentSocket)) {
+        node.disableArmButton(true);
         // Timeout for this operation
         const securityHandle = setTimeout(() => {
           if (ignoreTimeout) {
@@ -457,6 +459,7 @@ export class Main {
           this.log(`Remove message ID = ${msgID} by timeout.`);
           // Message has to be removed anyways
           node.removePendingMessageByID(msgID, codes.ERR_TIMEOUT, true, false);
+          node.disableArmButton(false);
           resolve(new RequestResult(false, `El controlador ID = ${controllerID} no ha respondido a tiempo.`));
         }, Main.REQUEST_TIMEOUT);
         // Send order to controller
@@ -465,9 +468,12 @@ export class Main {
           ignoreTimeout = true;
           clearTimeout(securityHandle);
           // Valid responses
-          if (receivedCode === codes.VALUE_ARM || receivedCode === codes.VALUE_DISARM || receivedCode === codes.VALUE_ARMING || receivedCode === codes.VALUE_DISARMING) {
+          const definite = receivedCode === codes.VALUE_ARM || receivedCode === codes.VALUE_DISARM;
+          if (definite || receivedCode === codes.VALUE_ARMING || receivedCode === codes.VALUE_DISARMING) {
+            node.disableArmButton(!definite);
             resolve(new RequestResult(true, `Orden de seguridad recibida.`, receivedCode));
           } else {
+            node.disableArmButton(false);
             resolve(new RequestResult(false, `La order no se pudo confirmar.`, receivedCode));
           }
           this.log(`Response from controller ${useful.toHex(receivedCode)}`);
