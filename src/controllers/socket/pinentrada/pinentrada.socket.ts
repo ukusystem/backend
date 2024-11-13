@@ -38,12 +38,12 @@ export const pinEntradaSocket = async (io: Server, socket: SocketPinEntrada) => 
 
   socket.on('disconnect', () => {
     const clientsCount = io.of(`/pin_entrada/${ctrl_id}`).sockets.size;
-    if (clientsCount == 0) {
+    if (clientsCount === 0) {
       PinEntradaManager.unregisterObserver(Number(ctrl_id));
     }
   });
 
-  socket.on('error', (error: any) => {
+  socket.on('error', (error) => {
     genericLogger.error(`Error en el namespace pines entrada | ${ctrl_id}`, error);
   });
 };

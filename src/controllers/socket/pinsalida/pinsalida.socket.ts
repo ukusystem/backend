@@ -47,8 +47,8 @@ export const pinSalidaSocket = async (io: Server, socket: SocketPinSalida) => {
     genericLogger.info(`Socket Pines Salida | Orden | ctrl_id : ${ctrl_id} | action : ${action} | pin : ${pin}`, { action, pin, es_id });
     try {
       const ordenResult = await onOrder({ action, ctrl_id, pin });
-      if (ordenResult != undefined) {
-        genericLogger.info(`Socket Pines Salida | Resultado Orden |  ${ordenResult.resultado?"Correcto":"Incorrecto"} | ${ordenResult.mensaje}`, ordenResult);
+      if (ordenResult !== undefined) {
+        genericLogger.info(`Socket Pines Salida | Resultado Orden |  ${ordenResult.resultado ? 'Correcto' : 'Incorrecto'} | ${ordenResult.mensaje}`, ordenResult);
         if (ordenResult.resultado) {
           // orden correcto
           const currPinSal = PinSalidaManager.getItemPinSalida(ctrl_id, ps_id);
@@ -67,12 +67,12 @@ export const pinSalidaSocket = async (io: Server, socket: SocketPinSalida) => {
 
   socket.on('disconnect', () => {
     const clientsCount = io.of(`/pines_salida/${ctrl_id}`).sockets.size;
-    if (clientsCount == 0) {
+    if (clientsCount === 0) {
       PinSalidaManager.unregisterObserver(ctrl_id);
     }
   });
 
-  socket.on('error', (error: any) => {
+  socket.on('error', (error) => {
     genericLogger.error(`Error en el namespace pines de salida | ctrl_id = ${ctrl_id}`, error);
   });
 };

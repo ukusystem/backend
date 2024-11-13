@@ -1,4 +1,4 @@
-import { Namespace, Socket } from "socket.io";
+import { Namespace, Socket } from 'socket.io';
 
 // Observer:
 export interface LastSnapshotObserver {
@@ -11,29 +11,17 @@ export interface LastSnapshotSubject {
   notifyLastSnapshot(ctrl_id: number, data: string): void;
 }
 
+// Socket:
+interface ClientToServerEvents {}
 
-// Socket: 
-interface ClientToServerEvents {
-}
-  
 interface ServerToClientEvents {
-    last_snapshot: (img: string) => void;
+  last_snapshot: (img: string) => void;
 }
 
 interface InterServerEvents {}
 
 interface SocketData {}
 
-export type NamespaceLastSnapshot = Namespace<
-  ClientToServerEvents,
-  ServerToClientEvents,
-  InterServerEvents,
-  SocketData
->;
+export type NamespaceLastSnapshot = Namespace<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>;
 
-export type SocketLastSnapshot = Socket<
-  ClientToServerEvents,
-  ServerToClientEvents,
-  InterServerEvents,
-  SocketData
->;
+export type SocketLastSnapshot = Socket<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>;

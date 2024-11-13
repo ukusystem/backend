@@ -32,7 +32,7 @@ export const registroAccesoSocket = async (io: Server, socket: SocketRegistroAcc
 
   socket.on('disconnect', () => {
     const clientsCount = io.of(`/registro_acceso/${ctrl_id}`).sockets.size;
-    if (clientsCount == 0) {
+    if (clientsCount === 0) {
       RegistroAccesoManager.unregisterObserver(ctrl_id);
     }
   });

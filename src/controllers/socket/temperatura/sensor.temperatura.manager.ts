@@ -1,336 +1,171 @@
-import { Temperatura } from "../../../models/site/temperatura";
-import { genericLogger } from "../../../services/loggers";
-import { SensorTemperaturaSocket, SensorTemperaturaSocketBad, SensorTemperatureObserver, SenTempAction, SenTempState, SocketSenTemperature } from "./sensor.temperatura.types";
+import { MySQL2 } from '../../../database/mysql';
+import { Init } from '../../../models/init';
+import { genericLogger } from '../../../services/loggers';
+import { filterUndefined } from '../../../utils/filterUndefined';
+import { ControllerSenTempMap, SensorTemperaturaObserver, SenTempAction, SenTempState, SocketSenTemperatura, ObserverSenTempMap, SenTemperarturaObj, SenTemperaturaMap, SensorTemperaturaRowData, SenTemperaturaAddUpdateDTO, SenTemperaturaSocketDTO } from './sensor.temperatura.types';
 
-export class SenTempSocketObserver implements SensorTemperatureObserver {
-  #socket: SocketSenTemperature;
+export class SenTempSocketObserver implements SensorTemperaturaObserver {
+  #socket: SocketSenTemperatura;
 
-  constructor(socket: SocketSenTemperature) {
+  constructor(socket: SocketSenTemperatura) {
     this.#socket = socket;
   }
-  updateListSenTemp( data: SensorTemperaturaSocket, action: SenTempAction ): void {
-    this.#socket.nsp.emit("list_temperature",data,action)
+  updateListSenTemp(data: SenTemperaturaSocketDTO, action: SenTempAction): void {
+    this.#socket.nsp.emit('list_temperature', data, action);
   }
-  updateSenTemp(data: SensorTemperaturaSocket): void {
-    this.#socket.nsp.emit("temperature",data)
-  }
-}
-
-export class SenTemperaturaVO implements SensorTemperaturaSocket {
-  st_id: number;
-  serie: string;
-  ubicacion: string;
-  actual: number;
-  activo: number;
-  ctrl_id: number;
-
-  constructor(props: SensorTemperaturaSocket) {
-    const { ctrl_id, activo, actual, serie, st_id, ubicacion } = props;
-    this.ctrl_id = ctrl_id;
-    this.activo = activo;
-    this.actual = actual;
-    this.ubicacion = ubicacion;
-    this.st_id = st_id;
-    this.serie = serie;
-  }
-
-  public setCtrlId(ctrl_id: SensorTemperaturaSocket["ctrl_id"]): void {
-    this.ctrl_id = ctrl_id;
-  }
-
-  public setStId(st_id: SensorTemperaturaSocket["st_id"]): void {
-    this.st_id = st_id;
-  }
-
-  public setSerie(serie: SensorTemperaturaSocket["serie"]): void {
-    this.serie = serie;
-  }
-
-  public setUbicacion(ubicacion: SensorTemperaturaSocket["ubicacion"]): void {
-    this.ubicacion = ubicacion;
-  }
-
-  public setActual(actual: SensorTemperaturaSocket["actual"]): void {
-    this.actual = actual;
-  }
-
-  public setActivo(activo: SensorTemperaturaSocket["activo"]): void {
-    this.activo = activo;
-  }
-
-  public toJSON(): SensorTemperaturaSocket {
-    const result: SensorTemperaturaSocket = {
-      ctrl_id: this.ctrl_id,
-      activo: this.activo,
-      actual: this.actual,
-      ubicacion: this.ubicacion,
-      st_id: this.st_id,
-      serie: this.serie,
-    };
-    return result;
+  updateSenTemp(data: SenTemperaturaSocketDTO): void {
+    this.#socket.nsp.emit('temperature', data);
   }
 }
 
-export class SenTemperaturaBadVO implements SensorTemperaturaSocketBad {
-  ctrl_id: number;
-  st_id: number;
-  serie: string | null;
-  ubicacion: string | null;
-  actual: number | null;
-  activo: number | null;
+export class SensorTemperaturaManager {
+  static #sensores: ControllerSenTempMap = new Map();
+  static #observers: ObserverSenTempMap = new Map();
 
-  constructor(props: SensorTemperaturaSocketBad) {
-    const { ctrl_id, activo, actual, serie, st_id, ubicacion } = props;
-    this.ctrl_id = ctrl_id;
-    this.activo = activo;
-    this.actual = actual;
-    this.ubicacion = ubicacion;
-    this.st_id = st_id;
-    this.serie = serie;
+  static registerObserver(ctrl_id: number, new_observer: SensorTemperaturaObserver): void {
+    const observer = SensorTemperaturaManager.#observers.get(ctrl_id);
+    if (observer === undefined) {
+      SensorTemperaturaManager.#observers.set(ctrl_id, new_observer);
+    }
+  }
+  static unregisterObserver(ctrl_id: number): void {
+    SensorTemperaturaManager.#observers.delete(ctrl_id);
+  }
+  static notifyListSenTemp(ctrl_id: number, data: SenTemperarturaObj, action: SenTempAction): void {
+    const observer = SensorTemperaturaManager.#observers.get(ctrl_id);
+    if (observer !== undefined) {
+      observer.updateListSenTemp(data, action);
+    }
+  }
+  static notifySenTemp(ctrl_id: number, data: SenTemperarturaObj): void {
+    const observer = SensorTemperaturaManager.#observers.get(ctrl_id);
+    if (observer !== undefined) {
+      observer.updateSenTemp(data);
+    }
   }
 
-  public setCtrlId(ctrl_id: SensorTemperaturaSocketBad["ctrl_id"]): void {
-    this.ctrl_id = ctrl_id;
+  static #add(ctrl_id: number, sensor: SenTemperarturaObj) {
+    const currController = SensorTemperaturaManager.#sensores.get(ctrl_id);
+    if (currController === undefined) {
+      const newMedEnergiaMap: SenTemperaturaMap = new Map();
+      newMedEnergiaMap.set(sensor.st_id, sensor);
+
+      SensorTemperaturaManager.#sensores.set(ctrl_id, newMedEnergiaMap);
+    } else {
+      currController.set(sensor.st_id, sensor);
+    }
+    // notifications:
+    if (sensor.activo === SenTempState.Activo) {
+      SensorTemperaturaManager.notifyListSenTemp(ctrl_id, sensor, 'add');
+    }
   }
 
-  public setStId(st_id: SensorTemperaturaSocketBad["st_id"]): void {
-    this.st_id = st_id;
+  static #update(ctrl_id: number, st_id_update: number, fieldsToUpdate: Partial<SenTemperarturaObj>) {
+    const currController = SensorTemperaturaManager.#sensores.get(ctrl_id);
+    if (currController !== undefined) {
+      const senTemperatura = currController.get(st_id_update);
+      if (senTemperatura !== undefined) {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { st_id, ...fieldsFiltered } = filterUndefined<SenTemperarturaObj>(fieldsToUpdate);
+
+        const { activo } = fieldsFiltered;
+        const hasChangeActivo = activo !== undefined && senTemperatura.activo !== activo;
+
+        Object.assign(senTemperatura, fieldsFiltered);
+
+        // notifications:
+        if (hasChangeActivo) {
+          if (activo === SenTempState.Activo) {
+            SensorTemperaturaManager.notifyListSenTemp(ctrl_id, senTemperatura, 'delete');
+          }
+          if (activo === SenTempState.Desactivado) {
+            SensorTemperaturaManager.notifyListSenTemp(ctrl_id, senTemperatura, 'add');
+          }
+        }
+        SensorTemperaturaManager.notifySenTemp(ctrl_id, senTemperatura);
+      }
+    }
   }
 
-  public setSerie(serie: SensorTemperaturaSocketBad["serie"]): void {
-    this.serie = serie;
+  static delete(ctrl_id: number, st_id: number): boolean {
+    const currController = SensorTemperaturaManager.#sensores.get(ctrl_id);
+    if (currController !== undefined) {
+      const senTemperatura = currController.get(st_id);
+      if (senTemperatura !== undefined) {
+        const hasDeleted = currController.delete(st_id);
+        if (hasDeleted) {
+          // notifications:
+          SensorTemperaturaManager.notifyListSenTemp(ctrl_id, senTemperatura, 'delete');
+        }
+        return hasDeleted;
+      }
+    }
+
+    return false;
   }
 
-  public setUbicacion(ubicacion: SensorTemperaturaSocketBad["ubicacion"]): void {
-    this.ubicacion = ubicacion;
+  static async init() {
+    try {
+      const regionNodos = await Init.getRegionNodos();
+      regionNodos.forEach(async ({ ctrl_id, nododb_name }) => {
+        try {
+          const sensoresTemp = await MySQL2.executeQuery<SensorTemperaturaRowData[]>({
+            sql: `SELECT * from ${nododb_name}.sensortemperatura WHERE activo = 1`,
+          });
+
+          for (const sensor of sensoresTemp) {
+            SensorTemperaturaManager.#add(ctrl_id, sensor);
+          }
+        } catch (error) {
+          genericLogger.error(`SensorTemperaturaManager | Error al inicializar sensor | ctrl_id : ${ctrl_id}`, error);
+        }
+      });
+    } catch (error) {
+      genericLogger.error('SensorTemperaturaManager| Error al inicializar sensores', error);
+      throw error;
+    }
   }
 
-  public setActual(actual: SensorTemperaturaSocketBad["actual"]): void {
-    this.actual = actual;
+  static add_update(ctrl_id: number, sensor: SenTemperaturaAddUpdateDTO) {
+    const currController = SensorTemperaturaManager.#sensores.get(ctrl_id);
+    const { st_id, activo, actual, serie, ubicacion } = sensor;
+
+    if (currController === undefined) {
+      //  only add
+      if (activo !== undefined && actual !== undefined && serie !== undefined && ubicacion !== undefined) {
+        SensorTemperaturaManager.#add(ctrl_id, { st_id, activo, actual, serie, ubicacion });
+      }
+    } else {
+      const hasMedEnergia = currController.has(st_id);
+      if (hasMedEnergia) {
+        SensorTemperaturaManager.#update(ctrl_id, st_id, sensor);
+      } else {
+        if (activo !== undefined && actual !== undefined && serie !== undefined && ubicacion !== undefined) {
+          SensorTemperaturaManager.#add(ctrl_id, { st_id, activo, actual, serie, ubicacion });
+        }
+      }
+    }
   }
 
-  public setActivo(activo: SensorTemperaturaSocketBad["activo"]): void {
-    this.activo = activo;
+  static getListSenTemp(ctrl_id: number): SenTemperarturaObj[] {
+    const currController = SensorTemperaturaManager.#sensores.get(ctrl_id);
+    if (currController !== undefined) {
+      const listSenTemp = Array.from(currController.values());
+      const listSenTempActives = listSenTemp.filter((medidor) => medidor.activo === SenTempState.Activo);
+      return listSenTempActives.sort((a, b) => a.st_id - b.st_id);
+    }
+
+    return [];
   }
 
-  public toJSON(): SensorTemperaturaSocketBad {
-    const result: SensorTemperaturaSocketBad = {
-      ctrl_id: this.ctrl_id,
-      activo: this.activo,
-      actual: this.actual,
-      ubicacion: this.ubicacion,
-      st_id: this.st_id,
-      serie: this.serie,
-    };
-    return result;
+  static getSenTempItem(ctrl_id: number, st_id: number) {
+    const currController = SensorTemperaturaManager.#sensores.get(ctrl_id);
+    if (currController !== undefined) {
+      const senTemperatura = currController.get(st_id);
+      if (senTemperatura !== undefined && senTemperatura.activo === SenTempState.Activo) {
+        return senTemperatura;
+      }
+    }
+    return undefined;
   }
 }
-
-export class SensorTemperaturaManager  {
-    static map: { [ctrl_id: number]: { [st_id: number]: SenTemperaturaVO }; } = {};
-    static observers: {[ctrl_id: number]: SensorTemperatureObserver} = {};
-
-    static registerObserver(ctrl_id: number, observer: SensorTemperatureObserver): void {
-        if(!SensorTemperaturaManager.observers[ctrl_id]){
-            SensorTemperaturaManager.observers[ctrl_id] = observer
-        }
-    }
-    static unregisterObserver(ctrl_id: number): void {
-        if (SensorTemperaturaManager.observers[ctrl_id]) {
-          delete SensorTemperaturaManager.observers[ctrl_id];
-        }
-    }
-
-    static notifyListSenTemp(ctrl_id: number, data: SensorTemperaturaSocket, action: SenTempAction): void {
-        if(SensorTemperaturaManager.observers[ctrl_id]){
-            SensorTemperaturaManager.observers[ctrl_id].updateListSenTemp(data,action)
-        }
-    }
-    static notifySenTemp(ctrl_id: number, data: SensorTemperaturaSocket): void {
-        if(SensorTemperaturaManager.observers[ctrl_id]){
-            SensorTemperaturaManager.observers[ctrl_id].updateSenTemp(data)
-        }
-    }
-
-    static #exists(args: { ctrl_id: number; st_id: number }) {
-      const { ctrl_id, st_id } = args;
-  
-      let is_ctrl_id: boolean = false;
-      let is_st_id: boolean = false;
-  
-      for (const ctrl_id_key in SensorTemperaturaManager.map) {
-        if (Number(ctrl_id_key) == ctrl_id) {
-          is_ctrl_id = true;
-          for (const st_id_key in SensorTemperaturaManager.map[ctrl_id_key]) {
-            if (Number(st_id_key) == st_id) {
-              is_st_id = true;
-              return is_ctrl_id && is_st_id;
-            }
-          }
-        }
-      }
-  
-      return is_ctrl_id && is_st_id;
-    }
-  
-    static #add(sensor: SenTemperaturaVO) {
-      const { ctrl_id, st_id } = sensor.toJSON();
-  
-      if (!SensorTemperaturaManager.map.hasOwnProperty(ctrl_id)) {
-        SensorTemperaturaManager.map[ctrl_id] = {};
-      }
-  
-      if (!SensorTemperaturaManager.map[ctrl_id].hasOwnProperty(st_id)) {
-        SensorTemperaturaManager.map[ctrl_id][st_id] = sensor;
-        if(sensor.activo === SenTempState.Activo){
-          SensorTemperaturaManager.notifyListSenTemp(ctrl_id,sensor.toJSON(),"add");
-        }
-      }
-    }
-  
-    static #update(sensor: SenTemperaturaVO) {
-      const { ctrl_id, st_id, activo, actual, serie, ubicacion } = sensor.toJSON();
-      if (SensorTemperaturaManager.map.hasOwnProperty(ctrl_id)) {
-        if (SensorTemperaturaManager.map[ctrl_id].hasOwnProperty(st_id)) {
-          const currentSenTemp = SensorTemperaturaManager.map[ctrl_id][st_id];
-        //   if (currentSenTemp.ctrl_id != ctrl_id) currentSenTemp.setCtrlId(ctrl_id);
-        //   if (currentSenTemp.st_id != st_id) currentSenTemp.setStId(st_id);
-          if (currentSenTemp.actual != actual) currentSenTemp.setActual(actual);
-          if (currentSenTemp.serie != serie) currentSenTemp.setSerie(serie);
-          if (currentSenTemp.ubicacion != ubicacion) currentSenTemp.setUbicacion(ubicacion);
-          if (currentSenTemp.activo != activo) {
-            if(currentSenTemp.activo === SenTempState.Activo){
-                SensorTemperaturaManager.notifyListSenTemp(ctrl_id, sensor.toJSON(),"delete");
-            }
-            if(currentSenTemp.activo === SenTempState.Desactivado){
-                SensorTemperaturaManager.notifyListSenTemp(ctrl_id, sensor.toJSON(),"add");
-            }
-            currentSenTemp.setActivo(activo);
-
-          };
-          
-          SensorTemperaturaManager.notifySenTemp(ctrl_id,sensor.toJSON())
-  
-        }
-      }
-    }
-  
-    public static async init() {
-      try {
-        let initData = await Temperatura.getAllSensoresTemperatura()
-        for (let sensor of initData) {
-          let newSenTemp = new SenTemperaturaVO(sensor);
-          SensorTemperaturaManager.add_update(newSenTemp);
-        }
-      } catch (error) {
-        genericLogger.error(`Socket Sensor Temperatura Map | SensorTemperaturaMap | Error al inicilizar sensores`,error);
-        throw error
-      }
-    }
-  
-    public static delete(sensor: SenTemperaturaVO | SenTemperaturaBadVO ) {
-      if(sensor instanceof SenTemperaturaVO ){
-        const { ctrl_id, st_id } = sensor.toJSON();
-        if (SensorTemperaturaManager.map.hasOwnProperty(ctrl_id)) {
-          if (SensorTemperaturaManager.map[ctrl_id].hasOwnProperty(st_id)) {
-            SensorTemperaturaManager.map[ctrl_id][st_id].setActivo(0);
-            SensorTemperaturaManager.notifyListSenTemp(ctrl_id, sensor.toJSON(),"delete");
-          }
-        }
-      }else{
-        const { st_id, ctrl_id } = sensor.toJSON();
-        if(st_id != null && ctrl_id != null){
-          const currentSenTemp = SensorTemperaturaManager.getSensorTemperatura(ctrl_id,st_id)
-          if(currentSenTemp !== null){
-            SensorTemperaturaManager.map[ctrl_id][st_id].setActivo(0);
-            SensorTemperaturaManager.notifyListSenTemp(ctrl_id, currentSenTemp.toJSON(),"delete");
-          }
-        }
-      }
-    }
-  
-    public static add_update(sensor: SenTemperaturaVO | SenTemperaturaBadVO) {
-      if(sensor instanceof SenTemperaturaVO ){
-        const { st_id, ctrl_id } = sensor.toJSON();
-        const exists = SensorTemperaturaManager.#exists({st_id, ctrl_id });
-    
-        if (!exists) {
-          SensorTemperaturaManager.#add(sensor);
-        } else {
-          SensorTemperaturaManager.#update(sensor);
-        }
-      }else{
-        const { st_id, ctrl_id,activo,actual,serie,ubicacion } = sensor.toJSON();
-        if(st_id != null && ctrl_id != null ){
-          const currentSenTemp = SensorTemperaturaManager.getSensorTemperatura(ctrl_id,st_id)
-          if(currentSenTemp){ // existe sensor temperatura
-            // actualizar
-            if(actual != null && currentSenTemp.actual != actual) currentSenTemp.setActual(actual);
-            if(serie != null && currentSenTemp.serie != serie) currentSenTemp.setSerie(serie);
-            if(ubicacion != null && currentSenTemp.ubicacion != ubicacion) currentSenTemp.setUbicacion(ubicacion);
-            if (activo != null && currentSenTemp.activo != activo) {
-              if (currentSenTemp.activo === SenTempState.Activo) {
-                SensorTemperaturaManager.notifyListSenTemp(ctrl_id,currentSenTemp.toJSON(),"delete");
-              }
-              if (currentSenTemp.activo === SenTempState.Desactivado) {
-                SensorTemperaturaManager.notifyListSenTemp(ctrl_id,currentSenTemp.toJSON(),"add");
-              }
-
-              currentSenTemp.setActivo(activo);
-            } 
-  
-            SensorTemperaturaManager.notifySenTemp(ctrl_id,currentSenTemp.toJSON())
-          }else{
-            // agregar
-            if( activo != null && actual != null && serie != null && ubicacion != null){
-              const newSenTemp = new SenTemperaturaVO({ st_id, ctrl_id,activo,actual,serie,ubicacion})
-              SensorTemperaturaManager.#add(newSenTemp);
-            }
-          }
-        }
-      }
-    }
-  
-    public static getSensorTemperatura(ctrl_id: number,st_id: number){
-      let result: SenTemperaturaVO | null = null;
-      if (SensorTemperaturaManager.map.hasOwnProperty(ctrl_id)) {
-        if(SensorTemperaturaManager.map[ctrl_id].hasOwnProperty(st_id)){
-          result = SensorTemperaturaManager.map[ctrl_id][st_id]
-        }
-      }
-      return result
-  
-    }
-  
-    public static getDataByCtrlID(ctrl_id: number) {
-      let resultData: SensorTemperaturaSocket[] = [];
-      if (SensorTemperaturaManager.map.hasOwnProperty(ctrl_id)) {
-        for (const st_id_key in SensorTemperaturaManager.map[ctrl_id]) {
-          let sensorData = SensorTemperaturaManager.map[ctrl_id][st_id_key].toJSON();
-          if (sensorData.activo == 1) {
-            resultData.push(sensorData);
-          }
-        }
-      }
-      let sortedData = resultData.sort((r1, r2) => r1.st_id - r2.st_id);
-      return sortedData;
-    }
-  
-}
-
-
-// (()=>{
-//   setInterval(()=>{
-
-//     const randomNumber = Math.floor(Math.random() * 11) + 20;
-//     const randomNumber2 = Math.floor(Math.random() * 11) + 20;
-
-//     const newSensorTemp = new SenTemperaturaVO({activo:1,actual:randomNumber, ctrl_id:1,serie:"rewrew",st_id:1,ubicacion:"Ubicacion_test"})
-//     const newSensorTemp2 = new SenTemperaturaVO({activo:1,actual:randomNumber2, ctrl_id:1,serie:"rewrew",st_id:2,ubicacion:"Ubicacion2"})
-
-//     SensorTemperaturaManager.add_update(newSensorTemp)
-//     SensorTemperaturaManager.add_update(newSensorTemp2)
-
-//   },20000)
-
-// })()
