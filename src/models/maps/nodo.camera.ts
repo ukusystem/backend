@@ -82,7 +82,7 @@ export class NodoCameraMapManager {
       region_nodos.forEach(async (reg_nodo) => {
         const { ctrl_id, nododb_name } = reg_nodo;
         const cams = await MySQL2.executeQuery<CameraRowData[]>({
-          sql: `SELECT * FROM ${nododb_name}.camara`,
+          sql: `SELECT * FROM ${nododb_name}.camara WHERE activo = 1`,
         });
         cams.forEach((cam) => {
           NodoCameraMapManager.add(ctrl_id, cam);

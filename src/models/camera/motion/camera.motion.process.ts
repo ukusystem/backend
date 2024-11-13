@@ -14,7 +14,8 @@ import { ControllerMapManager } from '../../maps';
 import { cameraLogger } from '../../../services/loggers';
 import { CameraMotionManager } from './camera.motion.manager';
 import { NodoCameraMapManager } from '../../maps/nodo.camera';
-import { notifyCamDisconnect } from '../../controllerapp/controller';
+// import { notifyCamDisconnect } from '../../controllerapp/controller';
+import { CameraReconnect } from '../cam.reconnect';
 
 const TIMEOUT_DISCONNECT = 5;
 export class CameraMotionProcess implements CameraMotionProps, CameraMotionMethods {
@@ -169,7 +170,9 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
               const camera = NodoCameraMapManager.getCamera(this.ctrl_id, this.cmr_id);
               if (camera !== undefined) {
                 cameraLogger.info(`CameraMotionProcess | snapshotMotion | Notify Camera Disconnect | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id}`);
-                notifyCamDisconnect(this.ctrl_id, { ...camera });
+                // notifyCamDisconnect(this.ctrl_id, { ...camera });
+                const newCamConnect = new CameraReconnect(this.ctrl_id, this.cmr_id, 'MotionSnapshot');
+                newCamConnect.start();
               }
             }
           }
@@ -231,7 +234,9 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
               const camera = NodoCameraMapManager.getCamera(this.ctrl_id, this.cmr_id);
               if (camera !== undefined) {
                 cameraLogger.info(`CameraMotionProcess | captureMotion | Notify Camera Disconnect | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id}`);
-                notifyCamDisconnect(this.ctrl_id, { ...camera });
+                // notifyCamDisconnect(this.ctrl_id, { ...camera });
+                const newCamConnect = new CameraReconnect(this.ctrl_id, this.cmr_id, 'MotionRecord');
+                newCamConnect.start();
               }
             }
           }

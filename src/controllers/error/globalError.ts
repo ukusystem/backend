@@ -1,7 +1,7 @@
-import { NextFunction, Request, Response, ErrorRequestHandler} from "express";
-import { CustomError } from "../../utils/CustomError";
-import { genericLogger } from "../../services/loggers";
-export const globalError = (error: CustomError | Error ,_req: Request,res: Response,_next: NextFunction) => {
+import { NextFunction, Request, Response } from 'express';
+import { CustomError } from '../../utils/CustomError';
+import { genericLogger } from '../../services/loggers';
+export const globalError = (error: CustomError | Error, _req: Request, res: Response, _next: NextFunction) => {
   if (error instanceof CustomError) {
     // Error personalizado
     return res.status(error.statusCode).json({
@@ -10,24 +10,24 @@ export const globalError = (error: CustomError | Error ,_req: Request,res: Respo
     });
   }
 
-  if(error instanceof SyntaxError){   
+  if (error instanceof SyntaxError) {
     return res.status(400).json({
       status: 400,
       message: error.message,
     });
   }
 
-  if ("type" in error) { // PayloadTooLargeError
-    if(error.type == "entity.too.large"){
+  if ('type' in error) {
+    // PayloadTooLargeError
+    if (error.type === 'entity.too.large') {
       return res.status(413).json({
-        error: "PayloadTooLargeError", 
-        message:
-          "La carga útil de la solicitud es demasiado grande. El tamaño máximo permitido es de 10 MB.",
+        error: 'PayloadTooLargeError',
+        message: 'La carga útil de la solicitud es demasiado grande. El tamaño máximo permitido es de 10 MB.',
       });
     }
   }
 
   // Errores no controlados
-  genericLogger.error("Error interno del servidor",error);
-  return res.status(500).json({ status: 500 ,message: "Internal Server Error" });
+  genericLogger.error('Error interno del servidor', error);
+  return res.status(500).json({ status: 500, message: 'Internal Server Error' });
 };

@@ -1,14 +1,13 @@
 // @ts-ignore
 // @ts-nocheck
 
-import { cameraLogger } from "../../../services/loggers";
-import { CameraMotionManager } from "./camera.motion.manager";
+import { cameraLogger } from '../../../services/loggers';
+import { CameraMotionManager } from './camera.motion.manager';
 // import { CameraMotionProcess } from "./camera.motion.process";
-import { CameraProps } from "./camera.motion.types";
-import { Cam } from "onvif";
+import { CameraProps } from './camera.motion.types';
+import { Cam } from 'onvif';
 
-export class CameraReconnect {
-
+export class CameraReconnectTest {
   ip: string;
   usuario: string;
   contraseña: string;
@@ -17,7 +16,7 @@ export class CameraReconnect {
 
   interval_proccess: NodeJS.Timeout | null = null;
 
-  constructor( props: CameraProps ) {
+  constructor(props: CameraProps) {
     const { cmr_id, ctrl_id, ip, contraseña, usuario } = props;
     this.cmr_id = cmr_id;
     this.ctrl_id = ctrl_id;
@@ -39,7 +38,7 @@ export class CameraReconnect {
         //   usuario: this.usuario,
         // });
         // CameraMotionManager.add_update(newCamMotion);
-        CameraMotionManager.notifyAddUpdate(this.ctrl_id,this.cmr_id);
+        CameraMotionManager.notifyAddUpdate(this.ctrl_id, this.cmr_id);
       }
 
       // console.log("creando setInterval de reconeccion")
@@ -57,7 +56,7 @@ export class CameraReconnect {
 
       // },30000)
     } catch (error) {
-      cameraLogger.error(`CameraReconnect | execute | Error CameraReconnect.execute`,error);
+      cameraLogger.error(`CameraReconnect | execute | Error CameraReconnect.execute`, error);
     }
   }
 
@@ -71,7 +70,7 @@ export class CameraReconnect {
       autoconnect: true,
     };
 
-    return new Promise<boolean>((resolve, reject) => {
+    return new Promise<boolean>((resolve, _reject) => {
       new Cam(camOvifProps, function (err: any) {
         if (err) {
           return resolve(false);

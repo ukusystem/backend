@@ -119,6 +119,6 @@ export class ControllerStateManager {
 //   }, 20000);
 //   setTimeout(() => {
 //     ControllerStateManager.socketAddUpdate(1, { disableSecurityButton: true });
-//     console.log({ disableSecurityButton: false });
+//     console.log({ disableSecurityButton: true });
 //   }, 40000);
 // })();
