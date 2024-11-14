@@ -1,7 +1,6 @@
 import { Server as HttpServer } from 'http';
 import { Server } from 'socket.io';
 import {
-  ticketSocket,
   lastSnapshotSocket,
   pinEntradaSocket,
   registroEntradaSocket,
@@ -25,6 +24,8 @@ import {
 } from '../controllers/socket';
 import { camStreamSocket } from '../controllers/socket/stream/camera.stream.socket';
 import { NamespaceRegistroAcceso, registroAccesoSocket } from '../controllers/socket/registro.acceso';
+import { NamespaceTicketSchedule } from '../controllers/socket/ticket.schedule/ticket.schedule.types';
+import { ticketScheduleSocket } from '../controllers/socket/ticket.schedule/ticket.schedule.socket';
 
 export class Sockets {
   #io: Server;
@@ -90,8 +91,9 @@ export class Sockets {
     });
 
     // Namespace: "/tickets/ctrl_id/"
-    this.#io.of(/^\/tickets\/\d+$/).on('connection', (socket) => {
-      ticketSocket(this.#io, socket);
+    const TicketScheduleNSP: NamespaceTicketSchedule = this.#io.of(/^\/tickets\/\d+$/);
+    TicketScheduleNSP.on('connection', (socket) => {
+      ticketScheduleSocket(this.#io, socket);
     });
 
     // Namespace: "/pin_entrada/ctrl_id"

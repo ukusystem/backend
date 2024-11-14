@@ -12,10 +12,11 @@ import { getExtesionFile } from '../../utils/getExtensionFile';
 
 import { Ticket, Personal, Solicitante } from '../../models/controllerapp/src/ticket';
 import { onTicket } from '../../models/controllerapp/controller';
-import { RegistroTicketObject, TicketMap } from '../../models/ticketschedule';
 import { genericLogger } from '../../services/loggers';
 import { RequestWithUser } from '../../types/requests';
-import { UserRol } from '../../types/rol';
+// import { UserRol } from '../../types/rol';
+import { TicketScheduleManager } from '../socket/ticket.schedule/ticket.schedule.manager';
+import { RegistroTicketObj } from '../socket/ticket.schedule/ticket.schedule.types';
 
 export const multerCreateTicketArgs: GeneralMulterMiddlewareArgs = {
   allowedMimeTypes: ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'],
@@ -34,7 +35,7 @@ export const createTicket = asyncErrorHandler(async (req: RequestWithUser, res: 
   const user = req.user;
 
   if (user !== undefined) {
-    const isAdmin = user.rl_id === UserRol.Administrador;
+    // const isAdmin = user.rl_id === UserRol.Administrador;
 
     try {
       await createTicketSchema.parseAsync(JSON.parse(req.body.formvalues)); // Validate  requests
@@ -131,17 +132,18 @@ export const createTicket = asyncErrorHandler(async (req: RequestWithUser, res: 
 
     if (formValues) {
       try {
-        const newTicket = new Ticket(archivosData, { ...formValues.solicitante, admin: isAdmin }, formValues.personales);
+        const newTicket = new Ticket(archivosData, { ...formValues.solicitante }, formValues.personales);
         const response = await onTicket(newTicket);
-        if (response) {
-          if (response.resultado && response.id) {
+        if (response !== undefined) {
+          if (response.resultado) {
             // success
 
-            const newTicket = new RegistroTicketObject({ ...formValues.solicitante, id: response.id, estd_id: 1 }); // estado esperando
-            TicketMap.add(newTicket);
+            const newTicketObj: RegistroTicketObj = { ...formValues.solicitante, rt_id: response.id, estd_id: 1 }; // estado esperando
+            TicketScheduleManager.add(ctrl_id, newTicketObj);
 
             return res.json({ success: true, message: 'Ticket creado correctamente.' });
           } else {
+            console.log(response);
             return res.json({ success: false, message: response.mensaje });
           }
         } else {

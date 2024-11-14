@@ -1,11 +1,12 @@
-import { Response, NextFunction } from "express";
-import { asyncErrorHandler } from "../../utils/asynErrorHandler";
-import { Ticket } from "../../models/ticket";
-import type { RequestWithUser } from "../../types/requests";
-import { onFinishTicket } from "../../models/controllerapp/controller";
-import { FinishTicket } from "../../models/controllerapp/src/finishTicket";
-import { TicketMap } from "../../models/ticketschedule";
-import { genericLogger } from "../../services/loggers";
+import { Response, NextFunction } from 'express';
+import { asyncErrorHandler } from '../../utils/asynErrorHandler';
+import { Ticket } from '../../models/ticket';
+import type { RequestWithUser } from '../../types/requests';
+import { onFinishTicket } from '../../models/controllerapp/controller';
+import { FinishTicket } from '../../models/controllerapp/src/finishTicket';
+import { genericLogger } from '../../services/loggers';
+import { RegTicketState } from '../socket/ticket.schedule/ticket.schedule.types';
+import { TicketScheduleManager } from '../socket/ticket.schedule/ticket.schedule.manager';
 
 interface TicketUpdateBody {
   action: number;
@@ -13,102 +14,96 @@ interface TicketUpdateBody {
   rt_id: number;
 }
 
-export const upadateTicket = asyncErrorHandler(
-  async (req: RequestWithUser, res: Response, next: NextFunction) => {
-    const data: TicketUpdateBody = req.body;
-    const {action, ctrl_id ,rt_id} = data
-    genericLogger.info(`updateTicket | Datos recividos:`,data);
-    const user = req.user!; // ! -> anteponer middleware auth
+export const upadateTicket = asyncErrorHandler(async (req: RequestWithUser, res: Response, _next: NextFunction) => {
+  const data: TicketUpdateBody = req.body;
+  const { action, ctrl_id, rt_id } = data;
+  genericLogger.info(`updateTicket | Datos recividos:`, data);
+  const user = req.user!; // ! -> anteponer middleware auth
 
-    const ticket = await Ticket.getTicketByCrtlIdAndTicketId({ctrl_id: ctrl_id, rt_id: rt_id});
+  const ticket = await Ticket.getTicketByCrtlIdAndTicketId({ ctrl_id: ctrl_id, rt_id: rt_id });
 
-    if(ticket){
+  if (ticket) {
+    if (ticket.estd_id === RegTicketState.Rechazado || ticket.estd_id === RegTicketState.Cancelado || ticket.estd_id === RegTicketState.Finalizado || ticket.estd_id === RegTicketState.Anulado) {
+      return res.status(403).json({ success: false, message: 'Acción no permitida.' });
+    } else {
+      const estdPendiente = ticket.estd_id === RegTicketState.Esperando && (action === RegTicketState.Aceptado || action === RegTicketState.Cancelado || action === RegTicketState.Rechazado);
+      const estdAceptBefore = ticket.estd_id === RegTicketState.Aceptado && (action === RegTicketState.Rechazado || action === RegTicketState.Cancelado);
+      const estdAceptDuring = ticket.estd_id === RegTicketState.Aceptado && (action === RegTicketState.Finalizado || action === RegTicketState.Anulado); // 2 -> Aceptado
 
-      if((ticket.estd_id == 4 || ticket.estd_id == 3 || ticket.estd_id == 16 || ticket.estd_id == 17)){ // 4 -> Rechazado , 3 -> Cancelado , 16 -> Finalizado , 17 -> Anulado
-        return res.status(403).json({success:false,message: "Acción no permitida.",})
-      }else{
+      const startDate = new Date(ticket.fechacomienzo);
+      const endDate = new Date(ticket.fechatermino);
+      const currentDate = new Date();
+      const isBeforeEvent = currentDate < startDate;
+      const isDuringEvent = currentDate >= startDate && currentDate < endDate;
 
-        const estdPendiente = ticket.estd_id == 1 && (action == 2 || action == 4 || action == 3) // 1 -> Esperando/Pendiente
-        const estdAceptBefore = ticket.estd_id == 2 && (action == 4 || action == 3);
-        const estdAceptDuring = ticket.estd_id == 2 && (action == 16 || action == 17)  // 2 -> Aceptado
+      const beforeEventAction = isBeforeEvent && (estdPendiente || estdAceptBefore);
+      const duringEventAction = isDuringEvent && estdAceptDuring;
 
-        const startDate = new Date(ticket.fechacomienzo);
-        const endDate = new Date(ticket.fechatermino);
-        const currentDate = new Date();
-        const isBeforeEvent = currentDate < startDate;
-        const isDuringEvent = currentDate >= startDate && currentDate < endDate;
-
-        const beforeEventAction = isBeforeEvent && (estdPendiente || estdAceptBefore);
-        const duringEventAction = isDuringEvent && (estdAceptDuring)
-
-
-
-        if( beforeEventAction || duringEventAction ){
-          
-          if(user.rol === "Administrador" || user.rol === "Usuario"){
-
-            try {
-              const response = await onFinishTicket(new FinishTicket(action,ctrl_id,rt_id))
-              if(response){
-                if(response.resultado ){ // success
-                  TicketMap.update(ctrl_id,rt_id,action)
-                  genericLogger.info(`updateT ticket successfully | ctrl_id = ${ctrl_id} | rt_id = ${rt_id} | action = ${action}`);                  
-                  return res.json({success: true,message: "Accion realizada con éxito",});
-                }else{
-                  return res.json({success: false,message: response.mensaje,});
-                }
-              }else{
-                return res.status(500).json({ success: false, message: "Internal Server Error Update Ticket, Backend-Technician", });
+      if (beforeEventAction || duringEventAction) {
+        if (user.rol === 'Administrador' || user.rol === 'Usuario') {
+          try {
+            const response = await onFinishTicket(new FinishTicket(action, ctrl_id, rt_id));
+            if (response) {
+              if (response.resultado) {
+                // success
+                TicketScheduleManager.update(ctrl_id, rt_id, { estd_id: action });
+                genericLogger.info(`Update Ticket successfully | ctrl_id = ${ctrl_id} | rt_id = ${rt_id} | action = ${action}`);
+                return res.json({ success: true, message: 'Accion realizada con éxito' });
+              } else {
+                return res.json({ success: false, message: response.mensaje });
               }
-            } catch (error) {
-              return res.status(500).json({ success: false, message: "Internal Server Error, Backend-Technician", });
+            } else {
+              return res.status(500).json({ success: false, message: 'Internal Server Error Update Ticket, Backend-Technician' });
             }
-            
+          } catch (error) {
+            genericLogger.error(`Error update ticket | ctrl_id = ${ctrl_id} | rt_id = ${rt_id} | action = ${action}`, error);
+            return res.status(500).json({ success: false, message: 'Internal Server Error, Backend-Technician' });
           }
         }
-
-        if(isBeforeEvent && ticket.estd_id == 1){
-          if(user.rol === "Invitado"){
-            if(action == 3){  // 3 -> Cancelar
-
-              // =========== Usar esto
-              // Main.onFinishTicket(new FinishTicket( action, ctrl_id, rt_id ));
-              try {
-                const response = await onFinishTicket(new FinishTicket(action,ctrl_id,rt_id))
-                if(response){
-                  if(response.resultado){ // success
-                    TicketMap.update(ctrl_id,rt_id,action)
-                    return res.json({success: true,message: "Accion realizada con éxito",});
-                  }else{
-                    return res.json({success: false,message: response.mensaje,});
-                  }
-                }else{
-                  return res.status(500).json({ success: false, message: "Internal Server Error Update Ticket, Backend-Technician", });
-                }
-              } catch (error) {
-                return res.status(500).json({ success: false, message: "Internal Server Error, Backend-Technician", });
-              }
-  
-            }
-          }
-        }
-        
       }
 
+      if (isBeforeEvent && ticket.estd_id === 1) {
+        if (user.rol === 'Invitado') {
+          if (action === 3) {
+            // 3 -> Cancelar
+
+            // =========== Usar esto
+            // Main.onFinishTicket(new FinishTicket( action, ctrl_id, rt_id ));
+            try {
+              const response = await onFinishTicket(new FinishTicket(action, ctrl_id, rt_id));
+              if (response) {
+                if (response.resultado) {
+                  // success
+                  TicketScheduleManager.update(ctrl_id, rt_id, { estd_id: action });
+
+                  return res.json({ success: true, message: 'Accion realizada con éxito' });
+                } else {
+                  return res.json({ success: false, message: response.mensaje });
+                }
+              } else {
+                return res.status(500).json({ success: false, message: 'Internal Server Error Update Ticket, Backend-Technician' });
+              }
+            } catch (error) {
+              genericLogger.error(`Error update ticket | ctrl_id = ${ctrl_id} | rt_id = ${rt_id} | action = ${action}`, error);
+              return res.status(500).json({ success: false, message: 'Internal Server Error, Backend-Technician' });
+            }
+          }
+        }
+      }
     }
-
-    res.status(400).json({
-      success: false,
-      message: "Acción no permitida.",
-    });
-
   }
-);
+
+  res.status(400).json({
+    success: false,
+    message: 'Acción no permitida.',
+  });
+});
+
 // 4 -> Rechazado
 // 2 -> Aceptado
 // 3 -> Cancelado
-// 1 -> Esperando   
-// 5 -> Completado : 
+// 1 -> Esperando
+// 5 -> Completado :
 
 // Acciones:
 // rechazar : -1,

@@ -26,7 +26,7 @@ export interface Solicitante {
   sn_id: number;
   co_id: number;
   ctrl_id: number;
-  admin: boolean;
+  // admin: boolean;
 }
 /**
  * Structure of the ticket received from the web application to CREATE a ticket

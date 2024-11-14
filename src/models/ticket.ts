@@ -143,24 +143,21 @@ export class Ticket {
     const backDateHour = dayjs().startOf('date').subtract(1, 'day').format('YYYY-MM-DD HH:mm:ss');
     const region_nodos = await Init.getRegionNodos();
     if (region_nodos.length > 0) {
-      const allRegistros = await region_nodos.reduce(
-        async (acc, item) => {
-          const resultAcc = await acc;
-          const { ctrl_id } = item;
-          const registroTicketsPend = await Ticket.getTicketsPendientesByControladorId({ ctrl_id });
-          if (registroTicketsPend.length > 0) {
-            const finalRegistroTickets = registroTicketsPend.map((ticket) => ({ ...ticket, ctrl_id }));
-            resultAcc.push(...finalRegistroTickets);
-          }
-          const regisTickAcep = await Ticket.getTicketsAceptadosByCtrlId24H({ ctrl_id: ctrl_id, fecha0M24: backDateHour });
-          if (regisTickAcep.length > 0) {
-            const finalRegisTickAcep = regisTickAcep.map((ticket) => ({ ...ticket, ctrl_id }));
-            resultAcc.push(...finalRegisTickAcep);
-          }
-          return resultAcc;
-        },
-        Promise.resolve([] as (RegistroTicket & { ctrl_id: number })[]),
-      );
+      const allRegistros = await region_nodos.reduce<Promise<(RegistroTicket & { ctrl_id: number })[]>>(async (acc, item) => {
+        const resultAcc = await acc;
+        const { ctrl_id } = item;
+        const registroTicketsPend = await Ticket.getTicketsPendientesByControladorId({ ctrl_id });
+        if (registroTicketsPend.length > 0) {
+          const finalRegistroTickets = registroTicketsPend.map((ticket) => ({ ...ticket, ctrl_id }));
+          resultAcc.push(...finalRegistroTickets);
+        }
+        const regisTickAcep = await Ticket.getTicketsAceptadosByCtrlId24H({ ctrl_id: ctrl_id, fecha0M24: backDateHour });
+        if (regisTickAcep.length > 0) {
+          const finalRegisTickAcep = regisTickAcep.map((ticket) => ({ ...ticket, ctrl_id }));
+          resultAcc.push(...finalRegisTickAcep);
+        }
+        return resultAcc;
+      }, Promise.resolve([]));
       return allRegistros;
     }
     return [];

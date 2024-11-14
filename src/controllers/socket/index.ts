@@ -1,4 +1,3 @@
-export * from './ticket';
 // export * from './voicestream';
 export * from './stream';
 export * from './pinentrada';
@@ -12,3 +11,4 @@ export * from './alarm';
 export * from './registro.acceso';
 export * from './registro.entrada';
 export * from './record.stream';
+export * from './ticket.schedule';
