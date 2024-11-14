@@ -671,7 +671,7 @@ export class Main {
     }
     this.log(`Ticket created ID ${insertedID}.`);
     // return States.EXECUTED;
-    return new RequestResult(true, `Ticket creado`, insertedID);
+    return new RequestResult(true, `Ticket creado`, -1, insertedID);
   }
 
   /**
