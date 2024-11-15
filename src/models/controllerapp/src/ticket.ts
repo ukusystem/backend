@@ -3,6 +3,7 @@ import { LoadedFile } from './types';
 // import { Personal, Solicitante } from "../../../controllers/ticket";
 import * as useful from './useful';
 import { States } from './enums';
+
 export interface Personal {
   c_id: number;
   co_id: number;
@@ -26,7 +27,6 @@ export interface Solicitante {
   sn_id: number;
   co_id: number;
   ctrl_id: number;
-  // admin: boolean;
 }
 /**
  * Structure of the ticket received from the web application to CREATE a ticket

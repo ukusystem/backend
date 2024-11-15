@@ -15,67 +15,41 @@ interface TicketUpdateBody {
 }
 
 export const upadateTicket = asyncErrorHandler(async (req: RequestWithUser, res: Response, _next: NextFunction) => {
-  const data: TicketUpdateBody = req.body;
-  const { action, ctrl_id, rt_id } = data;
-  genericLogger.info(`updateTicket | Datos recividos:`, data);
-  const user = req.user!; // ! -> anteponer middleware auth
+  const user = req.user;
 
-  const ticket = await Ticket.getTicketByCrtlIdAndTicketId({ ctrl_id: ctrl_id, rt_id: rt_id });
+  if (user !== undefined) {
+    const data: TicketUpdateBody = req.body;
+    const { action, ctrl_id, rt_id } = data;
+    genericLogger.info(` Update Ticket | ctrl_id : ${ctrl_id} | rt_id : ${rt_id} | action : ${data.action}`, data);
 
-  if (ticket) {
-    if (ticket.estd_id === RegTicketState.Rechazado || ticket.estd_id === RegTicketState.Cancelado || ticket.estd_id === RegTicketState.Finalizado || ticket.estd_id === RegTicketState.Anulado) {
-      return res.status(403).json({ success: false, message: 'Acción no permitida.' });
-    } else {
-      const estdPendiente = ticket.estd_id === RegTicketState.Esperando && (action === RegTicketState.Aceptado || action === RegTicketState.Cancelado || action === RegTicketState.Rechazado);
-      const estdAceptBefore = ticket.estd_id === RegTicketState.Aceptado && (action === RegTicketState.Rechazado || action === RegTicketState.Cancelado);
-      const estdAceptDuring = ticket.estd_id === RegTicketState.Aceptado && (action === RegTicketState.Finalizado || action === RegTicketState.Anulado); // 2 -> Aceptado
+    const ticket = await Ticket.getTicketByCrtlIdAndTicketId({ ctrl_id: ctrl_id, rt_id: rt_id });
 
-      const startDate = new Date(ticket.fechacomienzo);
-      const endDate = new Date(ticket.fechatermino);
-      const currentDate = new Date();
-      const isBeforeEvent = currentDate < startDate;
-      const isDuringEvent = currentDate >= startDate && currentDate < endDate;
+    if (ticket) {
+      if (ticket.estd_id === RegTicketState.Rechazado || ticket.estd_id === RegTicketState.Cancelado || ticket.estd_id === RegTicketState.Finalizado || ticket.estd_id === RegTicketState.Anulado) {
+        return res.status(403).json({ success: false, message: 'Acción no permitida.' });
+      } else {
+        const estdPendiente = ticket.estd_id === RegTicketState.Esperando && (action === RegTicketState.Aceptado || action === RegTicketState.Cancelado || action === RegTicketState.Rechazado);
+        const estdAceptBefore = ticket.estd_id === RegTicketState.Aceptado && (action === RegTicketState.Rechazado || action === RegTicketState.Cancelado);
+        const estdAceptDuring = ticket.estd_id === RegTicketState.Aceptado && (action === RegTicketState.Finalizado || action === RegTicketState.Anulado); // 2 -> Aceptado
 
-      const beforeEventAction = isBeforeEvent && (estdPendiente || estdAceptBefore);
-      const duringEventAction = isDuringEvent && estdAceptDuring;
+        const startDate = new Date(ticket.fechacomienzo);
+        const endDate = new Date(ticket.fechatermino);
+        const currentDate = new Date();
+        const isBeforeEvent = currentDate < startDate;
+        const isDuringEvent = currentDate >= startDate && currentDate < endDate;
 
-      if (beforeEventAction || duringEventAction) {
-        if (user.rol === 'Administrador' || user.rol === 'Usuario') {
-          try {
-            const response = await onFinishTicket(new FinishTicket(action, ctrl_id, rt_id));
-            if (response) {
-              if (response.resultado) {
-                // success
-                TicketScheduleManager.update(ctrl_id, rt_id, { estd_id: action });
-                genericLogger.info(`Update Ticket successfully | ctrl_id = ${ctrl_id} | rt_id = ${rt_id} | action = ${action}`);
-                return res.json({ success: true, message: 'Accion realizada con éxito' });
-              } else {
-                return res.json({ success: false, message: response.mensaje });
-              }
-            } else {
-              return res.status(500).json({ success: false, message: 'Internal Server Error Update Ticket, Backend-Technician' });
-            }
-          } catch (error) {
-            genericLogger.error(`Error update ticket | ctrl_id = ${ctrl_id} | rt_id = ${rt_id} | action = ${action}`, error);
-            return res.status(500).json({ success: false, message: 'Internal Server Error, Backend-Technician' });
-          }
-        }
-      }
+        const beforeEventAction = isBeforeEvent && (estdPendiente || estdAceptBefore);
+        const duringEventAction = isDuringEvent && estdAceptDuring;
 
-      if (isBeforeEvent && ticket.estd_id === 1) {
-        if (user.rol === 'Invitado') {
-          if (action === 3) {
-            // 3 -> Cancelar
-
-            // =========== Usar esto
-            // Main.onFinishTicket(new FinishTicket( action, ctrl_id, rt_id ));
+        if (beforeEventAction || duringEventAction) {
+          if (user.rol === 'Administrador' || user.rol === 'Usuario') {
             try {
               const response = await onFinishTicket(new FinishTicket(action, ctrl_id, rt_id));
               if (response) {
                 if (response.resultado) {
                   // success
                   TicketScheduleManager.update(ctrl_id, rt_id, { estd_id: action });
-
+                  genericLogger.info(`Update Ticket successfully | ctrl_id = ${ctrl_id} | rt_id = ${rt_id} | action = ${action}`);
                   return res.json({ success: true, message: 'Accion realizada con éxito' });
                 } else {
                   return res.json({ success: false, message: response.mensaje });
@@ -89,23 +63,39 @@ export const upadateTicket = asyncErrorHandler(async (req: RequestWithUser, res:
             }
           }
         }
+
+        if (isBeforeEvent && ticket.estd_id === RegTicketState.Esperando) {
+          if (user.rol === 'Invitado') {
+            if (action === RegTicketState.Cancelado) {
+              try {
+                const response = await onFinishTicket(new FinishTicket(action, ctrl_id, rt_id));
+                if (response) {
+                  if (response.resultado) {
+                    // success
+                    TicketScheduleManager.update(ctrl_id, rt_id, { estd_id: action });
+
+                    return res.json({ success: true, message: 'Accion realizada con éxito' });
+                  } else {
+                    return res.json({ success: false, message: response.mensaje });
+                  }
+                } else {
+                  return res.status(500).json({ success: false, message: 'Internal Server Error Update Ticket, Backend-Technician' });
+                }
+              } catch (error) {
+                genericLogger.error(`Error update ticket | ctrl_id = ${ctrl_id} | rt_id = ${rt_id} | action = ${action}`, error);
+                return res.status(500).json({ success: false, message: 'Internal Server Error, Backend-Technician' });
+              }
+            }
+          }
+        }
       }
     }
+
+    res.status(400).json({
+      success: false,
+      message: 'Acción no permitida.',
+    });
+  } else {
+    return res.status(401).json({ message: 'UNAUTHORIZED' });
   }
-
-  res.status(400).json({
-    success: false,
-    message: 'Acción no permitida.',
-  });
 });
-
-// 4 -> Rechazado
-// 2 -> Aceptado
-// 3 -> Cancelado
-// 1 -> Esperando
-// 5 -> Completado :
-
-// Acciones:
-// rechazar : -1,
-// cancelar : 0
-// aceptar : 1

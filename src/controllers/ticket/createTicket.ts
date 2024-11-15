@@ -85,7 +85,7 @@ export const createTicket = asyncErrorHandler(async (req: RequestWithUser, res: 
           const nameFileUuid = uuidv4();
           const extensionFile = getExtesionFile(file.originalname);
 
-          const movePath = path.resolve(`./archivos/ticket/${'nodo' + ctrl_id}/${dateFormat}/${nameFileUuid}.${extensionFile}`);
+          const movePath = path.resolve(`./archivos/ticket/nodo${ctrl_id}/${dateFormat}/${nameFileUuid}.${extensionFile}`);
 
           // Comprobar directorio de destino
           const directorioDestino = path.dirname(movePath);
