@@ -2,15 +2,14 @@ import { RowDataPacket } from 'mysql2';
 import { MySQL2 } from '../../database/mysql';
 import { Camara, Controlador, Marca, TipoCamara } from '../../types/db';
 import { handleErrorWithArgument, handleErrorWithoutArgument } from '../../utils/simpleErrorHandler';
-import { CameraOnvif, ControlPTZProps } from './CamOnvif';
 import { Init } from '../init';
 import { getRstpLinksByCtrlIdAndCmrId } from '../../utils/getCameraRtspLinks';
 import { ChildProcessByStdio, spawn } from 'child_process';
 import { verifyImageMarkers } from '../../utils/stream';
-import { decrypt } from '../../utils/decrypt';
 import { CustomError } from '../../utils/CustomError';
 import { cameraLogger } from '../../services/loggers';
-import { NodoCameraMapManager } from '../maps/nodo.camera';
+import { CameraOnvifManager } from './onvif/camera.onvif.manager';
+import { ControlPTZDTO } from './onvif/camera.onvif.types';
 
 type CameraInfo = Pick<Camara, 'cmr_id' | 'ip' | 'descripcion' | 'puertows' | 'tc_id'> & Pick<TipoCamara, 'tipo'> & Pick<Marca, 'marca'>;
 
@@ -38,26 +37,6 @@ type CamResponse = Record<
 >;
 
 export class Camera {
-  static async #getCameraOnvif({ ctrl_id, cmr_id }: CamIdentifier) {
-    try {
-      const cameraData = NodoCameraMapManager.getCamera(ctrl_id, cmr_id);
-      if (cameraData === undefined) {
-        throw new Error('Cámara no encontrada');
-      }
-
-      const contraseñaDecrypt = decrypt(cameraData.contraseña);
-      const camera = new CameraOnvif({ ctrl_id: ctrl_id, ip: cameraData.ip, usuario: cameraData.usuario, contraseña: contraseñaDecrypt });
-      return camera;
-    } catch (error) {
-      if (error instanceof Error) {
-        cameraLogger.error(`Error en #getCameraOnvif: ${error.message}`);
-      } else {
-        cameraLogger.error(`Error en #getCameraOnvif:`, error);
-      }
-      throw error;
-    }
-  }
-
   static snapshotCapture = async ({ ctrl_id, cmr_id }: CamIdentifier): Promise<Buffer> => {
     const [mainRtsp] = await getRstpLinksByCtrlIdAndCmrId(ctrl_id, cmr_id);
 
@@ -120,14 +99,13 @@ export class Camera {
     });
   };
 
-  static async controlPTZ({ action, velocity, movement, cmr_id, ctrl_id }: ControlPTZProps & CamIdentifier) {
-    const camera = await Camera.#getCameraOnvif({ ctrl_id, cmr_id }); // 1-2ms
-    await camera.controlPTZByActionAndVelocityAndMovement({ action, velocity, movement }); // 500-800 ms
+  static async controlPTZ({ action, velocity, movement, cmr_id, ctrl_id }: ControlPTZDTO & CamIdentifier) {
+    const data: ControlPTZDTO = { action, velocity, movement };
+    await CameraOnvifManager.controlPTZ(ctrl_id, cmr_id, data);
   }
 
   static async presetPTZ({ cmr_id, ctrl_id, preset }: CamIdentifier & { preset: number }) {
-    const camera = await Camera.#getCameraOnvif({ ctrl_id, cmr_id }); // 1-2ms
-    await camera.gotoPresetPTZByNumPreset({ n_preset: preset });
+    await CameraOnvifManager.presetPTZ(ctrl_id, cmr_id, preset);
   }
 
   static getAllCameras = handleErrorWithoutArgument<CamResponse>(async () => {

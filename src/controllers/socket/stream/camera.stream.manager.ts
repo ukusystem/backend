@@ -224,9 +224,10 @@ export class CamStreamSocketManager {
           currentProcess.ffmpegProcess.kill();
           delete CamStreamSocketManager.process[ctrl_id][cmr_id][q];
           if (code !== null) {
+            CamStreamSocketManager.notifyState(direction, false, 'isSuccess');
             CamStreamSocketManager.notifyState(direction, false, 'isLoading');
             CamStreamSocketManager.notifyState(direction, true, 'isError');
-            CamStreamSocketManager.notifyError(direction, `${cmr_id} : Proceso cerrado, error al consumir flujo.`);
+            CamStreamSocketManager.notifyError(direction, ` Camara ${cmr_id} | Error al consumir flujo.`);
           }
         }
       });

@@ -27,6 +27,10 @@ export const globalError = (error: CustomError | Error, _req: Request, res: Resp
     }
   }
 
+  if (error instanceof Error) {
+    return res.status(500).json({ message: error.message });
+  }
+
   // Errores no controlados
   genericLogger.error('Error interno del servidor', error);
   return res.status(500).json({ status: 500, message: 'Internal Server Error' });

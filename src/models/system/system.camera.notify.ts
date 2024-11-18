@@ -2,6 +2,7 @@ import { appConfig } from '../../configs';
 import { AlarmManager } from '../../controllers/socket';
 import { Camara } from '../../types/db';
 import { CameraMotionManager } from '../camera';
+import { CameraOnvifManager } from '../camera/onvif/camera.onvif.manager';
 import { NvrManager } from '../nvr/nvr.manager';
 
 export class CameraNotifyManager {
@@ -58,6 +59,14 @@ export class CameraNotifyManager {
     }
   }
 
+  static #notifyUpdateToOnvif(ctrl_id: number, curCam: Camara, fieldsUpdate: Partial<Camara>) {
+    const { ip, usuario, contraseña } = fieldsUpdate;
+    const hasChanges = (ip !== undefined && curCam.ip !== ip) || (usuario !== undefined && curCam.usuario !== usuario) || (contraseña !== undefined && curCam.contraseña !== contraseña);
+    if (hasChanges) {
+      CameraOnvifManager.notifyChangeCamera(ctrl_id, curCam.cmr_id);
+    }
+  }
+
   static update(ctrl_id: number, curCam: Camara, fieldsUpdate: Partial<Camara>) {
     // notify Alarm
     CameraNotifyManager.#notifyUpdateToAlarm(ctrl_id, curCam, fieldsUpdate);
@@ -71,6 +80,9 @@ export class CameraNotifyManager {
       CameraNotifyManager.#notifyDeleteToMotion(ctrl_id, curCam, fieldsUpdate);
       CameraNotifyManager.#notifyReconnectToMotion(ctrl_id, curCam, fieldsUpdate);
     }
+
+    // notify to Onvif:
+    CameraNotifyManager.#notifyUpdateToOnvif(ctrl_id, curCam, fieldsUpdate);
   }
 
   static add(ctrl_id: number, newCam: Camara) {
