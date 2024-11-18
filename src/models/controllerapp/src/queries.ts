@@ -498,7 +498,7 @@ export const nodeSelect = `
 export const nodeUpdate = `
 				UPDATE general.controlador
 				SET nodo=?, rgn_id=?, direccion=?, descripcion=?,
-					latitud=?, longitud=?, usuario=?, serie=?,
+					latitud=?, longitud=?, usuario=?,
 					ip=?, mascara=?, puertaenlace=?, puerto=?, personalgestion=?,
 					personalimplementador=?,
 
@@ -518,7 +518,7 @@ export const nodeUpdate = `
 export const nodeUpdatePwd = `
 				UPDATE general.controlador
 				SET nodo=?, rgn_id=?, direccion=?, descripcion=?,
-					latitud=?, longitud=?, usuario=?, serie=?,
+					latitud=?, longitud=?, usuario=?,
 					ip=?, mascara=?, puertaenlace=?, puerto=?, personalgestion=?,
 					personalimplementador=?, 
 
@@ -535,7 +535,7 @@ export const nodeUpdatePwd = `
 export const nodeUpdateTrivial = `
 			UPDATE general.controlador
 			SET nodo=?, rgn_id=?, direccion=?, descripcion=?,
-				latitud=?, longitud=?, serie=?,
+				latitud=?, longitud=?,
 				personalgestion=?,
 				personalimplementador=?,
 
@@ -547,10 +547,16 @@ export const nodeUpdateTrivial = `
 			WHERE ctrl_id=?;
 		`;
 
+export const nodeUpdateSerial = `
+			UPDATE general.controlador
+			SET serie=?
+			WHERE ctrl_id=?;
+`;
+
 export const nodeInsert = `
 				INSERT INTO general.controlador (
 					ctrl_id, nodo, rgn_id, direccion, descripcion, latitud, longitud,
-					usuario, serie, ip, mascara, puertaenlace, puerto, personalgestion,
+					usuario, ip, mascara, puertaenlace, puerto, personalgestion,
 					personalimplementador,
 
 					motionrecordseconds, res_id_motionrecord, motionrecordfps, 
@@ -559,10 +565,10 @@ export const nodeInsert = `
 					res_id_streamsecondary, streamsecondaryfps, 
 					res_id_streamauxiliary, streamauxiliaryfps,
 
-					contraseña, modo, seguridad, conectado, activo)
+					contraseña, modo, seguridad, conectado, activo, serie)
 				VALUE (
 					?, ?, ?, ?, ?, ?, ?,
-					?, ?, ?, ?, ?, ?, ?,
+					?, ?, ?, ?, ?, ?,
 					?,
 
 					?, ?, ?,
@@ -571,7 +577,7 @@ export const nodeInsert = `
 					?, ?,
 					?, ?,
 
-					?, 0, 0, 0, 1)
+					?, 0, 0, 0, 1, '-')
 			`;
 
 export const nodeDisable = `
@@ -580,7 +586,7 @@ export const nodeDisable = `
 				WHERE ctrl_id=?;
 			`;
 
-export const indexForTrivial = [0, 1, 2, 3, 4, 5, 6, 8, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26];
+export const indexForTrivial = [0, 1, 2, 3, 4, 5, 6, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25];
 
 export const nodeSelectID = `
 				SELECT ctrl_id AS entero FROM general.controlador
@@ -602,7 +608,7 @@ export const nodeParse = [
   tupleTxt,
   tupleTxt,
   tupleTxt,
-  tupleTxt,
+  //   tupleTxt,
   tupleInt,
   tupleTxt,
   tupleTxt,

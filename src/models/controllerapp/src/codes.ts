@@ -241,6 +241,7 @@ export const VALUE_MOUNTING = 0x29c; // The sd card in being mounted
 export const VALUE_SD_TECH = 0x29d; // Set or get the SD state from the technician
 export const VALUE_SD_STATE = 0x29e; // Get the complete sd state
 export const VALUE_NODE_STATE = 0x29f; // Notify the controller state to the technicians
+export const VALUE_SERIAL = 0x2a0; // Get the serial number
 
 export const VALUE_SOCKET_CLOSED = 0x400; // Socket was closed
 export const VALUE_AUTHORIZED = 0x401; // Card authorized

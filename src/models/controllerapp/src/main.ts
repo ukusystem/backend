@@ -32,6 +32,10 @@ import { Camara } from '../../../types/db';
 // import { ControllerStateManager } from '../../../controllers/socket';
 
 export class Main {
+  private static readonly VERSION_MAYOR = 0;
+  private static readonly VERSION_MINOR = 3;
+  private static readonly VERSION_PATCH = 0;
+
   /**
    * Whether the object has already been created and the service has already started running
    */

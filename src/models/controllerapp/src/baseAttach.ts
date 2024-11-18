@@ -221,6 +221,7 @@ export class BaseAttach extends Mortal {
     } else {
       const nodeAttach = <NodeAttach>key;
       if (key instanceof NodeAttach) {
+        nodeAttach.disableArmButton(true, false);
         // Delay connection if was unreachable
         setTimeout(
           () => {
@@ -1282,7 +1283,7 @@ export class NodeAttach extends BaseAttach {
         this.removePendingMessageByID(id, availableData[0].getInt(), false);
         break;
       case codes.VALUE_ALL_ADDRESSES:
-        // this._log(`Received all addresses '${command}'`)
+        // this._log(`Received all addresses '${command}'`);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const paramsForUpdate: any[] = [];
         while (parts.length >= 2) {
@@ -1298,6 +1299,22 @@ export class NodeAttach extends BaseAttach {
         // this._log(`Parts remaining ${parts.length}: '${parts}'`)
         // this._log(`Received ${paramsForUpdate.length} temperature addresses.`)
         await executeBatchForNode(queries.updateAddress, this.controllerID, paramsForUpdate);
+        break;
+      case codes.VALUE_SERIAL:
+        // this._log(`Received controller info '${command}'`);
+        this.mirrorMessage(this._appendPart(command, this.controllerID.toString()), true);
+        const serialData = this._parseMessage(parts, [queries.tupleTxt, queries.tupleTxt], id, false);
+        if (!serialData) {
+          break;
+        }
+        const serialNumber = serialData[0].getString();
+        const version = serialData[1].getString();
+        this._log(`Received controller info: Serial '${serialNumber}' Version '${version}'`);
+        // this._log(serialData[0].getString());
+        const serialRes = await executeQuery<ResultSetHeader>(queries.nodeUpdateSerial, [serialNumber, this.controllerID]);
+        if (!serialRes) {
+          this._log(`Could not update serial for controller ID = ${this.controllerID}`);
+        }
         break;
       case codes.VALUE_ADDRESS_CHANGED:
         this._log(`Received address changed '${command}'`);
@@ -1602,8 +1619,10 @@ export class NodeAttach extends BaseAttach {
     return true;
   }
 
-  disableArmButton(state: boolean) {
-    this._log(`Setting button disable to '${state}'`);
+  disableArmButton(state: boolean, log: boolean = true) {
+    if (log) {
+      this._log(`Setting button disable to '${state}'`);
+    }
     sm.ControllerStateManager.socketAddUpdate(this.controllerID, { disableSecurityButton: state });
   }
 
@@ -2619,8 +2638,6 @@ export class ManagerAttach extends BaseAttach {
       // Create attachment and connect the socket
 
       const newAttach = NodeAttach.getInstanceFromPacket(newData, this._logger);
-      // newAttach.completeData = newCompleteData
-      // currentAttach = newAttach
       newAttach.tryConnectNode(selector, true);
     } else {
       /**
