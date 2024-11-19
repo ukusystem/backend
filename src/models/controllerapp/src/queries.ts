@@ -36,7 +36,7 @@ export const tupleID = new IntTuple(ParseType.TYPE_INT, Codes.ERR_NO_ID);
 export const tupleValue = new IntTuple(ParseType.TYPE_INT, Codes.ERR_NO_VALUE);
 export const tupleTxt = new IntTuple(ParseType.TYPE_STR, Codes.ERR_NO_TXT);
 
-export const loginParse = [tupleUser, tuplePassword];
+export const loginParse = [tupleUser, tuplePassword, tupleInt, tupleInt, tupleInt];
 export const valueDateParse = [tupleValue, tupleLong];
 export const cmdAndIDParse = [tupleInt, tupleCmd];
 export const tempParse = [tupleInt, tupleFloat];

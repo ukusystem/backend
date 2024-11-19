@@ -605,6 +605,10 @@ export class BaseAttach extends Mortal {
     this._addResponse(id, codes.ERR_UNKNOWN_VALUE);
   }
 
+  _addIncompatible(id: number) {
+    this._addResponse(id, codes.ERR_INCOMPATIBLE);
+  }
+
   /**
    * Clear all remaining messages, signal to close the channel after the next send
    * and add a {@link codes.ERR_ANOTHER_CONNECTED}. The channel is supposed to be
@@ -1982,6 +1986,15 @@ export class ManagerAttach extends BaseAttach {
         if (!loginData) break;
         const user = loginData[0].getString();
         const password = loginData[1].getString();
+        const major = loginData[1].getInt();
+        // const minor = loginData[1].getInt();
+        // const patch = loginData[1].getInt();
+        if (Main.compareMajor(major) !== 0) {
+          this._log(`Technician version is not compatible`);
+          this._addIncompatible(id);
+          break;
+        }
+
         // Don't log password
         this._log(`Manager logging in as '${user}'`);
         if (ManagerAttach.isAnotherLoggedIn) {
@@ -2508,6 +2521,25 @@ export class ManagerAttach extends BaseAttach {
                       this._logFeelThroughHex(valueToSet);
                   }
                   break;
+                case codes.VALUE_FIRMWARE_ADD:
+                  const firmwareData = this._parseMessage(parts, [queries.tupleTxt], id, true);
+                  if (!firmwareData) {
+                    this._addResponse(id, codes.ERR);
+                    this._log(`There is no firmware in the message`);
+                    break;
+                  }
+                  const firmwareBase64 = firmwareData[0].getString();
+                  const firmSize = new AtomicNumber();
+                  const res = await useful.writeFileFromBase64(firmwareBase64, ``, firmSize);
+                  if (res) {
+                    console.log(`Firmware is valid`);
+                    this._addResponse(id, codes.AIO_OK);
+                  } else {
+                    this._addResponse(id, codes.ERR);
+                    console.log(`Coudl not write firmware to file`);
+                  }
+                  // console.log(firmwareBytes)
+                  break;
                 default:
                   this._log(`Unknown set value. Received '${command}' Value ${useful.toHex(valueToSet)}`);
                   this._addUnknownValue(id);
@@ -2985,7 +3017,7 @@ export class ManagerAttach extends BaseAttach {
   private async addGeneral(id: number, log: boolean) {
     const generalResponse = await executeQuery<db2.GeneralData[]>(queries.generalSelect);
     if (generalResponse && generalResponse.length === 1) {
-      this._addOne(new Message(codes.VALUE_GENERAL, id, [generalResponse[0].nombreempresa, generalResponse[0].correoadministrador]).setLogOnSend(log));
+      this._addOne(new Message(codes.VALUE_GENERAL, id, [generalResponse[0].nombreempresa, generalResponse[0].correoadministrador, Main.getVersionString()]).setLogOnSend(log));
     } else {
       this._log('Error getting general info.');
     }

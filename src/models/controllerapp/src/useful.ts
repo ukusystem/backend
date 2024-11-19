@@ -117,7 +117,7 @@ export async function readWorkerPhotoAsBase64(filename: string): Promise<string 
  * @param byteSize The size in bytes written to the file. If an error occurs, this value is set to `-1`.
  * @returns True if the write was successful, false otherwise.
  */
-async function writeFileFromBase64(base64: string, filePath: string, byteSize: AtomicNumber): Promise<boolean> {
+export async function writeFileFromBase64(base64: string, filePath: string, byteSize: AtomicNumber): Promise<boolean> {
   try {
     const temp = Buffer.from(base64, 'base64');
     if (temp.length <= MAX_FILE_SIZE_B) {

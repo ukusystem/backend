@@ -77,6 +77,9 @@ export const ERR_NO_BIG = 0x03e; // Missing BigIngeter. Used in Java
 export const ERR_NO_CARD_READER_TYPE = 0x03f; // Missing card reader type
 export const ERR_NO_LONG = 0x040; // Missing long.
 export const ERR_NO_FLOAT = 0x041; // Missing float.
+export const ERR_INCOMPATIBLE = 0x042; // Version is not compatible
+export const ERR_NOT_NEEDED = 0x043; // An update for the send version is not needed
+export const ERR_TOO_OLD = 0x044; // The firmware sent is too old for the server
 
 export const VALUE_ONE_LINK = 0x200; // Set or get one output link
 export const VALUE_ACTIVE_DELAY = 0x201; // Set or get delay to active
@@ -242,6 +245,9 @@ export const VALUE_SD_TECH = 0x29d; // Set or get the SD state from the technici
 export const VALUE_SD_STATE = 0x29e; // Get the complete sd state
 export const VALUE_NODE_STATE = 0x29f; // Notify the controller state to the technicians
 export const VALUE_SERIAL = 0x2a0; // Get the serial number
+export const VALUE_NEED_UPDATE = 0x2a1; // Ask if an update for a specific version  is needed
+export const VALUE_VERSION = 0x2a2; // Request versionç
+export const VALUE_FIRMWARE_ADD = 0x2a3; // Send a new firmware
 
 export const VALUE_SOCKET_CLOSED = 0x400; // Socket was closed
 export const VALUE_AUTHORIZED = 0x401; // Card authorized

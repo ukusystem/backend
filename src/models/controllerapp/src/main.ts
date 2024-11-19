@@ -32,7 +32,7 @@ import { Camara } from '../../../types/db';
 // import { ControllerStateManager } from '../../../controllers/socket';
 
 export class Main {
-  private static readonly VERSION_MAYOR = 0;
+  private static readonly VERSION_MAJOR = 0;
   private static readonly VERSION_MINOR = 3;
   private static readonly VERSION_PATCH = 0;
 
@@ -189,6 +189,30 @@ export class Main {
     setTimeout(this.startCamerasCheck, Main.ALIVE_CAMERA_PING_INTERVAL_MS);
 
     this.startTicketsCheck();
+  }
+
+  public static getVersionString(): string {
+    return `${Main.VERSION_MAJOR}.${Main.VERSION_MINOR}.${Main.VERSION_PATCH}`;
+  }
+
+  /**
+   * Compare a provided version and the backend's
+   * @param major
+   * @param minor
+   * @param patch
+   * @returns 1 if provided version is older, 0 if the same and -1 if newer.
+   */
+  public static compareVersion(major: number, minor: number, patch: number): 1 | 0 | -1 {
+    if (Main.VERSION_MAJOR === major && Main.VERSION_MINOR === minor && Main.VERSION_PATCH === patch) {
+      return 0;
+    } else if (Main.VERSION_MAJOR > major || (Main.VERSION_MAJOR === major && Main.VERSION_MINOR > minor) || (Main.VERSION_MAJOR === major && Main.VERSION_MINOR === minor && Main.VERSION_PATCH > patch)) {
+      return 1;
+    }
+    return -1;
+  }
+
+  public static compareMajor(major: number): 1 | 0 | -1 {
+    return Main.VERSION_MAJOR > major ? 1 : Main.VERSION_MINOR < major ? -1 : 0;
   }
 
   /**
