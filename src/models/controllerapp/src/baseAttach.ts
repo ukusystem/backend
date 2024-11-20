@@ -32,6 +32,7 @@ import * as codes from './codes';
 import * as db2 from './db2';
 // import * as sm from "@ctrls/socket";
 import * as sm from '../../../controllers/socket';
+import path from 'path';
 
 /**
  * Base attachment for the sockets
@@ -1909,6 +1910,8 @@ export class NodeAttach extends BaseAttach {
  */
 export class ManagerAttach extends BaseAttach {
   private address = BaseAttach.DEFAULT_ADDRESS;
+  private FIRMWARE_RELATIVE_PATH = 'firmware';
+  private FIRMWARE_BASE_FILENAME = 'firmware_';
 
   /**
    * Current logged in manager. Can be null if none is connected or none of the
@@ -1989,7 +1992,7 @@ export class ManagerAttach extends BaseAttach {
         const major = loginData[1].getInt();
         // const minor = loginData[1].getInt();
         // const patch = loginData[1].getInt();
-        if (Main.compareMajor(major) !== 0) {
+        if (Main.compareMajorWithMain(major) !== 0) {
           this._log(`Technician version is not compatible`);
           this._addIncompatible(id);
           break;
@@ -2529,16 +2532,65 @@ export class ManagerAttach extends BaseAttach {
                     break;
                   }
                   const firmwareBase64 = firmwareData[0].getString();
-                  const firmSize = new AtomicNumber();
-                  const res = await useful.writeFileFromBase64(firmwareBase64, ``, firmSize);
-                  if (res) {
-                    console.log(`Firmware is valid`);
-                    this._addResponse(id, codes.AIO_OK);
-                  } else {
+
+                  // Get version fom content
+                  const ver = useful.getVersionFromBase64(firmwareBase64);
+                  if (!ver || !(ver.major >= 0 && ver.minor >= 0 && ver.patch >= 0)) {
                     this._addResponse(id, codes.ERR);
-                    console.log(`Coudl not write firmware to file`);
+                    this._log(`Firmware version not found or format not expected`);
+                    break;
                   }
-                  // console.log(firmwareBytes)
+
+                  // Check version
+                  if (Main.compareMajorWithMain(ver.major) !== 0) {
+                    this._addResponse(id, codes.ERR_INCOMPATIBLE);
+                    this._log(`Firmware version (${ver.major}.${ver.minor}.${ver.patch}) not allowed`);
+                    break;
+                  }
+
+                  // Validate with versions in database
+                  const storedVersionsData = await executeQuery<db2.FirmwareData[]>(queries.firmwareOrderSelect, null);
+                  if (!storedVersionsData) {
+                    this._addResponse(id, codes.ERR);
+                    this._log(`Could not read firmware list from database`);
+                    break;
+                  }
+                  for (const firm of storedVersionsData) {
+                    console.log(`${firm.archivo} ${firm.mayor} ${firm.menor} ${firm.parche}`);
+                    const verFile = await useful.getVersionFromFile(firm.archivo);
+                    if (verFile) {
+                      if (Main.compareVersions(ver, verFile) === 1) {
+                        this._log(`Firmware version is newer`);
+                      } else {
+                        this._log(`Firmware version is older than the current`);
+                      }
+                      break;
+                    } else {
+                      this._log(`Firmware file ${firm.archivo} not found or could not find version`);
+                    }
+                  }
+
+                  // Write to file
+                  const firmSize = new AtomicNumber();
+                  const firmwareFilename = useful.getReplacedPath(path.join(this.FIRMWARE_RELATIVE_PATH, this.FIRMWARE_BASE_FILENAME + Date.now().toString()));
+                  const res = await useful.writeFileFromBase64(firmwareBase64, firmwareFilename, firmSize);
+                  if (!res) {
+                    this._addResponse(id, codes.ERR);
+                    this._log(`Could not write firmware to file`);
+                    break;
+                  }
+
+                  // Save in database
+                  const insertFirmRes = await executeQuery<ResultSetHeader>(queries.firmwareInsert, [firmwareFilename, 0, 0, 0]);
+                  if (!insertFirmRes) {
+                    this._log(`Firmware could not be inserted`);
+                    this._addResponse(id, codes.ERR);
+                    break;
+                  }
+
+                  // Notify success
+                  this._log(`Firmware registered`);
+                  this._addResponse(id, codes.AIO_OK);
                   break;
                 default:
                   this._log(`Unknown set value. Received '${command}' Value ${useful.toHex(valueToSet)}`);

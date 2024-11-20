@@ -355,7 +355,7 @@ CREATE TABLE `personal` (
 
 LOCK TABLES `personal` WRITE;
 /*!40000 ALTER TABLE `personal` DISABLE KEYS */;
-INSERT INTO `personal` VALUES (1,'Miguel','Ortíz Carhuapoma','987654321','87654321',1,1,'photos/registered/foto1.png','user1@gmail.com',1),(2,'Hans','Gutiérrez Dávila','987654322','87654322',2,2,'photos/registered\\foto2.png','user2@gmail.com',1),(3,'Antony','Jaramillo Aranda','987654323','87654323',3,3,'photos/registered\\foto3.png','user3@gmail.com',1),(4,'Evelyn','De la cruz Vargas','987654324','87654324',4,4,'photos/registered\\foto4.png','user4@gmail.com',1),(5,'Darlyn','Narciso x2','987654325','87654325',5,5,'photos/registered\\foto5.png','user5@gmail.com',1);
+INSERT INTO `personal` VALUES (1,'Miguel','Ortíz Carhuapoma','987654321','87654321',1,1,'photos/registered/foto1.png','user1@gmail.com',1),(2,'Hans','Gutiérrez Dávila','987654322','87654322',2,2,'photos/registered\\foto2.png','user2@gmail.com',1),(3,'Antony','Jaramillo Aranda','987654323','87654323',3,3,'photos/registered\\foto3.png','user3@gmail.com',1),(4,'Evelyn','De la cruz Vargas','987654324','87654324',4,4,'photos/registered\\foto4.png','user4@gmail.com',1),(5,'Darlyn','Narciso Narciso','987654325','87654325',5,5,'photos/registered\\foto5.png','user5@gmail.com',1);
 /*!40000 ALTER TABLE `personal` ENABLE KEYS */;
 UNLOCK TABLES;
 

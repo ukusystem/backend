@@ -1,0 +1,69 @@
+foto activo/inactivo de sensores
+	aniego
+	movimiento pared
+	puerta
+
+video abrir puerta con 
+	tarjeta
+	boton
+
+agregar tarjeta 
+	000009083058  	v
+	000009673336	x
+
+
+
+foto de camara conectada
+
+
+delay to arm by ticket
+
+	cannot arm immediately unles delay is cero
+
+
+cambiar:
+	acceso
+	regsitroacceso
+
+
+=================================================
+
+entry?			32 B  = 2*12B (key) + 8B (data)
+
+flash sector					0x1000		   4 kB = 4096 B
+								0x10000		  64 kB
+								0x100000    1024 kB
+
+parition table length			0xC00		   3 kB
+
+parition tables	   			   +0x1000		   4 kB
+
+factory app 		  offset	0x10000	
+app types have to align to  0x10000 = 64kB	
+
+data ota should be 0x2000
+
+minimum partition size 4kB = 0x1000
+
+
+my esp mac : e0:5a:1b:5f:13:14 
+dev board  : 40:91:51:e3:a0:5c  = 40:91:51:e3:a0:5c ?
+
+
+UKU000000001
+
+
+Actualizaciones:
+	- El backend tiene una version (mayor.menor.parche)
+	- El technician tambien tiene una version, y puede trabajar con el backend solo si coinciden sus 'mayores'. El 'menor' y 'parche' no son relevantes porque se supone que son actualizaciones retrocompatibles.
+	- El controlador, de igual forma, tiene una version y puede trabajar con el backend solo si sus 'mayores' coinciden. El socket de seguro se va a conectar, tal vez se pueda logear, pero no se debe permitir la operacion si no coinciden sus 'mayores'.
+	- El backend se instala sin un firmware por defecto, y los controladores antiguos no podrán trabajar en ese estado.
+	- Cuando se carga un firmware en el technician, se envía al backend para revisar su version.
+	- Para que el nuevo firmware se acepte, su 'mayor' debe coincidir con el del backend y debe ser más reciente que los firmware cargados anteriormente. Una vez aceptado, y si se pudo guardar como archivo, se registra en la base de datos como disponible.
+	- La base de datos de firmware se instala vacía.
+	- Al iniciar el backend, se busca en la base de datos los firmware que se han cargado, se verifica que sus archivos correspondientes existan en la carpeta del backend y según esta verificación se actualiza su 'disponibilidad' en la base de datos. Luego se lee el firmware mas actual (basado en la versión) y su referencia se guarda para actualizar controladores cuando uno se conecta o reconecta según lo necesiten (basado en la versión).
+	- Durante la ejecución del backend, cuando se acepta un nuevo firmware, se debe consultar a los controladores conectados si necesitan la actualización (basado en la versión) y actualizarlos.
+	- Cuando se intenta actualizar un controlador, si el archivo del firmware no se encuentra, se marca 'no disponible' en la base de datos, se buscar de nuevo el mas reciente disponible, si éste no tiene archivo correspondiente, se busca otro y este proceso se repite hasta encontrar un firmware disponible. Este proceso se repite por cada controlador que se conecta o reconecta. Este proceso es repetitivo, pero se supone que es una operación de muy baja frecuencia, asi que se acepta.
+	- Los firmware no se deben eliminar de la base de datos ni se deben borrar o agregar directamente en la carpeta del backend.
+
+	- Cuando se carga un firmware, se lee las lista de los anteriores, se compara la version del mas reciente y antes de descartar el nuevo, se verifica que el mas reciente tenga archivo. Sino tiene archivo se compara la version con el siguiente mas nuevo y asi hasta acabar la lista de firmware de la base de datos.

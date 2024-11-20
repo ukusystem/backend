@@ -7,6 +7,7 @@ import bcrypt from 'bcrypt';
 import dayjs from 'dayjs';
 import path from 'path';
 import * as codes from './codes';
+import { Firmware } from './firmware';
 // import process from 'node:process'
 const BCRYPT_STRENGTH = 12;
 const MAX_FILE_SIZE_B = 5 * 1000 * 1000;
@@ -51,6 +52,44 @@ export function isLinux(): boolean {
     osName = process.platform;
   }
   return osName === 'linux';
+}
+
+/**
+ * @param buffer Buffer to get the file content from.
+ * @return The version object, or null if the data could not be found in the predefined position.
+ */
+function getVersionFromBuffer(buffer: Buffer): Firmware | null {
+  const start = 0x30;
+  const length = 16;
+  const versionString = buffer.subarray(start, start + length).toString();
+  const verParts = versionString.split('.');
+  const major = parseInt(verParts[0]);
+  const minor = parseInt(verParts[1]);
+  const patch = parseInt(verParts[2]);
+  if (!(major >= 0 && minor >= 0 && patch >= 0)) {
+    return { major: major, minor: minor, patch: patch };
+  }
+  return null;
+}
+
+export async function getVersionFromFile(path: string): Promise<Firmware | null> {
+  try {
+    const buffer = await fs.readFile(path);
+    return getVersionFromBuffer(buffer);
+  } catch (e) {
+    console.log(e);
+  }
+  return null;
+}
+
+/**
+ * Like {@linkcode getVersionFromBuffer} but it gets the content from a base64 string.
+ * @param base64Content
+ * @returns
+ */
+export function getVersionFromBase64(base64Content: string): Firmware | null {
+  const versionString = Buffer.from(base64Content, 'base64');
+  return getVersionFromBuffer(versionString);
 }
 
 export function toHex(number: number): string {
@@ -185,7 +224,7 @@ export function getPathForWorkerPhoto(workerID: number): string {
  * Write a file to a path proper for an unregistered worker photo, using {@linkcode PHOTOS_RELATIVE_PATH}, the database name and the file name provided.
  *
  * @param base64
- * @param filename
+ * @param milis
  * @param nodeID The node ID to built the database name with.
  * @param byteSize
  * @return

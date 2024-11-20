@@ -29,6 +29,7 @@ import * as db2 from './db2';
 import * as net from 'net';
 import * as cp from 'child_process';
 import { Camara } from '../../../types/db';
+import { Firmware } from './firmware';
 // import { ControllerStateManager } from '../../../controllers/socket';
 
 export class Main {
@@ -196,22 +197,38 @@ export class Main {
   }
 
   /**
-   * Compare a provided version and the backend's
+   * Compare a version with the server's
    * @param major
    * @param minor
    * @param patch
-   * @returns 1 if provided version is older, 0 if the same and -1 if newer.
+   * @returns
+   * @see {@linkcode Main.compareVersions}
    */
-  public static compareVersion(major: number, minor: number, patch: number): 1 | 0 | -1 {
-    if (Main.VERSION_MAJOR === major && Main.VERSION_MINOR === minor && Main.VERSION_PATCH === patch) {
+  public static compareVersionWithMain(major: number, minor: number, patch: number): 1 | 0 | -1 {
+    return this.compareVersions({ major: Main.VERSION_MAJOR, minor: Main.VERSION_MINOR, patch: Main.VERSION_PATCH }, { major: major, minor: minor, patch: patch });
+  }
+
+  /**
+   * Compare two versions.
+   * @param ver1
+   * @param ver2
+   * @returns 1 if first version is newer than the second, 0 if the same and -1 if older.
+   */
+  public static compareVersions(ver1: Firmware, ver2: Firmware) {
+    if (ver1.major === ver2.major && ver1.minor === ver2.minor && ver1.patch === ver2.patch) {
       return 0;
-    } else if (Main.VERSION_MAJOR > major || (Main.VERSION_MAJOR === major && Main.VERSION_MINOR > minor) || (Main.VERSION_MAJOR === major && Main.VERSION_MINOR === minor && Main.VERSION_PATCH > patch)) {
+    } else if (ver1.major > ver2.major || (ver1.major === ver2.major && ver1.minor > ver2.minor) || (ver1.major === ver2.major && ver1.minor === ver2.minor && ver1.patch > ver2.patch)) {
       return 1;
     }
     return -1;
   }
 
-  public static compareMajor(major: number): 1 | 0 | -1 {
+  /**
+   *
+   * @param major
+   * @returns 1 id the provided major is older, 0 if the same, -1 if newer.
+   */
+  public static compareMajorWithMain(major: number): 1 | 0 | -1 {
     return Main.VERSION_MAJOR > major ? 1 : Main.VERSION_MINOR < major ? -1 : 0;
   }
 
@@ -805,7 +822,7 @@ export class Main {
    * @returns The proper filename to save in the database, or an error message if an error occurs.
    */
   private async processPhotoField(worker: Personal, byteSize: AtomicNumber, nodeID: number): Promise<string | null> {
-    const millis = useful.timeInt();
+    const millis = Date.now();
     const fotoOptional = worker.foto;
     // Initial state. the case where (isNew && fotoOptional.isPresent()) can still
     // change, depending on the success of the file written and that value is set
