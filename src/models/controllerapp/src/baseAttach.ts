@@ -33,6 +33,7 @@ import * as db2 from './db2';
 // import * as sm from "@ctrls/socket";
 import * as sm from '../../../controllers/socket';
 import path from 'path';
+import { Firmware } from './firmware';
 
 /**
  * Base attachment for the sockets
@@ -2525,6 +2526,7 @@ export class ManagerAttach extends BaseAttach {
                   }
                   break;
                 case codes.VALUE_FIRMWARE_ADD:
+                  // this._log(`Received firmware`);
                   const firmwareData = this._parseMessage(parts, [queries.tupleTxt], id, true);
                   if (!firmwareData) {
                     this._addResponse(id, codes.ERR);
@@ -2534,43 +2536,62 @@ export class ManagerAttach extends BaseAttach {
                   const firmwareBase64 = firmwareData[0].getString();
 
                   // Get version fom content
-                  const ver = useful.getVersionFromBase64(firmwareBase64);
-                  if (!ver || !(ver.major >= 0 && ver.minor >= 0 && ver.patch >= 0)) {
-                    this._addResponse(id, codes.ERR);
+                  // this._log(`Getting version from content`);
+                  const newVer = useful.getVersionFromBase64(firmwareBase64);
+                  if (!newVer || !(newVer.major >= 0 && newVer.minor >= 0 && newVer.patch >= 0)) {
+                    this._addResponse(id, codes.ERR_CORRUPTED);
                     this._log(`Firmware version not found or format not expected`);
                     break;
                   }
 
                   // Check version
-                  if (Main.compareMajorWithMain(ver.major) !== 0) {
+                  // this._log(`Checking version`);
+                  if (Main.compareMajorWithMain(newVer.major) !== 0) {
                     this._addResponse(id, codes.ERR_INCOMPATIBLE);
-                    this._log(`Firmware version (${ver.major}.${ver.minor}.${ver.patch}) not allowed`);
+                    this._log(`Firmware version (${newVer.major}.${newVer.minor}.${newVer.patch}) not allowed`);
                     break;
                   }
 
                   // Validate with versions in database
+                  // this._log(`Validating with database`);
                   const storedVersionsData = await executeQuery<db2.FirmwareData[]>(queries.firmwareOrderSelect, null);
                   if (!storedVersionsData) {
                     this._addResponse(id, codes.ERR);
                     this._log(`Could not read firmware list from database`);
                     break;
                   }
+                  let validationResult = false;
+                  let atLeastOneFound = false;
                   for (const firm of storedVersionsData) {
-                    console.log(`${firm.archivo} ${firm.mayor} ${firm.menor} ${firm.parche}`);
-                    const verFile = await useful.getVersionFromFile(firm.archivo);
-                    if (verFile) {
-                      if (Main.compareVersions(ver, verFile) === 1) {
-                        this._log(`Firmware version is newer`);
+                    this._log(`Verifying with file ${firm.archivo} (${firm.mayor}.${firm.menor}.${firm.parche})`);
+                    const fileVer = await useful.getVersionFromFile(firm.archivo);
+                    if (fileVer) {
+                      atLeastOneFound = true;
+                      const databaseVer = { major: firm.mayor, minor: firm.menor, patch: firm.parche };
+                      if (Main.compareVersions(fileVer, databaseVer) !== 0) {
+                        this._log(`File and database versions are not the same. Discarted.`);
+                        continue;
+                      }
+                      // At this point one file in the server in valid so the loop should end in this iteration
+                      if (Main.compareVersions(newVer, fileVer) === 1) {
+                        validationResult = true;
                       } else {
-                        this._log(`Firmware version is older than the current`);
+                        this._log(`Firmware version is not newer than the current`);
+                        this._addResponse(id, codes.ERR_TOO_OLD);
                       }
                       break;
                     } else {
-                      this._log(`Firmware file ${firm.archivo} not found or could not find version`);
+                      this._log(`File firmware version or file not found`);
                     }
+                  }
+                  if (!validationResult && atLeastOneFound) {
+                    this._log(`Firmware could not be validated with previous ones`);
+                    this._addResponse(id, codes.ERR);
+                    break;
                   }
 
                   // Write to file
+                  // this._log(`Writing to file`);
                   const firmSize = new AtomicNumber();
                   const firmwareFilename = useful.getReplacedPath(path.join(this.FIRMWARE_RELATIVE_PATH, this.FIRMWARE_BASE_FILENAME + Date.now().toString()));
                   const res = await useful.writeFileFromBase64(firmwareBase64, firmwareFilename, firmSize);
@@ -2581,7 +2602,8 @@ export class ManagerAttach extends BaseAttach {
                   }
 
                   // Save in database
-                  const insertFirmRes = await executeQuery<ResultSetHeader>(queries.firmwareInsert, [firmwareFilename, 0, 0, 0]);
+                  // this._log(`Saving in database`);
+                  const insertFirmRes = await executeQuery<ResultSetHeader>(queries.firmwareInsert, [firmwareFilename, newVer.major, newVer.minor, newVer.patch]);
                   if (!insertFirmRes) {
                     this._log(`Firmware could not be inserted`);
                     this._addResponse(id, codes.ERR);
@@ -2589,8 +2611,12 @@ export class ManagerAttach extends BaseAttach {
                   }
 
                   // Notify success
-                  this._log(`Firmware registered`);
+                  this._log(`New firmware version is newer. Registered.`);
                   this._addResponse(id, codes.AIO_OK);
+
+                  // Pass firmware to try to update all controllers
+                  Main.setFirmwareForAll(Buffer.from(firmwareBase64), newVer);
+
                   break;
                 default:
                   this._log(`Unknown set value. Received '${command}' Value ${useful.toHex(valueToSet)}`);
@@ -3101,6 +3127,34 @@ export class ManagerAttach extends BaseAttach {
 export class Selector {
   nodeAttachments: NodeAttach[] = [];
   readonly managerConnections: ManagerAttach[] = [];
+  private firmwareForAll: Buffer | null = null;
+  private versionForAll: Firmware | null = null;
+
+  /**
+   * Use a firmware buffer to update all currently connected controllers.
+   * Clear the buffer after all controllers have been consulted for updates or have been updated.
+   * @param newFirmwareBuffer The buffer to get the firmware from.
+   * @param version Version object.
+   */
+  public setFirmwareForAll(newFirmwareBuffer: Buffer, version: Firmware) {
+    this.firmwareForAll = newFirmwareBuffer;
+    this.versionForAll = version;
+    setTimeout(this.tryUpdateControllers, 1);
+  }
+
+  private tryUpdateControllers() {
+    if (this.firmwareForAll) {
+      for (const node of this.nodeAttachments) {
+        node.addCommandForController(codes.CMD_UPDATE, -1, null, [], (code) => {
+          if (code === codes.AIO_OK) {
+            // Start sending the firmware
+          } else {
+            console.log(`Update not needed for controller ${node.controllerID}`);
+          }
+        });
+      }
+    }
+  }
 
   /**
    * Check the selector's registered channels for an attachment with a

@@ -66,7 +66,7 @@ function getVersionFromBuffer(buffer: Buffer): Firmware | null {
   const major = parseInt(verParts[0]);
   const minor = parseInt(verParts[1]);
   const patch = parseInt(verParts[2]);
-  if (!(major >= 0 && minor >= 0 && patch >= 0)) {
+  if (major >= 0 && minor >= 0 && patch >= 0) {
     return { major: major, minor: minor, patch: patch };
   }
   return null;

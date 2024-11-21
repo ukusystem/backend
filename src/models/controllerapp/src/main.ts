@@ -226,10 +226,10 @@ export class Main {
   /**
    *
    * @param major
-   * @returns 1 id the provided major is older, 0 if the same, -1 if newer.
+   * @returns 1 if the provided major is older, 0 if the same, -1 if newer.
    */
   public static compareMajorWithMain(major: number): 1 | 0 | -1 {
-    return Main.VERSION_MAJOR > major ? 1 : Main.VERSION_MINOR < major ? -1 : 0;
+    return Main.VERSION_MAJOR > major ? 1 : Main.VERSION_MAJOR < major ? -1 : 0;
   }
 
   /**

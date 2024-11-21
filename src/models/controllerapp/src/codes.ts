@@ -80,6 +80,7 @@ export const ERR_NO_FLOAT = 0x041; // Missing float.
 export const ERR_INCOMPATIBLE = 0x042; // Version is not compatible
 export const ERR_NOT_NEEDED = 0x043; // An update for the send version is not needed
 export const ERR_TOO_OLD = 0x044; // The firmware sent is too old for the server
+export const ERR_CORRUPTED = 0x045; // The data sent is corrupted
 
 export const VALUE_ONE_LINK = 0x200; // Set or get one output link
 export const VALUE_ACTIVE_DELAY = 0x201; // Set or get delay to active
@@ -543,3 +544,21 @@ export const CMD_KEEP_ALIVE_REQUEST = 0x61b;
  * A card reader changed authorization
  */
 export const CMD_AUTHORIZATION_CHANGED = 0x61c;
+
+/**
+ * @brief To send an update. The version is appended as separate fields
+ * Format CDM_UPDATE,id,major,minor,patch
+ */
+export const CMD_UPDATE = 0x61d;
+
+/**
+ * @brief Continue with the download of the nre firmware
+ * Format CMD_UPDATE_CONTINUE,0,token,content
+ */
+export const CMD_UPDATE_CONTINUE = 0x61e;
+
+/**
+ * @brief End the download of the firmware
+ * Format CMD_UPDATE_END,0,token
+ */
+export const CMS_UPDATE_END = 0x61f;
