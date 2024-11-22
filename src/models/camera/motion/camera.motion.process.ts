@@ -486,7 +486,7 @@ const getMotionFfmegArgs = (rtspUrl: string, ctrl_id: number, configs: { baseRec
   }
 
   if (appConfig.system.start_snapshot_motion) {
-    result.push(...['-t', `${controller.motionsnapshotseconds}`, '-c:v', 'mjpeg', '-vf', `scale=${motion_snapshot.ancho}:${motion_snapshot.altura},select='gte(t\\,0)',fps=1/${controller.motionsnapshotinterval}`, '-strftime', '1', `${configs.baseSnapshotDir}/snapshot_%H_%M_%S.jpg`]);
+    result.push(...['-t', `${controller.motionsnapshotseconds}`, '-an', '-c:v', 'mjpeg', '-vf', `scale=${motion_snapshot.ancho}:${motion_snapshot.altura},select='gte(t\\,0)',fps=1/${controller.motionsnapshotinterval}`, '-strftime', '1', `${configs.baseSnapshotDir}/snapshot_%H_%M_%S.jpg`]);
   }
 
   return result;

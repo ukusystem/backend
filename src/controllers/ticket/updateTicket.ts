@@ -64,7 +64,7 @@ export const upadateTicket = asyncErrorHandler(async (req: RequestWithUser, res:
           }
         }
 
-        if (isBeforeEvent && ticket.estd_id === RegTicketState.Esperando) {
+        if (isBeforeEvent && (ticket.estd_id === RegTicketState.Esperando || ticket.estd_id === RegTicketState.Aceptado)) {
           if (user.rol === 'Invitado') {
             if (action === RegTicketState.Cancelado) {
               try {

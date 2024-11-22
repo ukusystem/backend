@@ -115,6 +115,7 @@ export class TicketScheduleManager {
             if (regTicketMap.has(this.rt_id)) {
               // delete ticket
               TicketScheduleManager.#delete(this.ctrl_id, this.rt_id);
+              // notify finish ticket
             }
           }
         },
