@@ -547,12 +547,13 @@ export const CMD_AUTHORIZATION_CHANGED = 0x61c;
 
 /**
  * @brief To send an update. The version is appended as separate fields
- * Format CDM_UPDATE,id,major,minor,patch
+ * Format sent by the server        CDM_UPDATE,id,major,minor,patch
+ * Format sent by the controller    CDM_UPDATE,id,response[,token]
  */
 export const CMD_UPDATE = 0x61d;
 
 /**
- * @brief Continue with the download of the nre firmware
+ * @brief Continue with the download of the new firmware
  * Format CMD_UPDATE_CONTINUE,0,token,content
  */
 export const CMD_UPDATE_CONTINUE = 0x61e;

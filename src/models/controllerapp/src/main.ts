@@ -58,6 +58,8 @@ export class Main {
   private static readonly ALIVE_CAMERA_PING_INTERVAL_MS = parseInt(process.env.CAMERA_PING_INTERVAL ?? '4') * 1000;
   private static readonly ALIVE_CAMERA_PING_TIMEOUT_MS = parseInt(process.env.CAMERA_PING_TIMEOUT ?? '2') * 1000;
 
+  private static readonly WAIT_UPDATE_FOR_ALL_INTERVAL = 1 * 1000;
+
   private static readonly LOGGER_RELATIVE_PATH = './logs';
   private readonly tag = '█ ';
   private readonly logger: Logger;

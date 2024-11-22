@@ -34,6 +34,7 @@ import * as db2 from './db2';
 import * as sm from '../../../controllers/socket';
 import path from 'path';
 import { Firmware } from './firmware';
+import { MyStringIterator } from './myStringIterator';
 
 /**
  * Base attachment for the sockets
@@ -951,6 +952,8 @@ export class NodeAttach extends BaseAttach {
   private user;
   private password;
 
+  private chunkIterator: MyStringIterator | null = null;
+
   /**
    * @deprecated
    */
@@ -1619,6 +1622,31 @@ export class NodeAttach extends BaseAttach {
           this.mirrorMessage(this._appendPart(command, this.controllerID.toString()), true);
         }
         break;
+      case codes.CMD_UPDATE:
+        const updateRes = this._parseMessage(parts, [queries.tupleInt]);
+        if (!updateRes || updateRes[0].getInt() !== codes.AIO_OK) {
+          this._log(`No response found or update not needed`);
+          break;
+        }
+        const tokenRes = this._parseMessage(parts, [queries.tupleInt]);
+        if (!tokenRes) {
+          // Not token received
+          break;
+        }
+        const token = tokenRes[0].getInt();
+        if (!this.chunkIterator) {
+          this._log(`Update needed but no firmware chunks found`);
+          break;
+        }
+        let nextChunk = this.chunkIterator.next();
+        while (nextChunk) {
+          this.addCommandForController(codes.CMD_UPDATE_CONTINUE, 0, null, [token.toString(), nextChunk]);
+          nextChunk = this.chunkIterator.next();
+        }
+        this._log(`Chunks (${this.chunkIterator.count()}) sent to controller ID ${this.controllerID}`);
+        this.chunkIterator = null;
+
+        break;
       default:
         return false;
     }
@@ -1733,6 +1761,14 @@ export class NodeAttach extends BaseAttach {
     await executeQuery(queries.insertNet, [this.controllerID, useful.getCurrentDate(), state]);
     await executeQuery(queries.insertCtrlState, [state, this.controllerID]);
     this._log(`Inserting: Net state ${state ? 'conectado' : 'desconectado'}`);
+  }
+
+  /**
+   *
+   * @param arrays Array of chunks of data encoded in base64
+   */
+  initIterator(arrays: string[]) {
+    this.chunkIterator = new MyStringIterator(arrays);
   }
 
   /**
@@ -2615,7 +2651,7 @@ export class ManagerAttach extends BaseAttach {
                   this._addResponse(id, codes.AIO_OK);
 
                   // Pass firmware to try to update all controllers
-                  Main.setFirmwareForAll(Buffer.from(firmwareBase64), newVer);
+                  selector.setFirmwareForAll(Buffer.from(firmwareBase64), newVer);
 
                   break;
                 default:
@@ -3127,31 +3163,22 @@ export class ManagerAttach extends BaseAttach {
 export class Selector {
   nodeAttachments: NodeAttach[] = [];
   readonly managerConnections: ManagerAttach[] = [];
-  private firmwareForAll: Buffer | null = null;
-  private versionForAll: Firmware | null = null;
 
   /**
-   * Use a firmware buffer to update all currently connected controllers.
-   * Clear the buffer after all controllers have been consulted for updates or have been updated.
+   * Use a firmware buffer and a version to try to update all currently connected controllers.
    * @param newFirmwareBuffer The buffer to get the firmware from.
-   * @param version Version object.
+   * @param version Version object. It should be generated parsing the firmware.
    */
   public setFirmwareForAll(newFirmwareBuffer: Buffer, version: Firmware) {
-    this.firmwareForAll = newFirmwareBuffer;
-    this.versionForAll = version;
-    setTimeout(this.tryUpdateControllers, 1);
-  }
-
-  private tryUpdateControllers() {
-    if (this.firmwareForAll) {
+    const firmwareChunks: string[] = [];
+    if (newFirmwareBuffer && version) {
       for (const node of this.nodeAttachments) {
-        node.addCommandForController(codes.CMD_UPDATE, -1, null, [], (code) => {
-          if (code === codes.AIO_OK) {
-            // Start sending the firmware
-          } else {
-            console.log(`Update not needed for controller ${node.controllerID}`);
-          }
-        });
+        if (!node.isLogged()) {
+          continue;
+        }
+        node.initIterator(firmwareChunks);
+        node.addCommandForController(codes.CMD_UPDATE, -1, null, [version.major.toString(), version.minor.toString(), version.patch.toString()]);
+        console.log(`Consulting controller for update`);
       }
     }
   }
