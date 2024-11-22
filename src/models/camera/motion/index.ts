@@ -1,4 +1,3 @@
-export * from "./camera.motion.manager"
-export * from "./camera.motion.process"
-export * from "./camera.motion.reconnect"
-export * from "./camera.motion.types"
+export * from './camera.motion.manager';
+export * from './camera.motion.process';
+export * from './camera.motion.types';

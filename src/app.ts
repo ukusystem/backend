@@ -17,7 +17,7 @@ import { SystemManager } from './models/system';
     await server.initmaps();
 
     // Iniciar dectecion de movimiento
-    if (process.env.START_MOTION_DETECTION === 'true') {
+    if (process.env.START_SNAPSHOT_MOTION === 'true' || process.env.START_RECORD_MOTION === 'true') {
       await server.motion();
     }
 

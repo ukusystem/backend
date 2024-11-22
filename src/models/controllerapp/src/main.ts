@@ -777,7 +777,7 @@ export class Main {
    * @returns The proper filename to save in the database, or an error message if an error occurs.
    */
   private async processPhotoField(worker: Personal, byteSize: AtomicNumber, nodeID: number): Promise<string | null> {
-    const millis = useful.timeInt();
+    const millis = Date.now();
     const fotoOptional = worker.foto;
     // Initial state. the case where (isNew && fotoOptional.isPresent()) can still
     // change, depending on the success of the file written and that value is set
