@@ -17,6 +17,7 @@ import { RequestWithUser } from '../../types/requests';
 // import { UserRol } from '../../types/rol';
 import { TicketScheduleManager } from '../socket/ticket.schedule/ticket.schedule.manager';
 import { RegistroTicketObj } from '../socket/ticket.schedule/ticket.schedule.types';
+import { TicketState } from '../../types/ticket.state';
 
 export const multerCreateTicketArgs: GeneralMulterMiddlewareArgs = {
   allowedMimeTypes: ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'],
@@ -109,7 +110,7 @@ export const createTicket = asyncErrorHandler(async (req: RequestWithUser, res: 
             const nameFileUuid = uuidv4();
             const extensionFile = getExtesionFile(file.originalname);
 
-            const movePath = path.resolve(`./archivos/ticket/${'nodo' + ctrl_id}/${dateFormat}/${nameFileUuid}.${extensionFile}`);
+            const movePath = path.resolve(`./archivos/ticket/nodo${ctrl_id}/${dateFormat}/${nameFileUuid}.${extensionFile}`);
 
             // Comprobar directorio de destino
             const directorioDestino = path.dirname(movePath);
@@ -132,19 +133,20 @@ export const createTicket = asyncErrorHandler(async (req: RequestWithUser, res: 
 
     if (formValues) {
       try {
+        // const stateTicket = user.rl_id === UserRol.Administrador || user.rl_id === UserRol.Usuario ? TicketState.Aceptado : TicketState.Esperando;
         const newTicket = new Ticket(archivosData, { ...formValues.solicitante }, formValues.personales);
         const response = await onTicket(newTicket);
         if (response !== undefined) {
           if (response.resultado) {
             // success
 
-            const newTicketObj: RegistroTicketObj = { ...formValues.solicitante, rt_id: response.id, estd_id: 1 }; // estado esperando
+            const newTicketObj: RegistroTicketObj = { ...formValues.solicitante, rt_id: response.id, estd_id: TicketState.Esperando }; // estado esperando (cambiar)
             TicketScheduleManager.add(ctrl_id, newTicketObj);
 
             return res.json({ success: true, message: 'Ticket creado correctamente.' });
           } else {
             console.log(response);
-            return res.json({ success: false, message: response.mensaje });
+            return res.status(500).json({ success: false, message: response.mensaje });
           }
         } else {
           return res.status(500).json({ success: false, message: 'Internal Server Error,Backend-Technician' });
