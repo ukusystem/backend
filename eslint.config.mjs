@@ -14,7 +14,7 @@ export default [
   {
     rules: {
       eqeqeq: ['error', 'always'],
-      'no-empty-function': 'error',
+      'no-empty-function': ['error', { allow: ['constructors'] }],
       'no-implicit-coercion': 'error',
       'no-case-declarations': 'off',
       '@typescript-eslint/no-duplicate-enum-values': 'error',
