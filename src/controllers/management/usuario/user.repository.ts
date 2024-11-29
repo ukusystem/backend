@@ -8,8 +8,12 @@ export interface UserRepository {
   update(u_id: number, fieldsUpdate: UpdateUserDTO): Promise<void>;
   findAll(): Promise<Usuario[]>;
   isUsernameAvailable(username: string): Promise<boolean>;
+  isPersonalAvailable(p_id: number): Promise<boolean>;
   softDelete(u_id: number): Promise<void>;
   findByCursorPagination(limit: number, cursor?: number): Promise<Usuario[]>;
+  findByOffsetPagination(limit: number, offset: number): Promise<Usuario[]>;
+
+  countTotal(filters?: any): Promise<number>;
 }
 
 // export interface UserRepository {
