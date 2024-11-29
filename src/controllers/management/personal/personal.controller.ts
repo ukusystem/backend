@@ -11,6 +11,9 @@ import path from 'path';
 import fs from 'fs';
 import { getExtesionFile } from '../../../utils/getExtensionFile';
 import { updatePersonalBodySchema } from './schemas/update.personal.schema';
+import { UpdatePersonalDTO } from './dtos/update.personal.dto';
+import { AuditManager, getRecordAudit } from '../../../models/audit/audit.manager';
+import { RequestWithUser } from '../../../types/requests';
 
 export class PersonalController {
   constructor(
@@ -20,7 +23,7 @@ export class PersonalController {
   ) {}
 
   static readonly CREATE_BODY_FIELDNAME: string = 'form';
-  static readonly CREATE_FILE_FIELDNAME: string = 'files_test';
+  static readonly CREATE_FILE_FIELDNAME: string = 'files';
 
   static readonly BASE_PROFILEPHOTO_DIR: string = './archivos/personal/photos';
   static readonly BASE_PROFILEPHOTO_RELATIVE_DIR: string = './archivos/personal';
@@ -147,7 +150,7 @@ export class PersonalController {
           success: true,
           message: 'Personal creado satisfactoriamente',
           data: {
-            u_id: newPersonalId,
+            p_id: newPersonalId,
           },
         });
       } catch (error) {
@@ -158,86 +161,108 @@ export class PersonalController {
   }
 
   get update() {
-    return asyncErrorHandler(async (req: Request, res: Response, next: NextFunction) => {
+    return asyncErrorHandler(async (req: RequestWithUser, res: Response, next: NextFunction) => {
       try {
-        const { p_id } = req.params as { p_id: string };
+        const user = req.user;
 
-        const personalFound = await this.personal_repository.findById(Number(p_id));
-        if (personalFound === undefined) {
-          this.#deleteTemporalFiles(req);
-          return res.status(400).json({ success: false, message: 'Personal no disponible' });
-        }
+        if (user !== undefined) {
+          const { p_id } = req.params as { p_id: string };
 
-        const formParse = JSON.parse(req.body[PersonalController.CREATE_BODY_FIELDNAME]);
-
-        const resultParse = updatePersonalBodySchema.safeParse(formParse);
-        if (!resultParse.success) {
-          this.#deleteTemporalFiles(req);
-          return res.status(400).json(resultParse.error.errors.map((errorDetail) => ({ message: errorDetail.message, status: errorDetail.code })));
-        }
-
-        const { c_id, co_id, dni, apellido, correo, nombre, telefono } = resultParse.data;
-
-        let hasChanges: boolean = false;
-
-        if (dni !== undefined && dni !== personalFound.dni) {
-          const personalFoundDni = await this.personal_repository.findByDni(dni);
-          if (personalFoundDni !== undefined) {
+          const personalFound = await this.personal_repository.findById(Number(p_id));
+          if (personalFound === undefined) {
             this.#deleteTemporalFiles(req);
-            return res.status(409).json({ success: false, message: `Personal con DNI ${dni} ya esta en uso.` });
+            return res.status(400).json({ success: false, message: 'Personal no disponible' });
           }
-          hasChanges = true;
-        }
 
-        if (c_id !== undefined && c_id !== personalFound.c_id) {
-          const cargoFound = await this.cargo_repository.findById(c_id);
-          if (cargoFound === undefined) {
+          const formParse = JSON.parse(req.body[PersonalController.CREATE_BODY_FIELDNAME]);
+
+          const resultParse = updatePersonalBodySchema.safeParse(formParse);
+          if (!resultParse.success) {
             this.#deleteTemporalFiles(req);
-            return res.status(404).json({ success: false, message: `Cargo no disponible.` });
+            return res.status(400).json(resultParse.error.errors.map((errorDetail) => ({ message: errorDetail.message, status: errorDetail.code })));
           }
-          hasChanges = true;
-        }
 
-        if (co_id !== undefined && co_id !== personalFound.co_id) {
-          const contrataFound = await this.contrata_repository.findById(co_id);
-          if (contrataFound === undefined) {
-            this.#deleteTemporalFiles(req);
-            return res.status(404).json({ success: false, message: `Contrata no disponible.` });
-          }
-          hasChanges = true;
-        }
+          const { c_id, co_id, dni, apellido, correo, nombre, telefono } = resultParse.data;
 
-        const filesUploaded = req.files;
-        let finalPhotoPath: string | undefined = undefined;
-        if (filesUploaded !== undefined) {
-          if (Array.isArray(filesUploaded)) {
-            const file = filesUploaded[0]; // expected only one
-            if (file !== undefined) {
-              finalPhotoPath = this.#moveMulterFilePhoto(file);
-              hasChanges = true;
+          const finalPersonalUpdateDTO: UpdatePersonalDTO = {};
+
+          if (dni !== undefined && dni !== personalFound.dni) {
+            const personalFoundDni = await this.personal_repository.findByDni(dni);
+            if (personalFoundDni !== undefined) {
+              this.#deleteTemporalFiles(req);
+              return res.status(409).json({ success: false, message: `Personal con DNI ${dni} ya esta en uso.` });
             }
-          } else {
-            const multerFiles = filesUploaded[PersonalController.CREATE_FILE_FIELDNAME];
-            if (multerFiles !== undefined) {
-              const file = multerFiles[0]; // expected only one
+            finalPersonalUpdateDTO.dni = dni;
+          }
+
+          if (c_id !== undefined && c_id !== personalFound.c_id) {
+            const cargoFound = await this.cargo_repository.findById(c_id);
+            if (cargoFound === undefined) {
+              this.#deleteTemporalFiles(req);
+              return res.status(404).json({ success: false, message: `Cargo no disponible.` });
+            }
+
+            finalPersonalUpdateDTO.c_id = c_id;
+          }
+
+          if (co_id !== undefined && co_id !== personalFound.co_id) {
+            const contrataFound = await this.contrata_repository.findById(co_id);
+            if (contrataFound === undefined) {
+              this.#deleteTemporalFiles(req);
+              return res.status(404).json({ success: false, message: `Contrata no disponible.` });
+            }
+
+            finalPersonalUpdateDTO.co_id = co_id;
+          }
+
+          const filesUploaded = req.files;
+
+          if (filesUploaded !== undefined) {
+            if (Array.isArray(filesUploaded)) {
+              const file = filesUploaded[0]; // expected only one
               if (file !== undefined) {
-                finalPhotoPath = this.#moveMulterFilePhoto(file);
-                hasChanges = true;
+                finalPersonalUpdateDTO.foto = this.#moveMulterFilePhoto(file);
+              }
+            } else {
+              const multerFiles = filesUploaded[PersonalController.CREATE_FILE_FIELDNAME];
+              if (multerFiles !== undefined) {
+                const file = multerFiles[0]; // expected only one
+                if (file !== undefined) {
+                  finalPersonalUpdateDTO.foto = this.#moveMulterFilePhoto(file);
+                }
               }
             }
           }
-        }
 
-        hasChanges = hasChanges || (apellido !== undefined && apellido !== personalFound.apellido) || (nombre !== undefined && nombre !== personalFound.nombre) || (correo !== undefined && correo !== personalFound.correo) || (telefono !== undefined && telefono !== personalFound.telefono);
-        if (hasChanges) {
-          await this.personal_repository.update(Number(p_id), { c_id, co_id, dni, apellido, correo, nombre, telefono, foto: finalPhotoPath });
-          return res.status(200).json({
-            success: true,
-            message: 'Personal actualizado exitosamente',
-          });
-        }
+          if (apellido !== undefined && apellido !== personalFound.apellido) {
+            finalPersonalUpdateDTO.apellido = apellido;
+          }
+          if (nombre !== undefined && nombre !== personalFound.nombre) {
+            finalPersonalUpdateDTO.nombre = nombre;
+          }
+          if (correo !== undefined && correo !== personalFound.correo) {
+            finalPersonalUpdateDTO.correo = correo;
+          }
+          if (telefono !== undefined && telefono !== personalFound.telefono) {
+            finalPersonalUpdateDTO.telefono = telefono;
+          }
 
-        res.status(200).json({ success: true, message: 'No se realizaron cambios en los datos del personal' });
+          if (Object.keys(finalPersonalUpdateDTO).length > 0) {
+            await this.personal_repository.update(Number(p_id), finalPersonalUpdateDTO);
+
+            const records = getRecordAudit(personalFound, finalPersonalUpdateDTO);
+            AuditManager.insert('general', 'general_audit', 'personal', records, `${user.p_id}. ${user.nombre} ${user.apellido}`);
+
+            return res.status(200).json({
+              success: true,
+              message: 'Personal actualizado exitosamente',
+            });
+          }
+
+          return res.status(200).json({ success: true, message: 'No se realizaron cambios en los datos del personal' });
+        } else {
+          return res.status(401).json({ message: 'No autorizado' });
+        }
       } catch (error) {
         this.#deleteTemporalFiles(req);
         next(error);

@@ -4,6 +4,8 @@ import { RubroRepository } from '../rubro/rubro.repository';
 import { CreateContrataDTO } from './dtos/create.contrata.dto';
 import { ContrataRepository } from './contrata.repository';
 import { UpdateContrataDTO } from './dtos/update.contrata.dto';
+import { RequestWithUser } from '../../../types/requests';
+import { AuditManager, getRecordAudit } from '../../../models/audit/audit.manager';
 
 export class ContrataController {
   constructor(
@@ -26,45 +28,61 @@ export class ContrataController {
         success: true,
         message: 'Contrata creado satisfactoriamente',
         data: {
-          u_id: newContrataId,
+          co_id: newContrataId,
         },
       });
     });
   }
 
   get update() {
-    return asyncErrorHandler(async (req: Request, res: Response, _next: NextFunction) => {
-      const { co_id } = req.params as { co_id: string };
-      const contrataUpdate: UpdateContrataDTO = req.body;
+    return asyncErrorHandler(async (req: RequestWithUser, res: Response, _next: NextFunction) => {
+      const user = req.user;
 
-      const contrataFound = await this.contrata_repository.findById(Number(co_id));
+      if (user !== undefined) {
+        const { co_id } = req.params as { co_id: string };
+        const incommingDTO: UpdateContrataDTO = req.body;
 
-      if (contrataFound === undefined) {
-        return res.status(400).json({ success: false, message: 'Contrata no disponible' });
-      }
+        const contrataFound = await this.contrata_repository.findById(Number(co_id));
 
-      const { contrata, descripcion, r_id } = contrataUpdate;
-      let hasChanges: boolean = false;
-
-      if (r_id !== undefined && r_id !== contrataFound.r_id) {
-        const rubroFound = await this.rubro_repository.findById(r_id);
-        if (rubroFound === undefined) {
-          return res.status(404).json({ success: false, message: `Rubro no disponible.` });
+        if (contrataFound === undefined) {
+          return res.status(400).json({ success: false, message: 'Contrata no disponible' });
         }
-        hasChanges = true;
+
+        const finalContrataUpdateDTO: UpdateContrataDTO = {};
+        const { r_id, contrata, descripcion } = incommingDTO;
+
+        if (r_id !== undefined && r_id !== contrataFound.r_id) {
+          const rubroFound = await this.rubro_repository.findById(r_id);
+          if (rubroFound === undefined) {
+            return res.status(404).json({ success: false, message: `Rubro no disponible.` });
+          }
+          finalContrataUpdateDTO.r_id = r_id;
+        }
+
+        if (contrata !== undefined && contrata !== contrataFound.contrata) {
+          finalContrataUpdateDTO.contrata = contrata;
+        }
+
+        if (descripcion !== undefined && descripcion !== contrataFound.descripcion) {
+          finalContrataUpdateDTO.descripcion = descripcion;
+        }
+
+        if (Object.keys(finalContrataUpdateDTO).length > 0) {
+          await this.contrata_repository.update(Number(co_id), finalContrataUpdateDTO);
+
+          const records = getRecordAudit(contrataFound, finalContrataUpdateDTO);
+          AuditManager.insert('general', 'general_audit', 'contrata', records, `${user.p_id}. ${user.nombre} ${user.apellido}`);
+
+          return res.status(200).json({
+            success: true,
+            message: 'Contrata actualizado exitosamente',
+          });
+        }
+
+        return res.status(200).json({ success: true, message: 'No se realizaron cambios en los datos de la contrata' });
+      } else {
+        return res.status(401).json({ message: 'No autorizado' });
       }
-
-      hasChanges = hasChanges || (contrata !== undefined && contrata !== contrataFound.contrata) || (descripcion !== undefined && descripcion !== contrataFound.descripcion);
-
-      if (hasChanges) {
-        await this.contrata_repository.update(Number(co_id), { contrata, descripcion, r_id });
-        return res.status(200).json({
-          success: true,
-          message: 'Contrata actualizado exitosamente',
-        });
-      }
-
-      res.status(200).json({ success: true, message: 'No se realizaron cambios en los datos de la contrata' });
     });
   }
 
@@ -105,6 +123,7 @@ export class ContrataController {
       });
     });
   }
+
   get singleContrata() {
     return asyncErrorHandler(async (req: Request, res: Response, _next: NextFunction) => {
       const { co_id } = req.params as { co_id: string };

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { AnyZodObject, ZodError } from 'zod';
+import { AnyZodObject, ZodError, ZodType } from 'zod';
 
 export const requestDataValidator =
   (validatorSchema: { bodySchema?: AnyZodObject; querySchema?: AnyZodObject; paramSchema?: AnyZodObject }, requestDataTypes: { hasBody?: boolean; hasQuery?: boolean; hasParam?: boolean } = { hasBody: false, hasParam: false, hasQuery: false }) =>
@@ -22,3 +22,59 @@ export const requestDataValidator =
       return res.status(500).send('Error making request, contact support');
     }
   };
+
+export enum ValidationKeys {
+  Query = 'query',
+  Params = 'params',
+  Body = 'body',
+}
+
+type SchemaOptions<TBody, TParams, TQuery> = {
+  body?: ZodType<TBody>;
+  params?: ZodType<TParams>;
+  query?: ZodType<TQuery>;
+};
+
+type ErrorItem = { type: ValidationKeys; errors: ZodError };
+
+export const requestValidator = <TBody, TParams, TQuery>(schemas: SchemaOptions<TBody, TParams, TQuery>) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const errors: ErrorItem[] = [];
+
+    if (schemas.params) {
+      const parseResult = schemas.params.safeParse(req.params);
+      if (!parseResult.success) {
+        errors.push({ type: ValidationKeys.Params, errors: parseResult.error });
+      }
+    }
+
+    if (schemas.query) {
+      const parseResult = schemas.query.safeParse(req.query);
+      if (!parseResult.success) {
+        errors.push({ type: ValidationKeys.Query, errors: parseResult.error });
+      }
+    }
+
+    if (schemas.body) {
+      const parseResult = schemas.body.safeParse(req.body);
+      if (!parseResult.success) {
+        errors.push({ type: ValidationKeys.Body, errors: parseResult.error });
+      }
+    }
+
+    if (errors.length > 0) {
+      sendErrors(errors, res);
+    } else {
+      next();
+    }
+  };
+};
+
+export const sendErrors = (errors: Array<ErrorItem>, res: Response) => {
+  return res.status(400).send({
+    errors: errors.map((error) => {
+      const errorList = error.errors.issues.map((issue) => ({ message: issue.message, code: issue.code }));
+      return { type: error.type, errors: errorList };
+    }),
+  });
+};

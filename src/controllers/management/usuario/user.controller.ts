@@ -6,6 +6,8 @@ import { CreateUserDTO } from './dtos/create.user.dto';
 import { PersonalRepository } from '../personal/personal.repository';
 import { RolRepository } from '../rol/rol.repository';
 import { UpdateUserDTO } from './dtos/update.user.dto';
+import { RequestWithUser } from '../../../types/requests';
+import { AuditManager, getRecordAudit } from '../../../models/audit/audit.manager';
 
 export class UserController {
   constructor(
@@ -55,68 +57,75 @@ export class UserController {
   }
 
   get update() {
-    return asyncErrorHandler(async (req: Request, res: Response, _next: NextFunction) => {
-      // params
-      const { u_id } = req.params as { u_id: string };
-      // body
-      const userUpdate: UpdateUserDTO = req.body;
-      const { contraseña, p_id, rl_id, usuario } = userUpdate;
+    return asyncErrorHandler(async (req: RequestWithUser, res: Response, _next: NextFunction) => {
+      const user = req.user;
 
-      const userFound = await this.user_repository.findById(Number(u_id));
-      if (userFound === undefined) {
-        return res.status(400).json({ success: false, message: 'Usuario no disponible' });
-      }
+      if (user !== undefined) {
+        // params
+        const { u_id } = req.params as { u_id: string };
+        // body
+        const incommingDTO: UpdateUserDTO = req.body;
+        const { contraseña, p_id, rl_id, usuario } = incommingDTO;
+        const finalUserUpdateDTO: UpdateUserDTO = {};
 
-      let hasChanges: boolean = false;
-      if (usuario !== undefined && usuario !== userFound.usuario) {
-        const isUsernameAvailable = await this.user_repository.isUsernameAvailable(usuario);
-        if (!isUsernameAvailable) {
-          return res.status(409).json({ success: false, message: 'El nombre de usuario ya está en uso. Por favor, elige otro.' });
+        const userFound = await this.user_repository.findById(Number(u_id));
+        if (userFound === undefined) {
+          return res.status(400).json({ success: false, message: 'Usuario no disponible' });
         }
 
-        hasChanges = true;
-      }
-
-      if (p_id !== undefined && p_id !== userFound.p_id) {
-        const foundPersonal = await this.personal_repository.findById(p_id);
-        if (foundPersonal === undefined) {
-          return res.status(404).json({ success: false, message: `Personal no encontrado.` });
+        if (usuario !== undefined && usuario !== userFound.usuario) {
+          const isUsernameAvailable = await this.user_repository.isUsernameAvailable(usuario);
+          if (!isUsernameAvailable) {
+            return res.status(409).json({ success: false, message: 'El nombre de usuario ya está en uso. Por favor, elige otro.' });
+          }
+          finalUserUpdateDTO.usuario = usuario;
         }
 
-        const isPersonalAvaible = await this.user_repository.isPersonalAvailable(p_id);
-        if (!isPersonalAvaible) {
-          return res.status(409).json({ success: false, message: 'El personal ya está en uso. Por favor, elige otro.' });
+        if (p_id !== undefined && p_id !== userFound.p_id) {
+          const foundPersonal = await this.personal_repository.findById(p_id);
+          if (foundPersonal === undefined) {
+            return res.status(404).json({ success: false, message: `Personal no encontrado.` });
+          }
+
+          const isPersonalAvaible = await this.user_repository.isPersonalAvailable(p_id);
+          if (!isPersonalAvaible) {
+            return res.status(409).json({ success: false, message: 'El personal ya está en uso. Por favor, elige otro.' });
+          }
+          finalUserUpdateDTO.p_id = p_id;
         }
-        hasChanges = true;
-      }
 
-      if (rl_id !== undefined && rl_id !== userFound.rl_id) {
-        const foundRol = await this.rol_repository.findById(rl_id);
-        if (foundRol === undefined) {
-          return res.status(404).json({ success: false, message: `Rol no encontrado.` });
+        if (rl_id !== undefined && rl_id !== userFound.rl_id) {
+          const foundRol = await this.rol_repository.findById(rl_id);
+          if (foundRol === undefined) {
+            return res.status(404).json({ success: false, message: `Rol no encontrado.` });
+          }
+
+          finalUserUpdateDTO.rl_id = rl_id;
         }
-        hasChanges = true;
-      }
 
-      let passwordHashed: string | undefined = undefined;
-      if (contraseña !== undefined) {
-        const isSamePassword = await this.hasher.compare(contraseña, userFound.contraseña);
-        if (!isSamePassword) {
-          passwordHashed = await this.hasher.hash(contraseña);
-          hasChanges = true;
+        if (contraseña !== undefined) {
+          const isSamePassword = await this.hasher.compare(contraseña, userFound.contraseña);
+          if (!isSamePassword) {
+            finalUserUpdateDTO.contraseña = await this.hasher.hash(contraseña);
+          }
         }
+
+        if (Object.keys(finalUserUpdateDTO).length > 0) {
+          await this.user_repository.update(Number(u_id), finalUserUpdateDTO);
+
+          const records = getRecordAudit(userFound, finalUserUpdateDTO);
+          AuditManager.insert('general', 'general_audit', 'usuario', records, `${user.p_id}. ${user.nombre} ${user.apellido}`);
+
+          return res.status(200).json({
+            success: true,
+            message: 'Usuario actualizado exitosamente',
+          });
+        }
+
+        return res.status(200).json({ success: true, message: 'No se realizaron cambios en los datos del usuario' });
+      } else {
+        return res.status(401).json({ message: 'No autorizado' });
       }
-
-      if (hasChanges) {
-        await this.user_repository.update(Number(u_id), { ...userUpdate, contraseña: passwordHashed });
-
-        return res.status(200).json({
-          success: true,
-          message: 'Usuario actualizado exitosamente',
-        });
-      }
-
-      res.status(200).json({ success: true, message: 'No se realizaron cambios en los datos del usuario' });
     });
   }
 
