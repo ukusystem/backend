@@ -48,6 +48,9 @@ interface IAppConfig {
       secret: string;
       expire: string;
     };
+    encrypt: {
+      secret: string;
+    };
   };
   cookie: {
     access_token: {
@@ -92,6 +95,9 @@ const appConfig: IAppConfig = {
     refresh_token: {
       secret: validatedEnv.REFRESH_TOKEN_SECRET,
       expire: validatedEnv.REFRESH_TOKEN_EXPIRE,
+    },
+    encrypt: {
+      secret: validatedEnv.ENCRYPT_TOKEN_SECRET,
     },
   },
   cookie: {
