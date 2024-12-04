@@ -365,7 +365,6 @@ export class Main {
       const newNode = NodeAttach.getInstanceFromPacket(node, this.logger);
       this.selector.nodeAttachments.push(newNode);
     }
-
     this.log(`Loaded ${this.selector.nodeAttachments.length} nodes.`);
     return true;
   }
@@ -505,7 +504,7 @@ export class Main {
           }
           this.log(`Remove message ID = ${msgID} by timeout.`);
           // Message has to be removed anyways
-          node.removePendingMessageByID(msgID, codes.ERR_TIMEOUT, true, false);
+          node.removePendingMessageByID(msgID, codes.J_ERR_TIMEOUT, true, false);
           node.disableArmButton(false);
           resolve(new RequestResult(false, `El controlador ID = ${controllerID} no ha respondido a tiempo.`));
         }, Main.REQUEST_TIMEOUT);
@@ -771,7 +770,7 @@ export class Main {
           }
           this.log(`Remove message ID = ${msgID} by timeout.`);
           // Message has to be removed anyways
-          nodeKey.removePendingMessageByID(msgID, codes.ERR_TIMEOUT, true, false);
+          nodeKey.removePendingMessageByID(msgID, codes.J_ERR_TIMEOUT, true, false);
           monitor = States.TIMEOUT;
           await this.registerOrder(newOrder, monitor);
           // resolve(monitor)

@@ -70,7 +70,7 @@ export const ERR_NO_ALARM = 0x037; // No alarm found
 export const ERR_NO_OFFSET = 0x038; // No offset found
 export const ERR_NO_CHANGE = 0x039; // There was no change / The value is the same as the previous
 export const ERR_NO_LOGGED_IN = 0x03a; // The user is not logged in
-export const ERR_TIMEOUT = 0x03b; // Operation timeout
+export const J_ERR_TIMEOUT = 0x03b; // Operation timeout
 export const ERR_NO_ADMIN = 0x03c; // Missing admin info
 export const ERR_NO_INT = 0x03d; // Missing integer
 export const ERR_NO_BIG = 0x03e; // Missing BigIngeter. Used in Java
@@ -562,4 +562,4 @@ export const CMD_UPDATE_CONTINUE = 0x61e;
  * @brief End the download of the firmware
  * Format CMD_UPDATE_END,0,token
  */
-export const CMS_UPDATE_END = 0x61f;
+export const CMD_UPDATE_END = 0x61f;

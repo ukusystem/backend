@@ -44,6 +44,11 @@ export class BaseAttach extends Mortal {
   static readonly UNREACHABLE_INTERVAL_MS = 60 * 1000;
   static readonly DEFAULT_ADDRESS = '0.0.0.0';
   private static readonly BASE_NODE_NAME = 'nodo';
+  /**
+   * Byte length of a chunk to send as part of an update. This will be encoded in base64 format, so the final length of the chunk is 4/3 of this value.
+   * Currently the final chunk is expected to be 400 bytes.
+   */
+  static readonly CHUNK_LENGTH = 300;
 
   /**
    * Inner socket used for communication with the controllers and managers.
@@ -398,7 +403,7 @@ export class BaseAttach extends Mortal {
    * @param execute Whether to execute the action.
    * @returns True if the message was found and removed.
    */
-  removePendingMessageByID(id: number, code: number, logFinish: boolean = true, execute: boolean = true): boolean {
+  removePendingMessageByID(id: number, code: number, logFinish: boolean = true, execute: boolean = true, data?: DataStruct): boolean {
     if (this.pendingMessages.has(id)) {
       const finished = this.pendingMessages.get(id);
       if (finished && this.pendingMessages.delete(id)) {
@@ -406,7 +411,7 @@ export class BaseAttach extends Mortal {
           // this._log(`Message ${id} ended with code ${useful.toHex(code)}.`);
         }
         if (finished.action && execute) {
-          finished.action(code);
+          finished.action(code, data);
         }
         return true;
       } else {
@@ -1623,34 +1628,65 @@ export class NodeAttach extends BaseAttach {
         }
         break;
       case codes.CMD_UPDATE:
+        this._log(`Received update response '${command}'`);
+        // Parse response
         const updateRes = this._parseMessage(parts, [queries.tupleInt]);
         if (!updateRes || updateRes[0].getInt() !== codes.AIO_OK) {
           this._log(`No response found or update not needed`);
           break;
         }
+
+        // Parse token if update is needed
         const tokenRes = this._parseMessage(parts, [queries.tupleInt]);
         if (!tokenRes) {
-          // Not token received
+          this._log(`Update needed but no token received`);
           break;
         }
-        const token = tokenRes[0].getInt();
-        if (!this.chunkIterator) {
-          this._log(`Update needed but no firmware chunks found`);
-          break;
-        }
-        let nextChunk = this.chunkIterator.next();
-        while (nextChunk) {
-          this.addCommandForController(codes.CMD_UPDATE_CONTINUE, 0, null, [token.toString(), nextChunk]);
-          nextChunk = this.chunkIterator.next();
-        }
-        this._log(`Chunks (${this.chunkIterator.count()}) sent to controller ID ${this.controllerID}`);
-        this.chunkIterator = null;
+        // const token = tokenRes[0].getInt();
+
+        this.removePendingMessageByID(id, updateRes[0].getInt(), true, true, tokenRes[0]);
 
         break;
       default:
         return false;
     }
     return true;
+  }
+
+  askSendFirmware(chunks: string[], version: Firmware) {
+    // Ask controller if this update is needed
+    // console.log(`Consulting controller for update`);
+    this.addCommandForController(codes.CMD_UPDATE, -1, null, [version.major.toString(), version.minor.toString(), version.patch.toString()], (code, tokenData) => {
+      if (code !== codes.AIO_OK) {
+        this._log('Update not nedded by controller');
+        return;
+      }
+
+      if (!tokenData) {
+        this._log('No token received');
+        return;
+      }
+      const token = tokenData.getInt();
+
+      // Get the first chunk to send
+      this.initIterator(chunks);
+      if (!this.chunkIterator) {
+        this._log(`Update needed but no firmware chunks found`);
+        this.chunkIterator = null;
+        return;
+      }
+      const count = this.chunkIterator.count();
+      let nextChunk = this.chunkIterator.next();
+
+      // Send all remaining chunks
+      while (nextChunk) {
+        this.addCommandForController(codes.CMD_UPDATE_CONTINUE, 0, null, [token.toString(), nextChunk]);
+        nextChunk = this.chunkIterator.next();
+      }
+      this.addCommandForController(codes.CMD_UPDATE_END, 0, null, [token.toString()]);
+      this._log(`Chunks (${count}) added to controller ID ${this.controllerID}`);
+      this.chunkIterator = null;
+    });
   }
 
   disableArmButton(state: boolean, log: boolean = true) {
@@ -1831,6 +1867,7 @@ export class NodeAttach extends BaseAttach {
    */
   tryConnectNode(selector: Selector, log: boolean, push: boolean = true) {
     const controllerSocket = net.createConnection(this.port, this.ip, () => {
+      // console.log(this._currentSocket?.writableLength);
       if (log) {
         this._log('Socket connect callback');
       }
@@ -3171,14 +3208,20 @@ export class Selector {
    */
   public setFirmwareForAll(newFirmwareBuffer: Buffer, version: Firmware) {
     const firmwareChunks: string[] = [];
+    let lastIndex = 0;
+    for (let i = 0; i < newFirmwareBuffer.length; i = i + BaseAttach.CHUNK_LENGTH) {
+      lastIndex = i + BaseAttach.CHUNK_LENGTH;
+      firmwareChunks.push(newFirmwareBuffer.subarray(i, lastIndex).toString('base64'));
+    }
+    if (lastIndex < newFirmwareBuffer.length) {
+      firmwareChunks.push(newFirmwareBuffer.subarray(lastIndex).toString('base64'));
+    }
     if (newFirmwareBuffer && version) {
       for (const node of this.nodeAttachments) {
         if (!node.isLogged()) {
           continue;
         }
-        node.initIterator(firmwareChunks);
-        node.addCommandForController(codes.CMD_UPDATE, -1, null, [version.major.toString(), version.minor.toString(), version.patch.toString()]);
-        console.log(`Consulting controller for update`);
+        node.askSendFirmware(firmwareChunks, version);
       }
     }
   }
