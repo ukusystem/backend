@@ -14,6 +14,9 @@ import { updatePersonalBodySchema } from './schemas/update.personal.schema';
 import { UpdatePersonalDTO } from './dtos/update.personal.dto';
 import { AuditManager, getRecordAudit } from '../../../models/audit/audit.manager';
 import { RequestWithUser } from '../../../types/requests';
+import { Personal } from './personal.entity';
+
+import { EntityResponse, CreateEntityResponse, UpdateResponse, OffsetPaginationResponse, DeleteReponse } from '../shared';
 
 export class PersonalController {
   constructor(
@@ -146,13 +149,12 @@ export class PersonalController {
 
         const newPersonalId = await this.personal_repository.create(newPersonal);
 
-        res.status(201).json({
-          success: true,
+        const response: CreateEntityResponse = {
+          id: newPersonalId,
           message: 'Personal creado satisfactoriamente',
-          data: {
-            p_id: newPersonalId,
-          },
-        });
+        };
+
+        res.status(201).json(response);
       } catch (error) {
         this.#deleteTemporalFiles(req);
         next(error);
@@ -253,10 +255,11 @@ export class PersonalController {
             const records = getRecordAudit(personalFound, finalPersonalUpdateDTO);
             AuditManager.insert('general', 'general_audit', 'personal', records, `${user.p_id}. ${user.nombre} ${user.apellido}`);
 
-            return res.status(200).json({
-              success: true,
+            const response: UpdateResponse<Personal> = {
               message: 'Personal actualizado exitosamente',
-            });
+            };
+
+            return res.status(200).json(response);
           }
 
           return res.status(200).json({ success: true, message: 'No se realizaron cambios en los datos del personal' });
@@ -278,12 +281,15 @@ export class PersonalController {
         return res.status(400).json({ success: false, message: 'Personal no disponible' });
       }
       await this.personal_repository.softDelete(Number(p_id));
-      res.status(200).json({
-        success: true,
+
+      const response: DeleteReponse = {
         message: 'Personal eliminado exitosamente',
-      });
+        id: Number(p_id),
+      };
+      res.status(200).json(response);
     });
   }
+
   get singlePersonal() {
     return asyncErrorHandler(async (req: Request, res: Response, _next: NextFunction) => {
       const { p_id } = req.params as { p_id: string };
@@ -291,7 +297,9 @@ export class PersonalController {
       if (personalFound === undefined) {
         return res.status(400).json({ success: false, message: 'Personal no disponible' });
       }
-      res.status(200).json(personalFound);
+
+      const response: EntityResponse<Personal> = personalFound;
+      res.status(200).json(response);
     });
   }
 
@@ -306,15 +314,17 @@ export class PersonalController {
       const personales = await this.personal_repository.findByOffsetPagination(final_limit, final_offset);
       const total = await this.personal_repository.countTotal();
 
-      return res.json({
+      const response: OffsetPaginationResponse<Personal> = {
         data: personales,
-        meta_data: {
+        meta: {
           limit: final_limit,
           offset: final_offset,
-          count_data: personales.length,
-          total_count: total,
+          currentCount: personales.length,
+          totalCount: total,
         },
-      });
+      };
+
+      return res.json(response);
     });
   }
 }

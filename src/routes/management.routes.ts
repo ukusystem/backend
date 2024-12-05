@@ -26,6 +26,8 @@ import { paginationAccesoSchema } from '../controllers/management/acceso/schemas
 import { updateAccesoBodySchema, updateAccesoParamSchema } from '../controllers/management/acceso/schemas/update.acceso.schema';
 import { createAccesoSchema } from '../controllers/management/acceso/schemas/create.acceso.schema';
 import { authenticate } from '../middlewares/auth.middleware';
+import { rolParamIdSchema } from '../controllers/management/rol/schemas/param.id.schema';
+import { RolController } from '../controllers/management/rol/rol.controller';
 
 const mysqlUserRepository = new MySQLUserRepository();
 const bycriptPasswordHasher = new BcryptPasswordHasher();
@@ -41,53 +43,60 @@ const userController = new UserController(mysqlUserRepository, bycriptPasswordHa
 const personalController = new PersonalController(mysqlPersonalRepository, mysqlCargoRepository, mysqlContrataRepository);
 const contrataController = new ContrataController(mysqlContrataRepository, mysqlRubroRepository);
 const accesoController = new AccesoController(mysqlAccesoRepository, mysqlPersonalRepository, mysqlEquipoAccesoRepository);
+const rolController = new RolController(mysqlRolRepository);
 
 export const managementRoutes = Router();
 
 // ========== Usuario ==========
 // GET	/management/users?limit=number&offset=number Listar todos los usuarios por paginacion
-managementRoutes.get('/management/users', requestValidator({ query: paginationUserSchema }), userController.listUsersOffset);
+managementRoutes.get('/management/users', authenticate, requestValidator({ query: paginationUserSchema }), userController.listUsersOffset);
 // GET	/management/users/:u_id Obtener usuario por id
-managementRoutes.get('/management/users/:u_id', requestValidator({ params: updateUserParamSchema }), userController.singleUser);
+managementRoutes.get('/management/users/:u_id', authenticate, requestValidator({ params: updateUserParamSchema }), userController.singleUser);
 // POST	/management/users Crear un nuevo usuario.
-managementRoutes.post('/management/users', requestValidator({ body: createUserSchema }), userController.create);
+managementRoutes.post('/management/users', authenticate, requestValidator({ body: createUserSchema }), userController.create);
 // PATCH /management/users/:u_id Actualizar un usuario.
-managementRoutes.patch('/management/users/:u_id', requestValidator({ body: updateUserBodySchema, params: updateUserParamSchema }), userController.update);
+managementRoutes.patch('/management/users/:u_id', authenticate, requestValidator({ body: updateUserBodySchema, params: updateUserParamSchema }), userController.update);
 // DELETE /management/users/:u_id Eliminar un usuario.
-managementRoutes.delete('/management/users/:u_id', requestValidator({ params: updateUserParamSchema }), userController.delete);
+managementRoutes.delete('/management/users/:u_id', authenticate, requestValidator({ params: updateUserParamSchema }), userController.delete);
 
 // ========== Personal ==========
 // GET	/management/personales?limit=number&offset=number Listar todos los personales por paginacion
-managementRoutes.get('/management/personales', requestValidator({ query: paginationPersonalSchema }), personalController.listPersonalesOffset);
+managementRoutes.get('/management/personales', authenticate, requestValidator({ query: paginationPersonalSchema }), personalController.listPersonalesOffset);
 // GET /management/personales/:p_id Obtener personal por id
-managementRoutes.get('/management/personales/:p_id', requestValidator({ params: updatePersonalParamSchema }), personalController.singlePersonal);
+managementRoutes.get('/management/personales/:p_id', authenticate, requestValidator({ params: updatePersonalParamSchema }), personalController.singlePersonal);
 // POST	/management/personales Crear un nuevo personal.
-managementRoutes.post('/management/personales', GeneralMulterMiddleware(personalController.createMulterConfig), personalController.create);
+managementRoutes.post('/management/personales', authenticate, GeneralMulterMiddleware(personalController.createMulterConfig), personalController.create);
 // PATCH /management/personales/:p_id Actualizar un personal.
-managementRoutes.patch('/management/personales/:p_id', requestValidator({ params: updatePersonalParamSchema }), GeneralMulterMiddleware(personalController.createMulterConfig), personalController.update);
+managementRoutes.patch('/management/personales/:p_id', authenticate, requestValidator({ params: updatePersonalParamSchema }), GeneralMulterMiddleware(personalController.createMulterConfig), personalController.update);
 // DELETE /management/personales/:p_id Eliminar un personal.
-managementRoutes.delete('/management/personales/:p_id', requestValidator({ params: updatePersonalParamSchema }), personalController.delete);
+managementRoutes.delete('/management/personales/:p_id', authenticate, requestValidator({ params: updatePersonalParamSchema }), personalController.delete);
 
 // ========== Contrata ==========
 // GET	/management/contratas?limit=number&offset=number Listar todos las contratas por paginacion
-managementRoutes.get('/management/contratas', requestValidator({ query: paginationContrataSchema }), contrataController.listContratasOffset);
+managementRoutes.get('/management/contratas', authenticate, requestValidator({ query: paginationContrataSchema }), contrataController.listContratasOffset);
 // GET /management/contratas/:co_id Obtener contrata por id
-managementRoutes.get('/management/contratas/:co_id', requestValidator({ params: updateContrataParamSchema }), contrataController.singleContrata);
+managementRoutes.get('/management/contratas/:co_id', authenticate, requestValidator({ params: updateContrataParamSchema }), contrataController.singleContrata);
 // POST	/management/contratas Crear una nueva contrata.
-managementRoutes.post('/management/contratas', requestValidator({ body: createContrataSchema }), contrataController.create);
+managementRoutes.post('/management/contratas', authenticate, requestValidator({ body: createContrataSchema }), contrataController.create);
 // PATCH /management/contratas/:co_id Actualizar una contrata.
-managementRoutes.patch('/management/contratas/:co_id', requestValidator({ body: updateContrataBodySchema, params: updateContrataParamSchema }), contrataController.update);
+managementRoutes.patch('/management/contratas/:co_id', authenticate, requestValidator({ body: updateContrataBodySchema, params: updateContrataParamSchema }), contrataController.update);
 // DELETE /management/contratas/:co_id Eliminar una contrata.
-managementRoutes.delete('/management/contratas/:co_id', requestValidator({ params: updateContrataParamSchema }), contrataController.delete);
+managementRoutes.delete('/management/contratas/:co_id', authenticate, requestValidator({ params: updateContrataParamSchema }), contrataController.delete);
 
 // ========== Acceso ==========
 // GET	/management/accesos?limit=number&offset=number Listar todos los accesos por paginacion
-managementRoutes.get('/management/accesos', requestValidator({ query: paginationAccesoSchema }), accesoController.listAccesosOffset);
+managementRoutes.get('/management/accesos', authenticate, requestValidator({ query: paginationAccesoSchema }), accesoController.listAccesosOffset);
 // GET /management/accesos/:a_id Obtener acceso por id
-managementRoutes.get('/management/accesos/:a_id', requestValidator({ params: updateAccesoParamSchema }), accesoController.singleAcceso);
+managementRoutes.get('/management/accesos/:a_id', authenticate, requestValidator({ params: updateAccesoParamSchema }), accesoController.singleAcceso);
 // POST	/management/accesos Crear una nueva acceso.
-managementRoutes.post('/management/accesos', requestValidator({ body: createAccesoSchema }), accesoController.create);
+managementRoutes.post('/management/accesos', authenticate, requestValidator({ body: createAccesoSchema }), accesoController.create);
 // PATCH /management/accesos/:a_id Actualizar un acceso.
-managementRoutes.patch('/management/accesos/:a_id', authenticate, requestValidator({ body: updateAccesoBodySchema, params: updateAccesoParamSchema }), accesoController.update);
+managementRoutes.patch('/management/accesos/:a_id', authenticate, authenticate, requestValidator({ body: updateAccesoBodySchema, params: updateAccesoParamSchema }), accesoController.update);
 // DELETE /management/accesos/:a_id Eliminar un acceso.
-managementRoutes.delete('/management/accesos/:a_id', requestValidator({ params: updateAccesoParamSchema }), accesoController.delete);
+managementRoutes.delete('/management/accesos/:a_id', authenticate, requestValidator({ params: updateAccesoParamSchema }), accesoController.delete);
+
+// ========== Rol ==========
+// GET	/management/roles Listar todos los roles
+managementRoutes.get('/management/roles', authenticate, rolController.listRoles);
+// GET /management/roles/:rl_id Obtener rol por id
+managementRoutes.get('/management/roles/:rl_id', authenticate, requestValidator({ params: rolParamIdSchema }), rolController.singleRol);

@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { PasswordHasher } from './security/passwod.hasher';
-import { UserRepository } from './user.repository';
+import { UserRepository, UserWithRoleAndPersonal } from './user.repository';
 import { asyncErrorHandler } from '../../../utils/asynErrorHandler';
 import { CreateUserDTO } from './dtos/create.user.dto';
 import { PersonalRepository } from '../personal/personal.repository';
@@ -8,6 +8,9 @@ import { RolRepository } from '../rol/rol.repository';
 import { UpdateUserDTO } from './dtos/update.user.dto';
 import { RequestWithUser } from '../../../types/requests';
 import { AuditManager, getRecordAudit } from '../../../models/audit/audit.manager';
+import { Usuario } from './user.entity';
+
+import { EntityResponse, CreateEntityResponse, UpdateResponse, OffsetPaginationResponse, DeleteReponse } from '../shared';
 
 export class UserController {
   constructor(
@@ -46,13 +49,12 @@ export class UserController {
 
       const newUserId = await this.user_repository.create({ ...userDTO, contraseña: passwordHashed });
 
-      res.status(201).json({
-        success: true,
+      const response: CreateEntityResponse = {
+        id: newUserId,
         message: 'Usuario creado satisfactoriamente',
-        data: {
-          u_id: newUserId,
-        },
-      });
+      };
+
+      res.status(201).json(response);
     });
   }
 
@@ -116,10 +118,10 @@ export class UserController {
           const records = getRecordAudit(userFound, finalUserUpdateDTO);
           AuditManager.insert('general', 'general_audit', 'usuario', records, `${user.p_id}. ${user.nombre} ${user.apellido}`);
 
-          return res.status(200).json({
-            success: true,
+          const response: UpdateResponse<Usuario> = {
             message: 'Usuario actualizado exitosamente',
-          });
+          };
+          return res.status(200).json(response);
         }
 
         return res.status(200).json({ success: true, message: 'No se realizaron cambios en los datos del usuario' });
@@ -129,23 +131,23 @@ export class UserController {
     });
   }
 
-  get listUsersCursor() {
-    return asyncErrorHandler(async (req: Request, res: Response, _next: NextFunction) => {
-      const { cursor, page_size } = req.query as { page_size: string | undefined; cursor: string | undefined };
+  // get listUsersCursor() {
+  //   return asyncErrorHandler(async (req: Request, res: Response, _next: NextFunction) => {
+  //     const { cursor, page_size } = req.query as { page_size: string | undefined; cursor: string | undefined };
 
-      const final_page_size: number = page_size !== undefined ? Math.min(Math.max(Number(page_size), 0), 100) : 10; // default page size : 10 ,  max page size : 100
+  //     const final_page_size: number = page_size !== undefined ? Math.min(Math.max(Number(page_size), 0), 100) : 10; // default page size : 10 ,  max page size : 100
 
-      const final_cursor: number | undefined = cursor !== undefined ? Number(cursor) : undefined;
-      const users = await this.user_repository.findByCursorPagination(final_page_size, final_cursor);
-      return res.json({
-        data: users,
-        meta_data: {
-          next_cursor: 0,
-          prev_cursor: 0,
-        },
-      });
-    });
-  }
+  //     const final_cursor: number | undefined = cursor !== undefined ? Number(cursor) : undefined;
+  //     const users = await this.user_repository.findByCursorPagination(final_page_size, final_cursor);
+  //     return res.json({
+  //       data: users,
+  //       meta_data: {
+  //         next_cursor: 0,
+  //         prev_cursor: 0,
+  //       },
+  //     });
+  //   });
+  // }
 
   get listUsersOffset() {
     return asyncErrorHandler(async (req: Request, res: Response, _next: NextFunction) => {
@@ -158,15 +160,16 @@ export class UserController {
       const users = await this.user_repository.findByOffsetPagination(final_limit, final_offset);
       const total = await this.user_repository.countTotal();
 
-      return res.json({
+      const response: OffsetPaginationResponse<UserWithRoleAndPersonal> = {
         data: users,
-        meta_data: {
+        meta: {
           limit: final_limit,
           offset: final_offset,
-          count_data: users.length,
-          total_count: total,
+          currentCount: users.length,
+          totalCount: total,
         },
-      });
+      };
+      return res.json(response);
     });
   }
 
@@ -178,21 +181,25 @@ export class UserController {
         return res.status(400).json({ success: false, message: 'Usuario no disponible' });
       }
       await this.user_repository.softDelete(Number(u_id));
-      res.status(200).json({
-        success: true,
+
+      const response: DeleteReponse = {
         message: 'Usuario eliminado exitosamente',
-      });
+        id: Number(u_id),
+      };
+      res.status(200).json(response);
     });
   }
 
   get singleUser() {
     return asyncErrorHandler(async (req: Request, res: Response, _next: NextFunction) => {
       const { u_id } = req.params as { u_id: string };
-      const userFound = await this.user_repository.findById(Number(u_id));
+      const userFound = await this.user_repository.findWithRoleAndPersonalById(Number(u_id));
       if (userFound === undefined) {
         return res.status(400).json({ success: false, message: 'Usuario no disponible' });
       }
-      res.status(200).json(userFound);
+      const response: EntityResponse<UserWithRoleAndPersonal> = userFound;
+
+      res.status(200).json(response);
     });
   }
 }

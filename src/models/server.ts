@@ -28,6 +28,7 @@ import { NvrManager } from './nvr/nvr.manager';
 import { genericLogger } from '../services/loggers';
 import { RegistroEntradaManager } from '../controllers/socket/registro.entrada';
 import { managementRoutes } from '../routes/management.routes';
+import { TokenManger } from './token.manager';
 
 // import { createServer as createServerHttps } from "https";
 // import fs from "fs";
@@ -160,6 +161,8 @@ export class ServerApp {
 
       await PersonalMapManager.init();
       await RegistroAccesoManager.init();
+
+      await TokenManger.init();
     } catch (error) {
       genericLogger.error(`Server Model | Error init maps`, error);
       throw error;

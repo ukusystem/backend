@@ -7,6 +7,8 @@ import { CreateAccesoDTO } from './dtos/create.acceso.dto';
 import { UpdateAccesoDTO } from './dtos/update.acceso.dto';
 import { AuditManager, getRecordAudit } from '../../../models/audit/audit.manager';
 import { RequestWithUser } from '../../../types/requests';
+import { EntityResponse, CreateEntityResponse, UpdateResponse, OffsetPaginationResponse, DeleteReponse } from '../shared';
+import { Acceso } from './acceso.entity';
 
 export class AccesoController {
   constructor(
@@ -36,13 +38,12 @@ export class AccesoController {
 
       const newAccesoId = await this.acceso_repository.create(accesoDTO);
 
-      res.status(201).json({
-        success: true,
+      const response: CreateEntityResponse = {
+        id: newAccesoId,
         message: 'Acceso creado satisfactoriamente',
-        data: {
-          a_id: newAccesoId,
-        },
-      });
+      };
+
+      res.status(201).json(response);
     });
   }
 
@@ -97,10 +98,10 @@ export class AccesoController {
           const records = getRecordAudit(accesoFound, finalUpdateAccesoDTO);
           AuditManager.insert('general', 'general_audit', 'acceso', records, `${user.p_id}. ${user.nombre} ${user.apellido}`);
 
-          return res.status(200).json({
-            success: true,
+          const response: UpdateResponse<Acceso> = {
             message: 'Acceso actualizado exitosamente',
-          });
+          };
+          return res.status(200).json(response);
         }
 
         return res.status(200).json({ success: true, message: 'No se realizaron cambios en los datos del acceso' });
@@ -120,16 +121,17 @@ export class AccesoController {
 
       const accesos = await this.acceso_repository.findByOffsetPagination(final_limit, final_offset);
       const total = await this.acceso_repository.countTotal();
-
-      return res.json({
+      const response: OffsetPaginationResponse<Acceso> = {
         data: accesos,
-        meta_data: {
+        meta: {
           limit: final_limit,
           offset: final_offset,
-          count_data: accesos.length,
-          total_count: total,
+          currentCount: accesos.length,
+          totalCount: total,
         },
-      });
+      };
+
+      return res.json(response);
     });
   }
 
@@ -141,10 +143,11 @@ export class AccesoController {
         return res.status(400).json({ success: false, message: 'Acceso no disponible' });
       }
       await this.acceso_repository.softDelete(Number(a_id));
-      res.status(200).json({
-        success: true,
+      const response: DeleteReponse = {
         message: 'Acceso eliminado exitosamente',
-      });
+        id: Number(a_id),
+      };
+      res.status(200).json(response);
     });
   }
 
@@ -155,7 +158,8 @@ export class AccesoController {
       if (accesoFound === undefined) {
         return res.status(400).json({ success: false, message: 'Acceso no disponible' });
       }
-      res.status(200).json(accesoFound);
+      const response: EntityResponse<Acceso> = accesoFound;
+      res.status(200).json(response);
     });
   }
 }

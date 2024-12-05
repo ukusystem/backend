@@ -2,16 +2,44 @@ import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import { MySQL2 } from '../../../database/mysql';
 import { CreateUserDTO } from './dtos/create.user.dto';
 import { Usuario } from './user.entity';
-import { UserRepository } from './user.repository';
+import { UserRepository, UserWithRoleAndPersonal } from './user.repository';
 import { UpdateUserDTO } from './dtos/update.user.dto';
 import dayjs from 'dayjs';
 
 interface UsuarioRowData extends RowDataPacket, Usuario {}
+interface UsuarioRoleAndPersonalRowData extends RowDataPacket {
+  u_id: number;
+  usuario: string;
+  fecha: string;
+  rl_id: number;
+  rol: string;
+  p_id: number;
+  nombre: string;
+  apellido: string;
+}
 interface TotalUserRowData extends RowDataPacket {
   total: number;
 }
 
 export class MySQLUserRepository implements UserRepository {
+  async findWithRoleAndPersonalById(u_id: number): Promise<UserWithRoleAndPersonal | undefined> {
+    const users = await MySQL2.executeQuery<UsuarioRoleAndPersonalRowData[]>({
+      sql: `SELECT u.u_id , u.usuario, u.fecha , r.rl_id , r.rol , p.p_id , p.nombre, p.apellido FROM  general.usuario u INNER JOIN general.rol r ON u.u_id = r.rl_id INNER JOIN general.personal p ON u.u_id = p.p_id WHERE u.u_id = ? AND u.activo = 1 LIMIT 1`,
+      values: [u_id],
+    });
+    if (users[0] !== undefined) {
+      const { usuario, fecha, apellido, nombre, p_id, rl_id, rol } = users[0];
+      const result: UserWithRoleAndPersonal = {
+        u_id,
+        usuario,
+        fecha,
+        personal: { apellido, nombre, p_id },
+        rol: { rl_id, rol },
+      };
+      return result;
+    }
+    return undefined;
+  }
   async isPersonalAvailable(p_id: number): Promise<boolean> {
     const users = await MySQL2.executeQuery<UsuarioRowData[]>({ sql: `SELECT * FROM general.usuario WHERE p_id = ? AND activo = 1 LIMIT 1`, values: [p_id] });
     return users[0] === undefined;
@@ -22,9 +50,13 @@ export class MySQLUserRepository implements UserRepository {
     return totals[0].total;
   }
 
-  async findByOffsetPagination(limit: number, offset: number): Promise<Usuario[]> {
-    const users = await MySQL2.executeQuery<UsuarioRowData[]>({ sql: `SELECT u_id, usuario, rl_id, fecha, p_id, activo FROM general.usuario WHERE activo = 1 ORDER BY u_id ASC LIMIT ? OFFSET ?`, values: [limit, offset] });
-    return users;
+  async findByOffsetPagination(limit: number, offset: number): Promise<UserWithRoleAndPersonal[]> {
+    const users = await MySQL2.executeQuery<UsuarioRoleAndPersonalRowData[]>({
+      sql: `SELECT u.u_id , u.usuario, u.fecha , r.rl_id , r.rol , p.p_id , p.nombre, p.apellido FROM  general.usuario u INNER JOIN general.rol r ON u.rl_id = r.rl_id INNER JOIN general.personal p ON u.p_id = p.p_id WHERE u.activo = 1 ORDER BY u.u_id ASC LIMIT ? OFFSET ?`,
+      values: [limit, offset],
+    });
+    const result = users.map<UserWithRoleAndPersonal>(({ apellido, fecha, nombre, p_id, rl_id, rol, u_id, usuario }) => ({ u_id, usuario, fecha, personal: { apellido, nombre, p_id }, rol: { rl_id, rol } }));
+    return result;
   }
 
   async findByCursorPagination(limit: number, cursor?: number): Promise<Usuario[]> {

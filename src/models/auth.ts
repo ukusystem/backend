@@ -50,7 +50,7 @@ export interface CreateUserTokenDTO {
 export class Auth {
   static findUser = simpleErrorHandler<UserInfo | null, Pick<Usuario, 'usuario'>>(async ({ usuario }) => {
     const userFound = await MySQL2.executeQuery<UserFound[]>({
-      sql: `SELECT u.u_id, u.usuario, u.contraseña, u.rl_id, u.fecha, u.p_id, p.nombre, p.apellido, p.dni, p.telefono, p.correo, p.c_id, p.foto, c.contrata , c.co_id, c.r_id, ru.rubro, r.rol, r.descripcion FROM general.usuario u INNER JOIN general.rol r ON u.rl_id = r.rl_id INNER JOIN general.personal p ON u.p_id = p.p_id INNER JOIN general.contrata c ON p.co_id = c.co_id INNER JOIN general.rubro ru ON c.r_id = ru.r_id  WHERE u.usuario = ? `,
+      sql: `SELECT u.u_id, u.usuario, u.contraseña, u.rl_id, u.fecha, u.p_id, p.nombre, p.apellido, p.dni, p.telefono, p.correo, p.c_id, p.foto, c.contrata , c.co_id, c.r_id, ru.rubro, r.rol, r.descripcion FROM general.usuario u INNER JOIN general.rol r ON u.rl_id = r.rl_id INNER JOIN general.personal p ON u.p_id = p.p_id INNER JOIN general.contrata c ON p.co_id = c.co_id INNER JOIN general.rubro ru ON c.r_id = ru.r_id  WHERE u.usuario = ?  AND u.activo = 1`,
       values: [usuario],
     });
 
@@ -84,7 +84,7 @@ export class Auth {
     });
   }
 
-  static async revokeUserToken(ut_id: number) {
+  static async revokeTokenById(ut_id: number) {
     const updated_at = dayjs().format('YYYY-MM-DD HH:mm:ss');
     await MySQL2.executeQuery<ResultSetHeader>({
       sql: `UPDATE general.user_token SET revoked = ? , updated_at = ? WHERE ut_id = ? LIMIT 1`,
@@ -92,17 +92,26 @@ export class Auth {
     });
   }
 
-  static async getRefreshTokens(user_id: number): Promise<UserToken[]> {
+  static async getTokenStored(user_id: number, refresh_token_input: string): Promise<UserToken | undefined> {
     const user_tokens = await MySQL2.executeQuery<UserTokenRowData[]>({
-      sql: `SELECT * FROM general.user_token WHERE user_id = ? AND revoked = 0 AND expires_at > NOW() LIMIT 1`,
+      sql: `SELECT * FROM general.user_token WHERE user_id = ? AND revoked = 0 AND expires_at > NOW()`,
       values: [user_id],
     });
-    return user_tokens;
+    for (const token of user_tokens) {
+      const refresh_token_decrypted = JwtEncription.decrypt(token.refresh_token);
+
+      const isMatch = refresh_token_input === refresh_token_decrypted;
+      if (isMatch) {
+        return token;
+      }
+    }
+
+    return undefined;
   }
 
   static findUserById = simpleErrorHandler<UserInfo | null, Pick<Usuario, 'u_id'>>(async ({ u_id }) => {
     const userFound = await MySQL2.executeQuery<UserFound[]>({
-      sql: `SELECT u.u_id, u.usuario, u.contraseña, u.rl_id, u.fecha, u.p_id, p.nombre, p.apellido, p.dni, p.telefono, p.correo, p.c_id, p.foto, c.contrata , c.co_id, c.r_id, r.rol, r.descripcion FROM general.usuario u INNER JOIN general.rol r ON u.rl_id = r.rl_id INNER JOIN general.personal p ON u.p_id = p.p_id INNER JOIN general.contrata c ON p.co_id = c.co_id WHERE u.u_id = ?`,
+      sql: `SELECT u.u_id, u.usuario, u.contraseña, u.rl_id, u.fecha, u.p_id, p.nombre, p.apellido, p.dni, p.telefono, p.correo, p.c_id, p.foto, c.contrata , c.co_id, c.r_id, r.rol, r.descripcion FROM general.usuario u INNER JOIN general.rol r ON u.rl_id = r.rl_id INNER JOIN general.personal p ON u.p_id = p.p_id INNER JOIN general.contrata c ON p.co_id = c.co_id WHERE u.u_id = ? AND u.activo = 1`,
       values: [u_id],
     });
 

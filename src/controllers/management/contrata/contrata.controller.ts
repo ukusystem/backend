@@ -7,6 +7,9 @@ import { UpdateContrataDTO } from './dtos/update.contrata.dto';
 import { RequestWithUser } from '../../../types/requests';
 import { AuditManager, getRecordAudit } from '../../../models/audit/audit.manager';
 
+import { Contrata } from './contrata.entity';
+import { EntityResponse, CreateEntityResponse, UpdateResponse, OffsetPaginationResponse, DeleteReponse } from '../shared';
+
 export class ContrataController {
   constructor(
     private readonly contrata_repository: ContrataRepository,
@@ -23,14 +26,12 @@ export class ContrataController {
       }
 
       const newContrataId = await this.contrata_repository.create(contrataDTO);
-
-      res.status(201).json({
-        success: true,
+      const response: CreateEntityResponse = {
+        id: newContrataId,
         message: 'Contrata creado satisfactoriamente',
-        data: {
-          co_id: newContrataId,
-        },
-      });
+      };
+
+      res.status(201).json(response);
     });
   }
 
@@ -73,10 +74,11 @@ export class ContrataController {
           const records = getRecordAudit(contrataFound, finalContrataUpdateDTO);
           AuditManager.insert('general', 'general_audit', 'contrata', records, `${user.p_id}. ${user.nombre} ${user.apellido}`);
 
-          return res.status(200).json({
-            success: true,
+          const response: UpdateResponse<Contrata> = {
             message: 'Contrata actualizado exitosamente',
-          });
+          };
+
+          return res.status(200).json(response);
         }
 
         return res.status(200).json({ success: true, message: 'No se realizaron cambios en los datos de la contrata' });
@@ -97,15 +99,17 @@ export class ContrataController {
       const contratas = await this.contrata_repository.findByOffsetPagination(final_limit, final_offset);
       const total = await this.contrata_repository.countTotal();
 
-      return res.json({
+      const response: OffsetPaginationResponse<Contrata> = {
         data: contratas,
-        meta_data: {
+        meta: {
           limit: final_limit,
           offset: final_offset,
-          count_data: contratas.length,
-          total_count: total,
+          currentCount: contratas.length,
+          totalCount: total,
         },
-      });
+      };
+
+      return res.json(response);
     });
   }
 
@@ -117,10 +121,12 @@ export class ContrataController {
         return res.status(400).json({ success: false, message: 'Contrata no disponible' });
       }
       await this.contrata_repository.softDelete(Number(co_id));
-      res.status(200).json({
-        success: true,
+
+      const response: DeleteReponse = {
         message: 'Contrata eliminado exitosamente',
-      });
+        id: Number(co_id),
+      };
+      res.status(200).json(response);
     });
   }
 
@@ -131,7 +137,9 @@ export class ContrataController {
       if (contrataFound === undefined) {
         return res.status(400).json({ success: false, message: 'Contrata no disponible' });
       }
-      res.status(200).json(contrataFound);
+
+      const response: EntityResponse<Contrata> = contrataFound;
+      res.status(200).json(response);
     });
   }
 }
