@@ -2610,6 +2610,7 @@ export class ManagerAttach extends BaseAttach {
 
                   // Get version fom content
                   // this._log(`Getting version from content`);
+                  // console.log(firmwareBase64);
                   const newVer = useful.getVersionFromBase64(firmwareBase64);
                   if (!newVer || !(newVer.major >= 0 && newVer.minor >= 0 && newVer.patch >= 0)) {
                     this._addResponse(id, codes.ERR_CORRUPTED);
@@ -2688,7 +2689,7 @@ export class ManagerAttach extends BaseAttach {
                   this._addResponse(id, codes.AIO_OK);
 
                   // Pass firmware to try to update all controllers
-                  selector.setFirmwareForAll(Buffer.from(firmwareBase64), newVer);
+                  selector.setFirmwareForAll(firmwareBase64, newVer);
 
                   break;
                 default:
@@ -3206,12 +3207,22 @@ export class Selector {
    * @param newFirmwareBuffer The buffer to get the firmware from.
    * @param version Version object. It should be generated parsing the firmware.
    */
-  public setFirmwareForAll(newFirmwareBuffer: Buffer, version: Firmware) {
+  public setFirmwareForAll(newFirmwareBase64: string, version: Firmware) {
+    const newFirmwareBuffer = Buffer.from(newFirmwareBase64);
     const firmwareChunks: string[] = [];
     let lastIndex = 0;
+    console.log(`Base64 head '${newFirmwareBuffer.toString('base64').substring(0, 30)}' Hex head '${newFirmwareBuffer.subarray(0, 0x30 + 16).toString('hex')}'`);
+    // console.log(newFirmwareBuffer.subarray(0, 0x30).toString('hex'));
     for (let i = 0; i < newFirmwareBuffer.length; i = i + BaseAttach.CHUNK_LENGTH) {
       lastIndex = i + BaseAttach.CHUNK_LENGTH;
-      firmwareChunks.push(newFirmwareBuffer.subarray(i, lastIndex).toString('base64'));
+      const sub = newFirmwareBuffer.subarray(i, lastIndex);
+      firmwareChunks.push(sub.toString('base64'));
+
+      // Print one chunk
+      // if (i === 0) {
+      //   console.log(`First chunk ${sub.toString('hex').substring(0, 20)}`);
+      //   console.log(`First base64 ${firmwareChunks[i].substring(0, 20)}`);
+      // }
     }
     if (lastIndex < newFirmwareBuffer.length) {
       firmwareChunks.push(newFirmwareBuffer.subarray(lastIndex).toString('base64'));
