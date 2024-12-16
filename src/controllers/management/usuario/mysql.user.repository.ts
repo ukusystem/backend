@@ -22,6 +22,9 @@ interface TotalUserRowData extends RowDataPacket {
 }
 
 export class MySQLUserRepository implements UserRepository {
+  async softDeleteByPersonalId(p_id: number): Promise<void> {
+    await MySQL2.executeQuery<ResultSetHeader>({ sql: `UPDATE general.usuario SET activo = 0 WHERE p_id = ?`, values: [p_id] });
+  }
   async findWithRoleAndPersonalById(u_id: number): Promise<UserWithRoleAndPersonal | undefined> {
     const users = await MySQL2.executeQuery<UsuarioRoleAndPersonalRowData[]>({
       sql: `SELECT u.u_id , u.usuario, u.fecha , r.rl_id , r.rol , p.p_id , p.nombre, p.apellido FROM  general.usuario u INNER JOIN general.rol r ON u.u_id = r.rl_id INNER JOIN general.personal p ON u.u_id = p.p_id WHERE u.u_id = ? AND u.activo = 1 LIMIT 1`,

@@ -6,6 +6,10 @@ import { MySQL2 } from '../../../database/mysql';
 interface RubroRowData extends RowDataPacket, Rubro {}
 
 export class MySQLRubroRepository implements RubroRepository {
+  async findAll(): Promise<Rubro[]> {
+    const rubros = await MySQL2.executeQuery<RubroRowData[]>({ sql: `SELECT * FROM general.rubro` });
+    return rubros;
+  }
   async findById(r_id: number): Promise<Rubro | undefined> {
     const rubros = await MySQL2.executeQuery<RubroRowData[]>({ sql: `SELECT * FROM general.rubro WHERE r_id = ? LIMIT 1`, values: [r_id] });
     return rubros[0];

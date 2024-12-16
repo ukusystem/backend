@@ -116,7 +116,7 @@ export class Camera {
         const { region, nododb_name, nodo, ctrl_id, rgn_id } = item;
 
         const cams = await MySQL2.executeQuery<CameraInfoRowData[]>({
-          sql: `SELECT  cmr_id ,ip , descripcion, puertows, c.tc_id ,tipo, marca FROM ${nododb_name}.camara c INNER JOIN general.marca m ON c.m_id = m.m_id INNER JOIN general.tipocamara t ON c.tc_id = t.tc_id WHERE c.activo = 1 ORDER BY c.ip ASC`,
+          sql: `SELECT cmr_id ,ip , descripcion, puertows, c.tc_id ,tipo, marca FROM ${nododb_name}.camara c INNER JOIN general.marca m ON c.m_id = m.m_id INNER JOIN general.tipocamara t ON c.tc_id = t.tc_id WHERE c.activo = 1 ORDER BY c.ip ASC`,
         });
 
         if (cams.length > 0) {

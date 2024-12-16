@@ -28,6 +28,8 @@ import { createAccesoSchema } from '../controllers/management/acceso/schemas/cre
 import { authenticate } from '../middlewares/auth.middleware';
 import { rolParamIdSchema } from '../controllers/management/rol/schemas/param.id.schema';
 import { RolController } from '../controllers/management/rol/rol.controller';
+import { rubroParamIdSchema } from '../controllers/management/rubro/schemas/param.id.schema';
+import { RubroController } from '../controllers/management/rubro/rubro.controller';
 
 const mysqlUserRepository = new MySQLUserRepository();
 const bycriptPasswordHasher = new BcryptPasswordHasher();
@@ -41,9 +43,10 @@ const mysqlRubroRepository = new MySQLRubroRepository();
 
 const userController = new UserController(mysqlUserRepository, bycriptPasswordHasher, mysqlPersonalRepository, mysqlRolRepository);
 const personalController = new PersonalController(mysqlPersonalRepository, mysqlCargoRepository, mysqlContrataRepository);
-const contrataController = new ContrataController(mysqlContrataRepository, mysqlRubroRepository);
+const contrataController = new ContrataController(mysqlContrataRepository, mysqlRubroRepository, mysqlPersonalRepository, mysqlUserRepository);
 const accesoController = new AccesoController(mysqlAccesoRepository, mysqlPersonalRepository, mysqlEquipoAccesoRepository);
 const rolController = new RolController(mysqlRolRepository);
+const rubroController = new RubroController(mysqlRubroRepository);
 
 export const managementRoutes = Router();
 
@@ -73,7 +76,8 @@ managementRoutes.delete('/management/personales/:p_id', authenticate, requestVal
 
 // ========== Contrata ==========
 // GET	/management/contratas?limit=number&offset=number Listar todos las contratas por paginacion
-managementRoutes.get('/management/contratas', authenticate, requestValidator({ query: paginationContrataSchema }), contrataController.listContratasOffset);
+// managementRoutes.get('/management/contratas', authenticate, requestValidator({ query: paginationContrataSchema }), contrataController.listContratasOffset);
+managementRoutes.get('/management/contratas', requestValidator({ query: paginationContrataSchema }), contrataController.listContratasOffset);
 // GET /management/contratas/:co_id Obtener contrata por id
 managementRoutes.get('/management/contratas/:co_id', authenticate, requestValidator({ params: updateContrataParamSchema }), contrataController.singleContrata);
 // POST	/management/contratas Crear una nueva contrata.
@@ -100,3 +104,9 @@ managementRoutes.delete('/management/accesos/:a_id', authenticate, requestValida
 managementRoutes.get('/management/roles', authenticate, rolController.listRoles);
 // GET /management/roles/:rl_id Obtener rol por id
 managementRoutes.get('/management/roles/:rl_id', authenticate, requestValidator({ params: rolParamIdSchema }), rolController.singleRol);
+
+// ========== Rubro ==========
+// GET	/management/rubros Listar todos los rubros
+managementRoutes.get('/management/rubros', authenticate, rubroController.listRubros);
+// GET /management/rubros/:r_id Obtener rubro por id
+managementRoutes.get('/management/rubros/:r_id', authenticate, requestValidator({ params: rubroParamIdSchema }), rubroController.singleRubro);

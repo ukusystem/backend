@@ -2,18 +2,23 @@ import { NextFunction, Request, Response } from 'express';
 import { asyncErrorHandler } from '../../../utils/asynErrorHandler';
 import { RubroRepository } from '../rubro/rubro.repository';
 import { CreateContrataDTO } from './dtos/create.contrata.dto';
-import { ContrataRepository } from './contrata.repository';
+import { ContrataRepository, ContrataWithRubro } from './contrata.repository';
 import { UpdateContrataDTO } from './dtos/update.contrata.dto';
 import { RequestWithUser } from '../../../types/requests';
 import { AuditManager, getRecordAudit } from '../../../models/audit/audit.manager';
 
 import { Contrata } from './contrata.entity';
 import { EntityResponse, CreateEntityResponse, UpdateResponse, OffsetPaginationResponse, DeleteReponse } from '../shared';
+import { PersonalRepository } from '../personal/personal.repository';
+import { UserRepository } from '../usuario/user.repository';
+import { PaginationContrata } from './schemas/pagination.contrata.schema';
 
 export class ContrataController {
   constructor(
     private readonly contrata_repository: ContrataRepository,
     private readonly rubro_repository: RubroRepository,
+    private readonly personal_repository: PersonalRepository,
+    private readonly user_repository: UserRepository,
   ) {}
 
   get create() {
@@ -90,21 +95,32 @@ export class ContrataController {
 
   get listContratasOffset() {
     return asyncErrorHandler(async (req: Request, res: Response, _next: NextFunction) => {
-      const { offset, limit } = req.query as { limit: string | undefined; offset: string | undefined };
+      // const { offset, limit } = req.query as { limit: string | undefined; offset: string | undefined };
+
+      const { offset, limit, filters }: PaginationContrata = req.query;
+      console.log(req.query);
 
       const final_limit: number = limit !== undefined ? Math.min(Math.max(Number(limit), 0), 100) : 10; // default limit : 10 ,  max limit : 100
 
       const final_offset: number = offset !== undefined ? Number(offset) : 0; // default offset : 0
 
-      const contratas = await this.contrata_repository.findByOffsetPagination(final_limit, final_offset);
+      const contratas = await this.contrata_repository.findByOffsetPagination(final_limit, final_offset, filters);
+
+      const contratasWithTotalPersonal = await Promise.all(
+        contratas.map(async (contrata) => {
+          const totalPersonal = await this.personal_repository.countTotalByCotrataId(contrata.co_id);
+          return { ...contrata, total_personal: totalPersonal };
+        }),
+      );
+
       const total = await this.contrata_repository.countTotal();
 
-      const response: OffsetPaginationResponse<Contrata> = {
-        data: contratas,
+      const response: OffsetPaginationResponse<ContrataWithRubro & { total_personal: number }> = {
+        data: contratasWithTotalPersonal,
         meta: {
           limit: final_limit,
           offset: final_offset,
-          currentCount: contratas.length,
+          currentCount: contratasWithTotalPersonal.length,
           totalCount: total,
         },
       };
@@ -117,10 +133,18 @@ export class ContrataController {
     return asyncErrorHandler(async (req: Request, res: Response, _next: NextFunction) => {
       const { co_id } = req.params as { co_id: string };
       const contrataFound = await this.contrata_repository.findById(Number(co_id));
+
       if (contrataFound === undefined) {
         return res.status(400).json({ success: false, message: 'Contrata no disponible' });
       }
+
       await this.contrata_repository.softDelete(Number(co_id));
+      await this.personal_repository.softDeleteByContrata(Number(co_id));
+
+      const personalesContrata = await this.personal_repository.findByContrataId(Number(co_id));
+      for (const personal of personalesContrata) {
+        await this.user_repository.softDeleteByPersonalId(personal.p_id);
+      }
 
       const response: DeleteReponse = {
         message: 'Contrata eliminado exitosamente',
@@ -133,12 +157,13 @@ export class ContrataController {
   get singleContrata() {
     return asyncErrorHandler(async (req: Request, res: Response, _next: NextFunction) => {
       const { co_id } = req.params as { co_id: string };
-      const contrataFound = await this.contrata_repository.findById(Number(co_id));
+      const contrataFound = await this.contrata_repository.findWithRubroById(Number(co_id));
       if (contrataFound === undefined) {
         return res.status(400).json({ success: false, message: 'Contrata no disponible' });
       }
+      const totalPersonal = await this.personal_repository.countTotalByCotrataId(contrataFound.co_id);
 
-      const response: EntityResponse<Contrata> = contrataFound;
+      const response: EntityResponse<ContrataWithRubro & { total_personal: number }> = { ...contrataFound, total_personal: totalPersonal };
       res.status(200).json(response);
     });
   }

@@ -26,6 +26,7 @@ export interface UserRepository {
   isUsernameAvailable(username: string): Promise<boolean>;
   isPersonalAvailable(p_id: number): Promise<boolean>;
   softDelete(u_id: number): Promise<void>;
+  softDeleteByPersonalId(p_id: number): Promise<void>;
   findByCursorPagination(limit: number, cursor?: number): Promise<Usuario[]>;
   // findByOffsetPagination(limit: number, offset: number): Promise<Usuario[]>;
   findByOffsetPagination(limit: number, offset: number): Promise<UserWithRoleAndPersonal[]>;

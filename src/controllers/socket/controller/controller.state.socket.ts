@@ -34,9 +34,9 @@ export const contollerStateSocket = async (io: Server, socket: SocketControllerS
   const observer = new ControllerStateSocketObserver(socket);
   ControllerStateManager.registerObserver(ctrl_id, observer);
 
-  socket.on('setMode', (newMode) => {
-    ControllerMapManager.update(ctrl_id, { modo: newMode });
-  });
+  // socket.on('setMode', (newMode) => {
+  //   ControllerMapManager.update(ctrl_id, { modo: newMode });
+  // });
 
   socket.on('setSecurity', async (newSecurity) => {
     // ControllerStateManager.socketAddUpdate(ctrl_id, { disableSecurityButton: true });

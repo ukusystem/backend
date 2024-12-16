@@ -67,6 +67,7 @@ export class CamStreamSocketManager {
       observerConfig.observer.updateFlux(frameBase64);
     }
   }
+
   static notifyError(direction: CamStreamDirection, message: string): void {
     const observerConfig = CamStreamSocketManager.#getObserver(direction);
     if (observerConfig) {
