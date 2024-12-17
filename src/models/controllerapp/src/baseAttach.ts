@@ -1656,7 +1656,7 @@ export class NodeAttach extends BaseAttach {
   askSendFirmware(chunks: string[], version: Firmware) {
     // Ask controller if this update is needed
     // console.log(`Consulting controller for update`);
-    this.addCommandForController(codes.CMD_UPDATE, -1, null, [version.major.toString(), version.minor.toString(), version.patch.toString()], (code, tokenData) => {
+    this.addCommandForController(codes.CMD_UPDATE, -1, null, [chunks.length.toString(), version.major.toString(), version.minor.toString(), version.patch.toString()], (code, tokenData) => {
       if (code !== codes.AIO_OK) {
         this._log('Update not nedded by controller');
         return;
@@ -2689,7 +2689,7 @@ export class ManagerAttach extends BaseAttach {
                   this._addResponse(id, codes.AIO_OK);
 
                   // Pass firmware to try to update all controllers
-                  selector.setFirmwareForAll(firmwareBase64, newVer);
+                  await selector.setFirmwareForAll(firmwareFilename, newVer);
 
                   break;
                 default:
@@ -3204,37 +3204,53 @@ export class Selector {
 
   /**
    * Use a firmware buffer and a version to try to update all currently connected controllers.
-   * @param newFirmwareBuffer The buffer to get the firmware from.
+   * @param newFirmwareFilename The file containing the firmware to update with. The file should have been generated when the firmware was received.
    * @param version Version object. It should be generated parsing the firmware.
    */
-  public setFirmwareForAll(newFirmwareBase64: string, version: Firmware) {
-    const newFirmwareBuffer = Buffer.from(newFirmwareBase64);
+  public async setFirmwareForAll(newFirmwareFilename: string, version: Firmware) {
+    const newFirmware64 = await useful.readFileAsBase64(newFirmwareFilename);
+    if (!newFirmware64) {
+      console.log('ERROR Reading file just created?');
+      return;
+    }
+    const newFirmwareBuffer = Buffer.from(newFirmware64, 'base64');
     const firmwareChunks: string[] = [];
-    let lastIndex = 0;
-    console.log(`Base64 head '${newFirmwareBuffer.toString('base64').substring(0, 30)}' Hex head '${newFirmwareBuffer.subarray(0, 0x30 + 16).toString('hex')}'`);
+    // console.log(
+    //   `Base64 head '${newFirmware64.substring(0, 30)}' Hex head '${Buffer.from(newFirmware64, 'base64')
+    //     .subarray(0, 0x30 + 16)
+    //     .toString('hex')}'`,
+    // );
     // console.log(newFirmwareBuffer.subarray(0, 0x30).toString('hex'));
+    let lastIndex = 0;
+    let counter = 0;
+
     for (let i = 0; i < newFirmwareBuffer.length; i = i + BaseAttach.CHUNK_LENGTH) {
       lastIndex = i + BaseAttach.CHUNK_LENGTH;
       const sub = newFirmwareBuffer.subarray(i, lastIndex);
       firmwareChunks.push(sub.toString('base64'));
+      counter = counter + 1;
 
-      // Print one chunk
-      // if (i === 0) {
-      //   console.log(`First chunk ${sub.toString('hex').substring(0, 20)}`);
-      //   console.log(`First base64 ${firmwareChunks[i].substring(0, 20)}`);
-      // }
-    }
-    if (lastIndex < newFirmwareBuffer.length) {
-      firmwareChunks.push(newFirmwareBuffer.subarray(lastIndex).toString('base64'));
-    }
-    if (newFirmwareBuffer && version) {
-      for (const node of this.nodeAttachments) {
-        if (!node.isLogged()) {
-          continue;
-        }
-        node.askSendFirmware(firmwareChunks, version);
+      if (i + BaseAttach.CHUNK_LENGTH >= newFirmwareBuffer.length) {
+        console.log(`Last chunk '${sub.toString('hex')}'`);
       }
     }
+
+    // Apparently never used
+    // if (lastIndex < newFirmwareBuffer.length) {
+    //   firmwareChunks.push(newFirmwareBuffer.subarray(lastIndex).toString('base64'));
+    //   counter = counter + 1;
+    //   console.log('Tail caught');
+    // }
+
+    console.log(`Splitted in ${firmwareChunks.length} chunks. Counter ${counter}`);
+    // if (newFirmware64 && version) {
+    for (const node of this.nodeAttachments) {
+      if (!node.isLogged()) {
+        continue;
+      }
+      node.askSendFirmware(firmwareChunks, version);
+    }
+    // }
   }
 
   /**

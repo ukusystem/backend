@@ -64,7 +64,7 @@ function getVersionFromBuffer(buffer: Buffer): Firmware | null {
   const sub = buffer.subarray(start, start + length);
   // console.log(buffer.subarray(0, start).toString('hex'));
   // console.log(sub.toString('hex'));
-  console.log("Base64 head '" + buffer.toString('base64').substring(0, 30) + "' Hex head '" + buffer.subarray(0, start + length).toString('hex') + "'");
+  // console.log("Base64 head '" + buffer.toString('base64').substring(0, 30) + "' Hex head '" + buffer.subarray(0, start + length).toString('hex') + "'");
   const versionString = sub.toString();
   const verParts = versionString.split('.');
   const major = parseInt(verParts[0]);
