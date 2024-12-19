@@ -35,6 +35,7 @@ import * as sm from '../../../controllers/socket';
 import path from 'path';
 import { Firmware } from './firmware';
 import { MyStringIterator } from './myStringIterator';
+import { createHash } from 'crypto';
 
 /**
  * Base attachment for the sockets
@@ -2608,6 +2609,19 @@ export class ManagerAttach extends BaseAttach {
                   }
                   const firmwareBase64 = firmwareData[0].getString();
 
+                  // Check integrity of firmware
+                  const newBuffer = Buffer.from(firmwareBase64, 'base64');
+                  const bufferToHash = newBuffer.subarray(0, -32);
+                  const hashInFile = newBuffer.subarray(-32);
+                  const calculatedSha = createHash('sha256').update(bufferToHash).digest();
+                  const compareRes = bufferToHash.compare(hashInFile);
+                  console.log(`Compare result: ${compareRes}`);
+                  this._log(`Firmware has ${compareRes === 0 ? 'valid' : 'invalid'} content. Sha256 calculated (${calculatedSha.length})): '${calculatedSha.toString('hex')}'. Sha256 in file (${hashInFile.length}): '${hashInFile.toString('hex')}'`);
+                  if (compareRes !== 0) {
+                    this._addResponse(id, codes.ERR_CORRUPTED);
+                    break;
+                  }
+
                   // Get version fom content
                   // this._log(`Getting version from content`);
                   // console.log(firmwareBase64);
@@ -3231,7 +3245,7 @@ export class Selector {
       counter = counter + 1;
 
       if (i + BaseAttach.CHUNK_LENGTH >= newFirmwareBuffer.length) {
-        console.log(`Last chunk '${sub.toString('hex')}'`);
+        // console.log(`Last chunk '${sub.toString('hex')}'`);
       }
     }
 
@@ -3242,7 +3256,7 @@ export class Selector {
     //   console.log('Tail caught');
     // }
 
-    console.log(`Splitted in ${firmwareChunks.length} chunks. Counter ${counter}`);
+    // console.log(`Splitted in ${firmwareChunks.length} chunks. Counter ${counter}`);
     // if (newFirmware64 && version) {
     for (const node of this.nodeAttachments) {
       if (!node.isLogged()) {
