@@ -29,7 +29,7 @@ import * as db2 from './db2';
 import * as net from 'net';
 import * as cp from 'child_process';
 import { Camara } from '../../../types/db';
-import { Firmware } from './firmware';
+import { FirmwareVersion } from './firmware';
 // import { ControllerStateManager } from '../../../controllers/socket';
 
 export class Main {
@@ -216,7 +216,7 @@ export class Main {
    * @param ver2
    * @returns 1 if first version is newer than the second, 0 if the same and -1 if older.
    */
-  public static compareVersions(ver1: Firmware, ver2: Firmware) {
+  public static compareVersions(ver1: FirmwareVersion, ver2: FirmwareVersion) {
     if (ver1.major === ver2.major && ver1.minor === ver2.minor && ver1.patch === ver2.patch) {
       return 0;
     } else if (ver1.major > ver2.major || (ver1.major === ver2.major && ver1.minor > ver2.minor) || (ver1.major === ver2.major && ver1.minor === ver2.minor && ver1.patch > ver2.patch)) {

@@ -33,7 +33,7 @@ import * as db2 from './db2';
 // import * as sm from "@ctrls/socket";
 import * as sm from '../../../controllers/socket';
 import path from 'path';
-import { Firmware } from './firmware';
+import { FirmwareVersion } from './firmware';
 import { MyStringIterator } from './myStringIterator';
 import { createHash } from 'crypto';
 
@@ -1542,14 +1542,68 @@ export class NodeAttach extends BaseAttach {
             this._log(`Type of internal error is unknown. Value ${useful.toHex(internalErrorCode)}`);
         }
         break;
+
+      // This message means that the login was successful
       case codes.CMD_HELLO_FROM_CTRL:
         this._log('Received hello from controller. Logged in.');
         this.setLogged(true);
 
+        // Register connection
         this.removePendingMessageByID(id, codes.AIO_OK);
         this.insertNet(true);
         // this._log("Logged in to controller");
+
+        // Consult version and update
+
+        // Verify version with the database
+        const storedVersionsData = await executeQuery<db2.FirmwareData[]>(queries.firmwareOrderSelect, null);
+        if (!storedVersionsData) {
+          this._log(`UPDATING_CONTROLLER: Could not read firmware list from database`);
+          break;
+        }
+
+        let validFile: string | null = null;
+        let validVersion: FirmwareVersion | null = null;
+        for (const firm of storedVersionsData) {
+          const fileBuffer = await useful.readFileAsBuffer(firm.archivo);
+          if (!fileBuffer) {
+            this._log(`Could not read file ${firm.archivo}`);
+            continue;
+          }
+          const fileBase64 = fileBuffer.toString('base64');
+
+          const shaRes = Selector.checkFirmwareShaFromBase64(fileBase64);
+          if (!shaRes) {
+            this._log(`File sha256 check failed`);
+            continue;
+          }
+
+          const fileVer = useful.getVersionFromBase64(fileBase64);
+          if (!fileVer) {
+            this._log(`File has no version`);
+            continue;
+          }
+
+          const matchVersion = Main.compareVersions(fileVer, { major: firm.mayor, minor: firm.minor, patch: firm.patch });
+          if (!matchVersion) {
+            this._log(`File version and database' doesn't match`);
+            continue;
+          }
+
+          validFile = fileBase64;
+          validVersion = fileVer;
+          break;
+        }
+
+        if (!validFile || !validVersion) {
+          this._log(`There was no valid firmware`);
+          break;
+        }
+        const chunks = _selector.splitFirmware(validFile);
+        this.askSendFirmware(chunks, validVersion);
+
         break;
+
       case codes.VALUE_ORDER_RESULT:
         this._log(`Received order result ${command}`);
         const orderData = this._parseMessage(parts, queries.orderParse, id, false);
@@ -1654,9 +1708,9 @@ export class NodeAttach extends BaseAttach {
     return true;
   }
 
-  askSendFirmware(chunks: string[], version: Firmware) {
+  askSendFirmware(chunks: string[], version: FirmwareVersion) {
     // Ask controller if this update is needed
-    // console.log(`Consulting controller for update`);
+    this._log(`Consulting controller for update to version ${version.major}.${version.minor}.${version.patch}`);
     this.addCommandForController(codes.CMD_UPDATE, -1, null, [chunks.length.toString(), version.major.toString(), version.minor.toString(), version.patch.toString()], (code, tokenData) => {
       if (code !== codes.AIO_OK) {
         this._log('Update not nedded by controller');
@@ -2609,15 +2663,11 @@ export class ManagerAttach extends BaseAttach {
                   }
                   const firmwareBase64 = firmwareData[0].getString();
 
-                  // Check integrity of firmware
-                  const newBuffer = Buffer.from(firmwareBase64, 'base64');
-                  const bufferToHash = newBuffer.subarray(0, -32);
-                  const hashInFile = newBuffer.subarray(-32);
-                  const calculatedSha = createHash('sha256').update(bufferToHash).digest();
-                  const compareRes = bufferToHash.compare(hashInFile);
-                  console.log(`Compare result: ${compareRes}`);
-                  this._log(`Firmware has ${compareRes === 0 ? 'valid' : 'invalid'} content. Sha256 calculated (${calculatedSha.length})): '${calculatedSha.toString('hex')}'. Sha256 in file (${hashInFile.length}): '${hashInFile.toString('hex')}'`);
-                  if (compareRes !== 0) {
+                  const compareRes = Selector.checkFirmwareShaFromBase64(firmwareBase64);
+
+                  if (!compareRes) {
+                    this._log(`Firmware has invalid content. Sha256 mismatch.`);
+                    // this._log(`Sha256 calculated: '${calculatedSha.toString('hex')}' Sha256 in file: '${hashInFile.toString('hex')}'`);
                     this._addResponse(id, codes.ERR_CORRUPTED);
                     break;
                   }
@@ -3217,17 +3267,11 @@ export class Selector {
   readonly managerConnections: ManagerAttach[] = [];
 
   /**
-   * Use a firmware buffer and a version to try to update all currently connected controllers.
-   * @param newFirmwareFilename The file containing the firmware to update with. The file should have been generated when the firmware was received.
-   * @param version Version object. It should be generated parsing the firmware.
+   * Decode a base64 string, split it into chunks of a maximum length ({@linkcode BaseAttach.CHUNK_LENGTH}) and encode each chunk again in base64.
+   * @returns The array of base64 chunks.
    */
-  public async setFirmwareForAll(newFirmwareFilename: string, version: Firmware) {
-    const newFirmware64 = await useful.readFileAsBase64(newFirmwareFilename);
-    if (!newFirmware64) {
-      console.log('ERROR Reading file just created?');
-      return;
-    }
-    const newFirmwareBuffer = Buffer.from(newFirmware64, 'base64');
+  public splitFirmware(base64Content: string): string[] {
+    const newFirmwareBuffer = Buffer.from(base64Content, 'base64');
     const firmwareChunks: string[] = [];
     // console.log(
     //   `Base64 head '${newFirmware64.substring(0, 30)}' Hex head '${Buffer.from(newFirmware64, 'base64')
@@ -3244,12 +3288,12 @@ export class Selector {
       firmwareChunks.push(sub.toString('base64'));
       counter = counter + 1;
 
-      if (i + BaseAttach.CHUNK_LENGTH >= newFirmwareBuffer.length) {
-        // console.log(`Last chunk '${sub.toString('hex')}'`);
-      }
+      // if (i + BaseAttach.CHUNK_LENGTH >= newFirmwareBuffer.length) {
+      //   console.log(`Last chunk '${sub.toString('hex')}'`);
+      // }
     }
 
-    // Apparently never used
+    // Apparently never used. In case of getting the last part.
     // if (lastIndex < newFirmwareBuffer.length) {
     //   firmwareChunks.push(newFirmwareBuffer.subarray(lastIndex).toString('base64'));
     //   counter = counter + 1;
@@ -3257,14 +3301,47 @@ export class Selector {
     // }
 
     // console.log(`Splitted in ${firmwareChunks.length} chunks. Counter ${counter}`);
-    // if (newFirmware64 && version) {
+
+    return firmwareChunks;
+  }
+
+  /**
+   * Calculate the sha256 from the file and compare it with the value within it.
+   * This works with a firmware content generated by compiling with Esp-idf.
+   * @param base64 Content of the file
+   * @returns True if the calculated value and the read one match.
+   */
+  public static checkFirmwareShaFromBase64(base64: string): boolean {
+    // console.log(calculatedSha);
+    // console.log(hashInFile);
+    // console.log(`Compare result: ${compareRes}`);
+    const newBuffer = Buffer.from(base64, 'base64');
+    const bufferToHash = newBuffer.subarray(0, -32);
+    const hashInFile = newBuffer.subarray(-32);
+    const calculatedSha = createHash('sha256').update(bufferToHash).digest();
+    return calculatedSha.compare(hashInFile) === 0;
+  }
+
+  /**
+   * Use a firmware buffer and a version to try to update all currently connected controllers.
+   * @param newFirmwareFilename The file containing the firmware to update with. The file should have been generated when the firmware was received.
+   * @param version Version object. It should be generated parsing the firmware.
+   */
+  public async setFirmwareForAll(newFirmwareFilename: string, version: FirmwareVersion) {
+    const newFirmware64 = await useful.readFileAsBase64(newFirmwareFilename);
+    if (!newFirmware64) {
+      console.log('ERROR Reading file just created?');
+      return;
+    }
+
+    const firmwareChunks = this.splitFirmware(newFirmware64);
+
     for (const node of this.nodeAttachments) {
       if (!node.isLogged()) {
         continue;
       }
       node.askSendFirmware(firmwareChunks, version);
     }
-    // }
   }
 
   /**

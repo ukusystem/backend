@@ -7,7 +7,7 @@ import bcrypt from 'bcrypt';
 import dayjs from 'dayjs';
 import path from 'path';
 import * as codes from './codes';
-import { Firmware } from './firmware';
+import { FirmwareVersion } from './firmware';
 // import process from 'node:process'
 const BCRYPT_STRENGTH = 12;
 const MAX_FILE_SIZE_B = 5 * 1000 * 1000;
@@ -58,7 +58,7 @@ export function isLinux(): boolean {
  * @param buffer Buffer to get the file content from.
  * @return The version object, or null if the data could not be found in the predefined position.
  */
-function getVersionFromBuffer(buffer: Buffer): Firmware | null {
+function getVersionFromBuffer(buffer: Buffer): FirmwareVersion | null {
   const start = 0x30;
   const length = 16;
   const sub = buffer.subarray(start, start + length);
@@ -76,14 +76,12 @@ function getVersionFromBuffer(buffer: Buffer): Firmware | null {
   return null;
 }
 
-export async function getVersionFromFile(path: string): Promise<Firmware | null> {
-  try {
-    const buffer = await fs.readFile(path);
-    return getVersionFromBuffer(buffer);
-  } catch (e) {
-    console.log(e);
+export async function getVersionFromFile(path: string): Promise<FirmwareVersion | null> {
+  const fileBuffer = await readFileAsBuffer(path);
+  if (!fileBuffer) {
+    return null;
   }
-  return null;
+  return getVersionFromBuffer(fileBuffer);
 }
 
 /**
@@ -91,7 +89,7 @@ export async function getVersionFromFile(path: string): Promise<Firmware | null>
  * @param base64Content
  * @returns
  */
-export function getVersionFromBase64(base64Content: string): Firmware | null {
+export function getVersionFromBase64(base64Content: string): FirmwareVersion | null {
   const versionString = Buffer.from(base64Content, 'base64');
   return getVersionFromBuffer(versionString);
 }
@@ -140,8 +138,13 @@ export function getStateName(state: number): string {
 }
 
 export async function readFileAsBase64(path: string): Promise<string | null> {
+  const buf = await readFileAsBuffer(path);
+  return buf ? buf.toString('base64') : null;
+}
+
+export async function readFileAsBuffer(path: string): Promise<Buffer | null> {
   try {
-    return (await fs.readFile(path)).toString('base64');
+    return await fs.readFile(path);
   } catch (e) {
     console.log(e);
   }
