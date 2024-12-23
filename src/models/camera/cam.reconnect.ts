@@ -7,7 +7,7 @@ import { NodoCameraMapManager } from '../maps/nodo.camera';
 
 import { Cam } from 'onvif';
 
-type TypeReconnect = 'Nvr' | 'MotionSnapshot' | 'MotionRecord';
+type TypeReconnect = 'Nvr' | 'MotionSnapshot' | 'MotionRecord' | 'Motion';
 interface CameraReconnectProps {
   ctrl_id: number;
   cmr_id: number;

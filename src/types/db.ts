@@ -99,6 +99,7 @@ export interface Acceso {
   ea_id: number;
   administrador: number;
   p_id: number;
+  activo: number;
 }
 
 export interface Estado {

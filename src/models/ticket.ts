@@ -6,6 +6,7 @@ import { Init } from './init';
 import { UserInfo } from './auth';
 import { CustomError } from '../utils/CustomError';
 import dayjs from 'dayjs';
+import { RegistroTicketPagination } from '../schemas/ticket';
 
 type PersonalInfo = Pick<Personal, 'p_id' | 'nombre' | 'apellido' | 'telefono' | 'dni' | 'c_id' | 'co_id' | 'foto'>;
 type PersonalSolicitante = Personal & Pick<Cargo, 'cargo'> & Pick<Contrata, 'contrata'>;
@@ -70,7 +71,7 @@ export class Ticket {
   }, 'Ticket.getTiposTrabajo');
 
   static getPersonalesByContrataId = handleErrorWithArgument<PersonalInfo[], Pick<Contrata, 'co_id'>>(async ({ co_id }) => {
-    const personalesContrata = await MySQL2.executeQuery<PersonalRowData[]>({ sql: `SELECT p_id, nombre,apellido, telefono, dni, c_id , co_id, foto FROM general.personal p WHERE p.co_id = ? AND nombre IS NOT NULL`, values: [co_id] });
+    const personalesContrata = await MySQL2.executeQuery<PersonalRowData[]>({ sql: `SELECT p_id, nombre,apellido, telefono, dni, c_id , co_id, foto FROM general.personal p WHERE p.co_id = ? AND p.activo = 1`, values: [co_id] });
 
     if (personalesContrata.length > 0) {
       return personalesContrata;
@@ -79,7 +80,7 @@ export class Ticket {
   }, 'Ticket.getPersonalesByContrataId');
 
   static getNodos = handleErrorWithoutArgument<RegionNodo[]>(async () => {
-    const regionNodo = await MySQL2.executeQuery<RegionNodoRowData[]>({ sql: `SELECT r.region, c.nodo, c.ctrl_id  FROM general.controlador c INNER JOIN general.region r ON c.rgn_id = r.rgn_id WHERE c.nodo IS NOT NULL` });
+    const regionNodo = await MySQL2.executeQuery<RegionNodoRowData[]>({ sql: `SELECT r.region, c.nodo, c.ctrl_id  FROM general.controlador c INNER JOIN general.region r ON c.rgn_id = r.rgn_id WHERE c.activo = 1` });
 
     if (regionNodo.length > 0) {
       return regionNodo;
@@ -143,34 +144,48 @@ export class Ticket {
     const backDateHour = dayjs().startOf('date').subtract(1, 'day').format('YYYY-MM-DD HH:mm:ss');
     const region_nodos = await Init.getRegionNodos();
     if (region_nodos.length > 0) {
-      const allRegistros = await region_nodos.reduce(
-        async (acc, item) => {
-          const resultAcc = await acc;
-          const { ctrl_id } = item;
-          const registroTicketsPend = await Ticket.getTicketsPendientesByControladorId({ ctrl_id });
-          if (registroTicketsPend.length > 0) {
-            const finalRegistroTickets = registroTicketsPend.map((ticket) => ({ ...ticket, ctrl_id }));
-            resultAcc.push(...finalRegistroTickets);
-          }
-          const regisTickAcep = await Ticket.getTicketsAceptadosByCtrlId24H({ ctrl_id: ctrl_id, fecha0M24: backDateHour });
-          if (regisTickAcep.length > 0) {
-            const finalRegisTickAcep = regisTickAcep.map((ticket) => ({ ...ticket, ctrl_id }));
-            resultAcc.push(...finalRegisTickAcep);
-          }
-          return resultAcc;
-        },
-        Promise.resolve([] as (RegistroTicket & { ctrl_id: number })[]),
-      );
+      const allRegistros = await region_nodos.reduce<Promise<(RegistroTicket & { ctrl_id: number })[]>>(async (acc, item) => {
+        const resultAcc = await acc;
+        const { ctrl_id } = item;
+        const registroTicketsPend = await Ticket.getTicketsPendientesByControladorId({ ctrl_id });
+        if (registroTicketsPend.length > 0) {
+          const finalRegistroTickets = registroTicketsPend.map((ticket) => ({ ...ticket, ctrl_id }));
+          resultAcc.push(...finalRegistroTickets);
+        }
+        const regisTickAcep = await Ticket.getTicketsAceptadosByCtrlId24H({ ctrl_id: ctrl_id, fecha0M24: backDateHour });
+        if (regisTickAcep.length > 0) {
+          const finalRegisTickAcep = regisTickAcep.map((ticket) => ({ ...ticket, ctrl_id }));
+          resultAcc.push(...finalRegisTickAcep);
+        }
+        return resultAcc;
+      }, Promise.resolve([]));
       return allRegistros;
     }
     return [];
   }, 'Ticket.getTicketsPendientesAceptados');
 
-  static getRegistrosByCtrlIdAndLimitAndOffset = handleErrorWithArgument<RegistroTicketDetail[], { ctrl_id: number; limit: number; offset: number; user: UserInfo }>(async ({ ctrl_id, limit, offset, user }) => {
+  static getRegistrosByCtrlIdAndLimitAndOffset = handleErrorWithArgument<RegistroTicketDetail[], { ctrl_id: number; limit: number; offset: number; user: UserInfo; filters?: RegistroTicketPagination['filters'] }>(async ({ ctrl_id, limit, offset, user, filters }) => {
+    let whereFilter: { whereQuery: string; valuesQuery: any[] } | undefined = undefined;
+    if (filters !== undefined && filters.state !== undefined) {
+      const uniqueStates = Array.from(new Set(filters.state));
+
+      const whereQuery = uniqueStates.reduce<{ whereQuery: string; valuesQuery: any[] }>(
+        (prev, curr, index) => {
+          const result = prev;
+          result.whereQuery = result.whereQuery.trim() + ' rt.estd_id = ? ' + (index < uniqueStates.length - 1 ? ' AND ' : '');
+          result.valuesQuery.push(curr);
+
+          return result;
+        },
+        { whereQuery: '', valuesQuery: [] },
+      );
+      whereFilter = whereQuery;
+    }
+
     if (user.rol === 'Invitado') {
       const registroTickets = await MySQL2.executeQuery<RegistroTicketDetailRowData[]>({
-        sql: `SELECT rt.*, e.estado, tt.nombre as tipotrabajo, co.contrata ,p.nombre , p.apellido FROM  ${'nodo' + ctrl_id}.registroticket rt INNER JOIN general.estado e ON rt.estd_id = e.estd_id INNER JOIN general.tipotrabajo tt ON rt.tt_id = tt.tt_id INNER JOIN general.contrata co ON rt.co_id = co.co_id INNER JOIN general.personal p ON rt.p_id = p.p_id WHERE rt.co_id = ? ORDER BY rt.rt_id DESC LIMIT ? OFFSET ? `,
-        values: [user.co_id, limit, offset],
+        sql: `SELECT rt.*, e.estado, tt.nombre as tipotrabajo, co.contrata ,p.nombre , p.apellido FROM  ${'nodo' + ctrl_id}.registroticket rt INNER JOIN general.estado e ON rt.estd_id = e.estd_id INNER JOIN general.tipotrabajo tt ON rt.tt_id = tt.tt_id INNER JOIN general.contrata co ON rt.co_id = co.co_id INNER JOIN general.personal p ON rt.p_id = p.p_id WHERE rt.co_id = ? ${whereFilter !== undefined ? whereFilter.whereQuery : ''} ORDER BY rt.rt_id DESC LIMIT ? OFFSET ? `,
+        values: whereFilter !== undefined ? [user.co_id, ...whereFilter.valuesQuery, limit, offset] : [user.co_id, limit, offset],
       });
 
       if (registroTickets.length > 0) {
@@ -179,8 +194,8 @@ export class Ticket {
       return [];
     } else if (user.rol === 'Administrador' || user.rol === 'Usuario') {
       const registroTickets = await MySQL2.executeQuery<RegistroTicketDetailRowData[]>({
-        sql: `SELECT rt.*, e.estado, tt.nombre as tipotrabajo, co.contrata ,p.nombre , p.apellido FROM  ${'nodo' + ctrl_id}.registroticket rt INNER JOIN general.estado e ON rt.estd_id = e.estd_id INNER JOIN general.tipotrabajo tt ON rt.tt_id = tt.tt_id INNER JOIN general.contrata co ON rt.co_id = co.co_id INNER JOIN general.personal p ON rt.p_id = p.p_id ORDER BY rt.rt_id DESC LIMIT ? OFFSET ? `,
-        values: [limit, offset],
+        sql: `SELECT rt.*, e.estado, tt.nombre as tipotrabajo, co.contrata ,p.nombre , p.apellido FROM  ${'nodo' + ctrl_id}.registroticket rt INNER JOIN general.estado e ON rt.estd_id = e.estd_id INNER JOIN general.tipotrabajo tt ON rt.tt_id = tt.tt_id INNER JOIN general.contrata co ON rt.co_id = co.co_id INNER JOIN general.personal p ON rt.p_id = p.p_id ${whereFilter !== undefined ? `WHERE ${whereFilter.whereQuery}` : ''} ORDER BY rt.rt_id DESC LIMIT ? OFFSET ? `,
+        values: whereFilter !== undefined ? [...whereFilter.valuesQuery, limit, offset] : [limit, offset],
       });
 
       if (registroTickets.length > 0) {
@@ -220,16 +235,38 @@ export class Ticket {
     }
   }, 'Ticket.getSingleRegistroTicketByCtrlIdAndRtId');
 
-  static getTotalRegistroTicketByCtrlId = handleErrorWithArgument<number, { ctrl_id: number; user: UserInfo }>(async ({ ctrl_id, user }) => {
+  static getTotalRegistroTicketByCtrlId = handleErrorWithArgument<number, { ctrl_id: number; user: UserInfo; filters?: RegistroTicketPagination['filters'] }>(async ({ ctrl_id, user, filters }) => {
+    let whereFilter: { whereQuery: string; valuesQuery: any[] } | undefined = undefined;
+    if (filters !== undefined && filters.state !== undefined) {
+      const uniqueStates = Array.from(new Set(filters.state));
+
+      const whereQuery = uniqueStates.reduce<{ whereQuery: string; valuesQuery: any[] }>(
+        (prev, curr, index) => {
+          const result = prev;
+          result.whereQuery = result.whereQuery.trim() + ' estd_id = ? ' + (index < uniqueStates.length - 1 ? ' AND ' : '');
+          result.valuesQuery.push(curr);
+
+          return result;
+        },
+        { whereQuery: '', valuesQuery: [] },
+      );
+      whereFilter = whereQuery;
+    }
     if (user.rol === 'Invitado') {
-      const totalRegistros = await MySQL2.executeQuery<TotalRegistroTicketRowData[]>({ sql: `SELECT COUNT(*) AS total FROM ${'nodo' + ctrl_id}.registroticket WHERE co_id = ?`, values: [user.co_id] });
+      const totalRegistros = await MySQL2.executeQuery<TotalRegistroTicketRowData[]>({
+        sql: `SELECT COUNT(*) AS total FROM ${'nodo' + ctrl_id}.registroticket WHERE co_id = ? AND ${whereFilter !== undefined ? whereFilter.whereQuery : ''}`,
+        values: whereFilter !== undefined ? [user.co_id, ...whereFilter.valuesQuery] : [user.co_id],
+      });
 
       if (totalRegistros.length > 0) {
         return totalRegistros[0].total;
       }
       return 0;
     } else if (user.rol === 'Administrador' || user.rol === 'Usuario') {
-      const totalRegistros = await MySQL2.executeQuery<TotalRegistroTicketRowData[]>({ sql: `SELECT COUNT(*) AS total FROM ${'nodo' + ctrl_id}.registroticket` });
+      const totalRegistros = await MySQL2.executeQuery<TotalRegistroTicketRowData[]>({
+        sql: `SELECT COUNT(*) AS total FROM ${'nodo' + ctrl_id}.registroticket ${whereFilter !== undefined ? ` WHERE ${whereFilter.whereQuery}` : ''}`,
+        values: whereFilter !== undefined ? whereFilter.valuesQuery : undefined,
+      });
 
       if (totalRegistros.length > 0) {
         return totalRegistros[0].total;

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // @ts-ignore
 // @ts-nocheck
 
@@ -6,7 +7,7 @@ import path from 'path';
 import fs from 'fs';
 import { Cam } from 'onvif';
 import { MySQL2 } from '../../../database/mysql';
-import { createImageBase64, verifyImageMarkers } from '../../../utils/stream';
+import { createImageBase64 } from '../../../utils/stream';
 import { getMulticastRtspStreamAndSubStream } from '../../../utils/getCameraRtspLinks';
 import dayjs from 'dayjs';
 import { CameraMotionMethods, CameraMotionProps, CameraProps } from './camera.motion.types';
@@ -16,6 +17,7 @@ import { CameraMotionManager } from './camera.motion.manager';
 import { NodoCameraMapManager } from '../../maps/nodo.camera';
 // import { notifyCamDisconnect } from '../../controllerapp/controller';
 import { CameraReconnect } from '../cam.reconnect';
+import { appConfig } from '../../../configs';
 
 const TIMEOUT_DISCONNECT = 5;
 export class CameraMotionProcess implements CameraMotionProps, CameraMotionMethods {
@@ -25,13 +27,8 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
   cmr_id: number;
   ctrl_id: number;
 
-  ffmpegProcessImage: ChildProcessByStdio<null, any, null> | null = null;
-  imageBuffer: Buffer = Buffer.alloc(0);
-  isInsideImage: boolean = false;
-  isActiveProccesImage: boolean = false;
-
-  ffmpegProcessVideo: ChildProcessByStdio<null, null, null> | null = null;
-  isActiveProccesVideo: boolean = false;
+  ffmpegProcess: ChildProcessByStdio<null, null, null> | undefined = undefined;
+  isActiveMotion: boolean = false;
 
   constructor(props: CameraProps) {
     const { cmr_id, ctrl_id, ip, contraseña, usuario } = props;
@@ -75,174 +72,104 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
     // }
 
     if (eventTopic === 'VideoSource/MotionAlarm' || eventTopic === 'RuleEngine/CellMotionDetector/Motion') {
-      this.isActiveProccesImage = dataValue;
-      this.isActiveProccesVideo = dataValue;
+      this.isActiveMotion = dataValue;
     }
 
-    if (this.isActiveProccesImage) {
-      this.snapshotMotion(rtspUrl);
-    }
-
-    if (this.isActiveProccesVideo) {
-      this.captureMotion(rtspUrl);
+    if (this.isActiveMotion) {
+      this.snapshotRecord(rtspUrl);
     }
   }
 
-  snapshotMotion(rtspUrl: string) {
-    if (this.ffmpegProcessImage === null) {
+  snapshotRecord(rtspUrl: string) {
+    if (this.ffmpegProcess === undefined) {
       try {
-        const argsImageProcces = getImageFfmpegArgs(rtspUrl, this.ctrl_id);
-        const newImgProcess = spawn('ffmpeg', argsImageProcces, { stdio: ['ignore', 'pipe', 'ignore'] });
-        this.ffmpegProcessImage = newImgProcess;
+        const baseSnapshotDir = createMotionDetectionFolders(`./deteccionmovimiento/img/nodo${this.ctrl_id}/camara${this.cmr_id}`);
 
-        this.ffmpegProcessImage.stdout.on('data', (data: Buffer) => {
-          // Verificar marcadores
-          const isMarkStart = verifyImageMarkers(data, 'start');
-          const isMarkEnd = verifyImageMarkers(data, 'end');
+        const baseRecordDir = createMotionDetectionFolders(`./deteccionmovimiento/vid/nodo${this.ctrl_id}/camara${this.cmr_id}`);
+        const recordFile = `record_${Date.now()}.mp4`;
+        const ffmpegArgs = getMotionFfmegArgs(rtspUrl, this.ctrl_id, { baseSnapshotDir: baseSnapshotDir.split(path.sep).join(path.posix.sep), baseRecordDir: baseRecordDir.split(path.sep).join(path.posix.sep), recordFile: recordFile });
 
-          if (!this.isInsideImage && isMarkStart) {
-            // Si no estamos dentro de una imagen y se encuentra el marcador de inicio
-            this.isInsideImage = true;
-          }
+        const controllerSnapshot = new AbortController();
+        // const { signal } = controller;
+        if (appConfig.system.start_snapshot_motion) {
+          fs.watch(baseSnapshotDir, { signal: controllerSnapshot.signal }, async (eventType, filename) => {
+            if (eventType === 'rename' && filename !== null) {
+              // search snapshot_%H_%M_%S.jpg and save to db
+              const regex = new RegExp(/^snapshot_(\d{2})_(\d{2})_(\d{2})\.jpg$/);
+              const isMatch = regex.test(filename);
+              if (isMatch) {
+                const snapshotFilePath = path.join(baseSnapshotDir, filename);
+                fs.readFile(snapshotFilePath, (err, data) => {
+                  if (err) {
+                    cameraLogger.error(`CameraMotionProcess | Error al leer captura | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id} `, err);
+                    return;
+                  }
+                  if (appConfig.system.start_snapshot_motion) {
+                    const imageBase64 = createImageBase64(data);
 
-          if (this.isInsideImage) {
-            // Concatenar nuevos datos al buffer existente
-            this.imageBuffer = Buffer.concat([this.imageBuffer, data]);
+                    CameraMotionManager.notifyImageMotion(this.ctrl_id, imageBase64);
 
-            if (verifyImageMarkers(this.imageBuffer, 'complete')) {
-              try {
-                const pathImg = createMotionDetectionFolders(`./deteccionmovimiento/img/nodo${this.ctrl_id}/camara${this.cmr_id}`);
-                cameraLogger.debug(`CameraMotionProcess | snapshotMotion | Imagen completo recibido | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id}`);
-                // Guardar la imagen
-                const imagePath = path.join(pathImg, `captura_${Date.now()}.jpg`); // ---> deteccionmovimiento\img\Arequipa\172.16.4.110\2024-01-26\13\captura_1706292419800.jpg
-
-                fs.writeFileSync(imagePath, this.imageBuffer);
-
-                const imageBase64 = createImageBase64(this.imageBuffer);
-                CameraMotionManager.notifyImageMotion(this.ctrl_id, imageBase64);
-
-                insertPathToDB(imagePath, this.ctrl_id, this.cmr_id, 0);
-              } catch (error) {
-                cameraLogger.error(`CameraMotionProcess | snapshotMotion | Error al guardar imagen | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id} `, error);
+                    insertPathToDB(snapshotFilePath, this.ctrl_id, this.cmr_id, 0);
+                  }
+                });
               }
             }
-          }
+          });
+        }
 
-          if (isMarkEnd) {
-            // Limpiar el búfer para la siguiente imagen
-            this.imageBuffer = Buffer.alloc(0);
-            this.isInsideImage = false;
-          }
-        });
+        const newFfmpegProcess = spawn('ffmpeg', ffmpegArgs, { stdio: ['ignore', 'ignore', 'ignore'] });
 
-        // this.ffmpegProcessImage.on("error", (err) => {
-        //   cameraLogger.error(`CameraMotionProcess | snapshotMotion | Error en el proceso ffmpegImage | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`,err);
-        //   if (this.ffmpegProcessImage) {
-        //     this.ffmpegProcessImage.kill();
-        //     this.ffmpegProcessImage = null;
-        //   }
+        this.ffmpegProcess = newFfmpegProcess;
 
-        //   // this.isActiveProccesImage = false;
+        this.ffmpegProcess.on('close', async (code, signal) => {
+          cameraLogger.debug(`CameraMotionProcess | Proceso ffmpeg cerrado con código ${code} y señal ${signal} | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id}`);
 
-        //   this.imageBuffer = Buffer.alloc(0);
-        //   this.isInsideImage = false;
-        // });
+          // abort controllers:
+          controllerSnapshot.abort();
 
-        this.ffmpegProcessImage.on('close', async (code) => {
-          cameraLogger.debug(`CameraMotionProcess | snapshotMotion | Proceso ffmpegImage cerrado con código ${code} | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id}`);
-          if (this.ffmpegProcessImage) {
-            // this.ffmpegProcessImage.kill();
-            this.ffmpegProcessImage = null;
-          }
-
-          this.imageBuffer = Buffer.alloc(0);
-          this.isInsideImage = false;
-
-          if (this.isActiveProccesImage) {
-            cameraLogger.debug(`CameraMotionProcess | snapshotMotion | Evento continua activo para capturar imagenes | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`);
-            const isConnected = await this.isCamConnected();
-            if (isConnected) {
-              return this.snapshotMotion(rtspUrl);
-            } else {
-              this.isActiveProccesImage = false;
-              // notificar deconexión
-              NodoCameraMapManager.update(this.ctrl_id, this.cmr_id, { conectado: 0 });
-              const camera = NodoCameraMapManager.getCamera(this.ctrl_id, this.cmr_id);
-              if (camera !== undefined) {
-                cameraLogger.info(`CameraMotionProcess | snapshotMotion | Notify Camera Disconnect | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id}`);
-                // notifyCamDisconnect(this.ctrl_id, { ...camera });
-                const newCamConnect = new CameraReconnect(this.ctrl_id, this.cmr_id, 'MotionSnapshot');
-                newCamConnect.start();
-              }
-            }
-          }
-        });
-      } catch (error) {
-        cameraLogger.error(`CameraMotionProcess | snapshotMotion | Error en CameraMotion.snapshotMotion | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id}`, error);
-      }
-    }
-  }
-
-  captureMotion(rtspUrl: string) {
-    if (this.ffmpegProcessVideo === null) {
-      try {
-        const pathFolderVid = createMotionDetectionFolders(`./deteccionmovimiento/vid/nodo${this.ctrl_id}/camara${this.cmr_id}`);
-        const videoPath = path.join(pathFolderVid, `grabacion_${Date.now()}.mp4`);
-        const argsVideoProcces = getVideoFfmpegArgs(rtspUrl, videoPath, this.ctrl_id);
-        const newVideoProcess = spawn('ffmpeg', argsVideoProcces, { stdio: ['ignore', 'ignore', 'ignore'] });
-        this.ffmpegProcessVideo = newVideoProcess;
-
-        // this.ffmpegProcessVideo.on("error", (err) => {
-        //   cameraLogger.error(`CameraMotionProcess | captureMotion | Error en el proceso ffmpegVideo | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`,err);
-        //   if (this.ffmpegProcessVideo) {
-        //     this.ffmpegProcessVideo.kill();
-        //     this.ffmpegProcessVideo = null;
-        //   }
-        // });
-
-        this.ffmpegProcessVideo.on('close', async (code) => {
+          // save record to db : code 0
+          const recordFilePath = path.join(baseRecordDir, recordFile);
           if (code === 0) {
-            cameraLogger.debug(`CameraMotionProcess | captureMotion | Proceso ffmpegVideo completado sin errores | Código de salida: ${code} | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id}`);
-            insertPathToDB(videoPath, this.ctrl_id, this.cmr_id, 1);
-          } else {
-            cameraLogger.error(`CameraMotionProcess | captureMotion | Proceso ffmpegVideo cerrado con código de error: ${code} | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id}`);
-            // Eliminar video.
-            try {
-              fs.unlinkSync(videoPath);
-            } catch (error) {
-              cameraLogger.error(`CameraMotionProcess | captureMotion | Error al eliminar video: ${videoPath} | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id}`, error);
+            cameraLogger.debug(`CameraMotionProcess| Proceso ffmpeg completado sin errores | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id}`);
+            if (appConfig.system.start_record_motion) {
+              insertPathToDB(recordFilePath, this.ctrl_id, this.cmr_id, 1);
             }
+          } else {
+            cameraLogger.error(`CameraMotionProcess  | Proceso ffmpeg cerrado con código de error: ${code} | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id}`);
+            // Eliminar video.
+            fs.unlink(recordFilePath, (err) => {
+              if (err) {
+                cameraLogger.error(`CameraMotionProcess | Error al eliminar video: ${recordFilePath} | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id}`, err);
+              }
+            });
           }
 
-          if (this.ffmpegProcessVideo) {
-            // this.ffmpegProcessVideo.kill();
-            this.ffmpegProcessVideo = null;
-            // if(code !== 0){
-            //   this.isActiveProccesVideo = false;
-            // }
+          if (this.ffmpegProcess !== undefined) {
+            // this.ffmpegProcess.kill();
+            this.ffmpegProcess = undefined;
           }
 
-          if (this.isActiveProccesVideo) {
-            cameraLogger.debug(`CameraMotionProcess | captureMotion | Evento continua activo para capturar video | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id}`);
+          if (this.isActiveMotion) {
+            cameraLogger.debug(`CameraMotionProcess | Evento motion continua activo | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id}`);
             const isConnected = await this.isCamConnected();
             if (isConnected) {
-              return this.captureMotion(rtspUrl);
+              return this.snapshotRecord(rtspUrl);
             } else {
-              this.isActiveProccesVideo = false;
+              this.isActiveMotion = false;
               // notificar deconexión
               NodoCameraMapManager.update(this.ctrl_id, this.cmr_id, { conectado: 0 });
               const camera = NodoCameraMapManager.getCamera(this.ctrl_id, this.cmr_id);
               if (camera !== undefined) {
-                cameraLogger.info(`CameraMotionProcess | captureMotion | Notify Camera Disconnect | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id}`);
+                cameraLogger.info(`CameraMotionProcess | Notify Camera Disconnect | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id}`);
                 // notifyCamDisconnect(this.ctrl_id, { ...camera });
-                const newCamConnect = new CameraReconnect(this.ctrl_id, this.cmr_id, 'MotionRecord');
+                const newCamConnect = new CameraReconnect(this.ctrl_id, this.cmr_id, 'Motion');
                 newCamConnect.start();
               }
             }
           }
         });
       } catch (error) {
-        cameraLogger.error(`CameraMotionProcess | captureMotion | Error en CameraMotion.captureMotion | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`, error);
+        cameraLogger.error(`CameraMotionProcess | Error en CameraMotion.snapshotRecord | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`, error);
       }
     }
   }
@@ -368,6 +295,7 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
 
   getDeviceInformation(cam: Cam): Promise<any> {
     const camHostname = this.ip;
+
     return new Promise<any>((resolve, reject) => {
       cam.getDeviceInformation((err: any, info: any, _xml: any) => {
         if (err) {
@@ -520,21 +448,9 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
       if (hasEvents && hasTopics) {
         // register for 'event' events. This causes the library to ask the camera for Pull Events
         camOnvif.on('event', (camMessage: any, xml: any) => {
-          // console.log(`Detección Movimiento Test | isActiveProccesImage = ${ JSON.stringify(this.isActiveProccesImage)}  | isActiveProccesVideo = ${ JSON.stringify(this.isActiveProccesVideo)} | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`)
           this.receivedEvent(camMessage, xml, multRtsp[0]);
         });
       }
-
-      // if(hasEvents){
-      //   // test
-      //   camOnvif.on("connect",function(data:any){
-      //     console.log("Connect Event test:", data)
-      //   })
-
-      //   comOnvif.on("error",function(err:any){
-      //     console.log("Error Envent", err)
-      //   })
-      // }
     } catch (error) {
       if (error instanceof Error) {
         cameraLogger.error(`CameraMotionProcess | Execute Error | ctrl_id : ${this.ctrl_id} | cmr_id ${this.cmr_id}`, error.message);
@@ -546,66 +462,34 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
   }
 }
 
-const getImageFfmpegArgs = (rtspUrl: string, ctrl_id: number): string[] => {
+const getMotionFfmegArgs = (rtspUrl: string, ctrl_id: number, configs: { baseRecordDir: string; recordFile: string; baseSnapshotDir: string }): string[] => {
   const ctrlConfig = ControllerMapManager.getControllerAndResolution(ctrl_id);
   if (ctrlConfig === undefined) {
-    throw new Error(`Error getImageFfmpegArgs | Controlador ${ctrl_id} no encontrado getControllerAndResolution`);
+    throw new Error(`Error getMotionFfmegArgs | Controlador ${ctrl_id} no encontrado getControllerAndResolution`);
   }
+
+  const isMotionDetection = appConfig.system.start_record_motion || appConfig.system.start_snapshot_motion;
+  if (!isMotionDetection) {
+    throw new Error(`Error getMotionFfmegArgs | Motion detection disabled.`);
+  }
+
   const {
     controller,
-    resolution: { motion_snapshot },
+    resolution: { motion_snapshot, motion_record },
   } = ctrlConfig;
 
-  return [
-    '-rtsp_transport',
-    'tcp',
-    '-timeout',
-    `${TIMEOUT_DISCONNECT * 1000000}`,
-    '-i',
-    `${rtspUrl}`,
-    '-vf',
-    `scale=${motion_snapshot.ancho}:${motion_snapshot.altura},select='gte(t\\,0)',fps=1/${controller.motionsnapshotinterval}`,
-    '-an',
-    '-t',
-    `${controller.motionsnapshotseconds}`,
-    '-c:v',
-    'mjpeg',
-    '-f',
-    'image2pipe',
-    '-',
-  ];
-};
+  const result: string[] = ['-rtsp_transport', 'tcp', '-timeout', `${TIMEOUT_DISCONNECT * 1000000}`, '-i', `${rtspUrl}`];
 
-const getVideoFfmpegArgs = (rtspUrl: string, outputPath: string, ctrl_id: number): string[] => {
-  const ctrlConfig = ControllerMapManager.getControllerAndResolution(ctrl_id);
-  if (ctrlConfig === undefined) {
-    throw new Error(`Error getVideoFfmpegArgs | Controlador ${ctrl_id} no encontrado getControllerAndResolution`);
+  if (appConfig.system.start_record_motion) {
+    const recordPath = path.join(configs.baseRecordDir, configs.recordFile);
+    result.push(...['-t', `${controller.motionrecordseconds}`, '-c:v', 'libx264', '-preset', 'ultrafast', '-r', `${controller.motionrecordfps}`, '-an', '-vf', `scale=${motion_record.ancho}:${motion_record.altura}`, `${recordPath}`]);
   }
-  const {
-    controller,
-    resolution: { motion_record },
-  } = ctrlConfig;
 
-  return [
-    '-rtsp_transport',
-    'tcp',
-    '-timeout',
-    `${TIMEOUT_DISCONNECT * 1000000}`,
-    '-i',
-    `${rtspUrl}`,
-    '-r',
-    `${controller.motionrecordfps}`,
-    '-vf',
-    `scale=${motion_record.ancho}:${motion_record.altura}`,
-    '-an',
-    '-c:v',
-    'libx264',
-    '-preset',
-    'fast',
-    '-t',
-    `${controller.motionrecordseconds}`,
-    `${outputPath}`,
-  ];
+  if (appConfig.system.start_snapshot_motion) {
+    result.push(...['-t', `${controller.motionsnapshotseconds}`, '-an', '-c:v', 'mjpeg', '-vf', `scale=${motion_snapshot.ancho}:${motion_snapshot.altura},select='gte(t\\,0)',fps=1/${controller.motionsnapshotinterval}`, '-strftime', '1', `${configs.baseSnapshotDir}/snapshot_%H_%M_%S.jpg`]);
+  }
+
+  return result;
 };
 
 function createFolderIfNotExists(dir: fs.PathLike) {

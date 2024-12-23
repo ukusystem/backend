@@ -1,11 +1,9 @@
 import { Server as HttpServer } from 'http';
 import { Server } from 'socket.io';
 import {
-  ticketSocket,
   lastSnapshotSocket,
   pinEntradaSocket,
   registroEntradaSocket,
-  voiceStreamSocket,
   NamespaceControllerState,
   contollerStateSocket,
   NamespacePinSalida,
@@ -26,6 +24,8 @@ import {
 } from '../controllers/socket';
 import { camStreamSocket } from '../controllers/socket/stream/camera.stream.socket';
 import { NamespaceRegistroAcceso, registroAccesoSocket } from '../controllers/socket/registro.acceso';
+import { NamespaceTicketSchedule } from '../controllers/socket/ticket.schedule/ticket.schedule.types';
+import { ticketScheduleSocket } from '../controllers/socket/ticket.schedule/ticket.schedule.socket';
 
 export class Sockets {
   #io: Server;
@@ -91,8 +91,9 @@ export class Sockets {
     });
 
     // Namespace: "/tickets/ctrl_id/"
-    this.#io.of(/^\/tickets\/\d+$/).on('connection', (socket) => {
-      ticketSocket(this.#io, socket);
+    const TicketScheduleNSP: NamespaceTicketSchedule = this.#io.of(/^\/tickets\/\d+$/);
+    TicketScheduleNSP.on('connection', (socket) => {
+      ticketScheduleSocket(this.#io, socket);
     });
 
     // Namespace: "/pin_entrada/ctrl_id"
@@ -126,10 +127,9 @@ export class Sockets {
     });
 
     // Namespace: "/voice_stream/ctrl_id/ip"
-    // eslint-disable-next-line no-useless-escape
-    this.#io.of(/^\/voice_stream\/(\d+)\/([\d\.]+)$/).on('connection', (socket) => {
-      voiceStreamSocket(this.#io, socket);
-    });
+    // this.#io.of(/^\/voice_stream\/(\d+)\/([\d\.]+)$/).on('connection', (socket) => {
+    //   voiceStreamSocket(this.#io, socket);
+    // });
 
     // Namespace : "/last_snapshot/ctrl_id"
     const AlarmNSP: NamespaceAlarm = this.#io.of('/alarm_notification');

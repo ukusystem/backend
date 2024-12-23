@@ -62,8 +62,7 @@ export class CameraMotionManager {
       if (CameraMotionManager.map[cam.ctrl_id][cam.cmr_id]) {
         const curCamMotion = CameraMotionManager.map[cam.ctrl_id][cam.cmr_id];
         if (curCamMotion.ip !== cam.ip || curCamMotion.contraseña !== cam.contraseña || curCamMotion.usuario !== cam.usuario) {
-          if (curCamMotion.ffmpegProcessImage !== null) curCamMotion.ffmpegProcessImage.kill();
-          if (curCamMotion.ffmpegProcessVideo !== null) curCamMotion.ffmpegProcessVideo.kill();
+          if (curCamMotion.ffmpegProcess !== undefined) curCamMotion.ffmpegProcess.kill();
 
           delete CameraMotionManager.map[cam.ctrl_id][cam.cmr_id];
           // Agregar nuevo
@@ -102,8 +101,7 @@ export class CameraMotionManager {
     if (CameraMotionManager.map[ctrl_id]) {
       if (CameraMotionManager.map[ctrl_id][cmr_id]) {
         const currentCamMot = CameraMotionManager.map[ctrl_id][cmr_id];
-        if (currentCamMot.ffmpegProcessImage !== null) currentCamMot.ffmpegProcessImage.kill();
-        if (currentCamMot.ffmpegProcessVideo !== null) currentCamMot.ffmpegProcessVideo.kill();
+        if (currentCamMot.ffmpegProcess !== undefined) currentCamMot.ffmpegProcess.kill();
         delete CameraMotionManager.map[ctrl_id][cmr_id];
       }
     }
@@ -120,8 +118,7 @@ export class CameraMotionManager {
       // const cur_contraseña = currCamMotion.contraseña;
       // const cur_usuario = currCamMotion.usuario;
 
-      if (currCamMotion.ffmpegProcessImage !== null) currCamMotion.ffmpegProcessImage.kill();
-      if (currCamMotion.ffmpegProcessVideo !== null) currCamMotion.ffmpegProcessVideo.kill();
+      if (currCamMotion.ffmpegProcess !== undefined) currCamMotion.ffmpegProcess.kill();
 
       delete CameraMotionManager.map[ctrl_id][cmr_id];
 
@@ -144,8 +141,8 @@ export class CameraMotionManager {
     if (CameraMotionManager.map[ctrl_id]) {
       if (CameraMotionManager.map[ctrl_id][cmr_id]) {
         const currentCamMot = CameraMotionManager.map[ctrl_id][cmr_id];
-        if (currentCamMot.ffmpegProcessImage !== null) currentCamMot.ffmpegProcessImage.kill();
-        if (currentCamMot.ffmpegProcessVideo !== null) currentCamMot.ffmpegProcessVideo.kill();
+
+        if (currentCamMot.ffmpegProcess !== undefined) currentCamMot.ffmpegProcess.kill();
         // delete CameraMotionManager.map[ctrl_id][cmr_id];
       }
     }

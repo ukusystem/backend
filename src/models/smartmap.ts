@@ -1,7 +1,7 @@
 import { RowDataPacket } from 'mysql2';
 import { MySQL2 } from '../database/mysql';
 import { Camara, Controlador, EquipoEntrada, EquipoSalida, Marca, PinesEntrada, PinesSalida, Region, TipoCamara } from '../types/db';
-import { handleErrorWithArgument } from '../utils/simpleErrorHandler';
+import { handleErrorWithArgument, handleErrorWithoutArgument } from '../utils/simpleErrorHandler';
 
 type ControladorInfo = Pick<Controlador, 'ctrl_id' | 'nodo' | 'rgn_id' | 'direccion' | 'descripcion' | 'latitud' | 'longitud' | 'serie' | 'ip' | 'personalgestion' | 'personalimplementador' | 'conectado'> & Pick<Region, 'region'>;
 type CameraInfo = Pick<Camara, 'cmr_id' | 'serie' | 'tc_id' | 'm_id' | 'ip' | 'descripcion' | 'conectado'> & Pick<TipoCamara, 'tipo'> & Pick<Marca, 'marca'>;
@@ -28,6 +28,13 @@ export class SmartMap {
       return controladorInfo[0];
     }
     return null;
+  }, 'SmartMap.getControladorInfoByCtrlId');
+
+  static getAllControllers = handleErrorWithoutArgument<ControladorInfo[]>(async () => {
+    const controladores = await MySQL2.executeQuery<ControladorInfoRowData[]>({
+      sql: `SELECT c.ctrl_id, c.nodo, c.rgn_id, r.region , c.direccion, c.descripcion, c.latitud, c.longitud , c.serie, c.ip , c.personalgestion , c.personalimplementador , c.conectado FROM general.controlador c INNER JOIN general.region r ON c.rgn_id = r.rgn_id WHERE c.activo = 1 `,
+    });
+    return controladores;
   }, 'SmartMap.getControladorInfoByCtrlId');
 
   static getCamerasInfoByCtrlId = handleErrorWithArgument<CameraInfo[] | [], { ctrl_id: number }>(async ({ ctrl_id }) => {

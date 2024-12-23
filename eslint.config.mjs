@@ -14,12 +14,12 @@ export default [
   {
     rules: {
       eqeqeq: ['error', 'always'],
-      'no-empty-function': 'error',
+      'no-empty-function': ['error', { allow: ['constructors'] }],
       'no-implicit-coercion': 'error',
       'no-case-declarations': 'off',
       '@typescript-eslint/no-duplicate-enum-values': 'error',
       '@typescript-eslint/no-inferrable-types': 'off',
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
       '@typescript-eslint/no-empty-object-type': ['warn', { allowInterfaces: 'always' }],
       '@typescript-eslint/ban-ts-comment': 'warn',

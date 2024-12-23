@@ -1,19 +1,14 @@
-import { Request, Response, NextFunction } from "express";
-import { asyncErrorHandler } from "../../utils/asynErrorHandler";
-import { Camera } from "../../models/camera/";
-
+import { Request, Response, NextFunction } from 'express';
+import { asyncErrorHandler } from '../../utils/asynErrorHandler';
+import { Camera } from '../../models/camera/';
 
 //Snapshot GET /camera/snapshot?ctrl_id=number&cmr_id=number
-export const getSnapshot= asyncErrorHandler(
-  async (req: Request, res: Response, next: NextFunction) => {
-
-    const {cmr_id,ctrl_id} = req.query as {ctrl_id:string,cmr_id:string}
-    console.log({cmr_id,ctrl_id})
-    const imgBuffer = await Camera.snapshotCapture({
-      ctrl_id: Number(ctrl_id),
-      cmr_id: Number(cmr_id)
-    });
-    res.set("Content-Type", "image/jpeg");
-    res.send(imgBuffer);
-  }
-);
+export const getSnapshot = asyncErrorHandler(async (req: Request, res: Response, _next: NextFunction) => {
+  const { cmr_id, ctrl_id } = req.query as { ctrl_id: string; cmr_id: string };
+  const imgBuffer = await Camera.snapshotCapture({
+    ctrl_id: Number(ctrl_id),
+    cmr_id: Number(cmr_id),
+  });
+  res.set('Content-Type', 'image/jpeg');
+  res.send(imgBuffer);
+});

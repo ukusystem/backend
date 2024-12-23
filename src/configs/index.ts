@@ -1,45 +1,39 @@
-import "dotenv/config";
-import { dbEnv } from "./db.configs";
-import { jwtEnv } from "./jwt.configs";
-import { emailEnv } from "./email.configs";
-import { serverEnv } from "./server.configs";
-import { PoolOptions } from "mysql2";
-import { encryptEnv } from "./encrypt.configs";
-import { cookieEnv } from "./cookie.config";
+import 'dotenv/config';
+import { dbEnv } from './db.configs';
+import { jwtEnv } from './jwt.configs';
+import { emailEnv } from './email.configs';
+import { serverEnv } from './server.configs';
+import { PoolOptions } from 'mysql2';
+import { encryptEnv } from './encrypt.configs';
+import { cookieEnv } from './cookie.config';
 // import { genericLogger } from "../services/loggers";
 
-const zodEnv = jwtEnv.merge(dbEnv).merge(emailEnv).merge(serverEnv).merge(encryptEnv).merge(cookieEnv)
+const zodEnv = jwtEnv.merge(dbEnv).merge(emailEnv).merge(serverEnv).merge(encryptEnv).merge(cookieEnv);
 
-declare global {
-  namespace NodeJS {
-    // interface ProcessEnv extends IJwtEnv , IDbEnv , IEmailEnv , IServerEnv, IEncryptEnv ,ICookieEnv {}
-  }
-}
+// declare global {
+//   namespace NodeJS {
+//     // interface ProcessEnv extends IJwtEnv , IDbEnv , IEmailEnv , IServerEnv, IEncryptEnv ,ICookieEnv {}
+//   }
+// }
 
-const result = zodEnv.safeParse(process.env)
+const result = zodEnv.safeParse(process.env);
 
 if (!result.success) {
-
-  const listErrors = result.error.errors.map(
-    (errorDetail) => ({
-      message: errorDetail.message,
-      status: errorDetail.code,
-      path: errorDetail.path
-    })
-  )
+  const listErrors = result.error.errors.map((errorDetail) => ({
+    message: errorDetail.message,
+    status: errorDetail.code,
+    path: errorDetail.path,
+  }));
   // genericLogger.error(`Validación de variables de entorno fallida`,listErrors);
-  console.log("Validación de variables de entorno fallida\n",listErrors)
+  console.log('Validación de variables de entorno fallida\n', listErrors);
 
-  throw new Error(
-    `Environment variable validation error:`
-  );
-
+  throw new Error(`Environment variable validation error:`);
 }
 
-const validatedEnv = result.data ; 
+const validatedEnv = result.data;
 
 interface IAppConfig {
-  node_env: "development" | "production" | "test";
+  node_env: 'development' | 'production' | 'test';
   server: {
     ip: string;
     port: number;
@@ -53,6 +47,9 @@ interface IAppConfig {
     refresh_token: {
       secret: string;
       expire: string;
+    };
+    encrypt: {
+      secret: string;
     };
   };
   cookie: {
@@ -76,10 +73,11 @@ interface IAppConfig {
     redirect_uris: string;
     refresh_token: string;
   };
-  system:{
-    start_motion: boolean;
-    start_nvr:boolean
-  }
+  system: {
+    start_nvr: boolean;
+    start_snapshot_motion: boolean;
+    start_record_motion: boolean;
+  };
 }
 
 const appConfig: IAppConfig = {
@@ -97,6 +95,9 @@ const appConfig: IAppConfig = {
     refresh_token: {
       secret: validatedEnv.REFRESH_TOKEN_SECRET,
       expire: validatedEnv.REFRESH_TOKEN_EXPIRE,
+    },
+    encrypt: {
+      secret: validatedEnv.ENCRYPT_TOKEN_SECRET,
     },
   },
   cookie: {
@@ -133,15 +134,14 @@ const appConfig: IAppConfig = {
     redirect_uris: validatedEnv.EMAIL_REDIRECT_URIS,
     refresh_token: validatedEnv.EMAIL_REFRESH_TOKEN,
   },
-  system:{
-    start_motion: validatedEnv.START_MOTION_DETECTION,
-    start_nvr: validatedEnv.START_NVR
-  }
+  system: {
+    start_nvr: validatedEnv.START_NVR,
+    start_record_motion: validatedEnv.START_RECORD_MOTION,
+    start_snapshot_motion: validatedEnv.START_SNAPSHOT_MOTION,
+  },
 };
 
 // genericLogger.debug("Configuraciones de entorno cargadas",appConfig);
-console.log("Configuraciones variables de entorno cargadas:\n",appConfig)
+console.log('Configuraciones variables de entorno cargadas:\n', appConfig);
 
 export { appConfig };
-
-

@@ -27,6 +27,8 @@ import { NodoCameraMapManager } from './maps/nodo.camera';
 import { NvrManager } from './nvr/nvr.manager';
 import { genericLogger } from '../services/loggers';
 import { RegistroEntradaManager } from '../controllers/socket/registro.entrada';
+import { managementRoutes } from '../routes/management.routes';
+import { TokenManger } from './token.manager';
 
 // import { createServer as createServerHttps } from "https";
 // import fs from "fs";
@@ -35,6 +37,8 @@ export class ServerApp {
   #app: Application;
   #port: number;
   #httpServer;
+
+  #baseApiPath: string = '/api/v1';
 
   constructor() {
     this.#app = express();
@@ -90,25 +94,26 @@ export class ServerApp {
 
   routes() {
     // Autentificacion
-    this.#app.use('/api/v1', authRoutes);
+    this.#app.use(this.#baseApiPath, authRoutes);
     // InitApp
-    this.#app.use('/api/v1', initRoutes);
+    this.#app.use(this.#baseApiPath, initRoutes);
     // Camera
-    this.#app.use('/api/v1', cameraRoutes);
+    this.#app.use(this.#baseApiPath, cameraRoutes);
     // Dashboard:
-    this.#app.use('/api/v1', dashboardRouter);
+    this.#app.use(this.#baseApiPath, dashboardRouter);
     // Register
-    this.#app.use('/api/v1', registerRoutes);
+    this.#app.use(this.#baseApiPath, registerRoutes);
     // Ticket
-    this.#app.use('/api/v1', ticketRoutes);
+    this.#app.use(this.#baseApiPath, ticketRoutes);
     // Vms
-    this.#app.use('/api/v1', vmsRoutes);
+    this.#app.use(this.#baseApiPath, vmsRoutes);
     // SmartMap
-    this.#app.use('/api/v1', smartMapRoutes);
+    this.#app.use(this.#baseApiPath, smartMapRoutes);
     // ==== SITE ====
     // Controles:
-    this.#app.use('/api/v1', siteRoutes);
-
+    this.#app.use(this.#baseApiPath, siteRoutes);
+    // ==== Management ====
+    this.#app.use(this.#baseApiPath, managementRoutes);
     // FrontEnd
     this.#app.use(frontEndRoutes);
     // Otros
@@ -156,6 +161,8 @@ export class ServerApp {
 
       await PersonalMapManager.init();
       await RegistroAccesoManager.init();
+
+      await TokenManger.init();
     } catch (error) {
       genericLogger.error(`Server Model | Error init maps`, error);
       throw error;

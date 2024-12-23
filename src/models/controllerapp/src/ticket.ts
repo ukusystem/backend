@@ -1,31 +1,32 @@
 // import { acceleratedmobilepageurl } from "googleapis/build/src/apis/acceleratedmobilepageurl";
-import { LoadedFile } from "./types";
+import { LoadedFile } from './types';
 // import { Personal, Solicitante } from "../../../controllers/ticket";
-import * as useful from './useful'
-import { States } from "./enums";
+import * as useful from './useful';
+import { States } from './enums';
+
 export interface Personal {
-  c_id:     number;
-  co_id:    number;
-  dni:      string;
-  foto:     null | string;
-  nombre:   string;
+  c_id: number;
+  co_id: number;
+  dni: string;
+  foto: null | string;
+  nombre: string;
   apellido: string;
   telefono: string;
-  isNew:    boolean;
+  isNew: boolean;
 }
 
 export interface Solicitante {
-  telefono:      string;
-  correo:        string;
-  descripcion:   string;
+  telefono: string;
+  correo: string;
+  descripcion: string;
   fechacomienzo: number;
-  fechatermino:  number;
-  prioridad:     number;
-  p_id:          number;
-  tt_id:         number;
-  sn_id:         number;
-  co_id:         number;
-  ctrl_id:       number;
+  fechatermino: number;
+  prioridad: number;
+  p_id: number;
+  tt_id: number;
+  sn_id: number;
+  co_id: number;
+  ctrl_id: number;
 }
 /**
  * Structure of the ticket received from the web application to CREATE a ticket
@@ -52,14 +53,24 @@ export class Ticket {
    *
    * @returns Array of parameters.
    */
-  public toArrayForQuery():any[] {
-  	return [ this.solicitante.telefono, this.solicitante.correo, this.solicitante.descripcion,
-  			useful.formatTimestamp(this.solicitante.fechacomienzo), useful.formatTimestamp(this.solicitante.fechatermino),
-  			States.WAITING_APPROVE, useful.getCurrentDate(), this.solicitante.prioridad, this.solicitante.p_id,
-  			this.solicitante.tt_id, this.solicitante.sn_id, this.solicitante.co_id ];
+  public toArrayForQuery(): any[] {
+    return [
+      this.solicitante.telefono,
+      this.solicitante.correo,
+      this.solicitante.descripcion,
+      useful.formatTimestamp(this.solicitante.fechacomienzo),
+      useful.formatTimestamp(this.solicitante.fechatermino),
+      States.WAITING_APPROVE,
+      useful.getCurrentDate(),
+      this.solicitante.prioridad,
+      this.solicitante.p_id,
+      this.solicitante.tt_id,
+      this.solicitante.sn_id,
+      this.solicitante.co_id,
+    ];
   }
 
-  toString():string {
-  	return `Start '${this.solicitante.fechacomienzo}' End '${this.solicitante.fechatermino}' Nodo ${this.solicitante.ctrl_id}`
+  toString(): string {
+    return `Start '${this.solicitante.fechacomienzo}' End '${this.solicitante.fechatermino}' Nodo ${this.solicitante.ctrl_id}`;
   }
 }
