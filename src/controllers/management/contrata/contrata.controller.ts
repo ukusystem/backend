@@ -98,7 +98,6 @@ export class ContrataController {
       // const { offset, limit } = req.query as { limit: string | undefined; offset: string | undefined };
 
       const { offset, limit, filters }: PaginationContrata = req.query;
-      console.log(req.query);
 
       const final_limit: number = limit !== undefined ? Math.min(Math.max(Number(limit), 0), 100) : 10; // default limit : 10 ,  max limit : 100
 
