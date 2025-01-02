@@ -1,95 +1,61 @@
-import { Namespace, Socket } from "socket.io";
-import { Controlador, MedidorEnergia } from "../../../types/db";
+import { Namespace, Socket } from 'socket.io';
+import { MedidorEnergia } from '../../../types/db';
+import { RowDataPacket } from 'mysql2';
 
-export type MedidorEnergiaSocket = Omit<MedidorEnergia, "serie"> & Pick<Controlador, "ctrl_id">;
-export type MedEneListAction = "add" | "delete" | "update"
+export type MedEneListAction = 'add' | 'delete' | 'update';
 
 export enum MedEneState {
   Activo = 1,
   Desactivado = 0,
 }
 
-// export interface IMedEnergiaDTO extends MedidorEnergiaSocket {
-//   setCtrlId(ctrl_id: MedidorEnergiaSocket["ctrl_id"]): void;
-//   setMeId(me_id: MedidorEnergiaSocket["me_id"]): void;
-//   setVoltaje(voltaje: MedidorEnergiaSocket["voltaje"]): void;
-//   setAmperaje(amperaje: MedidorEnergiaSocket["amperaje"]): void;
-//   setFdp(fdp: MedidorEnergiaSocket["fdp"]): void;
-//   setFrecuencia(frecuencia: MedidorEnergiaSocket["frecuencia"]): void;
-//   setPotenciaw(potenciaw: MedidorEnergiaSocket["potenciaw"]): void;
-//   setPotenciakwh(potenciakwh: MedidorEnergiaSocket["potenciakwh"]): void;
-//   setActivo(activo: MedidorEnergiaSocket["activo"]): void;
-//   setDescripcion(descripcion: MedidorEnergiaSocket["descripcion"]): void;
-//   toJSON(): MedidorEnergiaSocket
-// }
+export type MedEnergiaObj = Omit<MedidorEnergia, 'serie'>;
+export type MedEnergiaSocketDTO = MedEnergiaObj;
 
-export interface MedidorEnergiaSocketBad {
-  ctrl_id: number;
+export interface MedEnergiaAddUpdateDTO {
   me_id: number;
-  descripcion: string | null;
-  voltaje: number | null;
-  amperaje: number | null;
-  fdp: number | null;
-  frecuencia: number | null;
-  potenciaw: number | null;
-  potenciakwh: number | null;
-  activo: number | null;
+  descripcion: string | undefined;
+  voltaje: number | undefined;
+  amperaje: number | undefined;
+  fdp: number | undefined;
+  frecuencia: number | undefined;
+  potenciaw: number | undefined;
+  potenciakwh: number | undefined;
+  activo: number | undefined;
+}
+export interface MedidorEnergiaRowData extends RowDataPacket, MedidorEnergia {}
+
+export type MedEnergiaMap = Map<number, MedEnergiaObj>; // key : me_id
+export type CtrlMedEnergiaMap = Map<number, MedEnergiaMap>; // key : ctrl_id
+
+// Observer:
+export interface MedEnergiaObserver {
+  updateListModEnergia(data: MedEnergiaSocketDTO, action: MedEneListAction): void;
+  updateModEnergia(data: MedEnergiaSocketDTO): void;
 }
 
-// export interface IMedEnergiaBadDTO extends MedidorEnergiaSocketBad {
-//   setCtrlId(ctrl_id: MedidorEnergiaSocketBad["ctrl_id"]): void;
-//   setMeId(me_id: MedidorEnergiaSocketBad["me_id"]): void;
-//   setVoltaje(voltaje: MedidorEnergiaSocketBad["voltaje"]): void;
-//   setAmperaje(amperaje: MedidorEnergiaSocketBad["amperaje"]): void;
-//   setFdp(fdp: MedidorEnergiaSocketBad["fdp"]): void;
-//   setFrecuencia(frecuencia: MedidorEnergiaSocketBad["frecuencia"]): void;
-//   setPotenciaw(potenciaw: MedidorEnergiaSocketBad["potenciaw"]): void;
-//   setPotenciakwh(potenciakwh: MedidorEnergiaSocketBad["potenciakwh"]): void;
-//   setActivo(activo: MedidorEnergiaSocketBad["activo"]): void;
-//   setDescripcion(descripcion: MedidorEnergiaSocketBad["descripcion"]): void;
-//   toJSON(): MedidorEnergiaSocketBad;
-// }
+export type ObserverMedEnergiaMap = Map<number, MedEnergiaObserver>; // key : ctrl_id
+
+export interface ModEnergiaSubject {
+  registerObserver(ctrl_id: number, new_observer: MedEnergiaObserver): void;
+  unregisterObserver(ctrl_id: number): void;
+  notifyListMedEnergia(ctrl_id: number, data: MedEnergiaSocketDTO, action: MedEneListAction): void;
+  notifyMedEnergia(ctrl_id: number, data: MedEnergiaSocketDTO): void;
+}
 
 // Socket:
-interface ClientToServerEvents {
-}
-  
+interface ClientToServerEvents {}
+
 interface ServerToClientEvents {
-  initial_list_energia: (list: MedidorEnergiaSocket[]) => void;
-  list_energia: (modEn: MedidorEnergiaSocket, action: MedEneListAction) => void;
-  energia: (modEn: MedidorEnergiaSocket) => void;
+  initial_list_energia: (list: MedEnergiaSocketDTO[]) => void;
+  list_energia: (modEn: MedEnergiaSocketDTO, action: MedEneListAction) => void;
+  energia: (modEn: MedEnergiaSocketDTO) => void;
 }
 
 interface InterServerEvents {}
 
 interface SocketData {}
 
-export type NamespaceModEnergia = Namespace<
-  ClientToServerEvents,
-  ServerToClientEvents,
-  InterServerEvents,
-  SocketData
->;
+export type NamespaceMedEnergia = Namespace<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>;
 
-export type SocketModEnergia = Socket<
-  ClientToServerEvents,
-  ServerToClientEvents,
-  InterServerEvents,
-  SocketData
->;
-
-
-// Observer:
-
-export interface ModEnergiaObserver {
-  updateListModEnergia(data: MedidorEnergiaSocket , action: MedEneListAction ): void;
-  updateModEnergia(data: MedidorEnergiaSocket): void;
-}
-
-export interface ModEnergiaSubject {
-  registerObserver(ctrl_id: number,observer: ModEnergiaObserver): void;
-  unregisterObserver(ctrl_id: number): void;
-  notifyListModEnergia(ctrl_id: number,data: MedidorEnergiaSocket, action: MedEneListAction): void;
-  notifyModEnergia(ctrl_id: number, data: MedidorEnergiaSocket): void;
-}
-
+export type SocketMedEnergia = Socket<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>;

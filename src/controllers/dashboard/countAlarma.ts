@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { asyncErrorHandler } from "../../utils/asynErrorHandler";
 import { Dashboard } from "../../models/dashboard/dashboard";
+import { dashboardLogger } from "../../services/loggers";
 
 export const countAlarma = asyncErrorHandler(
   async (req: Request, res: Response, _next: NextFunction) => {
@@ -9,8 +10,7 @@ export const countAlarma = asyncErrorHandler(
       const data = await Dashboard.getTotalAlarmas({ctrl_id:Number(ctrl_id),date:date,isMonthly: monthly == "true"})
       res.json(data)
     } catch (error) {
-      console.error(error)
-      
+      dashboardLogger.error(`Error al obtener el total de alarmas`,error)
       res.json({data: {alarmas:[],total_alarma:0}})
     }
   }

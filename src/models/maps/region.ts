@@ -1,7 +1,8 @@
-import { RowDataPacket } from "mysql2";
-import { MySQL2 } from "../../database/mysql";
-import { Region } from "../../types/db";
-import { RegionNotifyManager } from "../system";
+import { RowDataPacket } from 'mysql2';
+import { MySQL2 } from '../../database/mysql';
+import { Region } from '../../types/db';
+import { RegionNotifyManager } from '../system';
+import { genericLogger } from '../../services/loggers';
 
 interface RegionRowData extends RowDataPacket, Region {}
 
@@ -23,17 +24,19 @@ export class RegionMapManager {
     const existRegion = RegionMapManager.#regions.has(rgn_id);
     if (!existRegion) {
       RegionMapManager.#regions.set(rgn_id, newRegion);
-      RegionNotifyManager.add(newRegion)
+      RegionNotifyManager.add(newRegion);
     }
   }
 
   static update(rgn_id: number, fieldsUpdate: Partial<Region>) {
     const currRegion = RegionMapManager.#regions.get(rgn_id);
     if (currRegion !== undefined) {
-      const curRegionCopy = {...currRegion}
-      const {rgn_id,...fieldsFiltered} = RegionMapManager.#filterUndefined(fieldsUpdate);
+      const curRegionCopy = { ...currRegion };
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { rgn_id, ...fieldsFiltered } = RegionMapManager.#filterUndefined(fieldsUpdate);
       Object.assign(currRegion, fieldsFiltered);
-      RegionNotifyManager.update(curRegionCopy,fieldsFiltered);
+      RegionNotifyManager.update(curRegionCopy, fieldsFiltered);
     }
   }
 
@@ -41,8 +44,8 @@ export class RegionMapManager {
     return RegionMapManager.#regions.get(rgn_id);
   }
 
-  static getAllRegion():Region[]{
-    return Array.from(RegionMapManager.#regions.values())
+  static getAllRegion(): Region[] {
+    return Array.from(RegionMapManager.#regions.values());
   }
 
   static async init() {
@@ -54,13 +57,11 @@ export class RegionMapManager {
         RegionMapManager.add(region.rgn_id, region);
       });
     } catch (error) {
-      console.log(`RegionMapManager | Error al inicializar regiones`);
-      console.error(error);
+      genericLogger.error(`RegionMapManager | Error al inicializar regiones`, error);
       throw error;
     }
   }
 }
-
 
 // (async () => {
 //   setInterval(() => {

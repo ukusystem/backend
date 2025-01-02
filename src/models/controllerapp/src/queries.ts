@@ -1,8 +1,8 @@
-import { IntTuple } from "./intTuple";
-import { ParseType } from "./enums";
-import * as Codes from "./codes";
-import { TableTuple } from "./tableTuple";
-import * as queries from "./queries";
+import { IntTuple } from './intTuple';
+import { ParseType } from './enums';
+import * as Codes from './codes';
+import { TableTuple } from './tableTuple';
+import * as queries from './queries';
 
 /**
  * Append a {@linkcode tuplePassword} to the provided list of
@@ -13,15 +13,15 @@ import * as queries from "./queries";
  * @return The complete list of tuples
  */
 export function addPasswordTuple(parseList: IntTuple[]): IntTuple[] {
-	const newList: IntTuple[] = []
-	for (const item of parseList) {
-		newList.push(item)
-	}
-	newList.push(queries.tuplePassword)
-	return newList;
+  const newList: IntTuple[] = [];
+  for (const item of parseList) {
+    newList.push(item);
+  }
+  newList.push(queries.tuplePassword);
+  return newList;
 }
 
-export const DEFAULT_DATE = "2000-01-01 00:00:00";
+export const DEFAULT_DATE = '2000-01-01 00:00:00';
 
 /* Constants for parsing commands */
 
@@ -40,6 +40,7 @@ export const loginParse = [tupleUser, tuplePassword];
 export const valueDateParse = [tupleValue, tupleLong];
 export const cmdAndIDParse = [tupleInt, tupleCmd];
 export const tempParse = [tupleInt, tupleFloat];
+export const IDTextParse = [tupleValue, tupleTxt];
 export const valueParse = [tupleValue];
 export const bigParse = [tupleBig];
 export const longParse = [tupleLong];
@@ -50,7 +51,10 @@ export const enablesParse = [tupleInt, tupleBig, tupleInt, tupleBig, tupleInt, t
 export const pinParse = [tupleInt, tupleInt, tupleLong, tupleInt];
 export const cardReadParse = [tupleInt, tupleBig, tupleInt, tupleInt, tupleInt, tupleLong];
 export const powerParse = [tupleLong, tupleID, tupleFloat, tupleFloat, tupleFloat, tupleFloat, tupleFloat, tupleFloat];
-export const orderParse = [tupleInt, tupleInt, tupleLong]
+export const orderParse = [tupleInt, tupleInt, tupleLong];
+export const securityStateParse = [tupleInt, tupleInt, tupleInt, tupleLong];
+export const sdStateParse = [tupleInt, tupleInt, tupleInt, tupleLong];
+export const authParse = [tupleInt, tupleInt, tupleLong];
 
 /* Manage tables */
 
@@ -174,14 +178,17 @@ export const updateAllInputsEnables = `
 			`;
 
 export const insertCard = `
-				INSERT INTO %s.registroacceso (serie, administrador, autorizacion, fecha, co_id, ea_id, tipo, sn_id)
+				INSERT INTO %s.registroacceso (serie, administrador, autorizacion, fecha, p_id, ea_id, tipo, sn_id)
 				VALUES (?,?,?,?,?,?,?,?);
 			`;
 
 export const getCardInfo = `
-				SELECT co_id, ea_id
-				FROM general.acceso
-				WHERE a_id =? AND activo=1;
+				SELECT A.p_id, A.ea_id
+				FROM general.acceso A
+				JOIN general.personal P
+				ON A.p_id = P.p_id
+				WHERE A.serie = ?
+				AND P.co_id = ?;
 			`;
 
 export const insertCtrlState = `
@@ -215,6 +222,12 @@ export const insertTemperature = `
 				INSERT INTO %s.registrotemperatura (st_id, valor, fecha)
 				VALUES (?, ?, ?);
 			`;
+
+export const updateAddress = `
+			UPDATE %s.sensortemperatura
+			SET serie = ?
+			WHERE st_id = ?;
+`;
 
 // export const setCurrentTemperature = `
 // 				UPDATE %s.sensortemperatura
@@ -269,19 +282,29 @@ export const insertCameraState = `
 /* Tickets and requests */
 
 /**
- * rt_id, telefono, correo, descripcion, fechacomienzo, fechatermino, estd_id, fechaestadofinal, fechacreacion, 
+ * rt_id, telefono, correo, descripcion, fechacomienzo, fechatermino, estd_id, fechaestadofinal, fechacreacion,
  * prioridad, p_id, tt_id, sn_id, enviado, co_id, asistencia
+ * @deprecated
  */
 export const selectUnattendedTicket = `
 				SELECT rt_id AS entero FROM %s.registroticket
 				WHERE co_id = ? AND fechacomienzo < ? AND fechatermino > ? AND enviado = 1 AND asistencia = 0;
 			`;
 
+/**
+ * @deprecated
+ */
 export const updateAttendance = `
 				UPDATE %s.registroticket
 				SET asistencia = 1
 				WHERE rt_id = ?;
 				`;
+
+export const setAttended = `
+				UPDATE %s.registroticket
+				SET asistencia = 1
+				WHERE co_id = ? AND fechacomienzo < ? AND fechatermino > ? AND enviado = 1 AND asistencia = 0;
+`;
 
 export const insertRequest = `
 				INSERT INTO %s.registropeticion ( pin, orden, fecha, estd_id)
@@ -320,7 +343,7 @@ export const insertWorker = `
 				INSERT INTO %s.actividadpersonal (nombre, apellido, telefono, dni, c_id, co_id, rt_id, foto)
 				VALUE (?, ?, ?, ?, ?, ?, ?, ?);
 			`;
-			
+
 /**
  * Removed:
  * WHERE enviado=0
@@ -438,27 +461,18 @@ export const nodeGetForUpdate = `
 				WHERE ctrl_id=? AND activo=1;
 			`;
 
-// export const nodeSelect = `
-// 				SELECT ctrl_id, nodo, rgn_id, direccion, descripcion,
-// 					latitud, longitud, usuario, serie,
-// 					ip, mascara, puertaenlace, puerto, personalgestion,
-// 					personalimplementador, seguridad
-// 				FROM general.controlador
-// 				WHERE activo=1;
-// 			`;
-
 /**
- * ctrl_id, nodo, rgn_id, direccion, descripcion, 
- * latitud, longitud, usuario, serie, 
- * ip, mascara, puertaenlace, puerto, personalgestion, 
- * personalimplementador, seguridad, 
- * 
- * motionrecordseconds, res_id_motionrecord, motionrecordfps, 
- * motionsnapshotseconds, res_id_motionsnapshot, motionsnapshotinterval, 
- * res_id_streamprimary, streamprimaryfps, 
- * res_id_streamsecondary, streamsecondaryfps, 
+ * ctrl_id, nodo, rgn_id, direccion, descripcion,
+ * latitud, longitud, usuario, serie,
+ * ip, mascara, puertaenlace, puerto, personalgestion,
+ * personalimplementador, seguridad,
+ *
+ * motionrecordseconds, res_id_motionrecord, motionrecordfps,
+ * motionsnapshotseconds, res_id_motionsnapshot, motionsnapshotinterval,
+ * res_id_streamprimary, streamprimaryfps,
+ * res_id_streamsecondary, streamsecondaryfps,
  * res_id_streamauxiliary, streamauxiliaryfps,
- * modo, 
+ * modo,
  */
 
 export const nodeSelect = `
@@ -533,7 +547,6 @@ export const nodeUpdateTrivial = `
 			WHERE ctrl_id=?;
 		`;
 
-
 export const nodeInsert = `
 				INSERT INTO general.controlador (
 					ctrl_id, nodo, rgn_id, direccion, descripcion, latitud, longitud,
@@ -578,17 +591,34 @@ export const nodeSelectID = `
  * Tuples to parse the node data without a password.
  */
 export const nodeParse = [
-	tupleID,
-	tupleTxt, tupleID, tupleTxt, tupleTxt,
-	tupleTxt, tupleTxt, tupleTxt, tupleTxt,
-	tupleTxt, tupleTxt, tupleTxt, tupleInt, tupleTxt,
-	tupleTxt,
-	tupleInt, tupleID, tupleInt,
-	tupleInt, tupleID, tupleInt,
-	tupleID, tupleInt,
-	tupleID, tupleInt,
-	tupleID, tupleInt
-	// tupleInt
+  tupleID,
+  tupleTxt,
+  tupleID,
+  tupleTxt,
+  tupleTxt,
+  tupleTxt,
+  tupleTxt,
+  tupleTxt,
+  tupleTxt,
+  tupleTxt,
+  tupleTxt,
+  tupleTxt,
+  tupleInt,
+  tupleTxt,
+  tupleTxt,
+  tupleInt,
+  tupleID,
+  tupleInt,
+  tupleInt,
+  tupleID,
+  tupleInt,
+  tupleID,
+  tupleInt,
+  tupleID,
+  tupleInt,
+  tupleID,
+  tupleInt,
+  // tupleInt
 ];
 
 /**
@@ -673,6 +703,11 @@ export const userDateIndex = 3;
 
 /* Worker */
 
+export const selectWorkerCompany = `
+	SELECT co_id AS entero FROM general.personal
+	WHERE p_id = ?;
+`;
+
 export const workersSelect = `
 				SELECT p_id, nombre, apellido, telefono, dni, c_id, co_id, foto, correo
 				FROM general.personal
@@ -708,13 +743,13 @@ export const workerIDIndex = 0;
  * items should be displayed in their original order.
  */
 export const cardSelect = `
-				SELECT a_id, serie, administrador, co_id, ea_id, activo
+				SELECT a_id, serie, administrador, p_id, ea_id, activo
 				FROM general.acceso;
 			`;
 
 export const cardUpdate = `
 				UPDATE general.acceso
-				SET serie=?, administrador=?, co_id=?, ea_id=?, activo=?
+				SET serie=?, administrador=?, p_id=?, ea_id=?, activo=?
 				WHERE a_id=?;
 			`;
 
@@ -727,7 +762,10 @@ export const cardDisable = `
 export const cardParse = [tupleInt, tupleBig, tupleInt, tupleInt, tupleInt, tupleInt];
 
 export const cardSelectForController = `
-				SELECT a_id, serie, administrador, co_id, activo FROM general.acceso;
+				SELECT A.a_id, A.serie, A.administrador, P.co_id, A.activo
+				FROM general.acceso A
+				JOIN general.personal P
+				ON A.p_id = P.p_id;
 			`;
 
 /* Energy */
@@ -917,22 +955,22 @@ export const cardReaderParse = [tupleInt, tupleTxt];
  * further processing and no node dependent.
  */
 export const tableTuples = [
-	new TableTuple(Codes.VALUE_GROUP, Codes.VALUE_GROUPS_END, queries.regionSelect, "region", false),
-	new TableTuple(Codes.VALUE_USER, Codes.VALUE_USER_END, queries.userSelect, "usuario", false),
-	new TableTuple(Codes.VALUE_COMPANY, Codes.VALUE_COMPANY_END, queries.companySelect, "contrata", false),
+  new TableTuple(Codes.VALUE_GROUP, Codes.VALUE_GROUPS_END, queries.regionSelect, 'region', false),
+  new TableTuple(Codes.VALUE_USER, Codes.VALUE_USER_END, queries.userSelect, 'usuario', false),
+  new TableTuple(Codes.VALUE_COMPANY, Codes.VALUE_COMPANY_END, queries.companySelect, 'contrata', false),
 
-	new TableTuple(Codes.VALUE_ACCESS_TYPE, Codes.VALUE_ACCESS_TYPE_END, queries.accessSelect, "equipoacceso", false),
-	new TableTuple(Codes.VALUE_SECTOR, Codes.VALUE_SECTOR_END, queries.sectorSelect, "rubro", false),
-	new TableTuple(Codes.VALUE_ROLE, Codes.VALUE_ROLE_END, queries.roleSelect, "rol", false),
-	new TableTuple(Codes.VALUE_POST, Codes.VALUE_POST_END, queries.postSelect, "cargo", false),
+  new TableTuple(Codes.VALUE_ACCESS_TYPE, Codes.VALUE_ACCESS_TYPE_END, queries.accessSelect, 'equipoacceso', false),
+  new TableTuple(Codes.VALUE_SECTOR, Codes.VALUE_SECTOR_END, queries.sectorSelect, 'rubro', false),
+  new TableTuple(Codes.VALUE_ROLE, Codes.VALUE_ROLE_END, queries.roleSelect, 'rol', false),
+  new TableTuple(Codes.VALUE_POST, Codes.VALUE_POST_END, queries.postSelect, 'cargo', false),
 
-	new TableTuple(Codes.VALUE_CARD, Codes.VALUE_CARD_END, queries.cardSelect, "acceso", false),
+  new TableTuple(Codes.VALUE_CARD, Codes.VALUE_CARD_END, queries.cardSelect, 'acceso', false),
 
-	new TableTuple(Codes.VALUE_DETECTOR, Codes.VALUE_DETECTOR_END, queries.detectorSelect, "equipoentrada", false),
-	new TableTuple(Codes.VALUE_ACTUATOR, Codes.VALUE_ACTUATOR_END, queries.actuatorSelect, "equiposalida", false),
-	new TableTuple(Codes.VALUE_CAMERA_TYPE, Codes.VALUE_CAMERA_TYPE_END, queries.cameraTypeSelect, "tipocamara", false),
-	new TableTuple(Codes.VALUE_CAMERA_BRAND, Codes.VALUE_CAMERA_BRAND_END, queries.camBrandSelect, "marca", false),
-	new TableTuple(Codes.VALUE_RESOLUTION, Codes.VALUE_RESOLUTION_END, queries.selectResolutions, "resolucion", false)
+  new TableTuple(Codes.VALUE_DETECTOR, Codes.VALUE_DETECTOR_END, queries.detectorSelect, 'equipoentrada', false),
+  new TableTuple(Codes.VALUE_ACTUATOR, Codes.VALUE_ACTUATOR_END, queries.actuatorSelect, 'equiposalida', false),
+  new TableTuple(Codes.VALUE_CAMERA_TYPE, Codes.VALUE_CAMERA_TYPE_END, queries.cameraTypeSelect, 'tipocamara', false),
+  new TableTuple(Codes.VALUE_CAMERA_BRAND, Codes.VALUE_CAMERA_BRAND_END, queries.camBrandSelect, 'marca', false),
+  new TableTuple(Codes.VALUE_RESOLUTION, Codes.VALUE_RESOLUTION_END, queries.selectResolutions, 'resolucion', false),
 ];
 
 /**
@@ -941,11 +979,11 @@ export const tableTuples = [
 
 export const generalSelect = `
 				SELECT nombreempresa, correoadministrador FROM general.configuracion LIMIT 1;
-`
+`;
 
 export const generalUpdate = `
 				UPDATE general.configuracion
 				SET nombreempresa=?, correoadministrador=? WHERE conf_id >0;
-`
+`;
 
-export const generalParse = [tupleTxt, tupleTxt]
+export const generalParse = [tupleTxt, tupleTxt];

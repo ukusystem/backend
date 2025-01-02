@@ -1,4 +1,5 @@
 import { MySQL2 } from "../../database/mysql";
+import { genericLogger } from "../../services/loggers";
 import { GeneralUpdate } from "./system.general.update";
 import { ControllerConfig, GeneralConfig, GeneralConfigRowData } from "./system.state.types";
 
@@ -44,8 +45,7 @@ export class SystemManager {
         SystemManager.general= generalConfigs[0]
       }
     } catch (error) {
-      console.log(`AppConfig | Init | Error al inicializar configuración`);
-      console.error(error);   
+      genericLogger.error(`SystemManager | init | Error al inicializar configuración`,error);
     }
   }
 

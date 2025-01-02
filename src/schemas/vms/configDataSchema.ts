@@ -1,14 +1,13 @@
-import test from 'node:test';
 import z from 'zod'
 
 const StreamSchema = z.object({
     cmr_id:z.number({required_error: "'cmr_id' es requerido",invalid_type_error: "'cmr_id' debe ser un numero",}).int("'cmr_id' debe ser un numero entero").gte(0, "'cmr_id' debe ser mayor o igual a 0"),
-    ip:z.string({required_error: "'ip' es requerido",invalid_type_error: "'ip' debe ser un string",}).ip({message:"'ip' invalido"}),
-    descripcion:z.string({required_error: "'descripcion' es requerido",invalid_type_error: "'descripcion' debe ser un string",}),
-    puertows: z.number({required_error: "'puertows' es requerido",invalid_type_error: "'puertows' debe ser un numero",}).int("'puertows' debe ser un numero entero").gte(0, "'puertows' debe ser mayor o igual a 0"),
-    tipo:z.string({required_error: "'tipo' es requerido",invalid_type_error: "'tipo' debe ser un string",}),
-    marca:z.string({required_error: "'marca' es requerido",invalid_type_error: "'marca' debe ser un string",}),
-    nodo:z.string({required_error: "'nodo' es requerido",invalid_type_error: "'nodo' debe ser un string",}),
+    // ip:z.string({required_error: "'ip' es requerido",invalid_type_error: "'ip' debe ser un string",}).ip({message:"'ip' invalido"}),
+    // descripcion:z.string({required_error: "'descripcion' es requerido",invalid_type_error: "'descripcion' debe ser un string",}),
+    // puertows: z.number({required_error: "'puertows' es requerido",invalid_type_error: "'puertows' debe ser un numero",}).int("'puertows' debe ser un numero entero").gte(0, "'puertows' debe ser mayor o igual a 0"),
+    // tipo:z.string({required_error: "'tipo' es requerido",invalid_type_error: "'tipo' debe ser un string",}),
+    // marca:z.string({required_error: "'marca' es requerido",invalid_type_error: "'marca' debe ser un string",}),
+    // nodo:z.string({required_error: "'nodo' es requerido",invalid_type_error: "'nodo' debe ser un string",}),
     ctrl_id:z.number({required_error: "'ctrl_id' es requerido",invalid_type_error: "'ctrl_id' debe ser un numero",}).int("'ctrl_id' debe ser un numero entero").gte(0, "'ctrl_id' debe ser mayor o igual a 0"),
 },{required_error:"Stream es requerido", invalid_type_error:"El tipo Stream es incorrecto"})
 

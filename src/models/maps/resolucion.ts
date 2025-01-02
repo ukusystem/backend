@@ -1,6 +1,7 @@
 import { RowDataPacket } from "mysql2";
 import { Resolucion } from "../../types/db";
 import { MySQL2 } from "../../database/mysql";
+import { genericLogger } from "../../services/loggers";
 
 interface ResolucionRowData extends RowDataPacket, Resolucion {}
 
@@ -47,8 +48,7 @@ export class Resolution {
         Resolution.add(resolution.res_id, resolution);
       });
     } catch (error) {
-      console.log(`Resolution | Error al inicializar regiones`);
-      console.error(error);
+      genericLogger.error(`Resolution | Error al inicializar regiones`,error);
       throw error;
     }
   }

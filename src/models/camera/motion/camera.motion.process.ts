@@ -1,21 +1,25 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // @ts-ignore
 // @ts-nocheck
 
-import { ChildProcessWithoutNullStreams, spawn } from "child_process";
-import path from "path";
-import fs from "fs";
-import { Cam } from "onvif";
-import { MySQL2 } from "../../../database/mysql";
-import { createImageBase64, verifyImageMarkers } from "../../../utils/stream";
-import { getMulticastRtspStreamAndSubStream } from "../../../utils/getCameraRtspLinks";
-import { Init } from "../../init";
-import { decrypt } from "../../../utils/decrypt";
-import dayjs from "dayjs";
-import { CameraMotionMethods, CameraMotionProps, CameraProps } from "./camera.motion.types";
-import { CameraMotionManager } from "./camera.motion.manager";
-import { ControllerMapManager } from "../../maps";
+import { ChildProcessByStdio, spawn } from 'child_process';
+import path from 'path';
+import fs from 'fs';
+import { Cam } from 'onvif';
+import { MySQL2 } from '../../../database/mysql';
+import { createImageBase64 } from '../../../utils/stream';
+import { getMulticastRtspStreamAndSubStream } from '../../../utils/getCameraRtspLinks';
+import dayjs from 'dayjs';
+import { CameraMotionMethods, CameraMotionProps, CameraProps } from './camera.motion.types';
+import { ControllerMapManager } from '../../maps';
+import { cameraLogger } from '../../../services/loggers';
+import { CameraMotionManager } from './camera.motion.manager';
+import { NodoCameraMapManager } from '../../maps/nodo.camera';
+// import { notifyCamDisconnect } from '../../controllerapp/controller';
+import { CameraReconnect } from '../cam.reconnect';
+import { appConfig } from '../../../configs';
 
-
+const TIMEOUT_DISCONNECT = 5;
 export class CameraMotionProcess implements CameraMotionProps, CameraMotionMethods {
   ip: string;
   usuario: string;
@@ -23,14 +27,8 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
   cmr_id: number;
   ctrl_id: number;
 
-  ffmpegProcessImage: ChildProcessWithoutNullStreams | null = null;
-  imageBuffer: Buffer = Buffer.alloc(0);
-  isInsideImage: boolean = false;
-  isActiveProccesImage: boolean = false;
-  blockProcessImage: boolean = false;
-
-  ffmpegProcessVideo: ChildProcessWithoutNullStreams | null = null;
-  isActiveProccesVideo: boolean = false;
+  ffmpegProcess: ChildProcessByStdio<null, null, null> | undefined = undefined;
+  isActiveMotion: boolean = false;
 
   constructor(props: CameraProps) {
     const { cmr_id, ctrl_id, ip, contraseña, usuario } = props;
@@ -47,191 +45,131 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
     // Split on '/'
     // For each part, remove any namespace
     // Recombine parts that were split with '/'
-    let output = "";
-    let parts = topic.split("/");
+    let output = '';
+    const parts = topic.split('/');
     for (let index = 0; index < parts.length; index++) {
-      let stringNoNamespace = parts[index].split(":").pop(); // split on :, then return the last item in the array
-      if (output.length == 0) {
+      const stringNoNamespace = parts[index].split(':').pop(); // split on :, then return the last item in the array
+      if (output.length === 0) {
         output += stringNoNamespace;
       } else {
-        output += "/" + stringNoNamespace;
+        output += '/' + stringNoNamespace;
       }
     }
     return output;
   }
 
   processEvent(eventTime: any, eventTopic: any, eventProperty: any, sourceName: any, sourceValue: any, dataName: any, dataValue: any, rtspUrl: string) {
-    let output = "";
-    output += `EVENT: ${eventTime.toJSON()} ${eventTopic}`;
-    if (typeof eventProperty !== "undefined") {
-      output += ` PROP:${eventProperty}`;
-    }
-    if (typeof sourceName !== "undefined" && typeof sourceValue !== "undefined") {
-      output += ` SRC:${sourceName}=${sourceValue}`;
-    }
-    if (typeof dataName !== "undefined" && typeof dataValue !== "undefined") {
-      output += ` DATA:${dataName}=${dataValue}`;
+    // let output = "";
+    // output += `EVENT: ${eventTime.toJSON()} ${eventTopic}`;
+    // if (typeof eventProperty !== "undefined") {
+    //   output += ` PROP:${eventProperty}`;
+    // }
+    // if (typeof sourceName !== "undefined" && typeof sourceValue !== "undefined") {
+    //   output += ` SRC:${sourceName}=${sourceValue}`;
+    // }
+    // if (typeof dataName !== "undefined" && typeof dataValue !== "undefined") {
+    //   output += ` DATA:${dataName}=${dataValue}`;
+    // }
+
+    if (eventTopic === 'VideoSource/MotionAlarm' || eventTopic === 'RuleEngine/CellMotionDetector/Motion') {
+      this.isActiveMotion = dataValue;
     }
 
-    if (eventTopic === "VideoSource/MotionAlarm" || eventTopic === "RuleEngine/CellMotionDetector/Motion") {
-      this.isActiveProccesImage = dataValue;
-      this.isActiveProccesVideo = dataValue;
-    }
-
-    if (this.isActiveProccesImage) {
-      this.snapshotMotion(rtspUrl);
-    }
-
-    if (this.isActiveProccesVideo) {
-      this.captureMotion(rtspUrl);
+    if (this.isActiveMotion) {
+      this.snapshotRecord(rtspUrl);
     }
   }
 
-  snapshotMotion(rtspUrl: string) {
-    if (!this.ffmpegProcessImage) {
+  snapshotRecord(rtspUrl: string) {
+    if (this.ffmpegProcess === undefined) {
       try {
-        const argsImageProcces = getImageFfmpegArgs(rtspUrl,this.ctrl_id);
-        this.ffmpegProcessImage = spawn("ffmpeg", argsImageProcces);
-        this.ffmpegProcessImage.stdout.on("data", (data: Buffer) => {
-          // Verificar marcadores
-          let isMarkStart = verifyImageMarkers(data, "start");
-          let isMarkEnd = verifyImageMarkers(data, "end");
+        const baseSnapshotDir = createMotionDetectionFolders(`./deteccionmovimiento/img/nodo${this.ctrl_id}/camara${this.cmr_id}`);
 
-          if (!this.isInsideImage && isMarkStart) {
-            // Si no estamos dentro de una imagen y se encuentra el marcador de inicio
-            this.isInsideImage = true;
+        const baseRecordDir = createMotionDetectionFolders(`./deteccionmovimiento/vid/nodo${this.ctrl_id}/camara${this.cmr_id}`);
+        const recordFile = `record_${Date.now()}.mp4`;
+        const ffmpegArgs = getMotionFfmegArgs(rtspUrl, this.ctrl_id, { baseSnapshotDir: baseSnapshotDir.split(path.sep).join(path.posix.sep), baseRecordDir: baseRecordDir.split(path.sep).join(path.posix.sep), recordFile: recordFile });
+
+        const controllerSnapshot = new AbortController();
+        // const { signal } = controller;
+        if (appConfig.system.start_snapshot_motion) {
+          fs.watch(baseSnapshotDir, { signal: controllerSnapshot.signal }, async (eventType, filename) => {
+            if (eventType === 'rename' && filename !== null) {
+              // search snapshot_%H_%M_%S.jpg and save to db
+              const regex = new RegExp(/^snapshot_(\d{2})_(\d{2})_(\d{2})\.jpg$/);
+              const isMatch = regex.test(filename);
+              if (isMatch) {
+                const snapshotFilePath = path.join(baseSnapshotDir, filename);
+                fs.readFile(snapshotFilePath, (err, data) => {
+                  if (err) {
+                    cameraLogger.error(`CameraMotionProcess | Error al leer captura | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id} `, err);
+                    return;
+                  }
+                  if (appConfig.system.start_snapshot_motion) {
+                    const imageBase64 = createImageBase64(data);
+
+                    CameraMotionManager.notifyImageMotion(this.ctrl_id, imageBase64);
+
+                    insertPathToDB(snapshotFilePath, this.ctrl_id, this.cmr_id, 0);
+                  }
+                });
+              }
+            }
+          });
+        }
+
+        const newFfmpegProcess = spawn('ffmpeg', ffmpegArgs, { stdio: ['ignore', 'ignore', 'ignore'] });
+
+        this.ffmpegProcess = newFfmpegProcess;
+
+        this.ffmpegProcess.on('close', async (code, signal) => {
+          cameraLogger.debug(`CameraMotionProcess | Proceso ffmpeg cerrado con código ${code} y señal ${signal} | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id}`);
+
+          // abort controllers:
+          controllerSnapshot.abort();
+
+          // save record to db : code 0
+          const recordFilePath = path.join(baseRecordDir, recordFile);
+          if (code === 0) {
+            cameraLogger.debug(`CameraMotionProcess| Proceso ffmpeg completado sin errores | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id}`);
+            if (appConfig.system.start_record_motion) {
+              insertPathToDB(recordFilePath, this.ctrl_id, this.cmr_id, 1);
+            }
+          } else {
+            cameraLogger.error(`CameraMotionProcess  | Proceso ffmpeg cerrado con código de error: ${code} | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id}`);
+            // Eliminar video.
+            fs.unlink(recordFilePath, (err) => {
+              if (err) {
+                cameraLogger.error(`CameraMotionProcess | Error al eliminar video: ${recordFilePath} | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id}`, err);
+              }
+            });
           }
 
-          if (this.isInsideImage) {
-            // Concatenar nuevos datos al buffer existente
-            this.imageBuffer = Buffer.concat([this.imageBuffer, data]);
+          if (this.ffmpegProcess !== undefined) {
+            // this.ffmpegProcess.kill();
+            this.ffmpegProcess = undefined;
+          }
 
-            if (verifyImageMarkers(this.imageBuffer, "complete")) {
-              try {
-                const pathImg = createMotionDetectionFolders(`./deteccionmovimiento/img/${"nodo" + this.ctrl_id}/${this.ip}`);
-                console.log(`Detección Movimiento | Imagen completo recibido | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`);
-                // Guardar la imagen
-                const imagePath = path.join(pathImg, `captura_${Date.now()}.jpg`); // ---> deteccionmovimiento\img\Arequipa\172.16.4.110\2024-01-26\13\captura_1706292419800.jpg
-
-                fs.writeFileSync(imagePath, this.imageBuffer);
-
-                let imageBase64 = createImageBase64(this.imageBuffer)
-                CameraMotionManager.notifyImageMotion(this.ctrl_id,imageBase64)
-
-                insertPathToDB(imagePath, this.ctrl_id, this.cmr_id, 0);
-
-              } catch (error) {
-                console.log(`Detección Movimiento | Error al guardar imagen | ctrl_id: ${this.ctrl_id} | ip: ${this.ip} `);
-                console.error(error);
+          if (this.isActiveMotion) {
+            cameraLogger.debug(`CameraMotionProcess | Evento motion continua activo | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id}`);
+            const isConnected = await this.isCamConnected();
+            if (isConnected) {
+              return this.snapshotRecord(rtspUrl);
+            } else {
+              this.isActiveMotion = false;
+              // notificar deconexión
+              NodoCameraMapManager.update(this.ctrl_id, this.cmr_id, { conectado: 0 });
+              const camera = NodoCameraMapManager.getCamera(this.ctrl_id, this.cmr_id);
+              if (camera !== undefined) {
+                cameraLogger.info(`CameraMotionProcess | Notify Camera Disconnect | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id}`);
+                // notifyCamDisconnect(this.ctrl_id, { ...camera });
+                const newCamConnect = new CameraReconnect(this.ctrl_id, this.cmr_id, 'Motion');
+                newCamConnect.start();
               }
             }
           }
-
-          if (isMarkEnd) {
-            // Limpiar el búfer para la siguiente imagen
-            this.imageBuffer = Buffer.alloc(0);
-            this.isInsideImage = false;
-          }
-        });
-
-        this.ffmpegProcessImage.on("error", (err) => {
-          console.log(`Detección Movimiento | Error en el proceso ffmpegImage | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`);
-          if (this.ffmpegProcessImage) {
-            this.ffmpegProcessImage.kill();
-            this.ffmpegProcessImage = null;
-          }
-
-          // this.isActiveProccesImage = false;
-
-          this.imageBuffer = Buffer.alloc(0);
-          this.isInsideImage = false;
-
-          console.error(err);
-        });
-
-        this.ffmpegProcessImage.on("close", async (code) => {
-          console.log(`Detección Movimiento | Proceso ffmpegImage cerrado con código ${code} | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`);
-          if (this.ffmpegProcessImage) {
-            this.ffmpegProcessImage.kill();
-            this.ffmpegProcessImage = null;
-          }
-          // this.isActiveProccesImage = false;
-
-          this.imageBuffer = Buffer.alloc(0);
-          this.isInsideImage = false;
-
-          if (this.isActiveProccesImage) {
-            console.log(`Detección Movimiento | Evento continua activo para capturar imagenes | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`);
-            let isConnected = await this.isCamConnected();
-            if (isConnected) {
-              return this.snapshotMotion(rtspUrl);
-            } else {
-              this.isActiveProccesImage = false;
-            }
-          }
         });
       } catch (error) {
-        console.log(`Detección Movimiento | Error en CameraMotion.snapshotMotion | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`);
-        console.error(error);
-      }
-    }
-  }
-
-  captureMotion(rtspUrl: string) {
-    if (!this.ffmpegProcessVideo) {
-      try {
-        const pathFolderVid = createMotionDetectionFolders(`./deteccionmovimiento/vid/${"nodo" + this.ctrl_id}/${this.ip}`);
-        const videoPath = path.join(pathFolderVid, `grabacion_${Date.now()}.mp4`);
-        const argsVideoProcces = getVideoFfmpegArgs(rtspUrl, videoPath , this.ctrl_id);
-
-        this.ffmpegProcessVideo = spawn("ffmpeg", argsVideoProcces);
-
-        this.ffmpegProcessVideo.on("error", (err) => {
-          console.log(`Detección Movimiento | Error en el proceso ffmpegVideo | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`);
-          if (this.ffmpegProcessVideo) {
-            this.ffmpegProcessVideo.kill();
-            this.ffmpegProcessVideo = null;
-          }
-
-          console.error(err);
-        });
-
-        this.ffmpegProcessVideo.on("close", async (code) => {
-          if (code === 0) {
-            console.log(`Detección Movimiento | Proceso ffmpegVideo completado sin errores | Código de salida: ${code} | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`);
-            insertPathToDB(videoPath, this.ctrl_id, this.cmr_id, 1);
-          } else {
-            console.error(`Detección Movimiento | Proceso ffmpegVideo cerrado con código de error: ${code} | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`);
-            // Eliminar video.
-            try {
-              fs.unlinkSync(videoPath);
-            } catch (error) {
-              console.log(`Detección Movimiento | Error al eliminar video: ${videoPath} | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`);
-              console.error(error); 
-            }
-          }
-
-          if (this.ffmpegProcessVideo) {
-            this.ffmpegProcessVideo.kill();
-            this.ffmpegProcessVideo = null;
-            // if(code !== 0){
-            //   this.isActiveProccesVideo = false;
-            // }
-          }
-
-          if (this.isActiveProccesVideo) {
-            console.log(`Detección Movimiento | Evento continua activo para capturar video | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`);
-            let isConnected = await this.isCamConnected();
-            if (isConnected) {
-              return this.captureMotion(rtspUrl);
-            } else {
-              this.isActiveProccesVideo = false;
-            }
-          }
-        });
-      } catch (error) {
-        console.log(`Detección Movimiento | Error en CameraMotion.captureMotion | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`);
-        console.error(error);
+        cameraLogger.error(`CameraMotionProcess | Error en CameraMotion.snapshotRecord | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`, error);
       }
     }
   }
@@ -255,9 +193,9 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
     let eventTopic = camMessage.topic._;
     eventTopic = this.stripNamespaces(eventTopic);
 
-    let eventTime = camMessage.message.message.$.UtcTime;
+    const eventTime = camMessage.message.message.$.UtcTime;
 
-    let eventProperty = camMessage.message.message.$.PropertyOperation;
+    const eventProperty = camMessage.message.message.$.PropertyOperation;
     // Supposed to be Initialized, Deleted or Changed but missing/undefined on the Avigilon 4 channel encoder
 
     // Only handle simpleItem
@@ -292,24 +230,24 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
     if (camMessage.message.message.data && camMessage.message.message.data.simpleItem) {
       if (Array.isArray(camMessage.message.message.data.simpleItem)) {
         for (let x = 0; x < camMessage.message.message.data.simpleItem.length; x++) {
-          let dataName = camMessage.message.message.data.simpleItem[x].$.Name;
-          let dataValue = camMessage.message.message.data.simpleItem[x].$.Value;
+          const dataName = camMessage.message.message.data.simpleItem[x].$.Name;
+          const dataValue = camMessage.message.message.data.simpleItem[x].$.Value;
           this.processEvent(eventTime, eventTopic, eventProperty, sourceName, sourceValue, dataName, dataValue, rtspUrl);
         }
       } else {
-        let dataName = camMessage.message.message.data.simpleItem.$.Name;
-        let dataValue = camMessage.message.message.data.simpleItem.$.Value;
+        const dataName = camMessage.message.message.data.simpleItem.$.Name;
+        const dataValue = camMessage.message.message.data.simpleItem.$.Value;
         this.processEvent(eventTime, eventTopic, eventProperty, sourceName, sourceValue, dataName, dataValue, rtspUrl);
       }
     } else if (camMessage.message.message.data && camMessage.message.message.data.elementItem) {
       // console.log("WARNING: Data contain an elementItem");
-      let dataName = "elementItem";
-      let dataValue = JSON.stringify(camMessage.message.message.data.elementItem);
+      const dataName = 'elementItem';
+      const dataValue = JSON.stringify(camMessage.message.message.data.elementItem);
       this.processEvent(eventTime, eventTopic, eventProperty, sourceName, sourceValue, dataName, dataValue, rtspUrl);
     } else {
       // console.log("WARNING: Data does not contain a simpleItem or elementItem");
-      let dataName = null;
-      let dataValue = null;
+      const dataName = null;
+      const dataValue = null;
       this.processEvent(eventTime, eventTopic, eventProperty, sourceName, sourceValue, dataName, dataValue, rtspUrl);
     }
   }
@@ -345,7 +283,7 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
       autoconnect: true,
     };
 
-    return new Promise<boolean>((resolve, reject) => {
+    return new Promise<boolean>((resolve, _reject) => {
       new Cam(camOvifProps, function (err: any) {
         if (err) {
           return resolve(false);
@@ -357,8 +295,9 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
 
   getDeviceInformation(cam: Cam): Promise<any> {
     const camHostname = this.ip;
+
     return new Promise<any>((resolve, reject) => {
-      cam.getDeviceInformation((err: any, info: any, xml: any) => {
+      cam.getDeviceInformation((err: any, info: any, _xml: any) => {
         if (err) {
           const errDiviceInformation = new Error(`Deteccion de Movimiento | No se pudo obtener informacion del dispositivo ${camHostname}`);
           return reject(errDiviceInformation);
@@ -372,7 +311,7 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
   getSystemDateAndTime(cam: Cam): Promise<any> {
     const camHostname = this.ip;
     return new Promise<any>((resolve, reject) => {
-      cam.getSystemDateAndTime((err: any, date: any, xml: any) => {
+      cam.getSystemDateAndTime((err: any, date: any, _xml: any) => {
         if (err) {
           const errSysDataTime = new Error(`Deteccion de Movimiento | No se pudo obtener el 'system datetime' del dispositivo ${camHostname}`);
           return reject(errSysDataTime);
@@ -386,7 +325,7 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
   getStreamUri(cam: Cam): Promise<any> {
     const camHostname = this.ip;
     return new Promise<any>((resolve, reject) => {
-      cam.getStreamUri({ protocol: "RTSP" }, function (err: any, stream: any) {
+      cam.getStreamUri({ protocol: 'RTSP' }, function (err: any, stream: any) {
         if (err) {
           const errStremaUri = new Error(`Deteccion de Movimiento | No se pudo obtener el 'stream uri' del dispositivo ${camHostname}`);
           return reject(errStremaUri);
@@ -400,16 +339,21 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
   getCapabilities(cam: Cam): Promise<boolean> {
     const camHostname = this.ip;
     return new Promise<boolean>((resolve, reject) => {
-      cam.getCapabilities(function (err: any, data: any, xml: any) {
-        if (err) {
-          const errCapabilities = new Error(`Deteccion de Movimiento | No se pudo obtener las 'capabilities' del dispositivo ${camHostname}`);
-          reject(errCapabilities);
-        }
-
-        if (data.events) {
-          return resolve(true);
-        } else {
-          return resolve(false);
+      cam.getCapabilities(function (err: any, data: any, _xml: any) {
+        try {
+          if (err) {
+            const errCapabilities = new Error(`Deteccion de Movimiento | No se pudo obtener las 'capabilities' del dispositivo ${camHostname}`);
+            reject(errCapabilities);
+          }
+          if (data.events) {
+            return resolve(true);
+          } else {
+            return resolve(false);
+          }
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        } catch (error) {
+          const errEvents = new Error(`Deteccion de Movimiento | No de pudo obtener eventos ${camHostname}`);
+          reject(errEvents);
         }
       });
     });
@@ -420,50 +364,50 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
     let hasTopics: boolean = false;
     return new Promise<boolean>((resolve, reject) => {
       if (hasEvents) {
-        cam.getEventProperties(function (err: any, data: any, xml: any) {
+        cam.getEventProperties(function (err: any, data: any, _xml: any) {
           if (err) {
             const errEventProperties = new Error(`Deteccion de Movimiento | No se pudo obtener las 'event properties' del dispositivo ${camHostname}`);
             return reject(errEventProperties);
           } else {
             // Display the available Topics
-            let parseNode = function (node: any, topicPath: any) {
+            const parseNode = function (node: any, topicPath: any) {
               // loop over all the child nodes in this node
               for (const child in node) {
-                if (child == "$") {
+                if (child === '$') {
                   continue;
-                } else if (child == "messageDescription") {
+                } else if (child === 'messageDescription') {
                   // we have found the details that go with an event
                   // examine the messageDescription
-                  let IsProperty = false;
-                  let source = "";
-                  let data = "";
-                  if (node[child].$ && node[child].$.IsProperty) {
-                    IsProperty = node[child].$.IsProperty;
-                  }
-                  if (node[child].source) {
-                    source = JSON.stringify(node[child].source);
-                  }
-                  if (node[child].data) {
-                    data = JSON.stringify(node[child].data);
-                  }
+                  // let IsProperty = false;
+                  // let source = "";
+                  // let data = "";
+                  // if (node[child].$ && node[child].$.IsProperty) {
+                  //   IsProperty = node[child].$.IsProperty;
+                  // }
+                  // if (node[child].source) {
+                  //   // source = JSON.stringify(node[child].source);
+                  // }
+                  // if (node[child].data) {
+                  //   // data = JSON.stringify(node[child].data);
+                  // }
                   // console.log("Found Event - " + topicPath.toUpperCase());
                   //console.log('  IsProperty=' + IsProperty);
-                  if (source.length > 0) {
-                    // console.log("  Source=" + source);
-                  }
-                  if (data.length > 0) {
-                    // console.log("  Data=" + data);
-                  }
+                  // if (source.length > 0) {
+                  //   // console.log("  Source=" + source);
+                  // }
+                  // if (data.length > 0) {
+                  //   // console.log("  Data=" + data);
+                  // }
 
                   hasTopics = true;
                   return;
                 } else {
                   // decend into the child node, looking for the messageDescription
-                  parseNode(node[child], topicPath + "/" + child);
+                  parseNode(node[child], topicPath + '/' + child);
                 }
               }
             };
-            parseNode(data.topicSet, "");
+            parseNode(data.topicSet, '');
             resolve(hasTopics);
           }
           // console.log("");
@@ -479,90 +423,73 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
   async execute() {
     try {
       const camOnvif = await this.getCamOnvifInstance();
-      console.log(`Deteccion de Movimiento | Conexion establecida con la camara ${this.ip}`);
+      cameraLogger.info(`CameraMotionProcess | execute | Conexion establecida con la camara ${this.ip}`);
 
       // Proceso 1
       const info = await this.getDeviceInformation(camOnvif);
-      console.log("Manufacturer  " + info.manufacturer);
-      console.log("Model         " + info.model);
-      console.log("Firmware      " + info.firmwareVersion);
-      console.log("Serial Number " + info.serialNumber);
+      cameraLogger.info(`CameraMotionProcess | execute | Manufacturer  ${info.manufacturer}`);
+      cameraLogger.info(`CameraMotionProcess | execute | Model         ${info.model}`);
+      cameraLogger.info(`CameraMotionProcess | execute | Firmware      ${info.firmwareVersion}`);
+      cameraLogger.info(`CameraMotionProcess | execute | Serial Number ${info.serialNumber}`);
       // Proceso 2
       const date = await this.getSystemDateAndTime(camOnvif);
-      console.log("Device Time   " + date);
+      cameraLogger.info(`CameraMotionProcess | execute | Device Time   ${date}`);
       // Get RTSP:
       const onvifRtspUrl = await this.getStreamUri(camOnvif);
       // const rstpUrl = addCredentialToRtsp(onvifRtspUrl, this.usuario, this.contraseña);
       const multRtsp = await getMulticastRtspStreamAndSubStream(onvifRtspUrl, this.usuario, this.contraseña, info.manufacturer);
-      console.log("Rtsp URL : ", JSON.stringify(multRtsp));
+      cameraLogger.info(`CameraMotionProcess | execute | Rtsp URL : ${JSON.stringify(multRtsp)}`);
       //Proceso 3
-      let hasEvents = await this.getCapabilities(camOnvif);
+      const hasEvents = await this.getCapabilities(camOnvif);
       // Proceso 4
-      let hasTopics = await this.getEventProperties(camOnvif, hasEvents);
+      const hasTopics = await this.getEventProperties(camOnvif, hasEvents);
 
-      console.log("hasEvents && hasTopics", hasEvents, hasTopics);
+      cameraLogger.info(`CameraMotionProcess | execute | hasEvents && hasTopics ${hasEvents} ${hasTopics}`);
       if (hasEvents && hasTopics) {
         // register for 'event' events. This causes the library to ask the camera for Pull Events
-        camOnvif.on("event", (camMessage: any, xml: any) => {
-          // console.log(`Detección Movimiento Test | isActiveProccesImage = ${ JSON.stringify(this.isActiveProccesImage)}  | isActiveProccesVideo = ${ JSON.stringify(this.isActiveProccesVideo)} | ctrl_id: ${this.ctrl_id} | ip: ${this.ip}`)
+        camOnvif.on('event', (camMessage: any, xml: any) => {
           this.receivedEvent(camMessage, xml, multRtsp[0]);
         });
       }
-
-      // if(hasEvents){
-      //   // test
-      //   camOnvif.on("connect",function(data:any){
-      //     console.log("Connect Event test:", data)
-      //   })
-
-      //   comOnvif.on("error",function(err:any){
-      //     console.log("Error Envent", err)
-      //   })
-      // }
     } catch (error) {
-      console.error("Error en CameraMotion.execute() :", error);
+      if (error instanceof Error) {
+        cameraLogger.error(`CameraMotionProcess | Execute Error | ctrl_id : ${this.ctrl_id} | cmr_id ${this.cmr_id}`, error.message);
+      } else {
+        cameraLogger.error(`CameraMotionProcess | Execute Error | ctrl_id : ${this.ctrl_id} | cmr_id ${this.cmr_id}`, error);
+      }
       // throw error
     }
   }
 }
 
-const getImageFfmpegArgs = (rtspUrl: string, ctrl_id: number): string[] => {
+const getMotionFfmegArgs = (rtspUrl: string, ctrl_id: number, configs: { baseRecordDir: string; recordFile: string; baseSnapshotDir: string }): string[] => {
   const ctrlConfig = ControllerMapManager.getControllerAndResolution(ctrl_id);
-  if(ctrlConfig === undefined){
-    throw new Error(`Error getImageFfmpegArgs | Controlador ${ctrl_id} no encontrado getControllerAndResolution`);
+  if (ctrlConfig === undefined) {
+    throw new Error(`Error getMotionFfmegArgs | Controlador ${ctrl_id} no encontrado getControllerAndResolution`);
   }
-  const {controller,resolution:{motion_snapshot}} = ctrlConfig
 
-  return [
-    "-rtsp_transport", "tcp", 
-    "-i", `${rtspUrl}`,
-    "-vf", `scale=${motion_snapshot.ancho}:${motion_snapshot.altura},select='gte(t\\,0)',fps=1/${controller.motionsnapshotinterval}`,
-    "-an",
-    "-t", `${controller.motionsnapshotseconds}`,
-    "-c:v", "mjpeg",
-    "-f", "image2pipe",
-    "-"
-    ];
-};
-
-const getVideoFfmpegArgs = (rtspUrl: string, outputPath: string, ctrl_id: number): string[] => {
-  const ctrlConfig = ControllerMapManager.getControllerAndResolution(ctrl_id);
-  if(ctrlConfig === undefined){
-    throw new Error(`Error getVideoFfmpegArgs | Controlador ${ctrl_id} no encontrado getControllerAndResolution`);
+  const isMotionDetection = appConfig.system.start_record_motion || appConfig.system.start_snapshot_motion;
+  if (!isMotionDetection) {
+    throw new Error(`Error getMotionFfmegArgs | Motion detection disabled.`);
   }
-  const {controller,resolution:{motion_record}} = ctrlConfig
 
-  return [
-    "-rtsp_transport","tcp",
-    "-i",`${rtspUrl}`,
-    "-r",`${controller.motionrecordfps}`,
-    "-vf",`scale=${motion_record.ancho}:${motion_record.altura}`,
-    "-an",
-    "-c:v","libx264",
-    "-preset","fast",
-    "-t",`${controller.motionrecordseconds}`,
-    `${outputPath}`,
-  ];
+  const {
+    controller,
+    resolution: { motion_snapshot, motion_record },
+  } = ctrlConfig;
+
+  const result: string[] = ['-rtsp_transport', 'tcp', '-timeout', `${TIMEOUT_DISCONNECT * 1000000}`, '-i', `${rtspUrl}`];
+
+  if (appConfig.system.start_record_motion) {
+    const recordPath = path.join(configs.baseRecordDir, configs.recordFile);
+    result.push(...['-t', `${controller.motionrecordseconds}`, '-c:v', 'libx264', '-preset', 'ultrafast', '-r', `${controller.motionrecordfps}`, '-an', '-vf', `scale=${motion_record.ancho}:${motion_record.altura}`, `${recordPath}`]);
+  }
+
+  if (appConfig.system.start_snapshot_motion) {
+    result.push(...['-t', `${controller.motionsnapshotseconds}`, '-an', '-c:v', 'mjpeg', '-vf', `scale=${motion_snapshot.ancho}:${motion_snapshot.altura},select='gte(t\\,0)',fps=1/${controller.motionsnapshotinterval}`, '-strftime', '1', `${configs.baseSnapshotDir}/snapshot_%H_%M_%S.jpg`]);
+  }
+
+  return result;
 };
 
 function createFolderIfNotExists(dir: fs.PathLike) {
@@ -574,9 +501,9 @@ function createFolderIfNotExists(dir: fs.PathLike) {
 function getCurrentDateTime() {
   const now = new Date();
   const year = now.getFullYear();
-  const month = (now.getMonth() + 1).toString().padStart(2, "0");
-  const day = now.getDate().toString().padStart(2, "0");
-  const hour = now.getHours().toString().padStart(2, "0");
+  const month = (now.getMonth() + 1).toString().padStart(2, '0');
+  const day = now.getDate().toString().padStart(2, '0');
+  const hour = now.getHours().toString().padStart(2, '0');
 
   return { year, month, day, hour };
 }
@@ -590,38 +517,15 @@ export function createMotionDetectionFolders(motionDetectionPath: string) {
   return folderPath;
 }
 
-const insertPathToDB = (newPath: string, ctrl_id: number, cmr_id: number, tipo: 0 | 1) => {
+export const insertPathToDB = (newPath: string, ctrl_id: number, cmr_id: number, tipo: 0 | 1) => {
   (async () => {
     try {
       const finalPath = newPath.split(path.sep).join(path.posix.sep);
-      const fecha = dayjs().format("YYYY-MM-DD HH:mm:ss")
+      const fecha = dayjs().format('YYYY-MM-DD HH:mm:ss');
 
-      await MySQL2.executeQuery({ sql: `INSERT INTO ${"nodo" + ctrl_id}.registroarchivocamara (cmr_id,tipo,ruta,fecha) VALUES ( ? , ?, ?, ?)`, values: [cmr_id, tipo, finalPath,fecha] });
+      await MySQL2.executeQuery({ sql: `INSERT INTO ${'nodo' + ctrl_id}.registroarchivocamara (cmr_id,tipo,ruta,fecha) VALUES ( ? , ?, ?, ?)`, values: [cmr_id, tipo, finalPath, fecha] });
     } catch (error) {
-      console.error("Error al insertar path a la db:\n", error);
+      cameraLogger.error(`CameraMotionProcess | insertPathToDB | Error al insertar path a la db:\n`, error);
     }
   })();
-};
-
-export const DeteccionMovimiento = async () => {
-  try {
-    const camerasData = await Init.getAllCameras();
-    Object.keys(camerasData).forEach((ctrlIdKey) => {
-      camerasData[Number(ctrlIdKey)].forEach(async (cam) => {
-        const { ip, usuario, contraseña, cmr_id, ctrl_id } = cam;
-
-        const contraseñaDecrypt = decrypt(contraseña);
-        const camMotion = new CameraMotionProcess({ ip, usuario, contraseña: contraseñaDecrypt, cmr_id, ctrl_id });
-        CameraMotionManager.add_whithout_execute(camMotion);
-        // try {
-        //   await camMotion.execute()
-        // } catch (error) {
-        //   console.log(error)
-        // }
-      });
-    });
-  } catch (error) {
-    console.error("Ocurrio un error en testMotion", error);
-    throw error;
-  }
 };

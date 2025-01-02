@@ -1,37 +1,39 @@
-
-import { ServerApp } from "./models/server";
-import { SystemManager } from "./models/system";
-import { TicketMap } from "./models/ticketschedule";
+import { TicketScheduleManager } from './controllers/socket/ticket.schedule/ticket.schedule.manager';
+import { ServerApp } from './models/server';
+import { SystemManager } from './models/system';
 
 (async () => {
   try {
     // Conectar a la base de datos:
     await ServerApp.connectDataBase();
 
-    await SystemManager.init()
-    
+    await SystemManager.init();
+
     // Crear un servidor
     const server = new ServerApp();
     // Inicializar websockets
     server.websocket();
     // Init Maps
-    await server.initmaps()
+    await server.initmaps();
 
-    // Inicializar dectecion de movimiento
-    // await server.motion()
+    // Iniciar dectecion de movimiento
+    if (process.env.START_SNAPSHOT_MOTION === 'true' || process.env.START_RECORD_MOTION === 'true') {
+      await server.motion();
+    }
 
-    // inciar modo nvr
-    // server.startNvrMode()
-    
+    // Iniciar modo nvr
+    if (process.env.START_NVR === 'true') {
+      server.startNvrMode();
+    }
+
     // Mio
     server.runController();
 
-    await TicketMap.init()
+    await TicketScheduleManager.init();
 
     // test()
   } catch (error) {
-    console.log(error);
-    process.exit(1)
+    console.error(error);
+    process.exit(1);
   }
 })();
-

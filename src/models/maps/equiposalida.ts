@@ -1,84 +1,61 @@
-import { RowDataPacket } from "mysql2";
-import { EquipoSalida } from "../../types/db";
-import { MySQL2 } from "../../database/mysql";
-
-export class EquipoSalidaObject implements EquipoSalida {
-  #descripcion: string;
-  #activo: number;
-  #es_id: number;
-  #actuador: string;
-
-  constructor(props: EquipoSalida) {
-    const { activo, descripcion, actuador, es_id } = props;
-    this.#descripcion = descripcion;
-    this.#activo = activo;
-    this.#actuador = actuador;
-    this.#es_id = es_id;
-  }
-
-  public get es_id(): number {
-    return this.#es_id;
-  }
-  public get actuador(): string {
-    return this.#actuador;
-  }
-  public get descripcion(): string {
-    return this.#descripcion;
-  }
-  public get activo(): number {
-    return this.#activo;
-  }
-  public setEsId(es_id: EquipoSalida["es_id"]): void {
-    this.#es_id = es_id;
-  }
-  public setActuador(actuador: EquipoSalida["actuador"]): void {
-    this.#actuador = actuador;
-  }
-  public setDescripcion(descripcion: EquipoSalida["descripcion"]): void {
-    this.#descripcion = descripcion;
-  }
-  public setActivo(activo: EquipoSalida["activo"]): void {
-    this.#activo = activo;
-  }
-}
+import { RowDataPacket } from 'mysql2';
+import { MySQL2 } from '../../database/mysql';
+import { EquipoSalida } from '../../types/db';
+import { filterUndefined } from '../../utils/filterUndefined';
+import { genericLogger } from '../../services/loggers';
 
 interface EquipoSalidaRowData extends RowDataPacket, EquipoSalida {}
 
-export class EquipoSalidaMap {
-  public static map: { [es_id: string]: EquipoSalidaObject } = {} ;
+export class EquipoSalidaMapManager {
+  static #equipos: Map<number, EquipoSalida> = new Map();
 
-  public static add_update(equiSal: EquipoSalidaObject) {
-    if (!EquipoSalidaMap.map[equiSal.es_id]) {
-      // add
-      EquipoSalidaMap.map[equiSal.es_id] = equiSal;
-    } else {
-      // update
-      const currentEquiEnt = EquipoSalidaMap.map[equiSal.es_id];
-      if (currentEquiEnt.actuador != equiSal.actuador) currentEquiEnt.setActuador(equiSal.actuador);
-      if (currentEquiEnt.descripcion != equiSal.descripcion) currentEquiEnt.setDescripcion(equiSal.descripcion);
-      if (currentEquiEnt.activo != equiSal.activo) currentEquiEnt.setActivo(equiSal.activo);
+  static add(newEqSal: EquipoSalida) {
+    const hasEqSal = EquipoSalidaMapManager.#equipos.has(newEqSal.es_id);
+    if (!hasEqSal) {
+      EquipoSalidaMapManager.#equipos.set(newEqSal.es_id, newEqSal);
+      // notify add (newEqSal)
     }
   }
 
-  public static delete(equiSal: EquipoSalidaObject) {
-    if (EquipoSalidaMap.map[equiSal.es_id]) {
-      delete EquipoSalidaMap.map[equiSal.es_id];
+  static update(es_id: number, fieldsUpdate: Partial<EquipoSalida>) {
+    const curEqSal = EquipoSalidaMapManager.#equipos.get(es_id);
+    if (curEqSal !== undefined) {
+      // const curEqSalCopy = {...curEqSal}
+
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { es_id, ...fieldsFiltered } = filterUndefined<EquipoSalida>(fieldsUpdate);
+      Object.assign(curEqSal, fieldsFiltered);
+      // notify update (curEqSalCopy,fieldsFiltered)
     }
   }
 
-  public static async init() {
+  static delete(es_id: number): boolean {
+    return EquipoSalidaMapManager.#equipos.delete(es_id);
+  }
+
+  static getEquipoSalida(es_id: number, onlyActive: boolean = true): EquipoSalida | undefined {
+    const equiSal = EquipoSalidaMapManager.#equipos.get(es_id);
+    if (!onlyActive) {
+      return equiSal;
+    }
+
+    if (equiSal !== undefined && equiSal.activo === 1) {
+      return equiSal;
+    }
+    return undefined;
+  }
+
+  static async init() {
     try {
-      const equiposSalida = await MySQL2.executeQuery<EquipoSalidaRowData[]>({sql: `SELECT * FROM general.equiposalida WHERE activo = 1`,});
-      if (equiposSalida.length > 0) {
-        for (let equiSal of equiposSalida) {
-          const newEquiSal = new EquipoSalidaObject(equiSal);
-          EquipoSalidaMap.add_update(newEquiSal);
+      const equiposSal = await MySQL2.executeQuery<EquipoSalidaRowData[]>({ sql: `SELECT * FROM general.equiposalida WHERE activo = 1` });
+      if (equiposSal.length > 0) {
+        for (const equipo of equiposSal) {
+          EquipoSalidaMapManager.add(equipo);
         }
       }
     } catch (error) {
-      console.log(`EquipoSalidaMap | Error al inicilizar equipos de salida`);
-      console.error(error);
-      throw error
+      genericLogger.error(`EquipoSalidaMapManager | Error al inicializar equipos salida`, error);
+      throw error;
     }
   }
 }

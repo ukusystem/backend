@@ -1,4 +1,4 @@
-export function getExtesionFile (fileName: string){
-    let partesNombre = fileName.split('.');
-    return partesNombre[partesNombre.length - 1];
+export function getExtesionFile(fileName: string) {
+  const partesNombre = fileName.split('.');
+  return partesNombre[partesNombre.length - 1];
 }

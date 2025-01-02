@@ -34,35 +34,8 @@ export async function sendMail({ toEmail }: { toEmail: string }) {
       
       </p>`,
     };
-    // const accessToken = await oAuth2Client.getAccessToken();
-    // const accessToken = await new Promise< string >((resolve, reject) => {
-    //   oAuth2Client.getAccessToken((err, token) => {
-    //     if (err) {
-    //       console.log("*ERR: ", err);
-    //       reject();
-    //     }
 
-    //     if(token == null || token == undefined){
-    //         console.log("Token null o undefined");
-    //         reject();
-    //     }else{
-    //         resolve(token);
-    //     }
-
-    //   });
-    // });
     const transport = nodemailer.createTransport({
-    //   host: "smtp.ethereal.email",
-    //   port: 587,
-    //   secure: false, // true for 465, false for other ports
-    //   auth: {
-    //     type: "OAuth2",
-    //     user: "everytel2023@gmail.com",
-    //     clientId: client_id,
-    //     clientSecret: client_secret,
-    //     refreshToken: refresh_token,
-    //     accessToken: accessToken,
-    //   },
     service:"gmail",
     auth:{
         type:"OAuth2",
@@ -74,16 +47,8 @@ export async function sendMail({ toEmail }: { toEmail: string }) {
     }
     });
     const result = await transport.sendMail(mailOptions);
-    // console.log("Imprimiendo el resultado:\n" ,result)
     return result;
-    // transport.sendMail(mailOptions, (err, info) => {
-    //   if (err) {
-    //     console.log("Error en el envio de correo nodemailer:\n", err);
-    //   }
-    //   console.log("Paso correctamente")
-    //   console.log("Info:\n" , info)
-    //   return info.response;
-    // });
+
   } catch (error) {
     if(error instanceof Error){
         throw new Error(`Error sending email: ${error.message}`);
@@ -93,13 +58,3 @@ export async function sendMail({ toEmail }: { toEmail: string }) {
 
   }
 }
-
-//   (async () => {
-//     try {
-//       const toEmail = 'example@example.com'; // Aquí debes definir el destinatario dinámicamente
-//       const emailResult = await sendMail(toEmail);
-//       console.log('Email sent...', emailResult);
-//     } catch (error) {
-//       console.error(error);
-//     }
-//   })();

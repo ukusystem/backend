@@ -1,4 +1,4 @@
-import { ControllerMapManager, RegionMapManager, TipoCamaraMapManager } from "../../../models/maps";
+import { ControllerMapManager, RegionMapManager } from "../../../models/maps";
 import { NodoCameraMapManager } from "../../../models/maps/nodo.camera";
 import { PinesEntrada, Region } from "../../../types/db";
 import { PinEntradaManager } from "../pinentrada";
@@ -42,9 +42,9 @@ export class AlarmManager {
 
   static notifyPinEntrada(ctrl_id:number,pe_id:number, action: ActionType):void{
     if(AlarmManager.#observer !== null){
-      const pinEntrada = PinEntradaManager.getPinEntrada(String(ctrl_id),String(pe_id));
-      if(pinEntrada !== null){
-        AlarmManager.#observer.emitPinEntrada(ctrl_id,pinEntrada.toJSON(),action);
+      const pinEntrada = PinEntradaManager.getPinEntrada(ctrl_id,pe_id);
+      if(pinEntrada !== undefined){
+        AlarmManager.#observer.emitPinEntrada(ctrl_id,pinEntrada,action);
       }
     }
   };
@@ -95,14 +95,14 @@ export class AlarmManager {
       const ctrlData : ControllerDataAlarm = { ctrl_id, activo, conectado, descripcion, modo, nodo, rgn_id, seguridad, }
 
       // camaras
-      const camaras = NodoCameraMapManager.getCamerasByCtrlID(ctrl_id,true);
+      const camaras = NodoCameraMapManager.getCamerasByCtrlID(ctrl_id);
       const camsData :  CameraDataAlarm[] = camaras.map((cam)=>{
         const {activo,cmr_id,conectado,descripcion,tc_id,ip} = cam
         return {activo,cmr_id,conectado,descripcion,tc_id,ip}
       });
 
       // pines entrada
-      const pinesEnt = PinEntradaManager.getListPinesEntrada(String(ctrl_id));
+      const pinesEnt = PinEntradaManager.getListPinesEntrada(ctrl_id);
       const pinsEntData : PinesEntrada[] = pinesEnt.map((pinEnt)=>{
         const {activo,descripcion,ee_id,estado,pe_id,pin} = pinEnt;
         return {activo,descripcion,ee_id,estado,pe_id,pin}

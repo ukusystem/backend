@@ -1,6 +1,7 @@
 
 import winston ,{format} from "winston";
 import DailyRotateFile from 'winston-daily-rotate-file';
+import { appConfig } from "../configs";
 
 export type LogMessage = string;
 
@@ -25,6 +26,7 @@ export class Logger {
 
   #initializeWinston() {
     const logger = winston.createLogger({
+      level: appConfig.node_env === 'production' ? 'info' : 'debug',
       transports: this.#getTransports(),
     });
     return logger;
@@ -34,21 +36,20 @@ export class Logger {
     const transports : winston.transport[] = [
       new winston.transports.Console({
         format: this.#getFormatForConsole(),
+        level: appConfig.node_env === 'production' ? 'info' : 'debug'
       }),
     ];
-
-    transports.push(this.getFileTransport()); // Also log file in production
     
-    // if (process.env.NODE_ENV === 'production') {
-    //   transports.push(this.getFileTransport()); // Also log file in production
-    // }
+    if (appConfig.node_env === 'production') {
+      transports.push(this.getFileTransport()); // Include file transport in production
+    }
 
     return transports;
   }
 
   #getFormatForConsole() {
     return format.combine(
-      format.timestamp({format: "YYYY-MM-DD hh:mm:ss"}),
+      format.timestamp({format: "YYYY-MM-DD HH:mm:ss"}),
       // format.align(),
       format.printf(
         info =>
@@ -72,7 +73,9 @@ export class Logger {
         })(),
         format.json()
       ),
-      dirname:`./logs/${this.#appName}/`
+      dirname:`./logs/${this.#appName}/`,
+      level: "info"
+
     });
   }
 
@@ -89,8 +92,8 @@ export class Logger {
   public error(msg: LogMessage, context?: LogContext) {
     this.#logWinston(LogLevel.ERROR,msg, context);
   }
-  public debug(msg: LogMessage, context?: LogContext) { //work for logging levels <= "debug"
-    if (process.env.NODE_ENV !== 'production') {
+  public debug(msg: LogMessage, context?: LogContext) {
+    if (appConfig.node_env !== 'production') {
       this.#logWinston(LogLevel.DEBUG,msg, context); // Don't log debug in production
     }
   }
