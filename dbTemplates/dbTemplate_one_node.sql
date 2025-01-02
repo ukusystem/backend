@@ -300,6 +300,60 @@ INSERT INTO `estado` VALUES (1,'Esperando'),(2,'Aceptado'),(3,'Cancelado'),(4,'R
 UNLOCK TABLES;
 
 --
+-- Table structure for table `firmware`
+--
+
+DROP TABLE IF EXISTS `firmware`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `firmware` (
+  `f_id` int NOT NULL AUTO_INCREMENT,
+  `archivo` varchar(200) NOT NULL,
+  `mayor` int unsigned NOT NULL,
+  `menor` int unsigned NOT NULL,
+  `parche` int unsigned NOT NULL,
+  PRIMARY KEY (`f_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `firmware`
+--
+
+LOCK TABLES `firmware` WRITE;
+/*!40000 ALTER TABLE `firmware` DISABLE KEYS */;
+/*!40000 ALTER TABLE `firmware` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `general_audit`
+--
+
+DROP TABLE IF EXISTS `general_audit`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `general_audit` (
+  `ga_id` int NOT NULL AUTO_INCREMENT,
+  `table_name` varchar(100) NOT NULL,
+  `field_name` varchar(100) NOT NULL,
+  `old_value` varchar(250) NOT NULL,
+  `new_value` varchar(250) NOT NULL,
+  `personal` varchar(250) NOT NULL,
+  `datetime` timestamp NOT NULL,
+  PRIMARY KEY (`ga_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `general_audit`
+--
+
+LOCK TABLES `general_audit` WRITE;
+/*!40000 ALTER TABLE `general_audit` DISABLE KEYS */;
+/*!40000 ALTER TABLE `general_audit` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `marca`
 --
 
@@ -428,7 +482,7 @@ CREATE TABLE `registrored` (
   PRIMARY KEY (`rr_id`),
   KEY `fk_registrored_controlador_co_id_idx` (`ctrl_id`),
   CONSTRAINT `fk_registrored_controlador_co_id` FOREIGN KEY (`ctrl_id`) REFERENCES `controlador` (`ctrl_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -437,7 +491,6 @@ CREATE TABLE `registrored` (
 
 LOCK TABLES `registrored` WRITE;
 /*!40000 ALTER TABLE `registrored` DISABLE KEYS */;
-INSERT INTO `registrored` VALUES (1,1,'2024-11-04 17:38:30',0);
 /*!40000 ALTER TABLE `registrored` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -564,6 +617,39 @@ LOCK TABLES `tipotrabajo` WRITE;
 /*!40000 ALTER TABLE `tipotrabajo` DISABLE KEYS */;
 INSERT INTO `tipotrabajo` VALUES (1,'Telecomunicaciones'),(2,'Electricidad'),(3,'Visita'),(4,'Mantenimiento');
 /*!40000 ALTER TABLE `tipotrabajo` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `user_token`
+--
+
+DROP TABLE IF EXISTS `user_token`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_token` (
+  `ut_id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `refresh_token` varchar(500) NOT NULL,
+  `issued_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `expires_at` timestamp NOT NULL,
+  `revoked` tinyint(1) NOT NULL DEFAULT '0',
+  `ip_address` varchar(45) NOT NULL,
+  `user_agent` text NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`ut_id`),
+  KEY `fk_user_token_user_u_id_idx` (`user_id`),
+  CONSTRAINT `fk_user_token_user_u_id` FOREIGN KEY (`user_id`) REFERENCES `usuario` (`u_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `user_token`
+--
+
+LOCK TABLES `user_token` WRITE;
+/*!40000 ALTER TABLE `user_token` DISABLE KEYS */;
+/*!40000 ALTER TABLE `user_token` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -1865,4 +1951,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-11-08 12:34:12
+-- Dump completed on 2025-01-02 17:33:37

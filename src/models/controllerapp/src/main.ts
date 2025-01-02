@@ -104,6 +104,9 @@ export class Main {
   flag = true;
 
   constructor() {
+    // console.log(Encryption.decrypt('hQGr0tZg83kUEIZsr+lPwg==', true));
+    // console.log(Encryption.decrypt('hQGr0tZg83kUEIZsr+lPwg==', false));
+
     // const enc = Encryption.encrypt("admin",true)
     // console.log(enc)
     // console.log(Encryption.decrypt(enc??'', true))
@@ -133,7 +136,7 @@ export class Main {
 
     /* Init messages */
 
-    this.log('█ Controller service v 0.3 █');
+    this.log(`█ Controller service v ${Main.VERSION_MAJOR}.${Main.VERSION_MINOR}.${Main.VERSION_PATCH} █`);
     this.log(`Running on ${useful.isWindows() ? 'Windows' : useful.isLinux() ? 'Linux' : 'Unknown OS'}`);
 
     /* Events to clean up */
@@ -338,7 +341,6 @@ export class Main {
       }
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     this.managerServer.on('error', (e: any) => {
       this.log(`ERROR listening to managers. Code ${e.code}`);
     });
@@ -476,7 +478,7 @@ export class Main {
    * @param filename Value to fill in the column called 'foto'.
    * @returns Array of parameters.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   private workerToArrayForQuery(worker: Personal, ticketID: number, filename: string | null): any[] {
     return [worker.nombre, worker.apellido, worker.telefono, worker.dni, worker.c_id, worker.co_id, ticketID, filename];
   }

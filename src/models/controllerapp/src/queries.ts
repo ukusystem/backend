@@ -1000,11 +1000,12 @@ export const firmwareInsert = `
 	INSERT INTO general.firmware (archivo, mayor, menor, parche)
 	VALUE (?,?,?,?);
 `;
-export const firmwareSetAvailability = `
-	UPDATE general.firmware
-	SET disponible = ?
-	WHERE f_id = ?;
-`;
+
+// export const firmwareSetAvailability = `
+// 	UPDATE general.firmware
+// 	SET disponible = ?
+// 	WHERE f_id = ?;
+// `;
 
 export const firmwareOrderSelect = `
 	SELECT * FROM general.firmware ORDER BY mayor DESC, menor DESC, parche DESC;
