@@ -3,6 +3,12 @@ import z from 'zod';
 const filtersSchema = z
   .object({
     state: z.array(z.enum(['1', '2', '3', '4', '16', '17', '18'])).optional(),
+    dateRange: z
+      .object({
+        start: z.string().date(),
+        end: z.string().date(),
+      })
+      .optional(),
   })
   .optional();
 

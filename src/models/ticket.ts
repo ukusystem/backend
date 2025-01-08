@@ -166,20 +166,35 @@ export class Ticket {
 
   static getRegistrosByCtrlIdAndLimitAndOffset = handleErrorWithArgument<RegistroTicketDetail[], { ctrl_id: number; limit: number; offset: number; user: UserInfo; filters?: RegistroTicketPagination['filters'] }>(async ({ ctrl_id, limit, offset, user, filters }) => {
     let whereFilter: { whereQuery: string; valuesQuery: any[] } | undefined = undefined;
-    if (filters !== undefined && filters.state !== undefined) {
-      const uniqueStates = Array.from(new Set(filters.state));
+    if (filters !== undefined) {
+      if (filters.state !== undefined) {
+        const uniqueStates = Array.from(new Set(filters.state));
 
-      const whereQuery = uniqueStates.reduce<{ whereQuery: string; valuesQuery: any[] }>(
-        (prev, curr, index) => {
-          const result = prev;
-          result.whereQuery = result.whereQuery.trim() + ' rt.estd_id = ? ' + (index < uniqueStates.length - 1 ? ' AND ' : '');
-          result.valuesQuery.push(curr);
+        const whereQuery = uniqueStates.reduce<{ whereQuery: string; valuesQuery: any[] }>(
+          (prev, curr, index) => {
+            const result = prev;
+            result.whereQuery = result.whereQuery.trim() + ' rt.estd_id = ? ' + (index < uniqueStates.length - 1 ? ' OR ' : ' ) ');
+            result.valuesQuery.push(curr);
 
-          return result;
-        },
-        { whereQuery: '', valuesQuery: [] },
-      );
-      whereFilter = whereQuery;
+            return result;
+          },
+          { whereQuery: ' ( ', valuesQuery: [] },
+        );
+        whereFilter = whereQuery;
+      }
+
+      if (filters.dateRange !== undefined) {
+        const { end: endDate, start: startDate } = filters.dateRange;
+        if (whereFilter !== undefined) {
+          whereFilter.whereQuery = whereFilter.whereQuery.trim() + ' AND DATE( rt.fechacomienzo ) >= ? AND DATE( rt.fechatermino ) <= ? ';
+          whereFilter.valuesQuery.push(startDate, endDate);
+        } else {
+          whereFilter = {
+            whereQuery: ' DATE( rt.fechacomienzo ) >= ? AND DATE( rt.fechatermino ) <= ? ',
+            valuesQuery: [startDate, endDate],
+          };
+        }
+      }
     }
 
     if (user.rol === 'Invitado') {
@@ -237,21 +252,37 @@ export class Ticket {
 
   static getTotalRegistroTicketByCtrlId = handleErrorWithArgument<number, { ctrl_id: number; user: UserInfo; filters?: RegistroTicketPagination['filters'] }>(async ({ ctrl_id, user, filters }) => {
     let whereFilter: { whereQuery: string; valuesQuery: any[] } | undefined = undefined;
-    if (filters !== undefined && filters.state !== undefined) {
-      const uniqueStates = Array.from(new Set(filters.state));
+    if (filters !== undefined) {
+      if (filters.state !== undefined) {
+        const uniqueStates = Array.from(new Set(filters.state));
 
-      const whereQuery = uniqueStates.reduce<{ whereQuery: string; valuesQuery: any[] }>(
-        (prev, curr, index) => {
-          const result = prev;
-          result.whereQuery = result.whereQuery.trim() + ' estd_id = ? ' + (index < uniqueStates.length - 1 ? ' AND ' : '');
-          result.valuesQuery.push(curr);
+        const whereQuery = uniqueStates.reduce<{ whereQuery: string; valuesQuery: any[] }>(
+          (prev, curr, index) => {
+            const result = prev;
+            result.whereQuery = result.whereQuery.trim() + ' estd_id = ? ' + (index < uniqueStates.length - 1 ? ' OR ' : ' ) ');
+            result.valuesQuery.push(curr);
 
-          return result;
-        },
-        { whereQuery: '', valuesQuery: [] },
-      );
-      whereFilter = whereQuery;
+            return result;
+          },
+          { whereQuery: ' ( ', valuesQuery: [] },
+        );
+        whereFilter = whereQuery;
+      }
+
+      if (filters.dateRange !== undefined) {
+        const { end: endDate, start: startDate } = filters.dateRange;
+        if (whereFilter !== undefined) {
+          whereFilter.whereQuery = whereFilter.whereQuery.trim() + ' AND DATE( fechacomienzo ) >= ? AND DATE( fechatermino ) <= ? ';
+          whereFilter.valuesQuery.push(startDate, endDate);
+        } else {
+          whereFilter = {
+            whereQuery: ' DATE( fechacomienzo ) >= ? AND DATE( fechatermino ) <= ?',
+            valuesQuery: [startDate, endDate],
+          };
+        }
+      }
     }
+
     if (user.rol === 'Invitado') {
       const totalRegistros = await MySQL2.executeQuery<TotalRegistroTicketRowData[]>({
         sql: `SELECT COUNT(*) AS total FROM ${'nodo' + ctrl_id}.registroticket WHERE co_id = ? AND ${whereFilter !== undefined ? whereFilter.whereQuery : ''}`,
