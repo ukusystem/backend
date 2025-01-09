@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import { asyncErrorHandler } from '../../../utils/asynErrorHandler';
 import { RolRepository } from './rol.repository';
-import { EntityResponse } from '../shared';
+import { EntityResponse } from '../../../types/shared';
 import { Rol } from './rol.entinty';
 
 export class RolController {

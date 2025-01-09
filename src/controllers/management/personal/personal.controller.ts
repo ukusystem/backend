@@ -16,7 +16,7 @@ import { AuditManager, getRecordAudit } from '../../../models/audit/audit.manage
 import { RequestWithUser } from '../../../types/requests';
 import { Personal } from './personal.entity';
 
-import { EntityResponse, CreateEntityResponse, UpdateResponse, OffsetPaginationResponse, DeleteReponse } from '../shared';
+import { EntityResponse, CreateEntityResponse, UpdateResponse, OffsetPaginationResponse, DeleteReponse } from '../../../types/shared';
 
 export class PersonalController {
   constructor(

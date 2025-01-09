@@ -7,7 +7,7 @@ import { CreateAccesoDTO } from './dtos/create.acceso.dto';
 import { UpdateAccesoDTO } from './dtos/update.acceso.dto';
 import { AuditManager, getRecordAudit } from '../../../models/audit/audit.manager';
 import { RequestWithUser } from '../../../types/requests';
-import { EntityResponse, CreateEntityResponse, UpdateResponse, OffsetPaginationResponse, DeleteReponse } from '../shared';
+import { EntityResponse, CreateEntityResponse, UpdateResponse, OffsetPaginationResponse, DeleteReponse } from '../../../types/shared';
 import { Acceso } from './acceso.entity';
 
 export class AccesoController {

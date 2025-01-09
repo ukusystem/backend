@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { asyncErrorHandler } from '../../../utils/asynErrorHandler';
-import { EntityResponse } from '../shared';
+import { EntityResponse } from '../../../types/shared';
 import { RubroRepository } from './rubro.repository';
 import { Rubro } from './rubro.entity';
 
