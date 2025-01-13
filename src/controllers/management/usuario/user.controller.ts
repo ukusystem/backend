@@ -10,7 +10,7 @@ import { RequestWithUser } from '../../../types/requests';
 import { AuditManager, getRecordAudit } from '../../../models/audit/audit.manager';
 import { Usuario } from './user.entity';
 
-import { EntityResponse, CreateEntityResponse, UpdateResponse, OffsetPaginationResponse, DeleteReponse } from '../shared';
+import { EntityResponse, CreateEntityResponse, UpdateResponse, OffsetPaginationResponse, DeleteReponse } from '../../../types/shared';
 
 export class UserController {
   constructor(

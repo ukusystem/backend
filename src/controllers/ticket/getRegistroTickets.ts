@@ -20,6 +20,8 @@ export const getRegistroTickets = asyncErrorHandler(async (req: RequestWithUser,
 
   const final_offset: number = offset !== undefined ? Number(offset) : 0; // default offset : 0
 
+  console.log(filters);
+
   const tickets = await Ticket.getRegistrosByCtrlIdAndLimitAndOffset({ ctrl_id: Number(ctrl_id), limit: final_limit, offset: final_offset, user, filters });
   const total = await Ticket.getTotalRegistroTicketByCtrlId({ ctrl_id: Number(ctrl_id), user, filters });
 
@@ -29,5 +31,6 @@ export const getRegistroTickets = asyncErrorHandler(async (req: RequestWithUser,
     total_size: total,
     data_size: tickets.length,
     data: tickets,
+    filters: filters,
   });
 });

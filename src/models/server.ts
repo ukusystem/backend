@@ -29,6 +29,7 @@ import { genericLogger } from '../services/loggers';
 import { RegistroEntradaManager } from '../controllers/socket/registro.entrada';
 import { managementRoutes } from '../routes/management.routes';
 import { TokenManger } from './token.manager';
+import { generalRoutes } from '../routes/general.routes';
 
 // import { createServer as createServerHttps } from "https";
 // import fs from "fs";
@@ -114,6 +115,9 @@ export class ServerApp {
     this.#app.use(this.#baseApiPath, siteRoutes);
     // ==== Management ====
     this.#app.use(this.#baseApiPath, managementRoutes);
+    // ==== General ====
+    this.#app.use(this.#baseApiPath, generalRoutes);
+
     // FrontEnd
     this.#app.use(frontEndRoutes);
     // Otros

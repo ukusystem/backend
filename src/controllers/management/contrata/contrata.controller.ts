@@ -8,7 +8,7 @@ import { RequestWithUser } from '../../../types/requests';
 import { AuditManager, getRecordAudit } from '../../../models/audit/audit.manager';
 
 import { Contrata } from './contrata.entity';
-import { EntityResponse, CreateEntityResponse, UpdateResponse, OffsetPaginationResponse, DeleteReponse } from '../shared';
+import { EntityResponse, CreateEntityResponse, UpdateResponse, OffsetPaginationResponse, DeleteReponse } from '../../../types/shared';
 import { PersonalRepository } from '../personal/personal.repository';
 import { UserRepository } from '../usuario/user.repository';
 import { PaginationContrata } from './schemas/pagination.contrata.schema';
