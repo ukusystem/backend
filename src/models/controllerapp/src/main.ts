@@ -34,7 +34,7 @@ import { FirmwareVersion } from './firmware';
 
 export class Main {
   private static readonly VERSION_MAJOR = 0;
-  private static readonly VERSION_MINOR = 3;
+  private static readonly VERSION_MINOR = 4;
   private static readonly VERSION_PATCH = 0;
 
   /**
