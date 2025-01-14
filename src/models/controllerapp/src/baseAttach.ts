@@ -474,7 +474,7 @@ export class BaseAttach extends Mortal {
   async _insertItem(name: string, items: DataStruct[] | null, insertQuery: string, id: number, nodeID: number = -1): Promise<boolean> {
     if (!items) return false;
     // Extract the selected field in each item.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const params: any[] = [];
     for (let i = 0; i < items.length; i++) {
       params[i] = items[i].selected;
@@ -499,7 +499,7 @@ export class BaseAttach extends Mortal {
    *                   formatted.
    * @returns True if the operation was successful, false otherwise.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   async _saveItemGeneral(name: string, parameters: any[], query: string, id: number, nodeID: number): Promise<boolean> {
     // this._log(`Saved: ${name}`);
     if (await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(query, nodeID), parameters)) {
@@ -1169,7 +1169,7 @@ export class NodeAttach extends BaseAttach {
         const currDate = useful.formatTimestamp(tempStamp);
         // const tempYear = useful.getYearFromTimestamp(tempStamp);
         // Get individual measures
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const paramsForRegister: any[] = [];
         // const paramsForCurrent: any[] = [];
         // Parse every sensor reading from the message. They come in pairs, so there must be at least two items.
@@ -1203,18 +1203,16 @@ export class NodeAttach extends BaseAttach {
           break;
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const paramsForInputs: any[] = [];
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const paramsForOutputs: any[] = [];
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const paramsForTemps: any[] = [];
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const paramsForEnergy: any[] = [];
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const paramsForInputStates: any[] = [];
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const paramsForOutputStates: any[] = [];
 
         const inputCount = enablesData[0];
@@ -1299,7 +1297,7 @@ export class NodeAttach extends BaseAttach {
         break;
       case codes.VALUE_ALL_ADDRESSES:
         // this._log(`Received all addresses '${command}'`);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const paramsForUpdate: any[] = [];
         while (parts.length >= 2) {
           const addrData = this._parseMessage(parts, queries.IDTextParse, id, false);
@@ -1796,7 +1794,6 @@ export class NodeAttach extends BaseAttach {
     return { pinID: pinID, enable: pinEnable };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private fillParams(itemCount: DataStruct, value: DataStruct, paramList: any[]) {
     const count = itemCount.getInt();
     const enables = BigInt(value.getInt());
@@ -1820,7 +1817,7 @@ export class NodeAttach extends BaseAttach {
    * @param id
    * @param nodeID
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   private async insertSilent(name: string, parameters: any[], query: string, nodeID: number, logSuccess: boolean) {
     if (!parameters) return;
     const fullQuery = BaseAttach.formatQueryWithNode(query, nodeID);
@@ -1851,6 +1848,7 @@ export class NodeAttach extends BaseAttach {
   async insertNet(state: boolean) {
     await executeQuery(queries.insertNet, [this.controllerID, useful.getCurrentDate(), state]);
     await executeQuery(queries.insertCtrlState, [state, this.controllerID]);
+    ControllerMapManager.update(this.controllerID, { conectado: state ? 1 : 0 });
     this._log(`Inserting: Net state ${state ? 'conectado' : 'desconectado'}`);
   }
 
@@ -1966,7 +1964,7 @@ export class NodeAttach extends BaseAttach {
     });
 
     // Triggers 'end' and 'close' events
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     controllerSocket.on('error', (err: any) => {
       this.unreached = false;
       // this._log(`Error on controller ${err.code}`);
