@@ -128,10 +128,10 @@ export const downloadPdfDetalles = asyncErrorHandler(async (req: RequestWithUser
               columns: [
                 {
                   width: 40,
-                  svg: '<svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#clip0_318_552)"><path d="M60.9823 43.9359H72.7286C75.5251 54.1372 50.0746 92.1086 16.7931 64.3383L11.7589 68.8726C27.7005 87.8583 80 85.8743 80 36.5683H59.5834L56.7869 18.4328H50.0746L42.2437 42.8025L45.0405 52.1537L52.5917 33.1679L57.3463 58.6709H63.2194L60.9823 43.9359Z" fill="#549AEC"/><path d="M20.7086 36.5683H7.28406C7.28406 21.5498 31.0566 -9.62069 63.4989 15.8825L67.9737 11.3486C40.8453 -13.0211 -0.826577 3.69761 0.0124759 43.9359H19.3102L16.5134 58.1046H22.9459L27.7005 33.1679L36.9298 58.1046H42.803L30.2175 18.4328H23.5053L20.7086 36.5683Z" fill="#1668DC"/></g><defs><clipPath id="clip0_318_552"><rect width="80" height="80" fill="white"/></clipPath></defs></svg>',
+                  svg: '<svg width="56" height="60" viewBox="0 0 56 60" fill="none" xmlns="http://www.w3.org/2000/svg"><g clip-path="url(#clip0_644_739)"><path d="M0.972961 10.9091L9.97296 0V60L0.972961 49.0908V10.9091Z" fill="#1668DC"/><path d="M54.973 49.0908L45.973 60V0L54.973 10.9091V49.0908Z" fill="#1668DC"/><path d="M45.973 60H9.9729V50.1819H45.973V60Z" fill="#1668DC"/><path d="M45.973 9.81819H9.9729V0H45.973V9.81819Z" fill="#1668DC"/><path d="M45.973 30.2727H9.9729V22.0909H45.973V30.2727Z" fill="#1668DC"/></g><defs><clipPath id="clip0_644_739"><rect width="54.0541" height="60" fill="white" transform="translate(0.972961)"/></clipPath></defs></svg>',
                 },
                 {
-                  text: 'Uku Systems',
+                  text: 'Janox',
                   alignment: 'left',
                   margin: [5, 10, 0, 0],
                   fontSize: 20,

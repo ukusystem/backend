@@ -11,6 +11,12 @@ export const getRegistroTickets = asyncErrorHandler(async (req: RequestWithUser,
     filters?:
       | {
           state?: ('1' | '2' | '3' | '4' | '16' | '17' | '18')[] | undefined;
+          dateRange?:
+            | {
+                end: string;
+                start: string;
+              }
+            | undefined;
         }
       | undefined;
   }; // "/ticket/historial?ctrl_id=number&limit=number&offset=number"
@@ -19,8 +25,6 @@ export const getRegistroTickets = asyncErrorHandler(async (req: RequestWithUser,
   const final_limit: number = limit !== undefined ? Math.min(Math.max(Number(limit), 0), 100) : 10; // default limit : 10 ,  max limit : 100
 
   const final_offset: number = offset !== undefined ? Number(offset) : 0; // default offset : 0
-
-  console.log(filters);
 
   const tickets = await Ticket.getRegistrosByCtrlIdAndLimitAndOffset({ ctrl_id: Number(ctrl_id), limit: final_limit, offset: final_offset, user, filters });
   const total = await Ticket.getTotalRegistroTicketByCtrlId({ ctrl_id: Number(ctrl_id), user, filters });

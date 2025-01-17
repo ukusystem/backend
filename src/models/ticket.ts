@@ -186,12 +186,25 @@ export class Ticket {
       if (filters.dateRange !== undefined) {
         const { end: endDate, start: startDate } = filters.dateRange;
         if (whereFilter !== undefined) {
-          whereFilter.whereQuery = whereFilter.whereQuery.trim() + ' AND DATE( rt.fechacomienzo ) >= ? AND DATE( rt.fechatermino ) <= ? ';
+          whereFilter.whereQuery = whereFilter.whereQuery.trim() + ' AND ( DATE( rt.fechacomienzo ) >= ? AND DATE( rt.fechatermino ) <= ? ) ';
           whereFilter.valuesQuery.push(startDate, endDate);
         } else {
           whereFilter = {
             whereQuery: ' DATE( rt.fechacomienzo ) >= ? AND DATE( rt.fechatermino ) <= ? ',
             valuesQuery: [startDate, endDate],
+          };
+        }
+      }
+
+      if (filters.priority !== undefined) {
+        const priority = filters.priority;
+        if (whereFilter !== undefined) {
+          whereFilter.whereQuery = whereFilter.whereQuery.trim() + ' AND rt.prioridad = ? ';
+          whereFilter.valuesQuery.push(priority);
+        } else {
+          whereFilter = {
+            whereQuery: ' rt.prioridad = ? ',
+            valuesQuery: [priority],
           };
         }
       }
@@ -272,12 +285,25 @@ export class Ticket {
       if (filters.dateRange !== undefined) {
         const { end: endDate, start: startDate } = filters.dateRange;
         if (whereFilter !== undefined) {
-          whereFilter.whereQuery = whereFilter.whereQuery.trim() + ' AND DATE( fechacomienzo ) >= ? AND DATE( fechatermino ) <= ? ';
+          whereFilter.whereQuery = whereFilter.whereQuery.trim() + ' AND ( DATE( fechacomienzo ) >= ? AND DATE( fechatermino ) <= ? ) ';
           whereFilter.valuesQuery.push(startDate, endDate);
         } else {
           whereFilter = {
             whereQuery: ' DATE( fechacomienzo ) >= ? AND DATE( fechatermino ) <= ?',
             valuesQuery: [startDate, endDate],
+          };
+        }
+      }
+
+      if (filters.priority !== undefined) {
+        const priority = filters.priority;
+        if (whereFilter !== undefined) {
+          whereFilter.whereQuery = whereFilter.whereQuery.trim() + ' AND prioridad = ? ';
+          whereFilter.valuesQuery.push(priority);
+        } else {
+          whereFilter = {
+            whereQuery: ' prioridad = ? ',
+            valuesQuery: [priority],
           };
         }
       }

@@ -244,7 +244,13 @@ export class CamStreamSocketManager {
           if (currentProcess) {
             // delete observer
             CamStreamSocketManager.unregisterObserver({ ctrl_id, cmr_id, q });
-            currentProcess.ffmpegProcess.kill();
+            if (currentProcess.ffmpegProcess && currentProcess.ffmpegProcess.pid !== undefined) {
+              try {
+                currentProcess.ffmpegProcess.kill();
+              } catch (error) {
+                vmsLogger.error(`Camera Stream Manager | Error kill process | ${JSON.stringify(direction)} `, error);
+              }
+            }
           }
         }
       }
