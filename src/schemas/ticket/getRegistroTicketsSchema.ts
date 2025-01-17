@@ -9,6 +9,7 @@ const filtersSchema = z
         end: z.string().date(),
       })
       .optional(),
+    priority: z.enum(['1', '2', '3']).optional(),
   })
   .optional();
 
