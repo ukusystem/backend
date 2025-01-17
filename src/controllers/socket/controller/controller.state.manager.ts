@@ -13,7 +13,7 @@ export class ControllerStateSocketObserver implements ControllerStateObserver {
 
   updateSecurityButton(data: boolean): void {
     this.#socket.nsp.emit('update_security_button', data);
-    console.log(`Data ${data}`);
+    // console.log(`Data ${data}`);
   }
 
   updateRegion(region: Region): void {
