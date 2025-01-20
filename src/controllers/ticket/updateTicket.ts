@@ -50,7 +50,7 @@ export const upadateTicket = asyncErrorHandler(async (req: RequestWithUser, res:
         const beforeEventAction = isBeforeEvent && (estdPendiente || estdAceptBefore);
         const duringEventAction = isDuringEvent && estdAceptDuring;
 
-        if (user.rl_id === UserRol.Administrador || user.rl_id === UserRol.Usuario) {
+        if (user.rl_id === UserRol.Administrador || user.rl_id === UserRol.Gestor) {
           if (beforeEventAction || duringEventAction) {
             try {
               const response = await onFinishTicket(new FinishTicket(action, ctrl_id, rt_id));

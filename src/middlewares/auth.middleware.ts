@@ -4,12 +4,11 @@ import { asyncErrorHandler } from '../utils/asynErrorHandler';
 import { CustomError } from '../utils/CustomError';
 import { RequestWithUser } from '../types/requests';
 import { appConfig } from '../configs';
+import { UserRol } from '../types/rol';
 
 export interface CustomRequest extends Request {
   user?: UserInfo;
 }
-
-type permittedRoles = 'Invitado' | 'Usuario' | 'Administrador';
 
 export const authenticate = asyncErrorHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
   const accessTokenCookie: string | undefined = req.cookies[appConfig.cookie.access_token.name];
@@ -37,7 +36,7 @@ export const authenticate = asyncErrorHandler(async (req: CustomRequest, res: Re
   next();
 });
 
-export const userRolCheck = (allowedRoles: permittedRoles[]) =>
+export const rolChecker = (allowedRoles: UserRol[]) =>
   asyncErrorHandler(async (req: RequestWithUser, res: Response, next: NextFunction) => {
     const user = req.user;
 
@@ -46,7 +45,7 @@ export const userRolCheck = (allowedRoles: permittedRoles[]) =>
       throw userNotAuthenticaded;
     }
 
-    if (!allowedRoles.some((rol) => rol === user.rol)) {
+    if (!allowedRoles.some((rol) => rol === user.rl_id)) {
       const accessDeniedError = new CustomError(`No tienes los permisos necesarios para acceder al recurso.`, 403, 'Acceso denegado');
       throw accessDeniedError;
     }

@@ -7,6 +7,7 @@ import { UserInfo } from './auth';
 import { CustomError } from '../utils/CustomError';
 import dayjs from 'dayjs';
 import { RegistroTicketPagination } from '../schemas/ticket';
+import { UserRol } from '../types/rol';
 
 type PersonalInfo = Pick<Personal, 'p_id' | 'nombre' | 'apellido' | 'telefono' | 'dni' | 'c_id' | 'co_id' | 'foto'>;
 type PersonalSolicitante = Personal & Pick<Cargo, 'cargo'> & Pick<Contrata, 'contrata'>;
@@ -210,9 +211,9 @@ export class Ticket {
       }
     }
 
-    if (user.rol === 'Invitado') {
+    if (user.rl_id === UserRol.Invitado) {
       const registroTickets = await MySQL2.executeQuery<RegistroTicketDetailRowData[]>({
-        sql: `SELECT rt.*, e.estado, tt.nombre as tipotrabajo, co.contrata ,p.nombre , p.apellido FROM  ${'nodo' + ctrl_id}.registroticket rt INNER JOIN general.estado e ON rt.estd_id = e.estd_id INNER JOIN general.tipotrabajo tt ON rt.tt_id = tt.tt_id INNER JOIN general.contrata co ON rt.co_id = co.co_id INNER JOIN general.personal p ON rt.p_id = p.p_id WHERE rt.co_id = ? ${whereFilter !== undefined ? whereFilter.whereQuery : ''} ORDER BY rt.rt_id DESC LIMIT ? OFFSET ? `,
+        sql: `SELECT rt.*, e.estado, tt.nombre as tipotrabajo, co.contrata ,p.nombre , p.apellido FROM  ${'nodo' + ctrl_id}.registroticket rt INNER JOIN general.estado e ON rt.estd_id = e.estd_id INNER JOIN general.tipotrabajo tt ON rt.tt_id = tt.tt_id INNER JOIN general.contrata co ON rt.co_id = co.co_id INNER JOIN general.personal p ON rt.p_id = p.p_id WHERE rt.co_id = ? ${whereFilter !== undefined ? ` AND ${whereFilter.whereQuery} ` : ''} ORDER BY rt.rt_id DESC LIMIT ? OFFSET ? `,
         values: whereFilter !== undefined ? [user.co_id, ...whereFilter.valuesQuery, limit, offset] : [user.co_id, limit, offset],
       });
 
@@ -220,7 +221,7 @@ export class Ticket {
         return registroTickets;
       }
       return [];
-    } else if (user.rol === 'Administrador' || user.rol === 'Usuario') {
+    } else if (user.rl_id === UserRol.Administrador || user.rl_id === UserRol.Gestor) {
       const registroTickets = await MySQL2.executeQuery<RegistroTicketDetailRowData[]>({
         sql: `SELECT rt.*, e.estado, tt.nombre as tipotrabajo, co.contrata ,p.nombre , p.apellido FROM  ${'nodo' + ctrl_id}.registroticket rt INNER JOIN general.estado e ON rt.estd_id = e.estd_id INNER JOIN general.tipotrabajo tt ON rt.tt_id = tt.tt_id INNER JOIN general.contrata co ON rt.co_id = co.co_id INNER JOIN general.personal p ON rt.p_id = p.p_id ${whereFilter !== undefined ? `WHERE ${whereFilter.whereQuery}` : ''} ORDER BY rt.rt_id DESC LIMIT ? OFFSET ? `,
         values: whereFilter !== undefined ? [...whereFilter.valuesQuery, limit, offset] : [limit, offset],
@@ -237,7 +238,7 @@ export class Ticket {
   }, 'Ticket.getRegistrosByCtrlIdAndLimitAndOffset');
 
   static getSingleRegistroTicketByCtrlIdAndRtId = handleErrorWithArgument<RegistroTicketDetail | null, { rt_id: number; ctrl_id: number; user: UserInfo }>(async ({ rt_id, ctrl_id, user }) => {
-    if (user.rol === 'Invitado') {
+    if (user.rl_id === UserRol.Invitado) {
       const singleRegistroTicket = await MySQL2.executeQuery<RegistroTicketDetailRowData[]>({
         sql: `SELECT rt.*, e.estado, tt.nombre as tipotrabajo, co.contrata ,p.nombre , p.apellido FROM  ${'nodo' + ctrl_id}.registroticket rt INNER JOIN general.estado e ON rt.estd_id = e.estd_id INNER JOIN general.tipotrabajo tt ON rt.tt_id = tt.tt_id INNER JOIN general.contrata co ON rt.co_id = co.co_id INNER JOIN general.personal p ON rt.p_id = p.p_id WHERE rt.rt_id = ? AND rt.co_id = ? `,
         values: [rt_id, user.co_id],
@@ -247,7 +248,7 @@ export class Ticket {
         return singleRegistroTicket[0];
       }
       return null;
-    } else if (user.rol === 'Administrador' || user.rol === 'Usuario') {
+    } else if (user.rl_id === UserRol.Administrador || user.rl_id === UserRol.Gestor) {
       const singleRegistroTicket = await MySQL2.executeQuery<RegistroTicketDetailRowData[]>({
         sql: `SELECT rt.*, e.estado, tt.nombre as tipotrabajo, co.contrata ,p.nombre , p.apellido FROM  ${'nodo' + ctrl_id}.registroticket rt INNER JOIN general.estado e ON rt.estd_id = e.estd_id INNER JOIN general.tipotrabajo tt ON rt.tt_id = tt.tt_id INNER JOIN general.contrata co ON rt.co_id = co.co_id INNER JOIN general.personal p ON rt.p_id = p.p_id WHERE rt.rt_id = ? `,
         values: [rt_id],
@@ -309,9 +310,9 @@ export class Ticket {
       }
     }
 
-    if (user.rol === 'Invitado') {
+    if (user.rl_id === UserRol.Invitado) {
       const totalRegistros = await MySQL2.executeQuery<TotalRegistroTicketRowData[]>({
-        sql: `SELECT COUNT(*) AS total FROM ${'nodo' + ctrl_id}.registroticket WHERE co_id = ? AND ${whereFilter !== undefined ? whereFilter.whereQuery : ''}`,
+        sql: `SELECT COUNT(*) AS total FROM ${'nodo' + ctrl_id}.registroticket WHERE co_id = ? ${whereFilter !== undefined ? ` AND ${whereFilter.whereQuery} ` : ''}`,
         values: whereFilter !== undefined ? [user.co_id, ...whereFilter.valuesQuery] : [user.co_id],
       });
 
@@ -319,7 +320,7 @@ export class Ticket {
         return totalRegistros[0].total;
       }
       return 0;
-    } else if (user.rol === 'Administrador' || user.rol === 'Usuario') {
+    } else if (user.rl_id === UserRol.Administrador || user.rl_id === UserRol.Gestor) {
       const totalRegistros = await MySQL2.executeQuery<TotalRegistroTicketRowData[]>({
         sql: `SELECT COUNT(*) AS total FROM ${'nodo' + ctrl_id}.registroticket ${whereFilter !== undefined ? ` WHERE ${whereFilter.whereQuery}` : ''}`,
         values: whereFilter !== undefined ? whereFilter.valuesQuery : undefined,

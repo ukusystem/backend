@@ -1,22 +1,20 @@
-import {Router} from 'express'
-import { requestDataValidator} from '../middlewares/validator.middleware'
+import { Router } from 'express';
+import { requestValidator } from '../middlewares/validator.middleware';
 
-import { downloadArchivoCamara, getArchivoCamara } from '../controllers/site/multimedia'
-import { getRegistroTemperartura } from '../controllers/site/temperatura'
-import { getRegistroTemperaturaSchema } from '../schemas/site/temperatura'
-import { getArchivoCamaraSchema } from '../schemas/site/multimedia'
-import { authenticate } from '../middlewares/auth.middleware'
+import { downloadArchivoCamara, getArchivoCamara } from '../controllers/site/multimedia';
+import { getRegistroTemperartura } from '../controllers/site/temperatura';
+import { getRegistroTemperaturaSchema } from '../schemas/site/temperatura';
+import { getArchivoCamaraSchema } from '../schemas/site/multimedia';
+import { authenticate, rolChecker } from '../middlewares/auth.middleware';
+import { UserRol } from '../types/rol';
 
-export const siteRoutes = Router()
-
-// ====================== CONTROLES ======================
+export const siteRoutes = Router();
 
 // ====================== TEMPERATURA ======================
-siteRoutes.get("/site/sensortemperatura/registros",authenticate,requestDataValidator({querySchema: getRegistroTemperaturaSchema},{hasQuery:true})  , getRegistroTemperartura)
+siteRoutes.get('/site/sensortemperatura/registros', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ query: getRegistroTemperaturaSchema }), getRegistroTemperartura);
 
 // ====================== MULTIMEDIA ======================
-
 // ArchivoCamaraPaths GET "/site/multimedia?ctrl_id=1&date='2024-02-13'&hour=10&tipo=0"
-siteRoutes.get("/site/multimedia",authenticate,requestDataValidator({querySchema: getArchivoCamaraSchema},{hasQuery:true}),getArchivoCamara) 
+siteRoutes.get('/site/multimedia', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ query: getArchivoCamaraSchema }), getArchivoCamara);
 // DownloadArchivoCamara GET "/site/multimedia/download?filePath=encodeURIComponent"
-siteRoutes.get("/site/multimedia/download",authenticate,downloadArchivoCamara)
+siteRoutes.get('/site/multimedia/download', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), downloadArchivoCamara);
