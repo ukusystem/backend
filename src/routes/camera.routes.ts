@@ -1,34 +1,23 @@
-import {Router} from 'express'
+import { Router } from 'express';
 import { cameraController } from '../controllers/camera';
-import { authenticate } from '../middlewares/auth.middleware';
-import { requestDataValidator } from '../middlewares/validator.middleware';
+import { authenticate, rolChecker } from '../middlewares/auth.middleware';
+import { requestValidator } from '../middlewares/validator.middleware';
 import { cameraControlSchema, cameraPresetSchema, cameraSnapshotSchema } from '../schemas/camera';
+import { UserRol } from '../types/rol';
 
 export const cameraRoutes = Router();
 
-// Control  GET /camera/control/:xctrl_id/:xip/:xaction/:xmovement/:xvelocity
-// cameraRoutes.get("/camera/control/:xctrl_id/:xip/:xaction/:xmovement/:xvelocity",authenticate, cameraController.getControlOnvif)
-
 // Control  GET /camera/control?ctrl_id=number&cmr_id=number&action=start&movement=Right&velocity=0.5
-cameraRoutes.get("/camera/control",authenticate,requestDataValidator({querySchema:cameraControlSchema},{hasQuery:true}), cameraController.getControlOnvif)
-
-// PresetFunction GET /camera/preset/:xctrl_id/:xip/:xnum_preset
-// cameraRoutes.get("/camera/preset/:xctrl_id/:xip/:xnum_preset",authenticate, cameraController.getPresetOnvif)
+cameraRoutes.get('/camera/control', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ query: cameraControlSchema }), cameraController.getControlOnvif);
 
 // PresetFunction GET /camera/preset?ctrl_id=number&cmr_id=number&preset=number
-cameraRoutes.get("/camera/preset",authenticate,requestDataValidator({querySchema:cameraPresetSchema},{hasQuery:true}), cameraController.getPresetOnvif)
-
-//Snapshot GET /camera/snapshot/:xctrl_id/:xip
-// cameraRoutes.get("/camera/snapshot/:xctrl_id/:xip",authenticate, cameraController.getSnapshot)
+cameraRoutes.get('/camera/preset', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ query: cameraPresetSchema }), cameraController.getPresetOnvif);
 
 //Snapshot GET /camera/snapshot?ctrl_id=number&cmr_id=number
-cameraRoutes.get("/camera/snapshot",authenticate,requestDataValidator({querySchema:cameraSnapshotSchema},{hasQuery:true}), cameraController.getSnapshot)
+cameraRoutes.get('/camera/snapshot', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ query: cameraSnapshotSchema }), cameraController.getSnapshot);
 
 // All Cameras GET /cameras
-cameraRoutes.get("/cameras",authenticate, cameraController.getAllCameras)
+cameraRoutes.get('/cameras', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), cameraController.getAllCameras);
 
 // CamarasPorCtrlID GET /camera/:xctrl_id
-cameraRoutes.get("/camera/:xctrl_id",authenticate,cameraController.getCameraByCtrlId)
-
-
-
+cameraRoutes.get('/camera/:xctrl_id', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), cameraController.getCameraByCtrlId);

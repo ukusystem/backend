@@ -2391,6 +2391,9 @@ export class ManagerAttach extends BaseAttach {
                     const a = useful.getCurrentDate();
                     // consolethis._log\(a)
                     userData[queries.userDateIndex].setString(a);
+                  } else {
+                    // Remove data value since it can be '~', which is not a valid date value. The query does not expect a date value in these cases.
+                    userData.splice(queries.userDateIndex, 1);
                   }
                   // Save user
                   switch (valueToSet) {

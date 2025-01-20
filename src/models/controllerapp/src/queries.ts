@@ -681,7 +681,7 @@ export const userInsert = `
  */
 export const userUpdate = `
 				UPDATE general.usuario
-				SET usuario=?, rl_id=?, fecha=?, p_id=?
+				SET usuario=?, rl_id=?, p_id=?
 				WHERE u_id=?;
 			`;
 
@@ -690,7 +690,7 @@ export const userUpdate = `
  */
 export const userUpdatePwd = `
 				UPDATE general.usuario
-				SET usuario=?, rl_id=?, fecha=?, p_id=?,
+				SET usuario=?, rl_id=?, p_id=?,
 				contraseña=?
 				WHERE u_id=?;
 			`;

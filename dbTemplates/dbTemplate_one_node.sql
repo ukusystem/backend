@@ -75,7 +75,7 @@ CREATE TABLE `cargo` (
 
 LOCK TABLES `cargo` WRITE;
 /*!40000 ALTER TABLE `cargo` DISABLE KEYS */;
-INSERT INTO `cargo` VALUES (1,'Gerente de proyecto'),(2,'Supervisora de Seguridad'),(3,'Técnico de Instalación'),(4,'Analista de Seguridad'),(5,'Operador de Monitoreo'),(6,'Consultora de Seguridad'),(7,'Técnico de Mantenimiento'),(8,'Especialista en Seguridad'),(9,'Coordinador de Seguridad'),(10,'Analista de Riesgos');
+INSERT INTO `cargo` VALUES (1,'Gerente de proyecto'),(2,'Supervisor de Seguridad'),(3,'Técnico de Instalación'),(4,'Analista de Seguridad'),(5,'Operador de Monitoreo'),(6,'Consultora de Seguridad'),(7,'Técnico de Mantenimiento'),(8,'Especialista en Seguridad'),(9,'Coordinador de Seguridad'),(10,'Analista de Riesgos'),(11,'Diseñador UI/UX'),(12,'Desarrollador de software'),(13,'Jefe de desarrollo'),(14,'Analista QA'),(15,'Desarrollador web');
 /*!40000 ALTER TABLE `cargo` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -409,7 +409,7 @@ CREATE TABLE `personal` (
 
 LOCK TABLES `personal` WRITE;
 /*!40000 ALTER TABLE `personal` DISABLE KEYS */;
-INSERT INTO `personal` VALUES (1,'Miguel','Ortíz Carhuapoma','987654321','87654321',1,1,'photos/registered/foto1.png','user1@gmail.com',1),(2,'Hans','Gutiérrez Dávila','987654322','87654322',2,2,'photos/registered\\foto2.png','user2@gmail.com',1),(3,'Antony','Jaramillo Aranda','987654323','87654323',3,3,'photos/registered\\foto3.png','user3@gmail.com',1),(4,'Evelyn','De la cruz Vargas','987654324','87654324',4,4,'photos/registered\\foto4.png','user4@gmail.com',1),(5,'Darlyn','Narciso Narciso','987654325','87654325',5,5,'photos/registered\\foto5.png','user5@gmail.com',1);
+INSERT INTO `personal` VALUES (1,'Miguel','Ortíz Carhuapoma','987654321','87654321',13,3,'photos/registered\\foto1.png','user1@gmail.com',1),(2,'Hans','Gutiérrez Dávila','987654322','87654322',12,3,'photos/registered\\foto2.png','user2@gmail.com',1),(3,'Antony','Jaramillo Aranda','987654323','87654323',15,2,'photos/registered\\foto3.png','user3@gmail.com',1),(4,'Evelyn','De la cruz Vargas','987654324','87654324',14,4,'photos/registered\\foto4.png','user4@gmail.com',1),(5,'Darlyn','Narciso Narciso','987654325','87654325',11,5,'photos/registered\\foto5.png','user5@gmail.com',1);
 /*!40000 ALTER TABLE `personal` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -543,7 +543,7 @@ CREATE TABLE `rol` (
 
 LOCK TABLES `rol` WRITE;
 /*!40000 ALTER TABLE `rol` DISABLE KEYS */;
-INSERT INTO `rol` VALUES (1,'Invitado','Acceso de solo lectura',1),(2,'Usuario','Acceso limitado a funciones específicas',1),(3,'Supervisor','Gestión y supervisión de contenidos',1),(4,'Editor','Edición y publicación de contenidos',1),(5,'Administrador','Acceso completo a la administración del sitio',1),(6,'Desarrollador','Desarrollo y pruebas de la plataforma web',1),(7,'Analista','Análisis de datos y generación de informes',1),(8,'Consultor','Asesoramiento y recomendaciones de mejoras',1),(9,'Moderador','Moderación de comentarios y foros',1),(10,'Suscriptor','Acceso a contenido premium',1);
+INSERT INTO `rol` VALUES (1,'Invitado','Creación de tickets',1),(2,'Gestor','Funciones web',1),(3,'Supervisor','Gestión y supervisión de contenidos',0),(4,'Editor','Edición y publicación de contenidos',0),(5,'Administrador','Acceso completo al sistema',1);
 /*!40000 ALTER TABLE `rol` ENABLE KEYS */;
 UNLOCK TABLES;
 
