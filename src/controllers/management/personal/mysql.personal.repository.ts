@@ -17,7 +17,7 @@ export class MySQLPersonalRespository implements PersonalRepository {
     return listPersonal;
   }
 
-  async softDeleteByContrata(co_id: number): Promise<void> {
+  async softDeleteByContrataId(co_id: number): Promise<void> {
     await MySQL2.executeQuery<ResultSetHeader>({ sql: `UPDATE general.personal SET activo = 0 WHERE activo = 1 AND co_id = ?`, values: [co_id] });
   }
 
@@ -29,10 +29,10 @@ export class MySQLPersonalRespository implements PersonalRepository {
     const listPersonal = await MySQL2.executeQuery<PersonalRowData[]>({ sql: `SELECT * FROM general.personal WHERE dni = ? AND activo = 1 LIMIT 1`, values: [dni] });
     return listPersonal[0];
   }
-  async create(data: CreatePersonalDTO): Promise<number> {
+  async create(data: CreatePersonalDTO): Promise<Personal> {
     const { nombre, apellido, telefono, dni, c_id, co_id, foto, correo } = data;
     const result = await MySQL2.executeQuery<ResultSetHeader>({ sql: `INSERT INTO general.personal ( nombre, apellido, telefono, dni, c_id, co_id, foto, correo , activo ) VALUES ( ? , ? , ? , ? , ? , ? , ? , ? , 1 )`, values: [nombre, apellido, telefono, dni, c_id, co_id, foto, correo] });
-    return result.insertId;
+    return { nombre, apellido, telefono, dni, c_id, co_id, foto, correo, activo: 1, p_id: result.insertId };
   }
 
   async update(p_id: number, fieldsUpdate: UpdatePersonalDTO): Promise<void> {

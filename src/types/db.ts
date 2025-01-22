@@ -33,6 +33,7 @@ export interface Usuario {
   fecha: string;
   p_id: number;
   activo: number;
+  ctrl_id: number;
 }
 
 export interface Cargo {

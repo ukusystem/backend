@@ -20,12 +20,16 @@ export interface UserWithRoleAndPersonal {
 export interface UserRepository {
   create(data: CreateUserDTO): Promise<number>;
   findById(u_id: number): Promise<Usuario | undefined>;
+  findByContrataId(co_id: number): Promise<Array<Usuario>>;
+  findByPersonalId(p_id: number): Promise<Array<Usuario>>;
   findWithRoleAndPersonalById(u_id: number): Promise<UserWithRoleAndPersonal | undefined>;
   update(u_id: number, fieldsUpdate: UpdateUserDTO): Promise<void>;
   findAll(): Promise<Usuario[]>;
   isUsernameAvailable(username: string): Promise<boolean>;
   isPersonalAvailable(p_id: number): Promise<boolean>;
   softDelete(u_id: number): Promise<void>;
+  // softDeleteByPersonalId(p_id: number): Promise<void>;
+  softDeleteByContrataId(co_id: number): Promise<void>;
   softDeleteByPersonalId(p_id: number): Promise<void>;
   findByCursorPagination(limit: number, cursor?: number): Promise<Usuario[]>;
   // findByOffsetPagination(limit: number, offset: number): Promise<Usuario[]>;

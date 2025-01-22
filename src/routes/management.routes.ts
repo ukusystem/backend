@@ -43,8 +43,8 @@ const mysqlAccesoRepository = new MySQLAccesoRepository();
 const mysqlRubroRepository = new MySQLRubroRepository();
 
 const userController = new UserController(mysqlUserRepository, bycriptPasswordHasher, mysqlPersonalRepository, mysqlRolRepository);
-const personalController = new PersonalController(mysqlPersonalRepository, mysqlCargoRepository, mysqlContrataRepository);
-const contrataController = new ContrataController(mysqlContrataRepository, mysqlRubroRepository, mysqlPersonalRepository, mysqlUserRepository);
+const personalController = new PersonalController(mysqlPersonalRepository, mysqlCargoRepository, mysqlContrataRepository, mysqlUserRepository);
+const contrataController = new ContrataController(mysqlContrataRepository, mysqlRubroRepository, mysqlPersonalRepository, mysqlUserRepository, mysqlAccesoRepository);
 const accesoController = new AccesoController(mysqlAccesoRepository, mysqlPersonalRepository, mysqlEquipoAccesoRepository);
 const rolController = new RolController(mysqlRolRepository);
 const rubroController = new RubroController(mysqlRubroRepository);

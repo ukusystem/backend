@@ -7,16 +7,18 @@ export interface ContrataWithRubro {
   contrata: string;
   descripcion: string;
   activo: number;
+  r_id: number;
   rubro: {
     r_id: number;
     rubro: string;
   };
+  total_personal: number;
 }
 
 export interface ContrataRepository {
   findById(co_id: number): Promise<Contrata | undefined>;
   findWithRubroById(co_id: number): Promise<ContrataWithRubro | undefined>;
-  create(data: CreateContrataDTO): Promise<number>;
+  create(data: CreateContrataDTO): Promise<Contrata>;
   update(co_id: number, fieldsUpdate: UpdateContrataDTO): Promise<void>;
   softDelete(co_id: number): Promise<void>;
   findByOffsetPagination(limit: number, offset: number, filters?: { rubros?: (string | number)[] }): Promise<ContrataWithRubro[]>;
