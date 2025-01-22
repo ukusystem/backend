@@ -33,7 +33,6 @@ export interface Usuario {
   fecha: string;
   p_id: number;
   activo: number;
-  ctrl_id: number;
 }
 
 export interface Cargo {
@@ -92,6 +91,14 @@ export interface Contrata {
   r_id: number;
   descripcion: string;
   activo: number;
+  ctrl_id: number;
+  pl_id: number;
+}
+export interface Plan {
+  pl_id: number;
+  plan: string;
+  max_personales: number;
+  max_sesiones: number;
 }
 
 export interface Acceso {

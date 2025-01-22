@@ -57,6 +57,15 @@ export const login = asyncErrorHandler(async (req: Request, res: Response, next:
     return next(errPasswordNotMatch);
   }
 
+  // Verificar sessiones activas
+
+  const activeSession = await Auth.getUserActiveSessions(userFound.u_id);
+
+  if (activeSession >= userFound.max_sesiones) {
+    const errMaxSessions = new CustomError(`Has alcanzado el número máximo de sesiones de inicio de sesión activas. Cierra sesión en otro dispositivo antes de intentar iniciar sesión nuevamente.`, 403, 'Forbidden');
+    return next(errMaxSessions);
+  }
+
   //Crear token de acceso
   const accessToken = await Auth.generateAccessToken({ id: userFound.u_id, rol: userFound.rol });
   const refreshToken = await Auth.generateRefreshToken({ id: userFound.u_id, rol: userFound.rol });
