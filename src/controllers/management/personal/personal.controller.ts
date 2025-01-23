@@ -1,7 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { asyncErrorHandler } from '../../../utils/asynErrorHandler';
 import { CreatePersonalDTO } from './dtos/create.personal.dto';
-import { CargoRepository } from '../cargo/cargo.repository';
 import { ContrataRepository } from '../contrata/contrata.repository';
 import { PersonalRepository } from './personal.repository';
 import { deleteTemporalFiles, GeneralMulterMiddlewareArgs } from '../../../middlewares/multer.middleware';
@@ -19,13 +18,14 @@ import { Personal } from './personal.entity';
 import { EntityResponse, CreateEntityResponse, UpdateResponse, OffsetPaginationResponse, DeleteReponse } from '../../../types/shared';
 import { InsertRecordActivity, OperationType } from '../../../models/audit/audit.types';
 import { UserRepository } from '../usuario/user.repository';
+import { AccesoRepository } from '../acceso/acceso.repository';
 
 export class PersonalController {
   constructor(
     private readonly personal_repository: PersonalRepository,
-    private readonly cargo_repository: CargoRepository,
     private readonly contrata_repository: ContrataRepository,
     private readonly user_repository: UserRepository,
+    private readonly acceso_repository: AccesoRepository,
   ) {}
 
   static readonly CREATE_BODY_FIELDNAME: string = 'form';
@@ -104,7 +104,7 @@ export class PersonalController {
             return res.status(400).json(resultParse.error.errors.map((errorDetail) => ({ message: errorDetail.message, status: errorDetail.code })));
           }
 
-          const { c_id, co_id, dni } = resultParse.data;
+          const { co_id, dni } = resultParse.data;
 
           const personalFound = await this.personal_repository.findByDni(dni);
           if (personalFound !== undefined) {
@@ -112,11 +112,11 @@ export class PersonalController {
             return res.status(409).json({ success: false, message: `Personal con DNI ${dni} ya esta en uso.` });
           }
 
-          const cargoFound = await this.cargo_repository.findById(c_id);
-          if (cargoFound === undefined) {
-            this.#deleteTemporalFiles(req);
-            return res.status(404).json({ success: false, message: `Cargo no disponible.` });
-          }
+          // const cargoFound = await this.cargo_repository.findById(c_id);
+          // if (cargoFound === undefined) {
+          //   this.#deleteTemporalFiles(req);
+          //   return res.status(404).json({ success: false, message: `Cargo no disponible.` });
+          // }
 
           const contrataFound = await this.contrata_repository.findById(co_id);
           if (contrataFound === undefined) {
@@ -204,7 +204,7 @@ export class PersonalController {
             return res.status(400).json(resultParse.error.errors.map((errorDetail) => ({ message: errorDetail.message, status: errorDetail.code })));
           }
 
-          const { c_id, co_id, dni, apellido, correo, nombre, telefono } = resultParse.data;
+          const { co_id, dni, apellido, correo, nombre, telefono } = resultParse.data;
 
           const finalPersonalUpdateDTO: UpdatePersonalDTO = {};
 
@@ -217,15 +217,15 @@ export class PersonalController {
             finalPersonalUpdateDTO.dni = dni;
           }
 
-          if (c_id !== undefined && c_id !== personalFound.c_id) {
-            const cargoFound = await this.cargo_repository.findById(c_id);
-            if (cargoFound === undefined) {
-              this.#deleteTemporalFiles(req);
-              return res.status(404).json({ success: false, message: `Cargo no disponible.` });
-            }
+          // if (c_id !== undefined && c_id !== personalFound.c_id) {
+          //   const cargoFound = await this.cargo_repository.findById(c_id);
+          //   if (cargoFound === undefined) {
+          //     this.#deleteTemporalFiles(req);
+          //     return res.status(404).json({ success: false, message: `Cargo no disponible.` });
+          //   }
 
-            finalPersonalUpdateDTO.c_id = c_id;
-          }
+          //   finalPersonalUpdateDTO.c_id = c_id;
+          // }
 
           if (co_id !== undefined && co_id !== personalFound.co_id) {
             const contrataFound = await this.contrata_repository.findById(co_id);
@@ -330,6 +330,20 @@ export class PersonalController {
         await this.user_repository.softDeleteByPersonalId(personalFound.p_id);
         // end delete: users
 
+        // delete : accesos
+        const accesosContrata = await this.acceso_repository.findByPersonalId(personalFound.p_id);
+
+        const accesosActivity = accesosContrata.map<InsertRecordActivity>((acceso) => ({
+          nombre_tabla: 'acceso',
+          id_registro: acceso.a_id,
+          tipo_operacion: OperationType.Delete,
+          valores_anteriores: { activo: acceso.activo },
+          valores_nuevos: { activo: 0 },
+          realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
+        }));
+        await this.acceso_repository.softDeleteByPersonalId(personalFound.p_id);
+        // end delete : accesos
+
         const newActivity: InsertRecordActivity = {
           nombre_tabla: 'personal',
           id_registro: personalFound.p_id,
@@ -339,7 +353,7 @@ export class PersonalController {
           realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
         };
 
-        AuditManager.generalMultipleInsert([newActivity, ...usersActivity]);
+        AuditManager.generalMultipleInsert([newActivity, ...usersActivity, ...accesosActivity]);
 
         const response: DeleteReponse = {
           message: 'Personal eliminado exitosamente',

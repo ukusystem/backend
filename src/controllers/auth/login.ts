@@ -2,7 +2,7 @@ import bcrypt from 'bcrypt';
 import { Request, Response, NextFunction } from 'express';
 import { asyncErrorHandler } from '../../utils/asynErrorHandler';
 import { Usuario } from '../../types/usuario';
-import { Auth } from '../../models/auth';
+import { Auth, UserInfo } from '../../models/auth';
 import { CustomError } from '../../utils/CustomError';
 import { appConfig } from '../../configs';
 
@@ -16,28 +16,28 @@ interface IData {
   token_type: string;
   access_token: string;
   refresh_token: string;
-  user: IUserLoginData;
+  user: Omit<UserInfo, 'contraseña'>;
 }
 
-interface IUserLoginData {
-  usuario: string;
-  fecha: string;
-  u_id: number;
-  rl_id: number;
-  p_id: number;
-  nombre: string;
-  dni: string;
-  telefono: string;
-  correo: string;
-  apellido: string;
-  c_id: number;
-  contrata: string;
-  co_id: number;
-  rubro: string;
-  rol: string;
-  descripcion: string;
-  foto: string;
-}
+// interface IUserLoginData {
+//   usuario: string;
+//   fecha: string;
+//   u_id: number;
+//   rl_id: number;
+//   p_id: number;
+//   nombre: string;
+//   dni: string;
+//   telefono: string;
+//   correo: string;
+//   apellido: string;
+//   c_id: number;
+//   contrata: string;
+//   co_id: number;
+//   rubro: string;
+//   rol: string;
+//   descripcion: string;
+//   foto: string;
+// }
 
 export const login = asyncErrorHandler(async (req: Request, res: Response, next: NextFunction) => {
   const { usuario, contraseña } = req.body as Pick<Usuario, 'contraseña' | 'usuario'>;

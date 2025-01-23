@@ -3,10 +3,11 @@ import jwt from 'jsonwebtoken';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import { simpleErrorHandler } from '../utils/simpleErrorHandler';
 
-import { Contrata, Personal, Plan, Rol, Rubro, Usuario } from '../types/db';
+import { Contrata, Personal, Rol, Usuario } from '../types/db';
 import { appConfig } from '../configs';
 import dayjs from 'dayjs';
 import { JwtEncription } from '../utils/jwt.encription';
+import { Rubro } from '../controllers/management/rubro/rubro.entity';
 
 interface JwtPayload {
   iat: number;
@@ -16,11 +17,11 @@ interface JwtPayload {
 }
 
 export type UserInfo = Pick<Usuario, 'u_id' | 'usuario' | 'contraseña' | 'fecha'> &
-  Pick<Rol, 'rl_id' | 'rol' | 'descripcion'> &
-  Pick<Personal, 'p_id' | 'nombre' | 'apellido' | 'dni' | 'telefono' | 'correo' | 'c_id' | 'foto'> &
+  Pick<Rol, 'rl_id' | 'rol'> &
+  Pick<Personal, 'p_id' | 'nombre' | 'apellido' | 'dni' | 'telefono' | 'correo' | 'foto'> &
   Pick<Contrata, 'contrata' | 'co_id' | 'ctrl_id'> &
-  Pick<Rubro, 'r_id' | 'rubro'> &
-  Pick<Plan, 'pl_id' | 'plan' | 'max_personales' | 'max_sesiones'>;
+  Pick<Rubro, 'r_id' | 'rubro' | 'max_personales' | 'max_sesiones'>;
+// Pick<Plan, 'pl_id' | 'plan' | 'max_personales' | 'max_sesiones'>;
 
 interface UserFound extends RowDataPacket, UserInfo {}
 
@@ -55,7 +56,7 @@ export interface CreateUserTokenDTO {
 export class Auth {
   static findUser = simpleErrorHandler<UserInfo | null, Pick<Usuario, 'usuario'>>(async ({ usuario }) => {
     const userFound = await MySQL2.executeQuery<UserFound[]>({
-      sql: `SELECT u.u_id, u.usuario, u.contraseña, u.fecha, r.rl_id, r.rol, r.descripcion, p.p_id, p.nombre, p.apellido, p.dni, p.telefono, p.correo, p.c_id, p.foto, c.co_id, c.contrata, c.ctrl_id, ru.r_id, ru.rubro, pl.pl_id, pl.plan, pl.max_personales, pl.max_sesiones FROM general.usuario u INNER JOIN general.rol r ON u.rl_id = r.rl_id INNER JOIN general.personal p ON u.p_id = p.p_id INNER JOIN general.contrata c ON p.co_id = c.co_id INNER JOIN general.rubro ru ON c.r_id = ru.r_id INNER JOIN general.plan pl ON c.pl_id = pl.pl_id  WHERE u.activo = 1 AND u.usuario = ? `,
+      sql: `SELECT u.u_id, u.usuario, u.contraseña, u.fecha, r.rl_id, r.rol, p.p_id, p.nombre, p.apellido, p.dni, p.telefono, p.correo, p.foto, c.co_id, c.contrata, c.ctrl_id, ru.r_id, ru.rubro, ru.max_personales, ru.max_sesiones FROM general.usuario u INNER JOIN general.rol r ON u.rl_id = r.rl_id INNER JOIN general.personal p ON u.p_id = p.p_id INNER JOIN general.contrata c ON p.co_id = c.co_id INNER JOIN general.rubro ru ON c.r_id = ru.r_id WHERE u.activo = 1 AND u.usuario = ? `,
       values: [usuario],
     });
 
@@ -124,7 +125,7 @@ export class Auth {
 
   static findUserById = simpleErrorHandler<UserInfo | null, Pick<Usuario, 'u_id'>>(async ({ u_id }) => {
     const userFound = await MySQL2.executeQuery<UserFound[]>({
-      sql: `SELECT u.u_id, u.usuario, u.contraseña, u.fecha, r.rl_id, r.rol, r.descripcion, p.p_id, p.nombre, p.apellido, p.dni, p.telefono, p.correo, p.c_id, p.foto, c.co_id, c.contrata, c.ctrl_id, ru.r_id, ru.rubro, pl.pl_id, pl.plan, pl.max_personales, pl.max_sesiones FROM general.usuario u INNER JOIN general.rol r ON u.rl_id = r.rl_id INNER JOIN general.personal p ON u.p_id = p.p_id INNER JOIN general.contrata c ON p.co_id = c.co_id INNER JOIN general.rubro ru ON c.r_id = ru.r_id INNER JOIN general.plan pl ON c.pl_id = pl.pl_id  WHERE u.activo = 1 AND u.u_id = ? `,
+      sql: `SELECT u.u_id, u.usuario, u.contraseña, u.fecha, r.rl_id, r.rol, p.p_id, p.nombre, p.apellido, p.dni, p.telefono, p.correo, p.foto, c.co_id, c.contrata, c.ctrl_id, ru.r_id, ru.rubro, ru.max_personales, ru.max_sesiones FROM general.usuario u INNER JOIN general.rol r ON u.rl_id = r.rl_id INNER JOIN general.personal p ON u.p_id = p.p_id INNER JOIN general.contrata c ON p.co_id = c.co_id INNER JOIN general.rubro ru ON c.r_id = ru.r_id WHERE u.activo = 1 AND u.u_id = ? `,
       values: [u_id],
     });
 

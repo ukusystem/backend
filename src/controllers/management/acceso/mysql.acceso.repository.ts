@@ -11,6 +11,13 @@ interface TotalAccespRowData extends RowDataPacket {
 }
 
 export class MySQLAccesoRepository implements AccesoRepository {
+  async softDeleteByPersonalId(p_id: number): Promise<void> {
+    await MySQL2.executeQuery<ResultSetHeader>({ sql: `UPDATE general.acceso SET activo = 0 WHERE activo = 1 AND p_id = ?`, values: [p_id] });
+  }
+  async findByPersonalId(p_id: number): Promise<Array<Acceso>> {
+    const accesos = await MySQL2.executeQuery<AccesoRowData[]>({ sql: `SELECT * FROM general.acceso WHERE activo = 1 AND p_id = ?  `, values: [p_id] });
+    return accesos;
+  }
   async findByContrataId(co_id: number): Promise<Array<Acceso>> {
     const accesos = await MySQL2.executeQuery<AccesoRowData[]>({ sql: `SELECT a.* FROM general.acceso a INNER JOIN general.personal p  ON a.p_id = p.p_id AND a.activo = 1 AND p.co_id = ?`, values: [co_id] });
     return accesos;
@@ -47,18 +54,11 @@ export class MySQLAccesoRepository implements AccesoRepository {
       { setQuery: '', setValues: [] },
     );
 
-    const result = await MySQL2.executeQuery<ResultSetHeader>({ sql: `UPDATE general.acceso SET ${queryValues.setQuery} WHERE a_id = ? LIMIT 1`, values: [...queryValues.setValues, a_id] });
-
-    if (result.affectedRows === 0) {
-      throw new Error(`Error al actualizar acceso`);
-    }
+    await MySQL2.executeQuery<ResultSetHeader>({ sql: `UPDATE general.acceso SET ${queryValues.setQuery} WHERE a_id = ? LIMIT 1`, values: [...queryValues.setValues, a_id] });
   }
 
   async softDelete(a_id: number): Promise<void> {
-    const result = await MySQL2.executeQuery<ResultSetHeader>({ sql: `UPDATE general.acceso SET activo = 0 WHERE a_id = ? LIMIT 1`, values: [a_id] });
-    if (result.affectedRows === 0) {
-      throw new Error(`Error al eliminar acceso`);
-    }
+    await MySQL2.executeQuery<ResultSetHeader>({ sql: `UPDATE general.acceso SET activo = 0 WHERE a_id = ? LIMIT 1`, values: [a_id] });
   }
 
   async findByOffsetPagination(limit: number, offset: number): Promise<Acceso[]> {

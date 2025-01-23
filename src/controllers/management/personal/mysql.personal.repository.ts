@@ -30,9 +30,9 @@ export class MySQLPersonalRespository implements PersonalRepository {
     return listPersonal[0];
   }
   async create(data: CreatePersonalDTO): Promise<Personal> {
-    const { nombre, apellido, telefono, dni, c_id, co_id, foto, correo } = data;
-    const result = await MySQL2.executeQuery<ResultSetHeader>({ sql: `INSERT INTO general.personal ( nombre, apellido, telefono, dni, c_id, co_id, foto, correo , activo ) VALUES ( ? , ? , ? , ? , ? , ? , ? , ? , 1 )`, values: [nombre, apellido, telefono, dni, c_id, co_id, foto, correo] });
-    return { nombre, apellido, telefono, dni, c_id, co_id, foto, correo, activo: 1, p_id: result.insertId };
+    const { nombre, apellido, telefono, dni, co_id, foto, correo } = data;
+    const result = await MySQL2.executeQuery<ResultSetHeader>({ sql: `INSERT INTO general.personal ( nombre, apellido, telefono, dni, co_id, foto, correo, c_id, activo ) VALUES ( ? , ? , ? , ? , ? , ? , ? , 1 , 1 )`, values: [nombre, apellido, telefono, dni, co_id, foto, correo] });
+    return { nombre, apellido, telefono, dni, co_id, foto, correo, c_id: 1, activo: 1, p_id: result.insertId };
   }
 
   async update(p_id: number, fieldsUpdate: UpdatePersonalDTO): Promise<void> {
@@ -48,18 +48,11 @@ export class MySQLPersonalRespository implements PersonalRepository {
       { setQuery: '', setValues: [] },
     );
 
-    const result = await MySQL2.executeQuery<ResultSetHeader>({ sql: `UPDATE general.personal SET ${queryValues.setQuery} WHERE p_id = ? LIMIT 1`, values: [...queryValues.setValues, p_id] });
-
-    if (result.affectedRows === 0) {
-      throw new Error(`Error al actualizar personal`);
-    }
+    await MySQL2.executeQuery<ResultSetHeader>({ sql: `UPDATE general.personal SET ${queryValues.setQuery} WHERE p_id = ? LIMIT 1`, values: [...queryValues.setValues, p_id] });
   }
 
   async softDelete(p_id: number): Promise<void> {
-    const result = await MySQL2.executeQuery<ResultSetHeader>({ sql: `UPDATE general.personal SET activo = 0 WHERE p_id = ? LIMIT 1`, values: [p_id] });
-    if (result.affectedRows === 0) {
-      throw new Error(`Error al eliminar personal`);
-    }
+    await MySQL2.executeQuery<ResultSetHeader>({ sql: `UPDATE general.personal SET activo = 0 WHERE activo = 1 AND p_id = ? LIMIT 1`, values: [p_id] });
   }
 
   async findByOffsetPagination(limit: number, offset: number): Promise<Personal[]> {

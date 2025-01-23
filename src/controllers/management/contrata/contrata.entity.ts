@@ -4,4 +4,8 @@ export interface Contrata {
   r_id: number;
   descripcion: string;
   activo: number;
+  ctrl_id: number;
+  direccion: string;
+  telefono: string;
+  correo: string;
 }

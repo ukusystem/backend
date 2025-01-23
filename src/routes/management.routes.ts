@@ -10,7 +10,6 @@ import { createUserSchema } from '../controllers/management/usuario/schemas/crea
 import { updateUserBodySchema, updateUserParamSchema } from '../controllers/management/usuario/schemas/update.user.schema';
 import { PersonalController } from '../controllers/management/personal/personal.controller';
 import { GeneralMulterMiddleware } from '../middlewares/multer.middleware';
-import { MySQLCargoRepository } from '../controllers/management/cargo/mysql.cargo.repository';
 import { MySQLContrataRepository } from '../controllers/management/contrata/mysql.contrata.repository';
 import { paginationPersonalSchema } from '../controllers/management/personal/schemas/pagination.personal.schema';
 import { updatePersonalParamSchema } from '../controllers/management/personal/schemas/update.personal.schema';
@@ -31,20 +30,21 @@ import { RolController } from '../controllers/management/rol/rol.controller';
 import { rubroParamIdSchema } from '../controllers/management/rubro/schemas/param.id.schema';
 import { RubroController } from '../controllers/management/rubro/rubro.controller';
 import { UserRol } from '../types/rol';
+import { MySQLContraldorRepository } from '../models/general/controlador/mysql.controlador.repository';
 
 const mysqlUserRepository = new MySQLUserRepository();
 const bycriptPasswordHasher = new BcryptPasswordHasher();
 const mysqlPersonalRepository = new MySQLPersonalRespository();
 const mysqlRolRepository = new MySQLRolRepository();
-const mysqlCargoRepository = new MySQLCargoRepository();
 const mysqlContrataRepository = new MySQLContrataRepository();
 const mysqlEquipoAccesoRepository = new MySQLEquipoAccesoRepository();
 const mysqlAccesoRepository = new MySQLAccesoRepository();
 const mysqlRubroRepository = new MySQLRubroRepository();
+const mysqlControladorRepository = new MySQLContraldorRepository();
 
 const userController = new UserController(mysqlUserRepository, bycriptPasswordHasher, mysqlPersonalRepository, mysqlRolRepository);
-const personalController = new PersonalController(mysqlPersonalRepository, mysqlCargoRepository, mysqlContrataRepository, mysqlUserRepository);
-const contrataController = new ContrataController(mysqlContrataRepository, mysqlRubroRepository, mysqlPersonalRepository, mysqlUserRepository, mysqlAccesoRepository);
+const personalController = new PersonalController(mysqlPersonalRepository, mysqlContrataRepository, mysqlUserRepository, mysqlAccesoRepository);
+const contrataController = new ContrataController(mysqlContrataRepository, mysqlRubroRepository, mysqlPersonalRepository, mysqlUserRepository, mysqlAccesoRepository, mysqlControladorRepository);
 const accesoController = new AccesoController(mysqlAccesoRepository, mysqlPersonalRepository, mysqlEquipoAccesoRepository);
 const rolController = new RolController(mysqlRolRepository);
 const rubroController = new RubroController(mysqlRubroRepository);

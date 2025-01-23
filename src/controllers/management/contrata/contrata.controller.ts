@@ -14,6 +14,7 @@ import { UserRepository } from '../usuario/user.repository';
 import { PaginationContrata } from './schemas/pagination.contrata.schema';
 import { InsertRecordActivity, OperationType } from '../../../models/audit/audit.types';
 import { AccesoRepository } from '../acceso/acceso.repository';
+import { ControladorRepository } from '../../../models/general/controlador/contralador.repository';
 
 export class ContrataController {
   constructor(
@@ -22,6 +23,7 @@ export class ContrataController {
     private readonly personal_repository: PersonalRepository,
     private readonly user_repository: UserRepository,
     private readonly acceso_repository: AccesoRepository,
+    private readonly controller_repository: ControladorRepository,
   ) {}
 
   get create() {
@@ -34,6 +36,11 @@ export class ContrataController {
         const rubroFound = await this.rubro_repository.findById(contrataDTO.r_id);
         if (rubroFound === undefined) {
           return res.status(404).json({ success: false, message: `Rubro no disponible.` });
+        }
+
+        const controllerFound = await this.controller_repository.findById(contrataDTO.ctrl_id);
+        if (controllerFound === undefined) {
+          return res.status(404).json({ success: false, message: `Controlador no disponible.` });
         }
 
         const newContrata = await this.contrata_repository.create(contrataDTO);
@@ -76,7 +83,7 @@ export class ContrataController {
         }
 
         const finalContrataUpdateDTO: UpdateContrataDTO = {};
-        const { r_id, contrata, descripcion } = incommingDTO;
+        const { r_id, ctrl_id, contrata, descripcion, direccion, telefono, correo } = incommingDTO;
 
         if (r_id !== undefined && r_id !== contrataFound.r_id) {
           const rubroFound = await this.rubro_repository.findById(r_id);
@@ -86,6 +93,14 @@ export class ContrataController {
           finalContrataUpdateDTO.r_id = r_id;
         }
 
+        if (ctrl_id !== undefined && ctrl_id !== contrataFound.ctrl_id) {
+          const controllerFound = await this.controller_repository.findById(ctrl_id);
+          if (controllerFound === undefined) {
+            return res.status(404).json({ success: false, message: `Controlador no disponible.` });
+          }
+          finalContrataUpdateDTO.ctrl_id = ctrl_id;
+        }
+
         if (contrata !== undefined && contrata !== contrataFound.contrata) {
           finalContrataUpdateDTO.contrata = contrata;
         }
@@ -93,9 +108,18 @@ export class ContrataController {
         if (descripcion !== undefined && descripcion !== contrataFound.descripcion) {
           finalContrataUpdateDTO.descripcion = descripcion;
         }
+        if (direccion !== undefined && direccion !== contrataFound.direccion) {
+          finalContrataUpdateDTO.direccion = direccion;
+        }
+        if (telefono !== undefined && telefono !== contrataFound.telefono) {
+          finalContrataUpdateDTO.telefono = telefono;
+        }
+        if (correo !== undefined && correo !== contrataFound.correo) {
+          finalContrataUpdateDTO.correo = correo;
+        }
 
         if (Object.keys(finalContrataUpdateDTO).length > 0) {
-          await this.contrata_repository.update(Number(co_id), finalContrataUpdateDTO);
+          await this.contrata_repository.update(contrataFound.co_id, finalContrataUpdateDTO);
 
           const oldValues = getOldRecordValues(contrataFound, finalContrataUpdateDTO);
 
