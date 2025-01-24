@@ -19,7 +19,7 @@ import { vmsRoutes } from '../routes/vms.routes';
 import { frontEndRoutes } from '../routes/frontend.routes';
 import { main } from './controllerapp/controller';
 import { MedidorEnergiaManager, PinEntradaManager, PinSalidaManager, RegistroAccesoManager, SensorTemperaturaManager } from '../controllers/socket';
-import { ContrataMapManager, ControllerMapManager, EquipoEntradaMapManager, EquipoSalidaMapManager, PersonalMapManager, RegionMapManager, Resolution, TipoCamaraMapManager } from './maps';
+import { ContrataMapManager, ControllerMapManager, EquipoEntradaMapManager, EquipoSalidaMapManager, PersonalMapManager, RegionMapManager, ResolutionMapManager, TipoCamaraMapManager } from './maps';
 import { dashboardRouter } from '../routes/dashboard.routes';
 import { appConfig } from '../configs';
 import { CameraMotionManager } from './camera';
@@ -150,7 +150,7 @@ export class ServerApp {
       await EquipoEntradaMapManager.init();
       await EquipoSalidaMapManager.init();
 
-      await Resolution.init();
+      await ResolutionMapManager.init();
       await RegionMapManager.init();
       await ControllerMapManager.init();
 

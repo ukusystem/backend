@@ -222,7 +222,14 @@ export class CamStreamSocketManager {
         if (currentProcess) {
           // delete observer
           // CamStreamSocketManager.unregisterObserver({ctrl_id,ip,q})
-          currentProcess.ffmpegProcess.kill();
+          if (currentProcess.ffmpegProcess && currentProcess.ffmpegProcess.pid !== undefined) {
+            try {
+              currentProcess.ffmpegProcess.kill();
+            } catch (error) {
+              vmsLogger.error(`Camera Stream Manager | createProccess | Error kill process | ${JSON.stringify(direction)} `, error);
+            }
+          }
+
           delete CamStreamSocketManager.process[ctrl_id][cmr_id][q];
           if (code !== null) {
             CamStreamSocketManager.notifyState(direction, false, 'isSuccess');
@@ -248,7 +255,7 @@ export class CamStreamSocketManager {
               try {
                 currentProcess.ffmpegProcess.kill();
               } catch (error) {
-                vmsLogger.error(`Camera Stream Manager | Error kill process | ${JSON.stringify(direction)} `, error);
+                vmsLogger.error(`Camera Stream Manager | killProcess | Error kill process | ${JSON.stringify(direction)} `, error);
               }
             }
           }
