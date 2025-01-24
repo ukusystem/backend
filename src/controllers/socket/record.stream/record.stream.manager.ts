@@ -128,7 +128,9 @@ export class RecordStreamManager {
       const curRecord = currController.get(cmr_id);
       if (curRecord !== undefined) {
         vmsLogger.info(`Stream Record Socket | stop_recording | ctrl_id = ${ctrl_id} | cmr_id = ${cmr_id}`);
-        curRecord[0].kill();
+        if (curRecord[0] && curRecord[0].pid !== undefined) {
+          curRecord[0].kill();
+        }
       }
     }
   }

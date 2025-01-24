@@ -81,7 +81,9 @@ export class Camera {
         ffmpegProcessImage.on('close', (code) => {
           cameraLogger.info(`snapshotCapture | Proceso ffmpegImage cerrado con código ${code}`);
           if (ffmpegProcessImage) {
-            ffmpegProcessImage.kill();
+            if (ffmpegProcessImage.pid !== undefined) {
+              ffmpegProcessImage.kill();
+            }
             ffmpegProcessImage = null;
           }
 

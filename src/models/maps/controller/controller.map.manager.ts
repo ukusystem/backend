@@ -4,7 +4,7 @@ import { Controlador } from '../../../types/db';
 import { filterUndefined } from '../../../utils/filterUndefined';
 import { ControllerNotifyManager } from '../../system';
 import { RegionMapManager } from '../region';
-import { Resolution } from '../resolucion';
+import { ResolutionMapManager } from '../resolucion';
 import { ControllerAndResolution, ControllerData, ControllerRowData, ControllerState, UpdateControllerResolution } from './controller.map.types';
 
 export class ControllerMapManager {
@@ -16,7 +16,7 @@ export class ControllerMapManager {
       const key_assert = key as keyof UpdateControllerResolution;
       if (resUpdates[key_assert] !== undefined) {
         const new_res_id = resUpdates[key_assert];
-        const resulucion = Resolution.getResolution(new_res_id as number);
+        const resulucion = ResolutionMapManager.getResolution(new_res_id as number);
         if (resulucion !== undefined) {
           Object.assign(curController, { [key_assert]: resUpdates[key_assert] });
           updateResolution[key_assert] = resUpdates[key_assert];
@@ -57,11 +57,11 @@ export class ControllerMapManager {
     if (controller === undefined) {
       return undefined;
     }
-    const resMotionRecord = Resolution.getResolution(controller.res_id_motionrecord);
-    const resMotionSnapshot = Resolution.getResolution(controller.res_id_motionsnapshot);
-    const resStreamAux = Resolution.getResolution(controller.res_id_streamauxiliary);
-    const resStreamPri = Resolution.getResolution(controller.res_id_streamprimary);
-    const resStreamSec = Resolution.getResolution(controller.res_id_streamsecondary);
+    const resMotionRecord = ResolutionMapManager.getResolution(controller.res_id_motionrecord);
+    const resMotionSnapshot = ResolutionMapManager.getResolution(controller.res_id_motionsnapshot);
+    const resStreamAux = ResolutionMapManager.getResolution(controller.res_id_streamauxiliary);
+    const resStreamPri = ResolutionMapManager.getResolution(controller.res_id_streamprimary);
+    const resStreamSec = ResolutionMapManager.getResolution(controller.res_id_streamsecondary);
 
     if (resMotionRecord !== undefined && resMotionSnapshot !== undefined && resStreamAux !== undefined && resStreamPri !== undefined && resStreamSec !== undefined) {
       const result: ControllerAndResolution = {

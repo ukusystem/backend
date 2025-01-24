@@ -1,11 +1,11 @@
-import { RowDataPacket } from "mysql2";
-import { Resolucion } from "../../types/db";
-import { MySQL2 } from "../../database/mysql";
-import { genericLogger } from "../../services/loggers";
+import { RowDataPacket } from 'mysql2';
+import { Resolucion } from '../../types/db';
+import { MySQL2 } from '../../database/mysql';
+import { genericLogger } from '../../services/loggers';
 
 interface ResolucionRowData extends RowDataPacket, Resolucion {}
 
-export class Resolution {
+export class ResolutionMapManager {
   static #resolutions: Map<number, Resolucion> = new Map();
 
   static #filterUndefined(data: Partial<Resolucion>): Partial<Resolucion> {
@@ -20,22 +20,22 @@ export class Resolution {
   }
 
   static add(res_id: number, newRegion: Resolucion) {
-    const existResolution = Resolution.#resolutions.has(res_id);
+    const existResolution = ResolutionMapManager.#resolutions.has(res_id);
     if (!existResolution) {
-      Resolution.#resolutions.set(res_id, newRegion);
+      ResolutionMapManager.#resolutions.set(res_id, newRegion);
     }
   }
 
   static update(res_id: number, fieldsUpdate: Partial<Resolucion>) {
-    const currResolution = Resolution.#resolutions.get(res_id);
+    const currResolution = ResolutionMapManager.#resolutions.get(res_id);
     if (currResolution !== undefined) {
-      const fieldsFiltered = Resolution.#filterUndefined(fieldsUpdate);
+      const fieldsFiltered = ResolutionMapManager.#filterUndefined(fieldsUpdate);
       Object.assign(currResolution, fieldsFiltered);
     }
   }
 
   static getResolution(res_id: number): Resolucion | undefined {
-    return Resolution.#resolutions.get(res_id);
+    return ResolutionMapManager.#resolutions.get(res_id);
   }
 
   static async init() {
@@ -45,10 +45,10 @@ export class Resolution {
       });
 
       resolutions.forEach((resolution) => {
-        Resolution.add(resolution.res_id, resolution);
+        ResolutionMapManager.add(resolution.res_id, resolution);
       });
     } catch (error) {
-      genericLogger.error(`Resolution | Error al inicializar regiones`,error);
+      genericLogger.error(`Resolution | Error al inicializar regiones`, error);
       throw error;
     }
   }
