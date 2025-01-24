@@ -18,7 +18,7 @@ export interface UserWithRoleAndPersonal {
 }
 
 export interface UserRepository {
-  create(data: CreateUserDTO): Promise<number>;
+  create(data: CreateUserDTO): Promise<Usuario>;
   findById(u_id: number): Promise<Usuario | undefined>;
   findByContrataId(co_id: number): Promise<Array<Usuario>>;
   findByPersonalId(p_id: number): Promise<Array<Usuario>>;

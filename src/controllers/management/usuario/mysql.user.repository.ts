@@ -81,11 +81,11 @@ export class MySQLUserRepository implements UserRepository {
     return users;
   }
 
-  async create(data: CreateUserDTO): Promise<number> {
+  async create(data: CreateUserDTO): Promise<Usuario> {
     const { usuario, contraseña, rl_id, p_id } = data;
     const fecha = dayjs().format('YYYY-MM-DD HH:mm:ss');
     const result = await MySQL2.executeQuery<ResultSetHeader>({ sql: `INSERT INTO general.usuario ( usuario , contraseña , rl_id , p_id , fecha , activo ) VALUES ( ? , ? , ? , ? , ? , 1 )`, values: [usuario, contraseña, rl_id, p_id, fecha] });
-    return result.insertId;
+    return { usuario, contraseña, rl_id, p_id, activo: 1, fecha, u_id: result.insertId };
   }
 
   async findById(u_id: number): Promise<Usuario | undefined> {

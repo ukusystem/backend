@@ -19,6 +19,7 @@ import { EntityResponse, CreateEntityResponse, UpdateResponse, OffsetPaginationR
 import { InsertRecordActivity, OperationType } from '../../../models/audit/audit.types';
 import { UserRepository } from '../usuario/user.repository';
 import { AccesoRepository } from '../acceso/acceso.repository';
+import { CustomError } from '../../../utils/CustomError';
 
 export class PersonalController {
   constructor(
@@ -105,6 +106,13 @@ export class PersonalController {
           }
 
           const { co_id, dni } = resultParse.data;
+
+          // limit max personales
+
+          const totalPersonal = await this.personal_repository.countTotalByCotrataId(co_id);
+          if (totalPersonal >= user.max_personales) {
+            return res.status(403).json({ message: 'Has alcanzado el número máximo de personales.' });
+          }
 
           const personalFound = await this.personal_repository.findByDni(dni);
           if (personalFound !== undefined) {
@@ -401,6 +409,30 @@ export class PersonalController {
       };
 
       return res.json(response);
+    });
+  }
+
+  get getPhoto() {
+    return asyncErrorHandler(async (req: RequestWithUser, res: Response, next: NextFunction) => {
+      const user = req.user;
+
+      if (user !== undefined) {
+        const { p_id } = req.params as { p_id: string };
+        const personalFound = await this.personal_repository.findById(Number(p_id));
+        if (personalFound === undefined) {
+          return res.status(404).json({ message: 'La foto solicitada no está disponible en el servidor.' });
+        }
+        const imgPathFinal = path.resolve(PersonalController.BASE_PROFILEPHOTO_RELATIVE_DIR, decodeURIComponent(personalFound.foto));
+
+        res.sendFile(imgPathFinal, (err) => {
+          if (err) {
+            const errPhotoNotFound = new CustomError(`La foto solicitada no está disponible en el servidor.`, 404, 'Not Found');
+            next(errPhotoNotFound);
+          }
+        });
+      } else {
+        return res.status(401).json({ message: 'No autorizado' });
+      }
     });
   }
 }

@@ -75,6 +75,8 @@ managementRoutes.post('/management/personales', authenticate, rolChecker([UserRo
 managementRoutes.patch('/management/personales/:p_id', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ params: updatePersonalParamSchema }), GeneralMulterMiddleware(personalController.createMulterConfig), personalController.update);
 // DELETE /management/personales/:p_id Eliminar un personal.
 managementRoutes.delete('/management/personales/:p_id', authenticate, rolChecker([UserRol.Administrador]), requestValidator({ params: updatePersonalParamSchema }), personalController.delete);
+// GET /management/personales/:p_id/foto Obtener foto personal por id
+managementRoutes.get('/management/personales/:p_id/foto', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ params: updatePersonalParamSchema }), personalController.getPhoto);
 
 // ========== Contrata ==========
 // GET	/management/contratas?limit=number&offset=number Listar todos las contratas por paginacion
