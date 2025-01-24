@@ -17,7 +17,7 @@ import { SystemManager } from '../../../models/system';
 import { appConfig } from '../../../configs';
 import { Main } from './main';
 // import { ControllerMapManager } from "@maps/index";
-import { ControllerMapManager } from '../../maps';
+import { ControllerMapManager, RegionMapManager } from '../../maps';
 import { NodeTickets } from './nodeTickets';
 // import { NodoCameraMapManager } from "@maps/nodo.camera";
 import { NodoCameraMapManager } from '../../maps/nodo.camera';
@@ -2289,19 +2289,28 @@ export class ManagerAttach extends BaseAttach {
                 case codes.VALUE_GROUP:
                 case codes.VALUE_GROUP_ADD:
                   const regionData = this._parseMessage(parts, queries.regionParse, id);
+                  if (!regionData) {
+                    break;
+                  }
+                  const groupID = regionData[0].getInt();
+                  const name = regionData[1].getString();
+                  const desc = regionData[2].getString();
                   switch (valueToSet) {
                     case codes.VALUE_GROUP:
                       await this._updateItem('region', regionData, queries.regionUpdate, id);
+                      RegionMapManager.update(groupID, { region: name, descripcion: desc });
                       break;
                     case codes.VALUE_GROUP_ADD:
                       await this._insertItem('region', regionData, queries.regionInsert, id);
+                      RegionMapManager.add(groupID, { activo: 1, rgn_id: groupID, region: name, descripcion: desc });
                       break;
                     default:
                       this._logFeelThroughHex(valueToSet);
                   }
                   break;
                 case codes.VALUE_GROUP_DISABLE:
-                  await this.disableItem('region', parts, queries.regionDisable, id);
+                  const disabledGroupID = await this.disableItem('region', parts, queries.regionDisable, id);
+                  RegionMapManager.update(disabledGroupID, { activo: 0 });
                   break;
                 case codes.VALUE_NODE:
                 case codes.VALUE_NODE_ADD:
