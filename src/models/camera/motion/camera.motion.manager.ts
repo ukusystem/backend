@@ -62,7 +62,15 @@ export class CameraMotionManager {
       if (CameraMotionManager.map[cam.ctrl_id][cam.cmr_id]) {
         const curCamMotion = CameraMotionManager.map[cam.ctrl_id][cam.cmr_id];
         if (curCamMotion.ip !== cam.ip || curCamMotion.contraseña !== cam.contraseña || curCamMotion.usuario !== cam.usuario) {
-          if (curCamMotion.ffmpegProcess !== undefined) curCamMotion.ffmpegProcess.kill();
+          if (curCamMotion.ffmpegProcess !== undefined) {
+            if (curCamMotion.ffmpegProcess && curCamMotion.ffmpegProcess.pid !== undefined) {
+              try {
+                curCamMotion.ffmpegProcess.kill();
+              } catch (error) {
+                cameraLogger.error(`CameraMotionManager | #updatecam | Error kill process | ctrl_id = ${curCamMotion.ctrl_id} , cmr_id = ${curCamMotion.cmr_id}`, error);
+              }
+            }
+          }
 
           delete CameraMotionManager.map[cam.ctrl_id][cam.cmr_id];
           // Agregar nuevo
@@ -101,7 +109,15 @@ export class CameraMotionManager {
     if (CameraMotionManager.map[ctrl_id]) {
       if (CameraMotionManager.map[ctrl_id][cmr_id]) {
         const currentCamMot = CameraMotionManager.map[ctrl_id][cmr_id];
-        if (currentCamMot.ffmpegProcess !== undefined) currentCamMot.ffmpegProcess.kill();
+        if (currentCamMot.ffmpegProcess !== undefined) {
+          if (currentCamMot.ffmpegProcess && currentCamMot.ffmpegProcess.pid !== undefined) {
+            try {
+              currentCamMot.ffmpegProcess.kill();
+            } catch (error) {
+              cameraLogger.error(`CameraMotionManager | notifyDelete | Error kill process | ctrl_id = ${ctrl_id} , cmr_id = ${cmr_id}`, error);
+            }
+          }
+        }
         delete CameraMotionManager.map[ctrl_id][cmr_id];
       }
     }
@@ -118,7 +134,15 @@ export class CameraMotionManager {
       // const cur_contraseña = currCamMotion.contraseña;
       // const cur_usuario = currCamMotion.usuario;
 
-      if (currCamMotion.ffmpegProcess !== undefined) currCamMotion.ffmpegProcess.kill();
+      if (currCamMotion.ffmpegProcess !== undefined) {
+        if (currCamMotion.ffmpegProcess && currCamMotion.ffmpegProcess.pid !== undefined) {
+          try {
+            currCamMotion.ffmpegProcess.kill();
+          } catch (error) {
+            cameraLogger.error(`CameraMotionManager | notifyReconnect | Error kill process | ctrl_id = ${ctrl_id} , cmr_id = ${cmr_id}`, error);
+          }
+        }
+      }
 
       delete CameraMotionManager.map[ctrl_id][cmr_id];
 
@@ -142,7 +166,16 @@ export class CameraMotionManager {
       if (CameraMotionManager.map[ctrl_id][cmr_id]) {
         const currentCamMot = CameraMotionManager.map[ctrl_id][cmr_id];
 
-        if (currentCamMot.ffmpegProcess !== undefined) currentCamMot.ffmpegProcess.kill();
+        if (currentCamMot.ffmpegProcess !== undefined) {
+          if (currentCamMot.ffmpegProcess && currentCamMot.ffmpegProcess.pid !== undefined) {
+            try {
+              currentCamMot.ffmpegProcess.kill();
+            } catch (error) {
+              cameraLogger.error(`CameraMotionManager | deleteFfmpegProccess | Error kill process | ctrl_id = ${ctrl_id} , cmr_id = ${cmr_id}`, error);
+            }
+          }
+        }
+
         // delete CameraMotionManager.map[ctrl_id][cmr_id];
       }
     }
