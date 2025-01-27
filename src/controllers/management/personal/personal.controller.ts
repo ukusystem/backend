@@ -107,10 +107,16 @@ export class PersonalController {
 
           const { co_id, dni } = resultParse.data;
 
+          const contrataFound = await this.contrata_repository.findWithRubroById(co_id);
+          if (contrataFound === undefined) {
+            this.#deleteTemporalFiles(req);
+            return res.status(404).json({ success: false, message: `Contrata no disponible.` });
+          }
+
           // limit max personales
 
-          const totalPersonal = await this.personal_repository.countTotalByCotrataId(co_id);
-          if (totalPersonal >= user.max_personales) {
+          const currTotalPersonal = await this.personal_repository.countTotalByCotrataId(co_id);
+          if (currTotalPersonal >= contrataFound.rubro.max_personales) {
             return res.status(403).json({ message: 'Has alcanzado el número máximo de personales.' });
           }
 
@@ -125,12 +131,6 @@ export class PersonalController {
           //   this.#deleteTemporalFiles(req);
           //   return res.status(404).json({ success: false, message: `Cargo no disponible.` });
           // }
-
-          const contrataFound = await this.contrata_repository.findById(co_id);
-          if (contrataFound === undefined) {
-            this.#deleteTemporalFiles(req);
-            return res.status(404).json({ success: false, message: `Contrata no disponible.` });
-          }
 
           const filesUploaded = req.files;
           let finalPhotoPath: string | undefined = undefined;
@@ -394,6 +394,8 @@ export class PersonalController {
       const final_limit: number = limit !== undefined ? Math.min(Math.max(Number(limit), 0), 100) : 10; // default limit : 10 ,  max limit : 100
 
       const final_offset: number = offset !== undefined ? Number(offset) : 0; // default offset : 0
+
+      console.log({ final_limit, final_offset });
 
       const personales = await this.personal_repository.findByOffsetPagination(final_limit, final_offset);
       const total = await this.personal_repository.countTotal();

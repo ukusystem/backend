@@ -76,7 +76,7 @@ export class ContrataController {
         const { co_id } = req.params as { co_id: string };
         const incommingDTO: UpdateContrataDTO = req.body;
 
-        const contrataFound = await this.contrata_repository.findById(Number(co_id));
+        const contrataFound = await this.contrata_repository.findWithRubroById(Number(co_id));
 
         if (contrataFound === undefined) {
           return res.status(400).json({ success: false, message: 'Contrata no disponible' });
@@ -89,6 +89,12 @@ export class ContrataController {
           const rubroFound = await this.rubro_repository.findById(r_id);
           if (rubroFound === undefined) {
             return res.status(404).json({ success: false, message: `Rubro no disponible.` });
+          }
+          if (rubroFound.max_personales < contrataFound.rubro.max_personales) {
+            const currTotalPersonal = await this.personal_repository.countTotalByCotrataId(contrataFound.co_id);
+            if (currTotalPersonal > rubroFound.max_personales) {
+              return res.status(400).json({ success: false, message: `El número total de personales supera el límite permitido para el plan seleccionado. Debes eliminar ${currTotalPersonal - rubroFound.max_personales} personal(es) para continuar.` });
+            }
           }
           finalContrataUpdateDTO.r_id = r_id;
         }

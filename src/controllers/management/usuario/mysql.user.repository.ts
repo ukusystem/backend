@@ -48,7 +48,9 @@ export class MySQLUserRepository implements UserRepository {
         u_id,
         usuario,
         fecha,
+        p_id,
         personal: { apellido, nombre, p_id },
+        rl_id,
         rol: { rl_id, rol },
       };
       return result;
@@ -70,7 +72,7 @@ export class MySQLUserRepository implements UserRepository {
       sql: `SELECT u.u_id , u.usuario, u.fecha , r.rl_id , r.rol , p.p_id , p.nombre, p.apellido FROM  general.usuario u INNER JOIN general.rol r ON u.rl_id = r.rl_id INNER JOIN general.personal p ON u.p_id = p.p_id WHERE u.activo = 1 ORDER BY u.u_id ASC LIMIT ? OFFSET ?`,
       values: [limit, offset],
     });
-    const result = users.map<UserWithRoleAndPersonal>(({ apellido, fecha, nombre, p_id, rl_id, rol, u_id, usuario }) => ({ u_id, usuario, fecha, personal: { apellido, nombre, p_id }, rol: { rl_id, rol } }));
+    const result = users.map<UserWithRoleAndPersonal>(({ apellido, fecha, nombre, p_id, rl_id, rol, u_id, usuario }) => ({ u_id, usuario, fecha, p_id, personal: { apellido, nombre, p_id }, rl_id, rol: { rl_id, rol } }));
     return result;
   }
 
