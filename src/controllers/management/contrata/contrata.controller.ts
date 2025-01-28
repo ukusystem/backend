@@ -29,128 +29,126 @@ export class ContrataController {
   get create() {
     return asyncErrorHandler(async (req: RequestWithUser, res: Response, _next: NextFunction) => {
       const user = req.user;
-
-      if (user !== undefined) {
-        const contrataDTO: CreateContrataDTO = req.body;
-
-        const rubroFound = await this.rubro_repository.findById(contrataDTO.r_id);
-        if (rubroFound === undefined) {
-          return res.status(404).json({ success: false, message: `Rubro no disponible.` });
-        }
-
-        const controllerFound = await this.controller_repository.findById(contrataDTO.ctrl_id);
-        if (controllerFound === undefined) {
-          return res.status(404).json({ success: false, message: `Controlador no disponible.` });
-        }
-
-        const newContrata = await this.contrata_repository.create(contrataDTO);
-
-        const newActivity: InsertRecordActivity = {
-          nombre_tabla: 'contrata',
-          id_registro: newContrata.co_id,
-          tipo_operacion: OperationType.Create,
-          valores_anteriores: null,
-          valores_nuevos: newContrata,
-          realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
-        };
-
-        AuditManager.generalInsert(newActivity);
-
-        const response: CreateEntityResponse = {
-          id: newContrata.co_id,
-          message: 'Contrata creado satisfactoriamente',
-        };
-
-        res.status(201).json(response);
-      } else {
+      if (user === undefined) {
         return res.status(401).json({ message: 'No autorizado' });
       }
+
+      const contrataDTO: CreateContrataDTO = req.body;
+
+      const rubroFound = await this.rubro_repository.findById(contrataDTO.r_id);
+      if (rubroFound === undefined) {
+        return res.status(404).json({ success: false, message: `Rubro no disponible.` });
+      }
+
+      const controllerFound = await this.controller_repository.findById(contrataDTO.ctrl_id);
+      if (controllerFound === undefined) {
+        return res.status(404).json({ success: false, message: `Controlador no disponible.` });
+      }
+
+      const newContrata = await this.contrata_repository.create(contrataDTO);
+
+      const newActivity: InsertRecordActivity = {
+        nombre_tabla: 'contrata',
+        id_registro: newContrata.co_id,
+        tipo_operacion: OperationType.Create,
+        valores_anteriores: null,
+        valores_nuevos: newContrata,
+        realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
+      };
+
+      AuditManager.generalInsert(newActivity);
+
+      const response: CreateEntityResponse = {
+        id: newContrata.co_id,
+        message: 'Contrata creado satisfactoriamente',
+      };
+
+      res.status(201).json(response);
     });
   }
 
   get update() {
     return asyncErrorHandler(async (req: RequestWithUser, res: Response, _next: NextFunction) => {
       const user = req.user;
-
-      if (user !== undefined) {
-        const { co_id } = req.params as { co_id: string };
-        const incommingDTO: UpdateContrataDTO = req.body;
-
-        const contrataFound = await this.contrata_repository.findWithRubroById(Number(co_id));
-
-        if (contrataFound === undefined) {
-          return res.status(400).json({ success: false, message: 'Contrata no disponible' });
-        }
-
-        const finalContrataUpdateDTO: UpdateContrataDTO = {};
-        const { r_id, ctrl_id, contrata, descripcion, direccion, telefono, correo } = incommingDTO;
-
-        if (r_id !== undefined && r_id !== contrataFound.r_id) {
-          const rubroFound = await this.rubro_repository.findById(r_id);
-          if (rubroFound === undefined) {
-            return res.status(404).json({ success: false, message: `Rubro no disponible.` });
-          }
-          if (rubroFound.max_personales < contrataFound.rubro.max_personales) {
-            const currTotalPersonal = await this.personal_repository.countTotalByCotrataId(contrataFound.co_id);
-            if (currTotalPersonal > rubroFound.max_personales) {
-              return res.status(400).json({ success: false, message: `El número total de personales supera el límite permitido para el plan seleccionado. Debes eliminar ${currTotalPersonal - rubroFound.max_personales} personal(es) para continuar.` });
-            }
-          }
-          finalContrataUpdateDTO.r_id = r_id;
-        }
-
-        if (ctrl_id !== undefined && ctrl_id !== contrataFound.ctrl_id) {
-          const controllerFound = await this.controller_repository.findById(ctrl_id);
-          if (controllerFound === undefined) {
-            return res.status(404).json({ success: false, message: `Controlador no disponible.` });
-          }
-          finalContrataUpdateDTO.ctrl_id = ctrl_id;
-        }
-
-        if (contrata !== undefined && contrata !== contrataFound.contrata) {
-          finalContrataUpdateDTO.contrata = contrata;
-        }
-
-        if (descripcion !== undefined && descripcion !== contrataFound.descripcion) {
-          finalContrataUpdateDTO.descripcion = descripcion;
-        }
-        if (direccion !== undefined && direccion !== contrataFound.direccion) {
-          finalContrataUpdateDTO.direccion = direccion;
-        }
-        if (telefono !== undefined && telefono !== contrataFound.telefono) {
-          finalContrataUpdateDTO.telefono = telefono;
-        }
-        if (correo !== undefined && correo !== contrataFound.correo) {
-          finalContrataUpdateDTO.correo = correo;
-        }
-
-        if (Object.keys(finalContrataUpdateDTO).length > 0) {
-          await this.contrata_repository.update(contrataFound.co_id, finalContrataUpdateDTO);
-
-          const oldValues = getOldRecordValues(contrataFound, finalContrataUpdateDTO);
-
-          const newActivity: InsertRecordActivity = {
-            nombre_tabla: 'contrata',
-            id_registro: contrataFound.co_id,
-            tipo_operacion: OperationType.Update,
-            valores_anteriores: oldValues,
-            valores_nuevos: finalContrataUpdateDTO,
-            realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
-          };
-
-          AuditManager.generalInsert(newActivity);
-
-          const response: UpdateResponse<Contrata> = {
-            message: 'Contrata actualizado exitosamente',
-          };
-
-          return res.status(200).json(response);
-        }
-
-        return res.status(200).json({ success: true, message: 'No se realizaron cambios en los datos de la contrata' });
-      } else {
+      if (user === undefined) {
         return res.status(401).json({ message: 'No autorizado' });
       }
+
+      const { co_id } = req.params as { co_id: string };
+      const incommingDTO: UpdateContrataDTO = req.body;
+
+      const contrataFound = await this.contrata_repository.findWithRubroById(Number(co_id));
+
+      if (contrataFound === undefined) {
+        return res.status(400).json({ success: false, message: 'Contrata no disponible' });
+      }
+
+      const finalContrataUpdateDTO: UpdateContrataDTO = {};
+      const { r_id, ctrl_id, contrata, descripcion, direccion, telefono, correo } = incommingDTO;
+
+      if (r_id !== undefined && r_id !== contrataFound.r_id) {
+        const rubroFound = await this.rubro_repository.findById(r_id);
+        if (rubroFound === undefined) {
+          return res.status(404).json({ success: false, message: `Rubro no disponible.` });
+        }
+        if (rubroFound.max_personales < contrataFound.rubro.max_personales) {
+          const currTotalPersonal = await this.personal_repository.countTotalByCotrataId(contrataFound.co_id);
+          if (currTotalPersonal > rubroFound.max_personales) {
+            return res.status(400).json({ success: false, message: `El número total de personales supera el límite permitido para el plan seleccionado. Debes eliminar ${currTotalPersonal - rubroFound.max_personales} personal(es) para continuar.` });
+          }
+        }
+        finalContrataUpdateDTO.r_id = r_id;
+      }
+
+      if (ctrl_id !== undefined && ctrl_id !== contrataFound.ctrl_id) {
+        const controllerFound = await this.controller_repository.findById(ctrl_id);
+        if (controllerFound === undefined) {
+          return res.status(404).json({ success: false, message: `Controlador no disponible.` });
+        }
+        finalContrataUpdateDTO.ctrl_id = ctrl_id;
+      }
+
+      if (contrata !== undefined && contrata !== contrataFound.contrata) {
+        finalContrataUpdateDTO.contrata = contrata;
+      }
+
+      if (descripcion !== undefined && descripcion !== contrataFound.descripcion) {
+        finalContrataUpdateDTO.descripcion = descripcion;
+      }
+      if (direccion !== undefined && direccion !== contrataFound.direccion) {
+        finalContrataUpdateDTO.direccion = direccion;
+      }
+      if (telefono !== undefined && telefono !== contrataFound.telefono) {
+        finalContrataUpdateDTO.telefono = telefono;
+      }
+      if (correo !== undefined && correo !== contrataFound.correo) {
+        finalContrataUpdateDTO.correo = correo;
+      }
+
+      if (Object.keys(finalContrataUpdateDTO).length > 0) {
+        await this.contrata_repository.update(contrataFound.co_id, finalContrataUpdateDTO);
+
+        const oldValues = getOldRecordValues(contrataFound, finalContrataUpdateDTO);
+
+        const newActivity: InsertRecordActivity = {
+          nombre_tabla: 'contrata',
+          id_registro: contrataFound.co_id,
+          tipo_operacion: OperationType.Update,
+          valores_anteriores: oldValues,
+          valores_nuevos: finalContrataUpdateDTO,
+          realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
+        };
+
+        AuditManager.generalInsert(newActivity);
+
+        const response: UpdateResponse<Contrata> = {
+          message: 'Contrata actualizado exitosamente',
+        };
+
+        return res.status(200).json(response);
+      }
+
+      return res.status(200).json({ success: true, message: 'No se realizaron cambios en los datos de la contrata' });
     });
   }
 
@@ -183,77 +181,76 @@ export class ContrataController {
   get delete() {
     return asyncErrorHandler(async (req: RequestWithUser, res: Response, _next: NextFunction) => {
       const user = req.user;
-
-      if (user !== undefined) {
-        const { co_id } = req.params as { co_id: string };
-        const contrataFound = await this.contrata_repository.findById(Number(co_id));
-
-        if (contrataFound === undefined) {
-          return res.status(400).json({ success: false, message: 'Contrata no disponible' });
-        }
-
-        // delete : contrata
-        await this.contrata_repository.softDelete(contrataFound.co_id);
-
-        // delete : personales
-        const personalesContrata = await this.personal_repository.findByContrataId(contrataFound.co_id);
-
-        const personalesActivity = personalesContrata.map<InsertRecordActivity>((personal) => ({
-          nombre_tabla: 'personal',
-          id_registro: personal.p_id,
-          tipo_operacion: OperationType.Delete,
-          valores_anteriores: { activo: personal.activo },
-          valores_nuevos: { activo: 0 },
-          realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
-        }));
-
-        await this.personal_repository.softDeleteByContrataId(contrataFound.co_id);
-
-        // delete : users
-        const usersContrata = await this.user_repository.findByContrataId(contrataFound.co_id);
-        const usersActivity = usersContrata.map<InsertRecordActivity>((user_item) => ({
-          nombre_tabla: 'usuario',
-          id_registro: user_item.u_id,
-          tipo_operacion: OperationType.Delete,
-          valores_anteriores: { activo: user_item.activo },
-          valores_nuevos: { activo: 0 },
-          realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
-        }));
-
-        await this.user_repository.softDeleteByContrataId(contrataFound.co_id);
-
-        // delete : accesos
-        const accesosContrata = await this.acceso_repository.findByContrataId(contrataFound.co_id);
-
-        const accesosActivity = accesosContrata.map<InsertRecordActivity>((acceso) => ({
-          nombre_tabla: 'acceso',
-          id_registro: acceso.a_id,
-          tipo_operacion: OperationType.Delete,
-          valores_anteriores: { activo: acceso.activo },
-          valores_nuevos: { activo: 0 },
-          realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
-        }));
-        await this.acceso_repository.softDeleteByContrataId(contrataFound.co_id);
-
-        const newActivity: InsertRecordActivity = {
-          nombre_tabla: 'contrata',
-          id_registro: contrataFound.co_id,
-          tipo_operacion: OperationType.Delete,
-          valores_anteriores: { activo: contrataFound.activo },
-          valores_nuevos: { activo: 0 },
-          realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
-        };
-
-        AuditManager.generalMultipleInsert([newActivity, ...personalesActivity, ...usersActivity, ...accesosActivity]);
-
-        const response: DeleteReponse = {
-          message: 'Contrata eliminado exitosamente',
-          id: Number(co_id),
-        };
-        res.status(200).json(response);
-      } else {
+      if (user === undefined) {
         return res.status(401).json({ message: 'No autorizado' });
       }
+
+      const { co_id } = req.params as { co_id: string };
+      const contrataFound = await this.contrata_repository.findById(Number(co_id));
+
+      if (contrataFound === undefined) {
+        return res.status(400).json({ success: false, message: 'Contrata no disponible' });
+      }
+
+      // delete : contrata
+      await this.contrata_repository.softDelete(contrataFound.co_id);
+
+      // delete : personales
+      const personalesContrata = await this.personal_repository.findByContrataId(contrataFound.co_id);
+
+      const personalesActivity = personalesContrata.map<InsertRecordActivity>((personal) => ({
+        nombre_tabla: 'personal',
+        id_registro: personal.p_id,
+        tipo_operacion: OperationType.Delete,
+        valores_anteriores: { activo: personal.activo },
+        valores_nuevos: { activo: 0 },
+        realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
+      }));
+
+      await this.personal_repository.softDeleteByContrataId(contrataFound.co_id);
+
+      // delete : users
+      const usersContrata = await this.user_repository.findByContrataId(contrataFound.co_id);
+      const usersActivity = usersContrata.map<InsertRecordActivity>((user_item) => ({
+        nombre_tabla: 'usuario',
+        id_registro: user_item.u_id,
+        tipo_operacion: OperationType.Delete,
+        valores_anteriores: { activo: user_item.activo },
+        valores_nuevos: { activo: 0 },
+        realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
+      }));
+
+      await this.user_repository.softDeleteByContrataId(contrataFound.co_id);
+
+      // delete : accesos
+      const accesosContrata = await this.acceso_repository.findByContrataId(contrataFound.co_id);
+
+      const accesosActivity = accesosContrata.map<InsertRecordActivity>((acceso) => ({
+        nombre_tabla: 'acceso',
+        id_registro: acceso.a_id,
+        tipo_operacion: OperationType.Delete,
+        valores_anteriores: { activo: acceso.activo },
+        valores_nuevos: { activo: 0 },
+        realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
+      }));
+      await this.acceso_repository.softDeleteByContrataId(contrataFound.co_id);
+
+      const newActivity: InsertRecordActivity = {
+        nombre_tabla: 'contrata',
+        id_registro: contrataFound.co_id,
+        tipo_operacion: OperationType.Delete,
+        valores_anteriores: { activo: contrataFound.activo },
+        valores_nuevos: { activo: 0 },
+        realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
+      };
+
+      AuditManager.generalMultipleInsert([newActivity, ...personalesActivity, ...usersActivity, ...accesosActivity]);
+
+      const response: DeleteReponse = {
+        message: 'Contrata eliminado exitosamente',
+        id: Number(co_id),
+      };
+      res.status(200).json(response);
     });
   }
 

@@ -92,16 +92,16 @@ managementRoutes.patch('/contratas/:co_id', authenticate, rolChecker([UserRol.Ad
 managementRoutes.delete('/contratas/:co_id', authenticate, rolChecker([UserRol.Administrador]), requestValidator({ params: updateContrataParamSchema }), contrataController.delete);
 
 // ========== Acceso ==========
-// GET	/management/accesos?limit=number&offset=number Listar todos los accesos por paginacion
-managementRoutes.get('/management/accesos', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ query: paginationAccesoSchema }), accesoController.listAccesosOffset);
-// GET /management/accesos/:a_id Obtener acceso por id
-managementRoutes.get('/management/accesos/:a_id', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ params: updateAccesoParamSchema }), accesoController.singleAcceso);
-// POST	/management/accesos Crear una nueva acceso.
-managementRoutes.post('/management/accesos', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ body: createAccesoSchema }), accesoController.create);
-// PATCH /management/accesos/:a_id Actualizar un acceso.
-managementRoutes.patch('/management/accesos/:a_id', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ body: updateAccesoBodySchema, params: updateAccesoParamSchema }), accesoController.update);
-// DELETE /management/accesos/:a_id Eliminar un acceso.
-managementRoutes.delete('/management/accesos/:a_id', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ params: updateAccesoParamSchema }), accesoController.delete);
+// GET	/accesos?limit=number&offset=number Listar todos los accesos por paginacion
+managementRoutes.get('/accesos', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ query: paginationAccesoSchema }), accesoController.listAccesosOffset);
+// GET /accesos/:a_id Obtener acceso por id
+managementRoutes.get('/accesos/:a_id', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ params: updateAccesoParamSchema }), accesoController.singleAcceso);
+// POST	/accesos Crear una nueva acceso.
+managementRoutes.post('/accesos', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ body: createAccesoSchema }), accesoController.create);
+// PATCH /accesos/:a_id Actualizar un acceso.
+managementRoutes.patch('/accesos/:a_id', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ body: updateAccesoBodySchema, params: updateAccesoParamSchema }), accesoController.update);
+// DELETE /accesos/:a_id Eliminar un acceso.
+managementRoutes.delete('/accesos/:a_id', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ params: updateAccesoParamSchema }), accesoController.delete);
 
 // ========== Rol ==========
 // GET	/management/roles Listar todos los roles

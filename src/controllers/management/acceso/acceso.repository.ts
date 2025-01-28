@@ -7,7 +7,7 @@ export interface AccesoRepository {
   findBySerie(serie: number): Promise<Acceso | undefined>;
   findByContrataId(co_id: number): Promise<Array<Acceso>>;
   findByPersonalId(p_id: number): Promise<Array<Acceso>>;
-  create(data: CreateAccesoDTO): Promise<number>;
+  create(data: CreateAccesoDTO): Promise<Acceso>;
   update(a_id: number, fieldsUpdate: UpdateAccesoDTO): Promise<void>;
   softDelete(a_id: number): Promise<void>;
   softDeleteByContrataId(co_id: number): Promise<void>;

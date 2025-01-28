@@ -7,7 +7,7 @@ import { PersonalRepository } from '../personal/personal.repository';
 import { RolRepository } from '../rol/rol.repository';
 import { UpdateUserDTO } from './dtos/update.user.dto';
 import { RequestWithUser } from '../../../types/requests';
-import { AuditManager, getOldRecordValues, getRecordAudit } from '../../../models/audit/audit.manager';
+import { AuditManager, getOldRecordValues } from '../../../models/audit/audit.manager';
 import { Usuario } from './user.entity';
 
 import { EntityResponse, CreateEntityResponse, UpdateResponse, OffsetPaginationResponse, DeleteReponse } from '../../../types/shared';
@@ -24,140 +24,135 @@ export class UserController {
   get create() {
     return asyncErrorHandler(async (req: RequestWithUser, res: Response, _next: NextFunction) => {
       const user = req.user;
-
-      if (user !== undefined) {
-        const userDTO: CreateUserDTO = req.body;
-
-        const isUsernameAvailable = await this.user_repository.isUsernameAvailable(userDTO.usuario);
-        if (!isUsernameAvailable) {
-          return res.status(409).json({ success: false, message: 'El nombre de usuario ya está en uso. Por favor, elige otro.' });
-        }
-
-        const foundPersonal = await this.personal_repository.findById(userDTO.p_id);
-        if (foundPersonal === undefined) {
-          return res.status(404).json({ success: false, message: `Personal no encontrado.` });
-        }
-
-        const isPersonalAvaible = await this.user_repository.isPersonalAvailable(userDTO.p_id);
-        if (!isPersonalAvaible) {
-          return res.status(409).json({ success: false, message: 'El personal ya tiene asignado un usuario. Por favor, elige otro.' });
-        }
-
-        const foundRol = await this.rol_repository.findById(userDTO.rl_id);
-        if (foundRol === undefined) {
-          return res.status(404).json({ success: false, message: `Rol no encontrado.` });
-        }
-
-        const passwordHashed = await this.hasher.hash(userDTO.contraseña);
-
-        const newUser = await this.user_repository.create({ ...userDTO, contraseña: passwordHashed });
-
-        const newActivity: InsertRecordActivity = {
-          nombre_tabla: 'usuario',
-          id_registro: newUser.u_id,
-          tipo_operacion: OperationType.Create,
-          valores_anteriores: null,
-          valores_nuevos: newUser,
-          realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
-        };
-
-        AuditManager.generalInsert(newActivity);
-
-        const response: CreateEntityResponse = {
-          id: newUser.u_id,
-          message: 'Usuario creado satisfactoriamente',
-        };
-
-        res.status(201).json(response);
-      } else {
+      if (user === undefined) {
         return res.status(401).json({ message: 'No autorizado' });
       }
+
+      const userDTO: CreateUserDTO = req.body;
+
+      const isUsernameAvailable = await this.user_repository.isUsernameAvailable(userDTO.usuario);
+      if (!isUsernameAvailable) {
+        return res.status(409).json({ success: false, message: 'El nombre de usuario ya está en uso. Por favor, elige otro.' });
+      }
+
+      const foundPersonal = await this.personal_repository.findById(userDTO.p_id);
+      if (foundPersonal === undefined) {
+        return res.status(404).json({ success: false, message: `Personal no encontrado.` });
+      }
+
+      const isPersonalAvaible = await this.user_repository.isPersonalAvailable(userDTO.p_id);
+      if (!isPersonalAvaible) {
+        return res.status(409).json({ success: false, message: 'El personal ya tiene asignado un usuario. Por favor, elige otro.' });
+      }
+
+      const foundRol = await this.rol_repository.findById(userDTO.rl_id);
+      if (foundRol === undefined) {
+        return res.status(404).json({ success: false, message: `Rol no encontrado.` });
+      }
+
+      const passwordHashed = await this.hasher.hash(userDTO.contraseña);
+
+      const newUser = await this.user_repository.create({ ...userDTO, contraseña: passwordHashed });
+
+      const newActivity: InsertRecordActivity = {
+        nombre_tabla: 'usuario',
+        id_registro: newUser.u_id,
+        tipo_operacion: OperationType.Create,
+        valores_anteriores: null,
+        valores_nuevos: newUser,
+        realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
+      };
+
+      AuditManager.generalInsert(newActivity);
+
+      const response: CreateEntityResponse = {
+        id: newUser.u_id,
+        message: 'Usuario creado satisfactoriamente',
+      };
+
+      res.status(201).json(response);
     });
   }
 
   get update() {
     return asyncErrorHandler(async (req: RequestWithUser, res: Response, _next: NextFunction) => {
       const user = req.user;
-
-      if (user !== undefined) {
-        // params
-        const { u_id } = req.params as { u_id: string };
-        // body
-        const incommingDTO: UpdateUserDTO = req.body;
-        const { contraseña, p_id, rl_id, usuario } = incommingDTO;
-        const finalUserUpdateDTO: UpdateUserDTO = {};
-
-        const userFound = await this.user_repository.findById(Number(u_id));
-        if (userFound === undefined) {
-          return res.status(400).json({ success: false, message: 'Usuario no disponible' });
-        }
-
-        if (usuario !== undefined && usuario !== userFound.usuario) {
-          const isUsernameAvailable = await this.user_repository.isUsernameAvailable(usuario);
-          if (!isUsernameAvailable) {
-            return res.status(409).json({ success: false, message: 'El nombre de usuario ya está en uso. Por favor, elige otro.' });
-          }
-          finalUserUpdateDTO.usuario = usuario;
-        }
-
-        if (p_id !== undefined && p_id !== userFound.p_id) {
-          const foundPersonal = await this.personal_repository.findById(p_id);
-          if (foundPersonal === undefined) {
-            return res.status(404).json({ success: false, message: `Personal no encontrado.` });
-          }
-
-          const isPersonalAvaible = await this.user_repository.isPersonalAvailable(p_id);
-          if (!isPersonalAvaible) {
-            return res.status(409).json({ success: false, message: 'El personal ya tiene asignado un usuario. Por favor, elige otro.' });
-          }
-          finalUserUpdateDTO.p_id = p_id;
-        }
-
-        if (rl_id !== undefined && rl_id !== userFound.rl_id) {
-          const foundRol = await this.rol_repository.findById(rl_id);
-          if (foundRol === undefined) {
-            return res.status(404).json({ success: false, message: `Rol no encontrado.` });
-          }
-
-          finalUserUpdateDTO.rl_id = rl_id;
-        }
-
-        if (contraseña !== undefined) {
-          const isSamePassword = await this.hasher.compare(contraseña, userFound.contraseña);
-          if (!isSamePassword) {
-            finalUserUpdateDTO.contraseña = await this.hasher.hash(contraseña);
-          }
-        }
-
-        if (Object.keys(finalUserUpdateDTO).length > 0) {
-          await this.user_repository.update(Number(u_id), finalUserUpdateDTO);
-
-          const records = getRecordAudit(userFound, finalUserUpdateDTO);
-          AuditManager.insert('general', 'general_audit', 'usuario', records, `${user.p_id}. ${user.nombre} ${user.apellido}`);
-
-          const oldValues = getOldRecordValues(userFound, finalUserUpdateDTO);
-
-          const newActivity: InsertRecordActivity = {
-            nombre_tabla: 'usuario',
-            id_registro: userFound.u_id,
-            tipo_operacion: OperationType.Update,
-            valores_anteriores: oldValues,
-            valores_nuevos: finalUserUpdateDTO,
-            realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
-          };
-
-          AuditManager.generalInsert(newActivity);
-
-          const response: UpdateResponse<Usuario> = {
-            message: 'Usuario actualizado exitosamente',
-          };
-          return res.status(200).json(response);
-        }
-
-        return res.status(200).json({ success: true, message: 'No se realizaron cambios en los datos del usuario' });
-      } else {
+      if (user === undefined) {
         return res.status(401).json({ message: 'No autorizado' });
       }
+
+      // params
+      const { u_id } = req.params as { u_id: string };
+      // body
+      const incommingDTO: UpdateUserDTO = req.body;
+      const { contraseña, p_id, rl_id, usuario } = incommingDTO;
+      const finalUserUpdateDTO: UpdateUserDTO = {};
+
+      const userFound = await this.user_repository.findById(Number(u_id));
+      if (userFound === undefined) {
+        return res.status(400).json({ success: false, message: 'Usuario no disponible' });
+      }
+
+      if (usuario !== undefined && usuario !== userFound.usuario) {
+        const isUsernameAvailable = await this.user_repository.isUsernameAvailable(usuario);
+        if (!isUsernameAvailable) {
+          return res.status(409).json({ success: false, message: 'El nombre de usuario ya está en uso. Por favor, elige otro.' });
+        }
+        finalUserUpdateDTO.usuario = usuario;
+      }
+
+      if (p_id !== undefined && p_id !== userFound.p_id) {
+        const foundPersonal = await this.personal_repository.findById(p_id);
+        if (foundPersonal === undefined) {
+          return res.status(404).json({ success: false, message: `Personal no encontrado.` });
+        }
+
+        const isPersonalAvaible = await this.user_repository.isPersonalAvailable(p_id);
+        if (!isPersonalAvaible) {
+          return res.status(409).json({ success: false, message: 'El personal ya tiene asignado un usuario. Por favor, elige otro.' });
+        }
+        finalUserUpdateDTO.p_id = p_id;
+      }
+
+      if (rl_id !== undefined && rl_id !== userFound.rl_id) {
+        const foundRol = await this.rol_repository.findById(rl_id);
+        if (foundRol === undefined) {
+          return res.status(404).json({ success: false, message: `Rol no encontrado.` });
+        }
+
+        finalUserUpdateDTO.rl_id = rl_id;
+      }
+
+      if (contraseña !== undefined) {
+        const isSamePassword = await this.hasher.compare(contraseña, userFound.contraseña);
+        if (!isSamePassword) {
+          finalUserUpdateDTO.contraseña = await this.hasher.hash(contraseña);
+        }
+      }
+
+      if (Object.keys(finalUserUpdateDTO).length > 0) {
+        await this.user_repository.update(Number(u_id), finalUserUpdateDTO);
+
+        const oldValues = getOldRecordValues(userFound, finalUserUpdateDTO);
+
+        const newActivity: InsertRecordActivity = {
+          nombre_tabla: 'usuario',
+          id_registro: userFound.u_id,
+          tipo_operacion: OperationType.Update,
+          valores_anteriores: oldValues,
+          valores_nuevos: finalUserUpdateDTO,
+          realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
+        };
+
+        AuditManager.generalInsert(newActivity);
+
+        const response: UpdateResponse<Usuario> = {
+          message: 'Usuario actualizado exitosamente',
+        };
+        return res.status(200).json(response);
+      }
+
+      return res.status(200).json({ success: true, message: 'No se realizaron cambios en los datos del usuario' });
     });
   }
 
@@ -206,34 +201,33 @@ export class UserController {
   get delete() {
     return asyncErrorHandler(async (req: RequestWithUser, res: Response, _next: NextFunction) => {
       const user = req.user;
-
-      if (user !== undefined) {
-        const { u_id } = req.params as { u_id: string };
-        const userFound = await this.user_repository.findById(Number(u_id));
-        if (userFound === undefined) {
-          return res.status(400).json({ success: false, message: 'Usuario no disponible' });
-        }
-        await this.user_repository.softDelete(Number(u_id));
-
-        const newActivity: InsertRecordActivity = {
-          nombre_tabla: 'usuario',
-          id_registro: userFound.p_id,
-          tipo_operacion: OperationType.Delete,
-          valores_anteriores: { activo: userFound.activo },
-          valores_nuevos: { activo: 0 },
-          realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
-        };
-
-        AuditManager.generalInsert(newActivity);
-
-        const response: DeleteReponse = {
-          message: 'Usuario eliminado exitosamente',
-          id: Number(u_id),
-        };
-        res.status(200).json(response);
-      } else {
+      if (user === undefined) {
         return res.status(401).json({ message: 'No autorizado' });
       }
+
+      const { u_id } = req.params as { u_id: string };
+      const userFound = await this.user_repository.findById(Number(u_id));
+      if (userFound === undefined) {
+        return res.status(400).json({ success: false, message: 'Usuario no disponible' });
+      }
+      await this.user_repository.softDelete(Number(u_id));
+
+      const newActivity: InsertRecordActivity = {
+        nombre_tabla: 'usuario',
+        id_registro: userFound.p_id,
+        tipo_operacion: OperationType.Delete,
+        valores_anteriores: { activo: userFound.activo },
+        valores_nuevos: { activo: 0 },
+        realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
+      };
+
+      AuditManager.generalInsert(newActivity);
+
+      const response: DeleteReponse = {
+        message: 'Usuario eliminado exitosamente',
+        id: Number(u_id),
+      };
+      res.status(200).json(response);
     });
   }
 

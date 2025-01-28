@@ -5,10 +5,11 @@ import { PersonalRepository } from '../personal/personal.repository';
 import { AccesoRepository } from './acceso.repository';
 import { CreateAccesoDTO } from './dtos/create.acceso.dto';
 import { UpdateAccesoDTO } from './dtos/update.acceso.dto';
-import { AuditManager, getRecordAudit } from '../../../models/audit/audit.manager';
+import { AuditManager, getOldRecordValues } from '../../../models/audit/audit.manager';
 import { RequestWithUser } from '../../../types/requests';
 import { EntityResponse, CreateEntityResponse, UpdateResponse, OffsetPaginationResponse, DeleteReponse } from '../../../types/shared';
 import { Acceso } from './acceso.entity';
+import { InsertRecordActivity, OperationType } from '../../../models/audit/audit.types';
 
 export class AccesoController {
   constructor(
@@ -18,7 +19,12 @@ export class AccesoController {
   ) {}
 
   get create() {
-    return asyncErrorHandler(async (req: Request, res: Response, _next: NextFunction) => {
+    return asyncErrorHandler(async (req: RequestWithUser, res: Response, _next: NextFunction) => {
+      const user = req.user;
+      if (user === undefined) {
+        return res.status(401).json({ message: 'No autorizado' });
+      }
+
       const accesoDTO: CreateAccesoDTO = req.body;
 
       const accesoFound = await this.acceso_repository.findBySerie(accesoDTO.serie);
@@ -36,10 +42,21 @@ export class AccesoController {
         return res.status(404).json({ success: false, message: `Equipo Acceso no disponible.` });
       }
 
-      const newAccesoId = await this.acceso_repository.create(accesoDTO);
+      const newAcceso = await this.acceso_repository.create(accesoDTO);
+
+      const newActivity: InsertRecordActivity = {
+        nombre_tabla: 'acceso',
+        id_registro: newAcceso.a_id,
+        tipo_operacion: OperationType.Create,
+        valores_anteriores: null,
+        valores_nuevos: newAcceso,
+        realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
+      };
+
+      AuditManager.generalInsert(newActivity);
 
       const response: CreateEntityResponse = {
-        id: newAccesoId,
+        id: newAcceso.a_id,
         message: 'Acceso creado satisfactoriamente',
       };
 
@@ -50,64 +67,73 @@ export class AccesoController {
   get update() {
     return asyncErrorHandler(async (req: RequestWithUser, res: Response, _next: NextFunction) => {
       const user = req.user;
-
-      if (user !== undefined) {
-        const { a_id } = req.params as { a_id: string };
-
-        const incommingDTO: UpdateAccesoDTO = req.body;
-
-        const accesoFound = await this.acceso_repository.findById(Number(a_id));
-        if (accesoFound === undefined) {
-          return res.status(404).json({ success: false, message: `Acceso no disponible` });
-        }
-
-        const finalUpdateAccesoDTO: UpdateAccesoDTO = {};
-        const { serie, p_id, ea_id, administrador } = incommingDTO;
-
-        if (serie !== undefined && serie !== accesoFound.serie) {
-          const accesoFoundSerie = await this.acceso_repository.findBySerie(serie);
-          if (accesoFoundSerie !== undefined) {
-            return res.status(409).json({ success: false, message: `Acceso con serie ${serie} ya esta en uso.` });
-          }
-          finalUpdateAccesoDTO.serie = serie;
-        }
-
-        if (p_id !== undefined && p_id !== accesoFound.p_id) {
-          const personalFound = await this.personal_repository.findById(p_id);
-          if (personalFound === undefined) {
-            return res.status(404).json({ success: false, message: `Personal no disponible.` });
-          }
-          finalUpdateAccesoDTO.p_id = p_id;
-        }
-
-        if (ea_id !== undefined && ea_id !== accesoFound.ea_id) {
-          const equipoAccesoFound = await this.equipoacceso_repository.findById(ea_id);
-          if (equipoAccesoFound === undefined) {
-            return res.status(404).json({ success: false, message: `Equipo Acceso no disponible.` });
-          }
-          finalUpdateAccesoDTO.ea_id = ea_id;
-        }
-
-        if (administrador !== undefined && administrador !== accesoFound.administrador) {
-          finalUpdateAccesoDTO.administrador = administrador;
-        }
-
-        if (Object.keys(finalUpdateAccesoDTO).length > 0) {
-          await this.acceso_repository.update(Number(a_id), finalUpdateAccesoDTO);
-
-          const records = getRecordAudit(accesoFound, finalUpdateAccesoDTO);
-          AuditManager.insert('general', 'general_audit', 'acceso', records, `${user.p_id}. ${user.nombre} ${user.apellido}`);
-
-          const response: UpdateResponse<Acceso> = {
-            message: 'Acceso actualizado exitosamente',
-          };
-          return res.status(200).json(response);
-        }
-
-        return res.status(200).json({ success: true, message: 'No se realizaron cambios en los datos del acceso' });
-      } else {
+      if (user === undefined) {
         return res.status(401).json({ message: 'No autorizado' });
       }
+
+      const { a_id } = req.params as { a_id: string };
+
+      const incommingDTO: UpdateAccesoDTO = req.body;
+
+      const accesoFound = await this.acceso_repository.findById(Number(a_id));
+      if (accesoFound === undefined) {
+        return res.status(404).json({ success: false, message: `Acceso no disponible` });
+      }
+
+      const finalUpdateAccesoDTO: UpdateAccesoDTO = {};
+      const { serie, p_id, ea_id, administrador } = incommingDTO;
+
+      if (serie !== undefined && serie !== accesoFound.serie) {
+        const accesoFoundSerie = await this.acceso_repository.findBySerie(serie);
+        if (accesoFoundSerie !== undefined) {
+          return res.status(409).json({ success: false, message: `Acceso con serie ${serie} ya esta en uso.` });
+        }
+        finalUpdateAccesoDTO.serie = serie;
+      }
+
+      if (p_id !== undefined && p_id !== accesoFound.p_id) {
+        const personalFound = await this.personal_repository.findById(p_id);
+        if (personalFound === undefined) {
+          return res.status(404).json({ success: false, message: `Personal no disponible.` });
+        }
+        finalUpdateAccesoDTO.p_id = p_id;
+      }
+
+      if (ea_id !== undefined && ea_id !== accesoFound.ea_id) {
+        const equipoAccesoFound = await this.equipoacceso_repository.findById(ea_id);
+        if (equipoAccesoFound === undefined) {
+          return res.status(404).json({ success: false, message: `Equipo Acceso no disponible.` });
+        }
+        finalUpdateAccesoDTO.ea_id = ea_id;
+      }
+
+      if (administrador !== undefined && administrador !== accesoFound.administrador) {
+        finalUpdateAccesoDTO.administrador = administrador;
+      }
+
+      if (Object.keys(finalUpdateAccesoDTO).length > 0) {
+        await this.acceso_repository.update(accesoFound.a_id, finalUpdateAccesoDTO);
+
+        const oldValues = getOldRecordValues(accesoFound, finalUpdateAccesoDTO);
+
+        const newActivity: InsertRecordActivity = {
+          nombre_tabla: 'acceso',
+          id_registro: accesoFound.a_id,
+          tipo_operacion: OperationType.Update,
+          valores_anteriores: oldValues,
+          valores_nuevos: finalUpdateAccesoDTO,
+          realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
+        };
+
+        AuditManager.generalInsert(newActivity);
+
+        const response: UpdateResponse<Acceso> = {
+          message: 'Acceso actualizado exitosamente',
+        };
+        return res.status(200).json(response);
+      }
+
+      return res.status(200).json({ success: true, message: 'No se realizaron cambios en los datos del acceso' });
     });
   }
 
@@ -136,13 +162,30 @@ export class AccesoController {
   }
 
   get delete() {
-    return asyncErrorHandler(async (req: Request, res: Response, _next: NextFunction) => {
+    return asyncErrorHandler(async (req: RequestWithUser, res: Response, _next: NextFunction) => {
+      const user = req.user;
+      if (user === undefined) {
+        return res.status(401).json({ message: 'No autorizado' });
+      }
+
       const { a_id } = req.params as { a_id: string };
       const accesoFound = await this.acceso_repository.findById(Number(a_id));
       if (accesoFound === undefined) {
         return res.status(400).json({ success: false, message: 'Acceso no disponible' });
       }
       await this.acceso_repository.softDelete(Number(a_id));
+
+      const newActivity: InsertRecordActivity = {
+        nombre_tabla: 'acceso',
+        id_registro: accesoFound.a_id,
+        tipo_operacion: OperationType.Delete,
+        valores_anteriores: { activo: accesoFound.activo },
+        valores_nuevos: { activo: 0 },
+        realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
+      };
+
+      AuditManager.generalInsert(newActivity);
+
       const response: DeleteReponse = {
         message: 'Acceso eliminado exitosamente',
         id: Number(a_id),

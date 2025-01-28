@@ -35,10 +35,10 @@ export class MySQLAccesoRepository implements AccesoRepository {
     return accesos[0];
   }
 
-  async create(data: CreateAccesoDTO): Promise<number> {
+  async create(data: CreateAccesoDTO): Promise<Acceso> {
     const { serie, administrador, p_id, ea_id } = data;
     const result = await MySQL2.executeQuery<ResultSetHeader>({ sql: `INSERT INTO general.acceso ( serie, administrador, p_id, ea_id , activo ) VALUES ( ? , ? , ? , ? , 1 )`, values: [serie, administrador, p_id, ea_id] });
-    return result.insertId;
+    return { serie, administrador, p_id, ea_id, activo: 1, a_id: result.insertId };
   }
 
   async update(a_id: number, fieldsUpdate: UpdateAccesoDTO): Promise<void> {

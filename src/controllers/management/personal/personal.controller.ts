@@ -94,98 +94,97 @@ export class PersonalController {
   get create() {
     return asyncErrorHandler(async (req: RequestWithUser, res: Response, next: NextFunction) => {
       const user = req.user;
+      if (user === undefined) {
+        return res.status(401).json({ message: 'No autorizado' });
+      }
 
-      if (user !== undefined) {
-        try {
-          const formParse = JSON.parse(req.body[PersonalController.CREATE_BODY_FIELDNAME]);
-          const resultParse = createPersonalSchema.safeParse(formParse);
+      try {
+        const formParse = JSON.parse(req.body[PersonalController.CREATE_BODY_FIELDNAME]);
+        const resultParse = createPersonalSchema.safeParse(formParse);
 
-          if (!resultParse.success) {
-            this.#deleteTemporalFiles(req);
-            return res.status(400).json(resultParse.error.errors.map((errorDetail) => ({ message: errorDetail.message, status: errorDetail.code })));
-          }
+        if (!resultParse.success) {
+          this.#deleteTemporalFiles(req);
+          return res.status(400).json(resultParse.error.errors.map((errorDetail) => ({ message: errorDetail.message, status: errorDetail.code })));
+        }
 
-          const { co_id, dni } = resultParse.data;
+        const { co_id, dni } = resultParse.data;
 
-          const contrataFound = await this.contrata_repository.findWithRubroById(co_id);
-          if (contrataFound === undefined) {
-            this.#deleteTemporalFiles(req);
-            return res.status(404).json({ success: false, message: `Contrata no disponible.` });
-          }
+        const contrataFound = await this.contrata_repository.findWithRubroById(co_id);
+        if (contrataFound === undefined) {
+          this.#deleteTemporalFiles(req);
+          return res.status(404).json({ success: false, message: `Contrata no disponible.` });
+        }
 
-          // limit max personales
+        // limit max personales
 
-          const currTotalPersonal = await this.personal_repository.countTotalByCotrataId(co_id);
-          if (currTotalPersonal >= contrataFound.rubro.max_personales) {
-            return res.status(403).json({ message: 'Has alcanzado el número máximo de personales.' });
-          }
+        const currTotalPersonal = await this.personal_repository.countTotalByCotrataId(co_id);
+        if (currTotalPersonal >= contrataFound.rubro.max_personales) {
+          return res.status(403).json({ message: 'Has alcanzado el número máximo de personales.' });
+        }
 
-          const personalFound = await this.personal_repository.findByDni(dni);
-          if (personalFound !== undefined) {
-            this.#deleteTemporalFiles(req);
-            return res.status(409).json({ success: false, message: `Personal con DNI ${dni} ya esta en uso.` });
-          }
+        const personalFound = await this.personal_repository.findByDni(dni);
+        if (personalFound !== undefined) {
+          this.#deleteTemporalFiles(req);
+          return res.status(409).json({ success: false, message: `Personal con DNI ${dni} ya esta en uso.` });
+        }
 
-          // const cargoFound = await this.cargo_repository.findById(c_id);
-          // if (cargoFound === undefined) {
-          //   this.#deleteTemporalFiles(req);
-          //   return res.status(404).json({ success: false, message: `Cargo no disponible.` });
-          // }
+        // const cargoFound = await this.cargo_repository.findById(c_id);
+        // if (cargoFound === undefined) {
+        //   this.#deleteTemporalFiles(req);
+        //   return res.status(404).json({ success: false, message: `Cargo no disponible.` });
+        // }
 
-          const filesUploaded = req.files;
-          let finalPhotoPath: string | undefined = undefined;
-          if (filesUploaded !== undefined) {
-            if (Array.isArray(filesUploaded)) {
-              const file = filesUploaded[0]; // expected only one
+        const filesUploaded = req.files;
+        let finalPhotoPath: string | undefined = undefined;
+        if (filesUploaded !== undefined) {
+          if (Array.isArray(filesUploaded)) {
+            const file = filesUploaded[0]; // expected only one
+            if (file !== undefined) {
+              finalPhotoPath = this.#moveMulterFilePhoto(file);
+            }
+          } else {
+            const multerFiles = filesUploaded[PersonalController.CREATE_FILE_FIELDNAME];
+            if (multerFiles !== undefined) {
+              const file = multerFiles[0]; // expected only one
               if (file !== undefined) {
                 finalPhotoPath = this.#moveMulterFilePhoto(file);
               }
-            } else {
-              const multerFiles = filesUploaded[PersonalController.CREATE_FILE_FIELDNAME];
-              if (multerFiles !== undefined) {
-                const file = multerFiles[0]; // expected only one
-                if (file !== undefined) {
-                  finalPhotoPath = this.#moveMulterFilePhoto(file);
-                }
-              }
             }
           }
-
-          if (finalPhotoPath === undefined) {
-            finalPhotoPath = this.#copyDefaultPhoto();
-          }
-
-          // falta validar foto
-          const newPersonal: CreatePersonalDTO = {
-            ...resultParse.data,
-            foto: finalPhotoPath,
-          };
-
-          const personalCreated = await this.personal_repository.create(newPersonal);
-
-          const newActivity: InsertRecordActivity = {
-            nombre_tabla: 'personal',
-            id_registro: personalCreated.p_id,
-            tipo_operacion: OperationType.Create,
-            valores_anteriores: null,
-            valores_nuevos: personalCreated,
-            realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
-          };
-
-          AuditManager.generalInsert(newActivity);
-
-          const response: CreateEntityResponse = {
-            id: personalCreated.p_id,
-            message: 'Personal creado satisfactoriamente',
-          };
-
-          res.status(201).json(response);
-        } catch (error) {
-          this.#deleteTemporalFiles(req);
-          next(error);
         }
-      } else {
-        return res.status(401).json({ message: 'No autorizado' });
+
+        if (finalPhotoPath === undefined) {
+          finalPhotoPath = this.#copyDefaultPhoto();
+        }
+
+        // falta validar foto
+        const newPersonal: CreatePersonalDTO = {
+          ...resultParse.data,
+          foto: finalPhotoPath,
+        };
+
+        const personalCreated = await this.personal_repository.create(newPersonal);
+
+        const newActivity: InsertRecordActivity = {
+          nombre_tabla: 'personal',
+          id_registro: personalCreated.p_id,
+          tipo_operacion: OperationType.Create,
+          valores_anteriores: null,
+          valores_nuevos: personalCreated,
+          realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
+        };
+
+        AuditManager.generalInsert(newActivity);
+
+        const response: CreateEntityResponse = {
+          id: personalCreated.p_id,
+          message: 'Personal creado satisfactoriamente',
+        };
+
+        res.status(201).json(response);
+      } catch (error) {
+        this.#deleteTemporalFiles(req);
+        next(error);
       }
     });
   }
@@ -194,116 +193,115 @@ export class PersonalController {
     return asyncErrorHandler(async (req: RequestWithUser, res: Response, next: NextFunction) => {
       try {
         const user = req.user;
+        if (user === undefined) {
+          return res.status(401).json({ message: 'No autorizado' });
+        }
 
-        if (user !== undefined) {
-          const { p_id } = req.params as { p_id: string };
+        const { p_id } = req.params as { p_id: string };
 
-          const personalFound = await this.personal_repository.findById(Number(p_id));
-          if (personalFound === undefined) {
+        const personalFound = await this.personal_repository.findById(Number(p_id));
+        if (personalFound === undefined) {
+          this.#deleteTemporalFiles(req);
+          return res.status(400).json({ success: false, message: 'Personal no disponible' });
+        }
+
+        const formParse = JSON.parse(req.body[PersonalController.CREATE_BODY_FIELDNAME]);
+
+        const resultParse = updatePersonalBodySchema.safeParse(formParse);
+        if (!resultParse.success) {
+          this.#deleteTemporalFiles(req);
+          return res.status(400).json(resultParse.error.errors.map((errorDetail) => ({ message: errorDetail.message, status: errorDetail.code })));
+        }
+
+        const { co_id, dni, apellido, correo, nombre, telefono } = resultParse.data;
+
+        const finalPersonalUpdateDTO: UpdatePersonalDTO = {};
+
+        if (dni !== undefined && dni !== personalFound.dni) {
+          const personalFoundDni = await this.personal_repository.findByDni(dni);
+          if (personalFoundDni !== undefined) {
             this.#deleteTemporalFiles(req);
-            return res.status(400).json({ success: false, message: 'Personal no disponible' });
+            return res.status(409).json({ success: false, message: `Personal con DNI ${dni} ya esta en uso.` });
           }
+          finalPersonalUpdateDTO.dni = dni;
+        }
 
-          const formParse = JSON.parse(req.body[PersonalController.CREATE_BODY_FIELDNAME]);
+        // if (c_id !== undefined && c_id !== personalFound.c_id) {
+        //   const cargoFound = await this.cargo_repository.findById(c_id);
+        //   if (cargoFound === undefined) {
+        //     this.#deleteTemporalFiles(req);
+        //     return res.status(404).json({ success: false, message: `Cargo no disponible.` });
+        //   }
 
-          const resultParse = updatePersonalBodySchema.safeParse(formParse);
-          if (!resultParse.success) {
+        //   finalPersonalUpdateDTO.c_id = c_id;
+        // }
+
+        if (co_id !== undefined && co_id !== personalFound.co_id) {
+          const contrataFound = await this.contrata_repository.findById(co_id);
+          if (contrataFound === undefined) {
             this.#deleteTemporalFiles(req);
-            return res.status(400).json(resultParse.error.errors.map((errorDetail) => ({ message: errorDetail.message, status: errorDetail.code })));
+            return res.status(404).json({ success: false, message: `Contrata no disponible.` });
           }
 
-          const { co_id, dni, apellido, correo, nombre, telefono } = resultParse.data;
+          finalPersonalUpdateDTO.co_id = co_id;
+        }
 
-          const finalPersonalUpdateDTO: UpdatePersonalDTO = {};
+        const filesUploaded = req.files;
 
-          if (dni !== undefined && dni !== personalFound.dni) {
-            const personalFoundDni = await this.personal_repository.findByDni(dni);
-            if (personalFoundDni !== undefined) {
-              this.#deleteTemporalFiles(req);
-              return res.status(409).json({ success: false, message: `Personal con DNI ${dni} ya esta en uso.` });
+        if (filesUploaded !== undefined) {
+          if (Array.isArray(filesUploaded)) {
+            const file = filesUploaded[0]; // expected only one
+            if (file !== undefined) {
+              finalPersonalUpdateDTO.foto = this.#moveMulterFilePhoto(file);
             }
-            finalPersonalUpdateDTO.dni = dni;
-          }
-
-          // if (c_id !== undefined && c_id !== personalFound.c_id) {
-          //   const cargoFound = await this.cargo_repository.findById(c_id);
-          //   if (cargoFound === undefined) {
-          //     this.#deleteTemporalFiles(req);
-          //     return res.status(404).json({ success: false, message: `Cargo no disponible.` });
-          //   }
-
-          //   finalPersonalUpdateDTO.c_id = c_id;
-          // }
-
-          if (co_id !== undefined && co_id !== personalFound.co_id) {
-            const contrataFound = await this.contrata_repository.findById(co_id);
-            if (contrataFound === undefined) {
-              this.#deleteTemporalFiles(req);
-              return res.status(404).json({ success: false, message: `Contrata no disponible.` });
-            }
-
-            finalPersonalUpdateDTO.co_id = co_id;
-          }
-
-          const filesUploaded = req.files;
-
-          if (filesUploaded !== undefined) {
-            if (Array.isArray(filesUploaded)) {
-              const file = filesUploaded[0]; // expected only one
+          } else {
+            const multerFiles = filesUploaded[PersonalController.CREATE_FILE_FIELDNAME];
+            if (multerFiles !== undefined) {
+              const file = multerFiles[0]; // expected only one
               if (file !== undefined) {
                 finalPersonalUpdateDTO.foto = this.#moveMulterFilePhoto(file);
               }
-            } else {
-              const multerFiles = filesUploaded[PersonalController.CREATE_FILE_FIELDNAME];
-              if (multerFiles !== undefined) {
-                const file = multerFiles[0]; // expected only one
-                if (file !== undefined) {
-                  finalPersonalUpdateDTO.foto = this.#moveMulterFilePhoto(file);
-                }
-              }
             }
           }
-
-          if (apellido !== undefined && apellido !== personalFound.apellido) {
-            finalPersonalUpdateDTO.apellido = apellido;
-          }
-          if (nombre !== undefined && nombre !== personalFound.nombre) {
-            finalPersonalUpdateDTO.nombre = nombre;
-          }
-          if (correo !== undefined && correo !== personalFound.correo) {
-            finalPersonalUpdateDTO.correo = correo;
-          }
-          if (telefono !== undefined && telefono !== personalFound.telefono) {
-            finalPersonalUpdateDTO.telefono = telefono;
-          }
-
-          if (Object.keys(finalPersonalUpdateDTO).length > 0) {
-            await this.personal_repository.update(Number(p_id), finalPersonalUpdateDTO);
-
-            const oldValues = getOldRecordValues(personalFound, finalPersonalUpdateDTO);
-
-            const newActivity: InsertRecordActivity = {
-              nombre_tabla: 'personal',
-              id_registro: personalFound.p_id,
-              tipo_operacion: OperationType.Update,
-              valores_anteriores: oldValues,
-              valores_nuevos: finalPersonalUpdateDTO,
-              realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
-            };
-
-            AuditManager.generalInsert(newActivity);
-
-            const response: UpdateResponse<Personal> = {
-              message: 'Personal actualizado exitosamente',
-            };
-
-            return res.status(200).json(response);
-          }
-
-          return res.status(200).json({ success: true, message: 'No se realizaron cambios en los datos del personal' });
-        } else {
-          return res.status(401).json({ message: 'No autorizado' });
         }
+
+        if (apellido !== undefined && apellido !== personalFound.apellido) {
+          finalPersonalUpdateDTO.apellido = apellido;
+        }
+        if (nombre !== undefined && nombre !== personalFound.nombre) {
+          finalPersonalUpdateDTO.nombre = nombre;
+        }
+        if (correo !== undefined && correo !== personalFound.correo) {
+          finalPersonalUpdateDTO.correo = correo;
+        }
+        if (telefono !== undefined && telefono !== personalFound.telefono) {
+          finalPersonalUpdateDTO.telefono = telefono;
+        }
+
+        if (Object.keys(finalPersonalUpdateDTO).length > 0) {
+          await this.personal_repository.update(Number(p_id), finalPersonalUpdateDTO);
+
+          const oldValues = getOldRecordValues(personalFound, finalPersonalUpdateDTO);
+
+          const newActivity: InsertRecordActivity = {
+            nombre_tabla: 'personal',
+            id_registro: personalFound.p_id,
+            tipo_operacion: OperationType.Update,
+            valores_anteriores: oldValues,
+            valores_nuevos: finalPersonalUpdateDTO,
+            realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
+          };
+
+          AuditManager.generalInsert(newActivity);
+
+          const response: UpdateResponse<Personal> = {
+            message: 'Personal actualizado exitosamente',
+          };
+
+          return res.status(200).json(response);
+        }
+
+        return res.status(200).json({ success: true, message: 'No se realizaron cambios en los datos del personal' });
       } catch (error) {
         this.#deleteTemporalFiles(req);
         next(error);
@@ -314,63 +312,62 @@ export class PersonalController {
   get delete() {
     return asyncErrorHandler(async (req: RequestWithUser, res: Response, _next: NextFunction) => {
       const user = req.user;
-      if (user !== undefined) {
-        const { p_id } = req.params as { p_id: string };
-        const personalFound = await this.personal_repository.findById(Number(p_id));
-        if (personalFound === undefined) {
-          return res.status(400).json({ success: false, message: 'Personal no disponible' });
-        }
-
-        // delete: personal
-        await this.personal_repository.softDelete(Number(p_id));
-
-        // delete: users
-        const usersPersonal = await this.user_repository.findByPersonalId(personalFound.p_id);
-        const usersActivity = usersPersonal.map<InsertRecordActivity>((user_item) => ({
-          nombre_tabla: 'usuario',
-          id_registro: user_item.u_id,
-          tipo_operacion: OperationType.Delete,
-          valores_anteriores: { activo: user_item.activo },
-          valores_nuevos: { activo: 0 },
-          realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
-        }));
-
-        await this.user_repository.softDeleteByPersonalId(personalFound.p_id);
-        // end delete: users
-
-        // delete : accesos
-        const accesosContrata = await this.acceso_repository.findByPersonalId(personalFound.p_id);
-
-        const accesosActivity = accesosContrata.map<InsertRecordActivity>((acceso) => ({
-          nombre_tabla: 'acceso',
-          id_registro: acceso.a_id,
-          tipo_operacion: OperationType.Delete,
-          valores_anteriores: { activo: acceso.activo },
-          valores_nuevos: { activo: 0 },
-          realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
-        }));
-        await this.acceso_repository.softDeleteByPersonalId(personalFound.p_id);
-        // end delete : accesos
-
-        const newActivity: InsertRecordActivity = {
-          nombre_tabla: 'personal',
-          id_registro: personalFound.p_id,
-          tipo_operacion: OperationType.Delete,
-          valores_anteriores: { activo: personalFound.activo },
-          valores_nuevos: { activo: 0 },
-          realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
-        };
-
-        AuditManager.generalMultipleInsert([newActivity, ...usersActivity, ...accesosActivity]);
-
-        const response: DeleteReponse = {
-          message: 'Personal eliminado exitosamente',
-          id: Number(p_id),
-        };
-        res.status(200).json(response);
-      } else {
+      if (user === undefined) {
         return res.status(401).json({ message: 'No autorizado' });
       }
+      const { p_id } = req.params as { p_id: string };
+      const personalFound = await this.personal_repository.findById(Number(p_id));
+      if (personalFound === undefined) {
+        return res.status(400).json({ success: false, message: 'Personal no disponible' });
+      }
+
+      // delete: personal
+      await this.personal_repository.softDelete(Number(p_id));
+
+      // delete: users
+      const usersPersonal = await this.user_repository.findByPersonalId(personalFound.p_id);
+      const usersActivity = usersPersonal.map<InsertRecordActivity>((user_item) => ({
+        nombre_tabla: 'usuario',
+        id_registro: user_item.u_id,
+        tipo_operacion: OperationType.Delete,
+        valores_anteriores: { activo: user_item.activo },
+        valores_nuevos: { activo: 0 },
+        realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
+      }));
+
+      await this.user_repository.softDeleteByPersonalId(personalFound.p_id);
+      // end delete: users
+
+      // delete : accesos
+      const accesosContrata = await this.acceso_repository.findByPersonalId(personalFound.p_id);
+
+      const accesosActivity = accesosContrata.map<InsertRecordActivity>((acceso) => ({
+        nombre_tabla: 'acceso',
+        id_registro: acceso.a_id,
+        tipo_operacion: OperationType.Delete,
+        valores_anteriores: { activo: acceso.activo },
+        valores_nuevos: { activo: 0 },
+        realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
+      }));
+      await this.acceso_repository.softDeleteByPersonalId(personalFound.p_id);
+      // end delete : accesos
+
+      const newActivity: InsertRecordActivity = {
+        nombre_tabla: 'personal',
+        id_registro: personalFound.p_id,
+        tipo_operacion: OperationType.Delete,
+        valores_anteriores: { activo: personalFound.activo },
+        valores_nuevos: { activo: 0 },
+        realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
+      };
+
+      AuditManager.generalMultipleInsert([newActivity, ...usersActivity, ...accesosActivity]);
+
+      const response: DeleteReponse = {
+        message: 'Personal eliminado exitosamente',
+        id: Number(p_id),
+      };
+      res.status(200).json(response);
     });
   }
 
@@ -417,24 +414,23 @@ export class PersonalController {
   get getPhoto() {
     return asyncErrorHandler(async (req: RequestWithUser, res: Response, next: NextFunction) => {
       const user = req.user;
-
-      if (user !== undefined) {
-        const { p_id } = req.params as { p_id: string };
-        const personalFound = await this.personal_repository.findById(Number(p_id));
-        if (personalFound === undefined) {
-          return res.status(404).json({ message: 'La foto solicitada no está disponible en el servidor.' });
-        }
-        const imgPathFinal = path.resolve(PersonalController.BASE_PROFILEPHOTO_RELATIVE_DIR, decodeURIComponent(personalFound.foto));
-
-        res.sendFile(imgPathFinal, (err) => {
-          if (err) {
-            const errPhotoNotFound = new CustomError(`La foto solicitada no está disponible en el servidor.`, 404, 'Not Found');
-            next(errPhotoNotFound);
-          }
-        });
-      } else {
+      if (user === undefined) {
         return res.status(401).json({ message: 'No autorizado' });
       }
+
+      const { p_id } = req.params as { p_id: string };
+      const personalFound = await this.personal_repository.findById(Number(p_id));
+      if (personalFound === undefined) {
+        return res.status(404).json({ message: 'La foto solicitada no está disponible en el servidor.' });
+      }
+      const imgPathFinal = path.resolve(PersonalController.BASE_PROFILEPHOTO_RELATIVE_DIR, decodeURIComponent(personalFound.foto));
+
+      res.sendFile(imgPathFinal, (err) => {
+        if (err) {
+          const errPhotoNotFound = new CustomError(`La foto solicitada no está disponible en el servidor.`, 404, 'Not Found');
+          next(errPhotoNotFound);
+        }
+      });
     });
   }
 }
