@@ -7,7 +7,7 @@ interface RubroRowData extends RowDataPacket, Rubro {}
 
 export class MySQLRubroRepository implements RubroRepository {
   async findAll(): Promise<Rubro[]> {
-    const rubros = await MySQL2.executeQuery<RubroRowData[]>({ sql: `SELECT * FROM general.rubro` });
+    const rubros = await MySQL2.executeQuery<RubroRowData[]>({ sql: `SELECT * FROM general.rubro ORDER BY r_id ASC` });
     return rubros;
   }
   async findById(r_id: number): Promise<Rubro | undefined> {

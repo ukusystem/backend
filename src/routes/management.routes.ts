@@ -31,6 +31,11 @@ import { rubroParamIdSchema } from '../controllers/management/rubro/schemas/para
 import { RubroController } from '../controllers/management/rubro/rubro.controller';
 import { UserRol } from '../types/rol';
 import { MySQLContraldorRepository } from '../models/general/controlador/mysql.controlador.repository';
+import { cargoParamIdSchema } from '../controllers/management/cargo/schemas/param.id.schema';
+import { MySQLCargoRepository } from '../controllers/management/cargo/mysql.cargo.repository';
+import { CargoController } from '../controllers/management/cargo/cargo.controller';
+import { EquipoAccesoController } from '../controllers/management/equipoacceso/equipo.acceso.controller';
+import { equipoAccesoParamIdSchema } from '../controllers/management/equipoacceso/schemas/param.id.schema';
 
 const mysqlUserRepository = new MySQLUserRepository();
 const bycriptPasswordHasher = new BcryptPasswordHasher();
@@ -41,6 +46,7 @@ const mysqlEquipoAccesoRepository = new MySQLEquipoAccesoRepository();
 const mysqlAccesoRepository = new MySQLAccesoRepository();
 const mysqlRubroRepository = new MySQLRubroRepository();
 const mysqlControladorRepository = new MySQLContraldorRepository();
+const mysqlCargoRepository = new MySQLCargoRepository();
 
 const userController = new UserController(mysqlUserRepository, bycriptPasswordHasher, mysqlPersonalRepository, mysqlRolRepository);
 const personalController = new PersonalController(mysqlPersonalRepository, mysqlContrataRepository, mysqlUserRepository, mysqlAccesoRepository);
@@ -48,6 +54,8 @@ const contrataController = new ContrataController(mysqlContrataRepository, mysql
 const accesoController = new AccesoController(mysqlAccesoRepository, mysqlPersonalRepository, mysqlEquipoAccesoRepository);
 const rolController = new RolController(mysqlRolRepository);
 const rubroController = new RubroController(mysqlRubroRepository);
+const cargoController = new CargoController(mysqlCargoRepository);
+const equipoAccesoController = new EquipoAccesoController(mysqlEquipoAccesoRepository);
 
 export const managementRoutes = Router();
 //  rolChecker([UserRol.Administrador, UserRol.Gestor]) rolChecker([UserRol.Administrador])
@@ -103,14 +111,26 @@ managementRoutes.patch('/accesos/:a_id', authenticate, rolChecker([UserRol.Admin
 // DELETE /accesos/:a_id Eliminar un acceso.
 managementRoutes.delete('/accesos/:a_id', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ params: updateAccesoParamSchema }), accesoController.delete);
 
-// ========== Rol ==========
-// GET	/management/roles Listar todos los roles
-managementRoutes.get('/management/roles', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), rolController.listRoles);
-// GET /management/roles/:rl_id Obtener rol por id
-managementRoutes.get('/management/roles/:rl_id', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ params: rolParamIdSchema }), rolController.singleRol);
-
 // ========== Rubro ==========
-// GET	/management/rubros Listar todos los rubros
-managementRoutes.get('/management/rubros', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), rubroController.listRubros);
-// GET /management/rubros/:r_id Obtener rubro por id
-managementRoutes.get('/management/rubros/:r_id', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ params: rubroParamIdSchema }), rubroController.singleRubro);
+// GET	/rubros Listar todos los rubros
+managementRoutes.get('/rubros', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), rubroController.list);
+// GET /rubros/:r_id Obtener rubro por id
+managementRoutes.get('/rubros/:r_id', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ params: rubroParamIdSchema }), rubroController.item);
+
+// ========== Cargo ==========
+// GET	/cargos Listar todos los cargos
+managementRoutes.get('/cargos', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), cargoController.list);
+// GET /cargos/:c_id Obtener cargo por id
+managementRoutes.get('/cargos/:c_id', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ params: cargoParamIdSchema }), cargoController.item);
+
+// ========== Rol ==========
+// GET	/roles Listar todos los roles
+managementRoutes.get('/roles', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), rolController.list);
+// GET /roles/:rl_id Obtener rol por id
+managementRoutes.get('/roles/:rl_id', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ params: rolParamIdSchema }), rolController.item);
+
+// ========== Equipo de Acceso ==========
+// GET	/equiposacceso Listar todos los equipos de acceso
+managementRoutes.get('/equiposacceso', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), equipoAccesoController.list);
+// GET /equiposacceso/:rl_id Obtener equipo acceso por id
+managementRoutes.get('/equiposacceso/:ea_id', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ params: equipoAccesoParamIdSchema }), equipoAccesoController.item);

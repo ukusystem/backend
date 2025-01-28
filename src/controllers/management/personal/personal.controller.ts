@@ -20,6 +20,7 @@ import { InsertRecordActivity, OperationType } from '../../../models/audit/audit
 import { UserRepository } from '../usuario/user.repository';
 import { AccesoRepository } from '../acceso/acceso.repository';
 import { CustomError } from '../../../utils/CustomError';
+import { PersonalMapManager } from '../../../models/maps';
 
 export class PersonalController {
   constructor(
@@ -164,6 +165,7 @@ export class PersonalController {
         };
 
         const personalCreated = await this.personal_repository.create(newPersonal);
+        PersonalMapManager.add(personalCreated);
 
         const newActivity: InsertRecordActivity = {
           nombre_tabla: 'personal',
@@ -281,6 +283,8 @@ export class PersonalController {
         if (Object.keys(finalPersonalUpdateDTO).length > 0) {
           await this.personal_repository.update(Number(p_id), finalPersonalUpdateDTO);
 
+          PersonalMapManager.update(personalFound.p_id, finalPersonalUpdateDTO);
+
           const oldValues = getOldRecordValues(personalFound, finalPersonalUpdateDTO);
 
           const newActivity: InsertRecordActivity = {
@@ -322,8 +326,9 @@ export class PersonalController {
       }
 
       // delete: personal
-      await this.personal_repository.softDelete(Number(p_id));
+      await this.personal_repository.softDelete(personalFound.p_id);
 
+      PersonalMapManager.delete(personalFound.p_id);
       // delete: users
       const usersPersonal = await this.user_repository.findByPersonalId(personalFound.p_id);
       const usersActivity = usersPersonal.map<InsertRecordActivity>((user_item) => ({

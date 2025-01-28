@@ -7,7 +7,7 @@ import { Rol } from './rol.entinty';
 export class RolController {
   constructor(private readonly repository: RolRepository) {}
 
-  get singleRol() {
+  get item() {
     return asyncErrorHandler(async (req: Request, res: Response, _next: NextFunction) => {
       const { rl_id } = req.params as { rl_id: string };
       const rolFound = await this.repository.findById(Number(rl_id));
@@ -18,7 +18,7 @@ export class RolController {
       res.status(200).json(response);
     });
   }
-  get listRoles() {
+  get list() {
     return asyncErrorHandler(async (req: Request, res: Response, _next: NextFunction) => {
       const roles = await this.repository.findAll();
       const response: EntityResponse<Rol[]> = roles;
