@@ -27,7 +27,6 @@ import { NodoCameraMapManager } from './maps/nodo.camera';
 import { NvrManager } from './nvr/nvr.manager';
 import { genericLogger } from '../services/loggers';
 import { RegistroEntradaManager } from '../controllers/socket/registro.entrada';
-import { managementRoutes } from '../routes/management.routes';
 import { TokenManger } from './token.manager';
 import { generalRoutes } from '../routes/general.routes';
 
@@ -113,8 +112,7 @@ export class ServerApp {
     // ==== SITE ====
     // Controles:
     this.#app.use(this.#baseApiPath, siteRoutes);
-    // ==== Management ====
-    this.#app.use(this.#baseApiPath, managementRoutes);
+
     // ==== General ====
     this.#app.use(this.#baseApiPath, generalRoutes);
 

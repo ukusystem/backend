@@ -7,7 +7,7 @@ import { Contrata, Personal, Rol, Usuario } from '../types/db';
 import { appConfig } from '../configs';
 import dayjs from 'dayjs';
 import { JwtEncription } from '../utils/jwt.encription';
-import { Rubro } from '../controllers/management/rubro/rubro.entity';
+import { Rubro } from './general/rubro/rubro.entity';
 
 interface JwtPayload {
   iat: number;

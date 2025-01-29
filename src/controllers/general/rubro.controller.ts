@@ -1,8 +1,8 @@
 import { NextFunction, Request, Response } from 'express';
-import { asyncErrorHandler } from '../../../utils/asynErrorHandler';
-import { EntityResponse } from '../../../types/shared';
-import { RubroRepository } from './rubro.repository';
-import { Rubro } from './rubro.entity';
+import { asyncErrorHandler } from '../../utils/asynErrorHandler';
+import { EntityResponse } from '../../types/shared';
+import { RubroRepository } from '../../models/general/rubro/rubro.repository';
+import { Rubro } from '../../models/general/rubro/rubro.entity';
 
 export class RubroController {
   constructor(private readonly repository: RubroRepository) {}

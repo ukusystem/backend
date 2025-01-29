@@ -1,8 +1,8 @@
 import { NextFunction, Request, Response } from 'express';
-import { asyncErrorHandler } from '../../../utils/asynErrorHandler';
-import { RolRepository } from './rol.repository';
-import { EntityResponse } from '../../../types/shared';
-import { Rol } from './rol.entinty';
+import { asyncErrorHandler } from '../../utils/asynErrorHandler';
+import { EntityResponse } from '../../types/shared';
+import { RolRepository } from '../../models/general/rol/rol.repository';
+import { Rol } from '../../models/general/rol/rol.entinty';
 
 export class RolController {
   constructor(private readonly repository: RolRepository) {}

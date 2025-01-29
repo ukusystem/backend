@@ -1,9 +1,8 @@
 import { NextFunction, Request, Response } from 'express';
-import { asyncErrorHandler } from '../../../utils/asynErrorHandler';
-import { EntityResponse } from '../../../types/shared';
-
-import { EquipoAccesoRepository } from './equipo.acceso.repository';
-import { EquipoAcceso } from './equipo.acceso.entity';
+import { asyncErrorHandler } from '../../utils/asynErrorHandler';
+import { EntityResponse } from '../../types/shared';
+import { EquipoAccesoRepository } from '../../models/general/equipoacceso/equipo.acceso.repository';
+import { EquipoAcceso } from '../../models/general/equipoacceso/equipo.acceso.entity';
 
 export class EquipoAccesoController {
   constructor(private readonly repository: EquipoAccesoRepository) {}

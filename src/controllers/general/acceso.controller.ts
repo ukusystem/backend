@@ -1,15 +1,16 @@
 import { NextFunction, Request, Response } from 'express';
-import { asyncErrorHandler } from '../../../utils/asynErrorHandler';
-import { EquipoAccesoRepository } from '../equipoacceso/equipo.acceso.repository';
-import { PersonalRepository } from '../personal/personal.repository';
-import { AccesoRepository } from './acceso.repository';
-import { CreateAccesoDTO } from './dtos/create.acceso.dto';
-import { UpdateAccesoDTO } from './dtos/update.acceso.dto';
-import { AuditManager, getOldRecordValues } from '../../../models/audit/audit.manager';
-import { RequestWithUser } from '../../../types/requests';
-import { EntityResponse, CreateEntityResponse, UpdateResponse, OffsetPaginationResponse, DeleteReponse } from '../../../types/shared';
-import { Acceso } from './acceso.entity';
-import { InsertRecordActivity, OperationType } from '../../../models/audit/audit.types';
+import { RequestWithUser } from '../../types/requests';
+import { asyncErrorHandler } from '../../utils/asynErrorHandler';
+import { InsertRecordActivity, OperationType } from '../../models/audit/audit.types';
+import { AuditManager, getOldRecordValues } from '../../models/audit/audit.manager';
+import { CreateEntityResponse, DeleteReponse, EntityResponse, OffsetPaginationResponse, UpdateResponse } from '../../types/shared';
+
+import { AccesoRepository } from '../../models/general/acceso/acceso.repository';
+import { PersonalRepository } from '../../models/general/personal/personal.repository';
+import { EquipoAccesoRepository } from '../../models/general/equipoacceso/equipo.acceso.repository';
+import { CreateAccesoDTO } from '../../models/general/acceso/dtos/create.acceso.dto';
+import { UpdateAccesoDTO } from '../../models/general/acceso/dtos/update.acceso.dto';
+import { Acceso } from '../../models/general/acceso/acceso.entity';
 
 export class AccesoController {
   constructor(

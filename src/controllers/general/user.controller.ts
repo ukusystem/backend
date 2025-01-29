@@ -1,17 +1,16 @@
 import { NextFunction, Request, Response } from 'express';
-import { PasswordHasher } from './security/passwod.hasher';
-import { UserRepository, UserWithRoleAndPersonal } from './user.repository';
-import { asyncErrorHandler } from '../../../utils/asynErrorHandler';
-import { CreateUserDTO } from './dtos/create.user.dto';
-import { PersonalRepository } from '../personal/personal.repository';
-import { RolRepository } from '../rol/rol.repository';
-import { UpdateUserDTO } from './dtos/update.user.dto';
-import { RequestWithUser } from '../../../types/requests';
-import { AuditManager, getOldRecordValues } from '../../../models/audit/audit.manager';
-import { Usuario } from './user.entity';
-
-import { EntityResponse, CreateEntityResponse, UpdateResponse, OffsetPaginationResponse, DeleteReponse } from '../../../types/shared';
-import { InsertRecordActivity, OperationType } from '../../../models/audit/audit.types';
+import { RequestWithUser } from '../../types/requests';
+import { asyncErrorHandler } from '../../utils/asynErrorHandler';
+import { InsertRecordActivity, OperationType } from '../../models/audit/audit.types';
+import { AuditManager, getOldRecordValues } from '../../models/audit/audit.manager';
+import { CreateEntityResponse, DeleteReponse, EntityResponse, OffsetPaginationResponse, UpdateResponse } from '../../types/shared';
+import { UserRepository, UserWithRoleAndPersonal } from '../../models/general/usuario/user.repository';
+import { PasswordHasher } from '../../models/general/usuario/security/passwod.hasher';
+import { PersonalRepository } from '../../models/general/personal/personal.repository';
+import { RolRepository } from '../../models/general/rol/rol.repository';
+import { CreateUserDTO } from '../../models/general/usuario/dtos/create.user.dto';
+import { UpdateUserDTO } from '../../models/general/usuario/dtos/update.user.dto';
+import { Usuario } from '../../models/general/usuario/user.entity';
 
 export class UserController {
   constructor(

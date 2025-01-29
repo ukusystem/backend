@@ -1,26 +1,25 @@
 import { NextFunction, Request, Response } from 'express';
-import { asyncErrorHandler } from '../../../utils/asynErrorHandler';
-import { CreatePersonalDTO } from './dtos/create.personal.dto';
-import { ContrataRepository } from '../contrata/contrata.repository';
-import { PersonalRepository } from './personal.repository';
-import { deleteTemporalFiles, GeneralMulterMiddlewareArgs } from '../../../middlewares/multer.middleware';
-import { createPersonalSchema } from './schemas/create.personal.schema';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import fs from 'fs';
-import { getExtesionFile } from '../../../utils/getExtensionFile';
-import { updatePersonalBodySchema } from './schemas/update.personal.schema';
-import { UpdatePersonalDTO } from './dtos/update.personal.dto';
-import { AuditManager, getOldRecordValues } from '../../../models/audit/audit.manager';
-import { RequestWithUser } from '../../../types/requests';
-import { Personal } from './personal.entity';
-
-import { EntityResponse, CreateEntityResponse, UpdateResponse, OffsetPaginationResponse, DeleteReponse } from '../../../types/shared';
-import { InsertRecordActivity, OperationType } from '../../../models/audit/audit.types';
-import { UserRepository } from '../usuario/user.repository';
-import { AccesoRepository } from '../acceso/acceso.repository';
-import { CustomError } from '../../../utils/CustomError';
-import { PersonalMapManager } from '../../../models/maps';
+import { RequestWithUser } from '../../types/requests';
+import { asyncErrorHandler } from '../../utils/asynErrorHandler';
+import { InsertRecordActivity, OperationType } from '../../models/audit/audit.types';
+import { AuditManager, getOldRecordValues } from '../../models/audit/audit.manager';
+import { CreateEntityResponse, DeleteReponse, EntityResponse, OffsetPaginationResponse, UpdateResponse } from '../../types/shared';
+import { PersonalRepository } from '../../models/general/personal/personal.repository';
+import { ContrataRepository } from '../../models/general/contrata/contrata.repository';
+import { UserRepository } from '../../models/general/usuario/user.repository';
+import { AccesoRepository } from '../../models/general/acceso/acceso.repository';
+import { deleteTemporalFiles, GeneralMulterMiddlewareArgs } from '../../middlewares/multer.middleware';
+import { getExtesionFile } from '../../utils/getExtensionFile';
+import { createPersonalSchema } from '../../models/general/personal/schemas/create.personal.schema';
+import { CreatePersonalDTO } from '../../models/general/personal/dtos/create.personal.dto';
+import { PersonalMapManager } from '../../models/maps';
+import { updatePersonalBodySchema } from '../../models/general/personal/schemas/update.personal.schema';
+import { UpdatePersonalDTO } from '../../models/general/personal/dtos/update.personal.dto';
+import { Personal } from '../../models/general/personal/personal.entity';
+import { CustomError } from '../../utils/CustomError';
 
 export class PersonalController {
   constructor(

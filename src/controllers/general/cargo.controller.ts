@@ -1,9 +1,9 @@
 import { NextFunction, Request, Response } from 'express';
-import { asyncErrorHandler } from '../../../utils/asynErrorHandler';
-import { EntityResponse } from '../../../types/shared';
+import { asyncErrorHandler } from '../../utils/asynErrorHandler';
+import { EntityResponse } from '../../types/shared';
 
-import { CargoRepository } from './cargo.repository';
-import { Cargo } from './cargo.entity';
+import { CargoRepository } from '../../models/general/cargo/cargo.repository';
+import { Cargo } from '../../models/general/cargo/cargo.entity';
 
 export class CargoController {
   constructor(private readonly repository: CargoRepository) {}

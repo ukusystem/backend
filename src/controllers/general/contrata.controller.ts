@@ -1,20 +1,20 @@
 import { NextFunction, Request, Response } from 'express';
-import { asyncErrorHandler } from '../../../utils/asynErrorHandler';
-import { RubroRepository } from '../rubro/rubro.repository';
-import { CreateContrataDTO } from './dtos/create.contrata.dto';
-import { ContrataRepository, ContrataWithRubro } from './contrata.repository';
-import { UpdateContrataDTO } from './dtos/update.contrata.dto';
-import { RequestWithUser } from '../../../types/requests';
-import { AuditManager, getOldRecordValues } from '../../../models/audit/audit.manager';
+import { RequestWithUser } from '../../types/requests';
+import { asyncErrorHandler } from '../../utils/asynErrorHandler';
+import { InsertRecordActivity, OperationType } from '../../models/audit/audit.types';
+import { AuditManager, getOldRecordValues } from '../../models/audit/audit.manager';
+import { CreateEntityResponse, DeleteReponse, EntityResponse, OffsetPaginationResponse, UpdateResponse } from '../../types/shared';
 
-import { Contrata } from './contrata.entity';
-import { EntityResponse, CreateEntityResponse, UpdateResponse, OffsetPaginationResponse, DeleteReponse } from '../../../types/shared';
-import { PersonalRepository } from '../personal/personal.repository';
-import { UserRepository } from '../usuario/user.repository';
-import { PaginationContrata } from './schemas/pagination.contrata.schema';
-import { InsertRecordActivity, OperationType } from '../../../models/audit/audit.types';
-import { AccesoRepository } from '../acceso/acceso.repository';
-import { ControladorRepository } from '../../../models/general/controlador/contralador.repository';
+import { ContrataRepository, ContrataWithRubro } from '../../models/general/contrata/contrata.repository';
+import { RubroRepository } from '../../models/general/rubro/rubro.repository';
+import { PersonalRepository } from '../../models/general/personal/personal.repository';
+import { UserRepository } from '../../models/general/usuario/user.repository';
+import { AccesoRepository } from '../../models/general/acceso/acceso.repository';
+import { ControladorRepository } from '../../models/general/controlador/contralador.repository';
+import { CreateContrataDTO } from '../../models/general/contrata/dtos/create.contrata.dto';
+import { UpdateContrataDTO } from '../../models/general/contrata/dtos/update.contrata.dto';
+import { Contrata } from '../../models/general/contrata/contrata.entity';
+import { PaginationContrata } from '../../models/general/contrata/schemas/pagination.contrata.schema';
 
 export class ContrataController {
   constructor(
