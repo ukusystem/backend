@@ -6,7 +6,7 @@ import { CreateContrataDTO } from './dtos/create.contrata.dto';
 import { UpdateContrataDTO } from './dtos/update.contrata.dto';
 import { PaginationContrata } from './schemas/pagination.contrata.schema';
 import { Rubro } from '../rubro/rubro.entity';
-
+import { v4 as uuidv4 } from 'uuid';
 interface TotalContrataRowData extends RowDataPacket {
   total: number;
 }
@@ -21,10 +21,30 @@ interface FilterSintax {
 }
 
 export class MySQLContrataRepository implements ContrataRepository {
+  async findByUuId(co_uuid: string): Promise<Contrata | undefined> {
+    const contratas = await MySQL2.executeQuery<ContrataRowData[]>({ sql: `SELECT * FROM general.contrata WHERE co_uuid = ? AND activo = 1 LIMIT 1`, values: [co_uuid] });
+    return contratas[0];
+  }
+  async findWithRubroByUuId(co_uuid: string): Promise<ContrataWithRubro | undefined> {
+    const contratas = await MySQL2.executeQuery<ContrataRubroRowData[]>({
+      sql: ` SELECT  c.*,  r.rubro, r.max_personales, r.max_sesiones, COUNT(p.co_id) AS total_personal FROM  general.contrata c INNER JOIN  general.rubro r ON c.r_id = r.r_id AND c.activo = 1 AND c.co_uuid = ? LEFT JOIN  general.personal p ON p.co_id = c.co_id AND p.activo = 1 GROUP BY  c.co_id, r.r_id LIMIT 1`,
+      values: [co_uuid],
+    });
+    if (contratas[0]) {
+      const { contrata, descripcion, ctrl_id, direccion, telefono, correo, activo, co_id, r_id, rubro, max_personales, max_sesiones, total_personal, co_uuid } = contratas[0];
+      return { contrata, descripcion, ctrl_id, direccion, telefono, correo, activo, co_id, r_id, rubro: { r_id, rubro, max_personales, max_sesiones }, total_personal, co_uuid };
+    }
+    return undefined;
+  }
+
   async create(data: CreateContrataDTO): Promise<Contrata> {
     const { contrata, r_id, descripcion, ctrl_id, direccion, telefono, correo } = data;
-    const result = await MySQL2.executeQuery<ResultSetHeader>({ sql: `INSERT INTO general.contrata ( contrata, r_id, descripcion, ctrl_id, direccion, telefono, correo , activo ) VALUES ( ? , ? , ? , ? , ? , ? , ? , 1 )`, values: [contrata, r_id, descripcion, ctrl_id, direccion, telefono, correo] });
-    const newContrata: Contrata = { contrata, r_id, descripcion, ctrl_id, direccion, telefono, correo, activo: 1, co_id: result.insertId };
+    const new_co_uuid = uuidv4();
+    const result = await MySQL2.executeQuery<ResultSetHeader>({
+      sql: `INSERT INTO general.contrata ( co_uuid, contrata, r_id, descripcion, ctrl_id, direccion, telefono, correo , activo ) VALUES ( ? , ? , ? , ? , ? , ? , ? , ? , 1 )`,
+      values: [new_co_uuid, contrata, r_id, descripcion, ctrl_id, direccion, telefono, correo],
+    });
+    const newContrata: Contrata = { contrata, r_id, descripcion, ctrl_id, direccion, telefono, correo, activo: 1, co_id: result.insertId, co_uuid: new_co_uuid };
     return newContrata;
   }
 
@@ -78,7 +98,7 @@ export class MySQLContrataRepository implements ContrataRepository {
       values: [...(rubroFilter?.values || []), limit, offset],
     });
 
-    return contratas.map(({ contrata, descripcion, ctrl_id, direccion, telefono, correo, activo, co_id, r_id, rubro, max_personales, max_sesiones, total_personal }) => ({
+    return contratas.map(({ contrata, descripcion, ctrl_id, direccion, telefono, correo, activo, co_id, r_id, rubro, max_personales, max_sesiones, total_personal, co_uuid }) => ({
       contrata,
       descripcion,
       ctrl_id,
@@ -87,6 +107,7 @@ export class MySQLContrataRepository implements ContrataRepository {
       correo,
       activo,
       co_id,
+      co_uuid,
       r_id,
       rubro: { r_id, rubro, max_personales, max_sesiones },
       total_personal,
@@ -105,8 +126,8 @@ export class MySQLContrataRepository implements ContrataRepository {
       values: [co_id],
     });
     if (contratas[0]) {
-      const { contrata, descripcion, ctrl_id, direccion, telefono, correo, activo, co_id, r_id, rubro, max_personales, max_sesiones, total_personal } = contratas[0];
-      return { contrata, descripcion, ctrl_id, direccion, telefono, correo, activo, co_id, r_id, rubro: { r_id, rubro, max_personales, max_sesiones }, total_personal };
+      const { contrata, descripcion, ctrl_id, direccion, telefono, correo, activo, co_id, r_id, rubro, max_personales, max_sesiones, total_personal, co_uuid } = contratas[0];
+      return { contrata, descripcion, ctrl_id, direccion, telefono, correo, activo, co_id, r_id, rubro: { r_id, rubro, max_personales, max_sesiones }, total_personal, co_uuid };
     }
     return undefined;
   }

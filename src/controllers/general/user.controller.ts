@@ -8,9 +8,10 @@ import { UserRepository, UserWithRoleAndPersonal } from '../../models/general/us
 import { PasswordHasher } from '../../models/general/usuario/security/passwod.hasher';
 import { PersonalRepository } from '../../models/general/personal/personal.repository';
 import { RolRepository } from '../../models/general/rol/rol.repository';
-import { CreateUserDTO } from '../../models/general/usuario/dtos/create.user.dto';
 import { UpdateUserDTO } from '../../models/general/usuario/dtos/update.user.dto';
 import { Usuario } from '../../models/general/usuario/user.entity';
+import { CreateUserBody } from '../../models/general/usuario/schemas/create.user.schema';
+import { UpdateUserBody, UserUuIDParam } from '../../models/general/usuario/schemas/update.user.schema';
 
 export class UserController {
   constructor(
@@ -27,7 +28,7 @@ export class UserController {
         return res.status(401).json({ message: 'No autorizado' });
       }
 
-      const userDTO: CreateUserDTO = req.body;
+      const userDTO: CreateUserBody = req.body;
 
       const isUsernameAvailable = await this.user_repository.isUsernameAvailable(userDTO.usuario);
       if (!isUsernameAvailable) {
@@ -65,7 +66,7 @@ export class UserController {
       AuditManager.generalInsert(newActivity);
 
       const response: CreateEntityResponse = {
-        id: newUser.u_id,
+        id: newUser.u_uuid,
         message: 'Usuario creado satisfactoriamente',
       };
 
@@ -81,13 +82,13 @@ export class UserController {
       }
 
       // params
-      const { u_id } = req.params as { u_id: string };
+      const { u_uuid } = req.params as UserUuIDParam;
       // body
-      const incommingDTO: UpdateUserDTO = req.body;
+      const incommingDTO: UpdateUserBody = req.body;
       const { contraseña, p_id, rl_id, usuario } = incommingDTO;
       const finalUserUpdateDTO: UpdateUserDTO = {};
 
-      const userFound = await this.user_repository.findById(Number(u_id));
+      const userFound = await this.user_repository.findByUuId(u_uuid);
       if (userFound === undefined) {
         return res.status(400).json({ success: false, message: 'Usuario no disponible' });
       }
@@ -130,7 +131,7 @@ export class UserController {
       }
 
       if (Object.keys(finalUserUpdateDTO).length > 0) {
-        await this.user_repository.update(Number(u_id), finalUserUpdateDTO);
+        await this.user_repository.updateByUuid(userFound.u_uuid, finalUserUpdateDTO);
 
         const oldValues = getOldRecordValues(userFound, finalUserUpdateDTO);
 
@@ -204,12 +205,12 @@ export class UserController {
         return res.status(401).json({ message: 'No autorizado' });
       }
 
-      const { u_id } = req.params as { u_id: string };
-      const userFound = await this.user_repository.findById(Number(u_id));
+      const { u_uuid } = req.params as UserUuIDParam;
+      const userFound = await this.user_repository.findByUuId(u_uuid);
       if (userFound === undefined) {
         return res.status(400).json({ success: false, message: 'Usuario no disponible' });
       }
-      await this.user_repository.softDelete(Number(u_id));
+      await this.user_repository.softDelete(userFound.u_id);
 
       const newActivity: InsertRecordActivity = {
         nombre_tabla: 'usuario',
@@ -224,7 +225,7 @@ export class UserController {
 
       const response: DeleteReponse = {
         message: 'Usuario eliminado exitosamente',
-        id: Number(u_id),
+        id: userFound.u_uuid,
       };
       res.status(200).json(response);
     });
@@ -232,8 +233,8 @@ export class UserController {
 
   get singleUser() {
     return asyncErrorHandler(async (req: Request, res: Response, _next: NextFunction) => {
-      const { u_id } = req.params as { u_id: string };
-      const userFound = await this.user_repository.findWithRoleAndPersonalById(Number(u_id));
+      const { u_uuid } = req.params as UserUuIDParam;
+      const userFound = await this.user_repository.findWithRoleAndPersonalByUuId(u_uuid);
       if (userFound === undefined) {
         return res.status(400).json({ success: false, message: 'Usuario no disponible' });
       }

@@ -1,4 +1,4 @@
 export interface DeleteReponse {
   message: string;
-  id: number;
+  id: number | string;
 }

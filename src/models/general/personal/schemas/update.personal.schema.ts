@@ -22,7 +22,13 @@ export const updatePersonalBodySchema = z.object({
 });
 
 export const updatePersonalParamSchema = z.object({
-  p_id: z.coerce.number({ required_error: "'p_id' es requerido", invalid_type_error: "'p_id' debe ser un numero" }).int("'p_id' debe ser un numero entero").gt(0, "'p_id' deber ser mayor a 0"),
+  p_uuid: z
+    .string({
+      required_error: "'p_uuid' es obligatorio",
+      invalid_type_error: "'p_uuid' debe ser una cadena de texto",
+    })
+    .uuid({ message: "'p_uuid' no es un identificador válido" }),
 });
 
 export type UpdatePersonalSchema = z.input<typeof updatePersonalBodySchema>;
+export type PersonalUuIDParam = z.input<typeof updatePersonalParamSchema>;

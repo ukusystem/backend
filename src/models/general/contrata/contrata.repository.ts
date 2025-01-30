@@ -11,7 +11,9 @@ export interface ContrataWithRubro extends Contrata {
 
 export interface ContrataRepository {
   findById(co_id: number): Promise<Contrata | undefined>;
+  findByUuId(co_uuid: string): Promise<Contrata | undefined>;
   findWithRubroById(co_id: number): Promise<ContrataWithRubro | undefined>;
+  findWithRubroByUuId(co_uuid: string): Promise<ContrataWithRubro | undefined>;
   create(data: CreateContrataDTO): Promise<Contrata>;
   update(co_id: number, fieldsUpdate: UpdateContrataDTO): Promise<void>;
   softDelete(co_id: number): Promise<void>;

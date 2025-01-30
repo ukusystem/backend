@@ -9,3 +9,5 @@ export const createUserSchema = z.object(
   },
   { required_error: "Datos requeridos : 'usuario' 'contraseña' 'rl_id' 'p_id'", invalid_type_error: 'JSON invalido' },
 );
+
+export type CreateUserBody = z.infer<typeof createUserSchema>;

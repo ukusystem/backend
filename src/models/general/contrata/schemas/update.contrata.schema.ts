@@ -18,5 +18,13 @@ export const updateContrataBodySchema = z.object({
 });
 
 export const updateContrataParamSchema = z.object({
-  co_id: z.coerce.number({ required_error: "'co_id' es requerido", invalid_type_error: "'co_id' debe ser un numero" }).int("'co_id' debe ser un numero entero").gt(0, "'co_id' deber ser mayor a 0"),
+  co_uuid: z
+    .string({
+      required_error: "'co_uuid' es obligatorio",
+      invalid_type_error: "'co_uuid' debe ser una cadena de texto",
+    })
+    .uuid({ message: "'co_uuid' no es un identificador válido" }),
 });
+
+export type UpdateContrataBody = z.infer<typeof updateContrataBodySchema>;
+export type ContrataUuIDParam = z.input<typeof updateContrataParamSchema>;

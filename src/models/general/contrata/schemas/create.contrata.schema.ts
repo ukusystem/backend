@@ -16,3 +16,5 @@ export const createContrataSchema = z.object({
     .regex(/^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/, "'correo' incorrecto.")
     .max(100, "'correo' no puede tener mas de 100 caracteres."),
 });
+
+export type CreateContrataBody = z.infer<typeof createContrataSchema>;

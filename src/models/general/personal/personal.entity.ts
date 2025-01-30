@@ -1,5 +1,6 @@
 export interface Personal {
   p_id: number;
+  p_uuid: string;
   nombre: string;
   apellido: string;
   telefono: string;

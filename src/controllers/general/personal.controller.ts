@@ -16,7 +16,7 @@ import { getExtesionFile } from '../../utils/getExtensionFile';
 import { createPersonalSchema } from '../../models/general/personal/schemas/create.personal.schema';
 import { CreatePersonalDTO } from '../../models/general/personal/dtos/create.personal.dto';
 import { PersonalMapManager } from '../../models/maps';
-import { updatePersonalBodySchema } from '../../models/general/personal/schemas/update.personal.schema';
+import { PersonalUuIDParam, updatePersonalBodySchema } from '../../models/general/personal/schemas/update.personal.schema';
 import { UpdatePersonalDTO } from '../../models/general/personal/dtos/update.personal.dto';
 import { Personal } from '../../models/general/personal/personal.entity';
 import { CustomError } from '../../utils/CustomError';
@@ -178,7 +178,7 @@ export class PersonalController {
         AuditManager.generalInsert(newActivity);
 
         const response: CreateEntityResponse = {
-          id: personalCreated.p_id,
+          id: personalCreated.p_uuid,
           message: 'Personal creado satisfactoriamente',
         };
 
@@ -198,9 +198,9 @@ export class PersonalController {
           return res.status(401).json({ message: 'No autorizado' });
         }
 
-        const { p_id } = req.params as { p_id: string };
+        const { p_uuid } = req.params as PersonalUuIDParam;
 
-        const personalFound = await this.personal_repository.findById(Number(p_id));
+        const personalFound = await this.personal_repository.findByUuId(p_uuid);
         if (personalFound === undefined) {
           this.#deleteTemporalFiles(req);
           return res.status(400).json({ success: false, message: 'Personal no disponible' });
@@ -280,7 +280,7 @@ export class PersonalController {
         }
 
         if (Object.keys(finalPersonalUpdateDTO).length > 0) {
-          await this.personal_repository.update(Number(p_id), finalPersonalUpdateDTO);
+          await this.personal_repository.update(personalFound.p_id, finalPersonalUpdateDTO);
 
           PersonalMapManager.update(personalFound.p_id, finalPersonalUpdateDTO);
 
@@ -318,8 +318,8 @@ export class PersonalController {
       if (user === undefined) {
         return res.status(401).json({ message: 'No autorizado' });
       }
-      const { p_id } = req.params as { p_id: string };
-      const personalFound = await this.personal_repository.findById(Number(p_id));
+      const { p_uuid } = req.params as PersonalUuIDParam;
+      const personalFound = await this.personal_repository.findByUuId(p_uuid);
       if (personalFound === undefined) {
         return res.status(400).json({ success: false, message: 'Personal no disponible' });
       }
@@ -369,7 +369,7 @@ export class PersonalController {
 
       const response: DeleteReponse = {
         message: 'Personal eliminado exitosamente',
-        id: Number(p_id),
+        id: personalFound.p_uuid,
       };
       res.status(200).json(response);
     });
@@ -377,8 +377,8 @@ export class PersonalController {
 
   get singlePersonal() {
     return asyncErrorHandler(async (req: Request, res: Response, _next: NextFunction) => {
-      const { p_id } = req.params as { p_id: string };
-      const personalFound = await this.personal_repository.findById(Number(p_id));
+      const { p_uuid } = req.params as PersonalUuIDParam;
+      const personalFound = await this.personal_repository.findByUuId(p_uuid);
       if (personalFound === undefined) {
         return res.status(400).json({ success: false, message: 'Personal no disponible' });
       }
@@ -395,8 +395,6 @@ export class PersonalController {
       const final_limit: number = limit !== undefined ? Math.min(Math.max(Number(limit), 0), 100) : 10; // default limit : 10 ,  max limit : 100
 
       const final_offset: number = offset !== undefined ? Number(offset) : 0; // default offset : 0
-
-      console.log({ final_limit, final_offset });
 
       const personales = await this.personal_repository.findByOffsetPagination(final_limit, final_offset);
       const total = await this.personal_repository.countTotal();
@@ -422,8 +420,8 @@ export class PersonalController {
         return res.status(401).json({ message: 'No autorizado' });
       }
 
-      const { p_id } = req.params as { p_id: string };
-      const personalFound = await this.personal_repository.findById(Number(p_id));
+      const { p_uuid } = req.params as PersonalUuIDParam;
+      const personalFound = await this.personal_repository.findByUuId(p_uuid);
       if (personalFound === undefined) {
         return res.status(404).json({ message: 'La foto solicitada no está disponible en el servidor.' });
       }

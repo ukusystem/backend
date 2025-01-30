@@ -8,5 +8,13 @@ export const updateUserBodySchema = z.object({
 });
 
 export const updateUserParamSchema = z.object({
-  u_id: z.coerce.number({ required_error: "'u_id' es requerido", invalid_type_error: "'u_id' debe ser un numero" }).int("'u_id' debe ser un numero entero").nonnegative("'u_id' debe ser un numero no negativo"),
+  u_uuid: z
+    .string({
+      required_error: "'u_uuid' es obligatorio",
+      invalid_type_error: "'u_uuid' debe ser una cadena de texto",
+    })
+    .uuid({ message: "'u_uuid' no es un identificador válido" }),
 });
+
+export type UserUuIDParam = z.infer<typeof updateUserParamSchema>;
+export type UpdateUserBody = z.infer<typeof updateUserBodySchema>;

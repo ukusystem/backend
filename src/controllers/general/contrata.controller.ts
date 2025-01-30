@@ -11,10 +11,11 @@ import { PersonalRepository } from '../../models/general/personal/personal.repos
 import { UserRepository } from '../../models/general/usuario/user.repository';
 import { AccesoRepository } from '../../models/general/acceso/acceso.repository';
 import { ControladorRepository } from '../../models/general/controlador/contralador.repository';
-import { CreateContrataDTO } from '../../models/general/contrata/dtos/create.contrata.dto';
 import { UpdateContrataDTO } from '../../models/general/contrata/dtos/update.contrata.dto';
 import { Contrata } from '../../models/general/contrata/contrata.entity';
 import { PaginationContrata } from '../../models/general/contrata/schemas/pagination.contrata.schema';
+import { CreateContrataBody } from '../../models/general/contrata/schemas/create.contrata.schema';
+import { ContrataUuIDParam, UpdateContrataBody } from '../../models/general/contrata/schemas/update.contrata.schema';
 
 export class ContrataController {
   constructor(
@@ -33,7 +34,7 @@ export class ContrataController {
         return res.status(401).json({ message: 'No autorizado' });
       }
 
-      const contrataDTO: CreateContrataDTO = req.body;
+      const contrataDTO: CreateContrataBody = req.body;
 
       const rubroFound = await this.rubro_repository.findById(contrataDTO.r_id);
       if (rubroFound === undefined) {
@@ -59,7 +60,7 @@ export class ContrataController {
       AuditManager.generalInsert(newActivity);
 
       const response: CreateEntityResponse = {
-        id: newContrata.co_id,
+        id: newContrata.co_uuid,
         message: 'Contrata creado satisfactoriamente',
       };
 
@@ -74,10 +75,10 @@ export class ContrataController {
         return res.status(401).json({ message: 'No autorizado' });
       }
 
-      const { co_id } = req.params as { co_id: string };
-      const incommingDTO: UpdateContrataDTO = req.body;
+      const { co_uuid } = req.params as ContrataUuIDParam;
+      const incommingDTO: UpdateContrataBody = req.body;
 
-      const contrataFound = await this.contrata_repository.findWithRubroById(Number(co_id));
+      const contrataFound = await this.contrata_repository.findWithRubroByUuId(co_uuid);
 
       if (contrataFound === undefined) {
         return res.status(400).json({ success: false, message: 'Contrata no disponible' });
@@ -185,8 +186,8 @@ export class ContrataController {
         return res.status(401).json({ message: 'No autorizado' });
       }
 
-      const { co_id } = req.params as { co_id: string };
-      const contrataFound = await this.contrata_repository.findById(Number(co_id));
+      const { co_uuid } = req.params as ContrataUuIDParam;
+      const contrataFound = await this.contrata_repository.findByUuId(co_uuid);
 
       if (contrataFound === undefined) {
         return res.status(400).json({ success: false, message: 'Contrata no disponible' });
@@ -248,7 +249,7 @@ export class ContrataController {
 
       const response: DeleteReponse = {
         message: 'Contrata eliminado exitosamente',
-        id: Number(co_id),
+        id: co_uuid,
       };
       res.status(200).json(response);
     });
@@ -256,8 +257,8 @@ export class ContrataController {
 
   get singleContrata() {
     return asyncErrorHandler(async (req: Request, res: Response, _next: NextFunction) => {
-      const { co_id } = req.params as { co_id: string };
-      const contrataFound = await this.contrata_repository.findWithRubroById(Number(co_id));
+      const { co_uuid } = req.params as ContrataUuIDParam;
+      const contrataFound = await this.contrata_repository.findWithRubroByUuId(co_uuid);
       if (contrataFound === undefined) {
         return res.status(400).json({ success: false, message: 'Contrata no disponible' });
       }

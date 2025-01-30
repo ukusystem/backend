@@ -1,5 +1,6 @@
 export interface Contrata {
   co_id: number;
+  co_uuid: string;
   contrata: string;
   r_id: number;
   descripcion: string;
