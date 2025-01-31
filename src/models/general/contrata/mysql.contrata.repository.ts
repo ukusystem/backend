@@ -21,6 +21,10 @@ interface FilterSintax {
 }
 
 export class MySQLContrataRepository implements ContrataRepository {
+  async isAvailabaleController(ctrl_id: number): Promise<boolean> {
+    const contratas = await MySQL2.executeQuery<ContrataRowData[]>({ sql: `SELECT * FROM general.contrata WHERE ctrl_id = ? AND activo = 1 LIMIT 1`, values: [ctrl_id] });
+    return contratas.length === 0;
+  }
   async findByUuId(co_uuid: string): Promise<Contrata | undefined> {
     const contratas = await MySQL2.executeQuery<ContrataRowData[]>({ sql: `SELECT * FROM general.contrata WHERE co_uuid = ? AND activo = 1 LIMIT 1`, values: [co_uuid] });
     return contratas[0];

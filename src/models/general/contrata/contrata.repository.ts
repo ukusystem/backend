@@ -19,4 +19,5 @@ export interface ContrataRepository {
   softDelete(co_id: number): Promise<void>;
   findByOffsetPagination(limit: number, offset: number, filters?: PaginationContrata['filters']): Promise<ContrataWithRubro[]>;
   countTotal(filters?: PaginationContrata['filters']): Promise<number>;
+  isAvailabaleController(ctrl_id: number): Promise<boolean>;
 }

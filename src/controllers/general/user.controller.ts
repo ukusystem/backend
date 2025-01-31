@@ -12,6 +12,7 @@ import { UpdateUserDTO } from '../../models/general/usuario/dtos/update.user.dto
 import { Usuario } from '../../models/general/usuario/user.entity';
 import { CreateUserBody } from '../../models/general/usuario/schemas/create.user.schema';
 import { UpdateUserBody, UserUuIDParam } from '../../models/general/usuario/schemas/update.user.schema';
+import { UserRol } from '../../types/rol';
 
 export class UserController {
   constructor(
@@ -28,6 +29,10 @@ export class UserController {
         return res.status(401).json({ message: 'No autorizado' });
       }
 
+      if (user.rl_id !== UserRol.Representante && user.rl_id !== UserRol.Gestor) {
+        return res.status(401).json({ message: 'No autorizado' });
+      }
+
       const userDTO: CreateUserBody = req.body;
 
       const isUsernameAvailable = await this.user_repository.isUsernameAvailable(userDTO.usuario);
@@ -40,19 +45,28 @@ export class UserController {
         return res.status(404).json({ success: false, message: `Personal no encontrado.` });
       }
 
+      // gestor : solo puede crear de un representante
+      if (user.rl_id === UserRol.Gestor && foundPersonal.representante === 0) {
+        return res.status(403).json({ message: 'No tienes los permisos necesarios para crear este recurso' });
+      }
+      // representante: solo puede crear de un integrante
+      if (user.rl_id === UserRol.Representante && foundPersonal.representante === 1) {
+        return res.status(403).json({ message: 'No tienes los permisos necesarios para crear este recurso' });
+      }
+
       const isPersonalAvaible = await this.user_repository.isPersonalAvailable(userDTO.p_id);
       if (!isPersonalAvaible) {
         return res.status(409).json({ success: false, message: 'El personal ya tiene asignado un usuario. Por favor, elige otro.' });
       }
 
-      const foundRol = await this.rol_repository.findById(userDTO.rl_id);
-      if (foundRol === undefined) {
-        return res.status(404).json({ success: false, message: `Rol no encontrado.` });
-      }
+      // const foundRol = await this.rol_repository.findById(userDTO.rl_id);
+      // if (foundRol === undefined) {
+      //   return res.status(404).json({ success: false, message: `Rol no encontrado.` });
+      // }
 
       const passwordHashed = await this.hasher.hash(userDTO.contraseña);
 
-      const newUser = await this.user_repository.create({ ...userDTO, contraseña: passwordHashed });
+      const newUser = await this.user_repository.create({ ...userDTO, contraseña: passwordHashed, rl_id: user.rl_id === UserRol.Gestor ? UserRol.Representante : UserRol.Integrante });
 
       const newActivity: InsertRecordActivity = {
         nombre_tabla: 'usuario',
@@ -81,11 +95,15 @@ export class UserController {
         return res.status(401).json({ message: 'No autorizado' });
       }
 
+      if (user.rl_id !== UserRol.Representante && user.rl_id !== UserRol.Gestor) {
+        return res.status(401).json({ message: 'No autorizado' });
+      }
+
       // params
       const { u_uuid } = req.params as UserUuIDParam;
       // body
       const incommingDTO: UpdateUserBody = req.body;
-      const { contraseña, p_id, rl_id, usuario } = incommingDTO;
+      const { contraseña, p_id, usuario } = incommingDTO;
       const finalUserUpdateDTO: UpdateUserDTO = {};
 
       const userFound = await this.user_repository.findByUuId(u_uuid);
@@ -107,6 +125,15 @@ export class UserController {
           return res.status(404).json({ success: false, message: `Personal no encontrado.` });
         }
 
+        // gestor : solo puede actualizar de un representante,
+        if (user.rl_id === UserRol.Gestor && foundPersonal.representante === 0) {
+          return res.status(403).json({ message: 'No tienes los permisos necesarios para crear este recurso' });
+        }
+        // representante: solo puede actualizar de un integrante
+        if (user.rl_id === UserRol.Representante && foundPersonal.representante === 1) {
+          return res.status(403).json({ message: 'No tienes los permisos necesarios para modificar este recurso' });
+        }
+
         const isPersonalAvaible = await this.user_repository.isPersonalAvailable(p_id);
         if (!isPersonalAvaible) {
           return res.status(409).json({ success: false, message: 'El personal ya tiene asignado un usuario. Por favor, elige otro.' });
@@ -114,14 +141,14 @@ export class UserController {
         finalUserUpdateDTO.p_id = p_id;
       }
 
-      if (rl_id !== undefined && rl_id !== userFound.rl_id) {
-        const foundRol = await this.rol_repository.findById(rl_id);
-        if (foundRol === undefined) {
-          return res.status(404).json({ success: false, message: `Rol no encontrado.` });
-        }
+      // if (rl_id !== undefined && rl_id !== userFound.rl_id) {
+      //   const foundRol = await this.rol_repository.findById(rl_id);
+      //   if (foundRol === undefined) {
+      //     return res.status(404).json({ success: false, message: `Rol no encontrado.` });
+      //   }
 
-        finalUserUpdateDTO.rl_id = rl_id;
-      }
+      //   finalUserUpdateDTO.rl_id = rl_id;
+      // }
 
       if (contraseña !== undefined) {
         const isSamePassword = await this.hasher.compare(contraseña, userFound.contraseña);
@@ -131,7 +158,7 @@ export class UserController {
       }
 
       if (Object.keys(finalUserUpdateDTO).length > 0) {
-        await this.user_repository.updateByUuid(userFound.u_uuid, finalUserUpdateDTO);
+        await this.user_repository.update(userFound.u_id, finalUserUpdateDTO);
 
         const oldValues = getOldRecordValues(userFound, finalUserUpdateDTO);
 

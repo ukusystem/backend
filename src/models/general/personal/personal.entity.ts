@@ -10,4 +10,5 @@ export interface Personal {
   foto: string;
   correo: string;
   activo: number;
+  representante: 1 | 0;
 }

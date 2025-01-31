@@ -20,15 +20,14 @@ export interface UserRepository {
   findByUuId(u_uuid: string): Promise<Usuario | undefined>;
   findByContrataId(co_id: number): Promise<Array<Usuario>>;
   findByPersonalId(p_id: number): Promise<Array<Usuario>>;
+  findWithRoleByPersonalUuId(p_uuid: string): Promise<UserWithRoleAndPersonal | undefined>;
   findWithRoleAndPersonalById(u_id: number): Promise<UserWithRoleAndPersonal | undefined>;
   findWithRoleAndPersonalByUuId(u_uuid: string): Promise<UserWithRoleAndPersonal | undefined>;
   update(u_id: number, fieldsUpdate: UpdateUserDTO): Promise<void>;
-  updateByUuid(u_uuid: string, fieldsUpdate: UpdateUserDTO): Promise<void>;
   findAll(): Promise<Usuario[]>;
   isUsernameAvailable(username: string): Promise<boolean>;
   isPersonalAvailable(p_id: number): Promise<boolean>;
   softDelete(u_id: number): Promise<void>;
-  softDeleteByUuId(u_uuid: string): Promise<void>;
   softDeleteByContrataId(co_id: number): Promise<void>;
   softDeleteByPersonalId(p_id: number): Promise<void>;
   findByOffsetPagination(limit: number, offset: number): Promise<UserWithRoleAndPersonal[]>;

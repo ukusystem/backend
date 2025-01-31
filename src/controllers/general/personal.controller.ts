@@ -20,6 +20,9 @@ import { PersonalUuIDParam, updatePersonalBodySchema } from '../../models/genera
 import { UpdatePersonalDTO } from '../../models/general/personal/dtos/update.personal.dto';
 import { Personal } from '../../models/general/personal/personal.entity';
 import { CustomError } from '../../utils/CustomError';
+import { ContrataUuIDParam } from '../../models/general/contrata/schemas/update.contrata.schema';
+import { Usuario } from '../../models/general/usuario/user.entity';
+import { UserRol } from '../../types/rol';
 
 export class PersonalController {
   constructor(
@@ -163,7 +166,120 @@ export class PersonalController {
           foto: finalPhotoPath,
         };
 
-        const personalCreated = await this.personal_repository.create(newPersonal);
+        const personalCreated = await this.personal_repository.create(newPersonal, false);
+        PersonalMapManager.add(personalCreated);
+
+        const newActivity: InsertRecordActivity = {
+          nombre_tabla: 'personal',
+          id_registro: personalCreated.p_id,
+          tipo_operacion: OperationType.Create,
+          valores_anteriores: null,
+          valores_nuevos: personalCreated,
+          realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
+        };
+
+        AuditManager.generalInsert(newActivity);
+
+        const response: CreateEntityResponse = {
+          id: personalCreated.p_uuid,
+          message: 'Personal creado satisfactoriamente',
+        };
+
+        res.status(201).json(response);
+      } catch (error) {
+        this.#deleteTemporalFiles(req);
+        next(error);
+      }
+    });
+  }
+  get createPersonalRepresentante() {
+    return asyncErrorHandler(async (req: RequestWithUser, res: Response, next: NextFunction) => {
+      const user = req.user;
+      if (user === undefined) {
+        return res.status(401).json({ message: 'No autorizado' });
+      }
+
+      if (user.rl_id !== UserRol.Representante && user.rl_id !== UserRol.Gestor) {
+        return res.status(401).json({ message: 'No autorizado' });
+      }
+
+      try {
+        const formParse = JSON.parse(req.body[PersonalController.CREATE_BODY_FIELDNAME]);
+        const resultParse = createPersonalSchema.safeParse(formParse);
+
+        if (!resultParse.success) {
+          this.#deleteTemporalFiles(req);
+          return res.status(400).json(resultParse.error.errors.map((errorDetail) => ({ message: errorDetail.message, status: errorDetail.code })));
+        }
+
+        const { co_id, dni } = resultParse.data;
+
+        const contrataFound = await this.contrata_repository.findWithRubroById(co_id);
+        if (contrataFound === undefined) {
+          this.#deleteTemporalFiles(req);
+          return res.status(404).json({ success: false, message: `Contrata no disponible.` });
+        }
+
+        if (user.rl_id === UserRol.Gestor) {
+          // solo un representante por contrata(familia)
+          const isAvailableRepresentante = await this.personal_repository.isAvailableRepresentante(contrataFound.co_id);
+          if (!isAvailableRepresentante) {
+            this.#deleteTemporalFiles(req);
+            return res.status(404).json({ success: false, message: `Familia ya tiene asignado un representante` });
+          }
+        }
+
+        if (user.rl_id === UserRol.Representante) {
+          // limit max personales (integrantes)
+          const currTotalPersonal = await this.personal_repository.countTotalByCotrataId(co_id);
+          if (currTotalPersonal >= contrataFound.rubro.max_personales + 1) {
+            this.#deleteTemporalFiles(req);
+            return res.status(403).json({ message: 'Has alcanzado el número máximo de personales.' });
+          }
+        }
+
+        const personalFound = await this.personal_repository.findByDni(dni);
+        if (personalFound !== undefined) {
+          this.#deleteTemporalFiles(req);
+          return res.status(409).json({ success: false, message: `Personal con DNI ${dni} ya esta en uso.` });
+        }
+
+        // const cargoFound = await this.cargo_repository.findById(c_id);
+        // if (cargoFound === undefined) {
+        //   this.#deleteTemporalFiles(req);
+        //   return res.status(404).json({ success: false, message: `Cargo no disponible.` });
+        // }
+
+        const filesUploaded = req.files;
+        let finalPhotoPath: string | undefined = undefined;
+        if (filesUploaded !== undefined) {
+          if (Array.isArray(filesUploaded)) {
+            const file = filesUploaded[0]; // expected only one
+            if (file !== undefined) {
+              finalPhotoPath = this.#moveMulterFilePhoto(file);
+            }
+          } else {
+            const multerFiles = filesUploaded[PersonalController.CREATE_FILE_FIELDNAME];
+            if (multerFiles !== undefined) {
+              const file = multerFiles[0]; // expected only one
+              if (file !== undefined) {
+                finalPhotoPath = this.#moveMulterFilePhoto(file);
+              }
+            }
+          }
+        }
+
+        if (finalPhotoPath === undefined) {
+          finalPhotoPath = this.#copyDefaultPhoto();
+        }
+
+        // falta validar foto
+        const newPersonal: CreatePersonalDTO = {
+          ...resultParse.data,
+          foto: finalPhotoPath,
+        };
+
+        const personalCreated = await this.personal_repository.create(newPersonal, user.rl_id === UserRol.Gestor);
         PersonalMapManager.add(personalCreated);
 
         const newActivity: InsertRecordActivity = {
@@ -198,12 +314,27 @@ export class PersonalController {
           return res.status(401).json({ message: 'No autorizado' });
         }
 
+        if (user.rl_id !== UserRol.Representante && user.rl_id !== UserRol.Gestor) {
+          return res.status(401).json({ message: 'No autorizado' });
+        }
+
         const { p_uuid } = req.params as PersonalUuIDParam;
 
         const personalFound = await this.personal_repository.findByUuId(p_uuid);
         if (personalFound === undefined) {
           this.#deleteTemporalFiles(req);
           return res.status(400).json({ success: false, message: 'Personal no disponible' });
+        }
+
+        // gestor : solo puede actualizar un representante
+        if (user.rl_id === UserRol.Gestor && personalFound.representante === 0) {
+          this.#deleteTemporalFiles(req);
+          return res.status(403).json({ message: 'No tienes los permisos necesarios para modificar este recurso' });
+        }
+        // representante: solo puede actualizar a los integrantes
+        if (user.rl_id === UserRol.Representante && personalFound.representante === 1) {
+          this.#deleteTemporalFiles(req);
+          return res.status(403).json({ message: 'No tienes los permisos necesarios para modificar este recurso' });
         }
 
         const formParse = JSON.parse(req.body[PersonalController.CREATE_BODY_FIELDNAME]);
@@ -318,10 +449,24 @@ export class PersonalController {
       if (user === undefined) {
         return res.status(401).json({ message: 'No autorizado' });
       }
+
+      if (user.rl_id !== UserRol.Representante && user.rl_id !== UserRol.Gestor) {
+        return res.status(401).json({ message: 'No autorizado' });
+      }
+
       const { p_uuid } = req.params as PersonalUuIDParam;
       const personalFound = await this.personal_repository.findByUuId(p_uuid);
       if (personalFound === undefined) {
         return res.status(400).json({ success: false, message: 'Personal no disponible' });
+      }
+
+      // gestor : solo puede eleminar un representante
+      if (user.rl_id === UserRol.Gestor && personalFound.representante === 0) {
+        return res.status(403).json({ message: 'No tienes los permisos necesarios para modificar este recurso' });
+      }
+      // representante: solo puede eleminar a los integrantes
+      if (user.rl_id === UserRol.Representante && personalFound.representante === 1) {
+        return res.status(403).json({ message: 'No tienes los permisos necesarios para modificar este recurso' });
       }
 
       // delete: personal
@@ -387,6 +532,18 @@ export class PersonalController {
       res.status(200).json(response);
     });
   }
+  get singleUserPersonal() {
+    return asyncErrorHandler(async (req: Request, res: Response, _next: NextFunction) => {
+      const { p_uuid } = req.params as PersonalUuIDParam;
+      const personalFound = await this.user_repository.findWithRoleByPersonalUuId(p_uuid);
+      if (personalFound === undefined) {
+        return res.status(400).json({ success: false, message: 'Personal no disponible' });
+      }
+
+      const response: EntityResponse<Omit<Usuario, 'contraseña'>> = personalFound;
+      res.status(200).json(response);
+    });
+  }
 
   get listPersonalesOffset() {
     return asyncErrorHandler(async (req: Request, res: Response, _next: NextFunction) => {
@@ -398,6 +555,31 @@ export class PersonalController {
 
       const personales = await this.personal_repository.findByOffsetPagination(final_limit, final_offset);
       const total = await this.personal_repository.countTotal();
+
+      const response: OffsetPaginationResponse<Personal> = {
+        data: personales,
+        meta: {
+          limit: final_limit,
+          offset: final_offset,
+          currentCount: personales.length,
+          totalCount: total,
+        },
+      };
+
+      return res.json(response);
+    });
+  }
+  get offsetPaginationByContrata() {
+    return asyncErrorHandler(async (req: Request, res: Response, _next: NextFunction) => {
+      const { offset, limit } = req.query as { limit: string | undefined; offset: string | undefined };
+      const { co_uuid } = req.params as ContrataUuIDParam;
+
+      const final_limit: number = limit !== undefined ? Math.min(Math.max(Number(limit), 0), 100) : 10; // default limit : 10 ,  max limit : 100
+
+      const final_offset: number = offset !== undefined ? Number(offset) : 0; // default offset : 0
+
+      const personales = await this.personal_repository.findByCoUuIdAndOffsetPagination(co_uuid, final_limit, final_offset);
+      const total = await this.personal_repository.countTotalByCotrataUuId(co_uuid);
 
       const response: OffsetPaginationResponse<Personal> = {
         data: personales,

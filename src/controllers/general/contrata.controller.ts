@@ -46,6 +46,11 @@ export class ContrataController {
         return res.status(404).json({ success: false, message: `Controlador no disponible.` });
       }
 
+      const isControllerAvailable = await this.contrata_repository.isAvailabaleController(controllerFound.ctrl_id);
+      if (!isControllerAvailable) {
+        return res.status(404).json({ success: false, message: `Controlador ya esta en uso. Selecione uno diferente.` });
+      }
+
       const newContrata = await this.contrata_repository.create(contrataDTO);
 
       const newActivity: InsertRecordActivity = {
@@ -94,7 +99,7 @@ export class ContrataController {
         }
         if (rubroFound.max_personales < contrataFound.rubro.max_personales) {
           const currTotalPersonal = await this.personal_repository.countTotalByCotrataId(contrataFound.co_id);
-          if (currTotalPersonal > rubroFound.max_personales) {
+          if (currTotalPersonal > rubroFound.max_personales + 1) {
             return res.status(400).json({ success: false, message: `El número total de personales supera el límite permitido para el plan seleccionado. Debes eliminar ${currTotalPersonal - rubroFound.max_personales} personal(es) para continuar.` });
           }
         }
@@ -106,6 +111,12 @@ export class ContrataController {
         if (controllerFound === undefined) {
           return res.status(404).json({ success: false, message: `Controlador no disponible.` });
         }
+
+        const isControllerAvailable = await this.contrata_repository.isAvailabaleController(controllerFound.ctrl_id);
+        if (!isControllerAvailable) {
+          return res.status(404).json({ success: false, message: `Controlador ya esta en uso. Selecione uno diferente.` });
+        }
+
         finalContrataUpdateDTO.ctrl_id = ctrl_id;
       }
 
@@ -266,6 +277,15 @@ export class ContrataController {
 
       const response: EntityResponse<ContrataWithRubro & { total_personal: number }> = { ...contrataFound, total_personal: totalPersonal };
       res.status(200).json(response);
+    });
+  }
+  get representante() {
+    return asyncErrorHandler(async (req: Request, res: Response, _next: NextFunction) => {
+      const { co_uuid } = req.params as ContrataUuIDParam;
+
+      const personalFound = await this.personal_repository.findRepresentanteByCoUuId(co_uuid);
+
+      res.status(200).json(personalFound ?? null);
     });
   }
 }

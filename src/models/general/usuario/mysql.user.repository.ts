@@ -9,12 +9,6 @@ import { v4 as uuidv4 } from 'uuid';
 
 interface UsuarioRowData extends RowDataPacket, Usuario {}
 interface UsuarioRoleAndPersonalRowData extends RowDataPacket, Usuario {
-  // u_id: number;
-  // u_uuid: string;
-  // usuario: string;
-  // fecha: string;
-  // rl_id: number;
-  // p_id: number;
   rol: string;
   nombre: string;
   apellido: string;
@@ -24,6 +18,30 @@ interface TotalUserRowData extends RowDataPacket {
 }
 
 export class MySQLUserRepository implements UserRepository {
+  async findWithRoleByPersonalUuId(p_uuid: string): Promise<UserWithRoleAndPersonal | undefined> {
+    const users = await MySQL2.executeQuery<UsuarioRoleAndPersonalRowData[]>({
+      sql: `SELECT u.* , r.rol , p.nombre, p.apellido FROM  general.usuario u INNER JOIN general.rol r ON u.rl_id = r.rl_id INNER JOIN general.personal p ON u.p_id = p.p_id WHERE  u.activo = 1  AND p.p_uuid = ? LIMIT 1`,
+      values: [p_uuid],
+    });
+
+    if (users[0] !== undefined) {
+      const { usuario, fecha, p_id, rl_id, apellido, nombre, rol, u_id, activo, u_uuid } = users[0];
+      const result: UserWithRoleAndPersonal = {
+        u_id,
+        u_uuid,
+        usuario,
+        fecha,
+        p_id,
+        rl_id,
+        rol: { rl_id, rol },
+        personal: { apellido, nombre, p_id },
+        activo,
+      };
+      return result;
+    }
+    return undefined;
+  }
+
   async findByUuId(u_uuid: string): Promise<Usuario | undefined> {
     const users = await MySQL2.executeQuery<UsuarioRowData[]>({ sql: `SELECT * FROM general.usuario WHERE u_uuid = ? AND activo = 1 LIMIT 1`, values: [u_uuid] });
     return users[0];
@@ -50,24 +68,7 @@ export class MySQLUserRepository implements UserRepository {
     }
     return undefined;
   }
-  async updateByUuid(u_uuid: string, fieldsUpdate: UpdateUserDTO): Promise<void> {
-    const keyValueList = Object.entries(fieldsUpdate).filter(([, value]) => value !== undefined);
-    const queryValues = keyValueList.reduce<{ setQuery: string; setValues: string[] }>(
-      (prev, cur, index, arr) => {
-        const result = prev;
-        const [key, value] = cur;
-        result.setQuery = `${result.setQuery.trim()} ${key} = ? ${index < arr.length - 1 ? ', ' : ''}`;
-        result.setValues.push(value);
-        return result;
-      },
-      { setQuery: '', setValues: [] },
-    );
 
-    await MySQL2.executeQuery<ResultSetHeader>({ sql: `UPDATE general.usuario SET ${queryValues.setQuery} WHERE u_uuid = ? LIMIT 1`, values: [...queryValues.setValues, u_uuid] });
-  }
-  async softDeleteByUuId(u_uuid: string): Promise<void> {
-    await MySQL2.executeQuery<ResultSetHeader>({ sql: `UPDATE general.usuario SET activo = 0 WHERE u_uuid = ? LIMIT 1`, values: [u_uuid] });
-  }
   async findByPersonalId(p_id: number): Promise<Array<Usuario>> {
     const users = await MySQL2.executeQuery<UsuarioRowData[]>({ sql: `SELECT * FROM general.usuario WHERE activo = 1 AND p_id = ?`, values: [p_id] });
     return users;
