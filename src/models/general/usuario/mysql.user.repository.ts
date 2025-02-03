@@ -18,6 +18,13 @@ interface TotalUserRowData extends RowDataPacket {
 }
 
 export class MySQLUserRepository implements UserRepository {
+  async softDeleteMembersByContrataId(co_id: number): Promise<void> {
+    await MySQL2.executeQuery<ResultSetHeader>({ sql: `UPDATE general.usuario u INNER JOIN general.personal p  ON u.p_id = p.p_id AND u.activo = 1  AND p.representante = 0 AND p.co_id = ? SET u.activo = 0`, values: [co_id] });
+  }
+  async findMembersByContrataId(co_id: number): Promise<Array<Usuario>> {
+    const users = await MySQL2.executeQuery<UsuarioRowData[]>({ sql: `SELECT u.* FROM general.usuario u INNER JOIN general.personal p  ON u.p_id = p.p_id AND u.activo = 1  AND p.representante = 0 AND p.co_id = ?`, values: [co_id] });
+    return users;
+  }
   async findWithRoleByPersonalUuId(p_uuid: string): Promise<UserWithRoleAndPersonal | undefined> {
     const users = await MySQL2.executeQuery<UsuarioRoleAndPersonalRowData[]>({
       sql: `SELECT u.* , r.rol , p.nombre, p.apellido FROM  general.usuario u INNER JOIN general.rol r ON u.rl_id = r.rl_id INNER JOIN general.personal p ON u.p_id = p.p_id WHERE  u.activo = 1  AND p.p_uuid = ? LIMIT 1`,

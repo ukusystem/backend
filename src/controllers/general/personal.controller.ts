@@ -217,7 +217,7 @@ export class PersonalController {
         const contrataFound = await this.contrata_repository.findWithRubroById(co_id);
         if (contrataFound === undefined) {
           this.#deleteTemporalFiles(req);
-          return res.status(404).json({ success: false, message: `Contrata no disponible.` });
+          return res.status(404).json({ success: false, message: `Familia no disponible.` }); // Contrata no disponible.
         }
 
         if (user.rl_id === UserRol.Gestor) {
@@ -231,10 +231,10 @@ export class PersonalController {
 
         if (user.rl_id === UserRol.Representante) {
           // limit max personales (integrantes)
-          const currTotalPersonal = await this.personal_repository.countTotalByCotrataId(co_id);
-          if (currTotalPersonal >= contrataFound.rubro.max_personales + 1) {
+          const currTotalMembers = await this.personal_repository.countTotalMembersByCotrataId(contrataFound.co_id);
+          if (currTotalMembers >= contrataFound.rubro.max_personales) {
             this.#deleteTemporalFiles(req);
-            return res.status(403).json({ message: 'Has alcanzado el número máximo de personales.' });
+            return res.status(403).json({ message: 'Has alcanzado el número máximo de intregrantes.' });
           }
         }
 
@@ -368,14 +368,22 @@ export class PersonalController {
         //   finalPersonalUpdateDTO.c_id = c_id;
         // }
 
-        if (co_id !== undefined && co_id !== personalFound.co_id) {
-          const contrataFound = await this.contrata_repository.findById(co_id);
-          if (contrataFound === undefined) {
-            this.#deleteTemporalFiles(req);
-            return res.status(404).json({ success: false, message: `Contrata no disponible.` });
-          }
+        if (user.rl_id === UserRol.Gestor) {
+          if (co_id !== undefined && co_id !== personalFound.co_id) {
+            const contrataFound = await this.contrata_repository.findById(co_id);
+            if (contrataFound === undefined) {
+              this.#deleteTemporalFiles(req);
+              return res.status(404).json({ success: false, message: `Familia no disponible.` }); // Contrata no disponible.
+            }
 
-          finalPersonalUpdateDTO.co_id = co_id;
+            const isAvailableRepresentante = await this.personal_repository.isAvailableRepresentante(contrataFound.co_id);
+            if (!isAvailableRepresentante) {
+              this.#deleteTemporalFiles(req);
+              return res.status(404).json({ success: false, message: `Familia ya tiene asignado un representante` });
+            }
+
+            finalPersonalUpdateDTO.co_id = co_id;
+          }
         }
 
         const filesUploaded = req.files;

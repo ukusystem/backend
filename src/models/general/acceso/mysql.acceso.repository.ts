@@ -11,6 +11,13 @@ interface TotalAccespRowData extends RowDataPacket {
 }
 
 export class MySQLAccesoRepository implements AccesoRepository {
+  async findMembersByContrataId(co_id: number): Promise<Array<Acceso>> {
+    const accesos = await MySQL2.executeQuery<AccesoRowData[]>({ sql: `SELECT a.* FROM general.acceso a INNER JOIN general.personal p  ON a.p_id = p.p_id AND a.activo = 1 AND p.representante = 0 AND p.co_id = ?`, values: [co_id] });
+    return accesos;
+  }
+  async softDeleteMembersByContrataId(co_id: number): Promise<void> {
+    await MySQL2.executeQuery<ResultSetHeader>({ sql: `UPDATE general.acceso a INNER JOIN general.personal p  ON a.p_id = p.p_id AND a.activo = 1 AND p.representante = 0  AND  p.co_id = ? SET a.activo = 0`, values: [co_id] });
+  }
   async softDeleteByPersonalId(p_id: number): Promise<void> {
     await MySQL2.executeQuery<ResultSetHeader>({ sql: `UPDATE general.acceso SET activo = 0 WHERE activo = 1 AND p_id = ?`, values: [p_id] });
   }

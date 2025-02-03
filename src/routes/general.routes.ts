@@ -10,7 +10,7 @@ import { BcryptPasswordHasher } from '../models/general/usuario/security/bycript
 import { MySQLPersonalRespository } from '../models/general/personal/mysql.personal.repository';
 import { MySQLRolRepository } from '../models/general/rol/mysql.rol.repository';
 import { UserController } from '../controllers/general/user.controller';
-import { paginationUserSchema } from '../models/general/usuario/schemas/pagination.user.schema';
+// import { paginationUserSchema } from '../models/general/usuario/schemas/pagination.user.schema';
 import { updateUserBodySchema, updateUserParamSchema } from '../models/general/usuario/schemas/update.user.schema';
 import { createUserSchema } from '../models/general/usuario/schemas/create.user.schema';
 import { PersonalController } from '../controllers/general/personal.controller';
@@ -30,13 +30,13 @@ import { paginationAccesoSchema } from '../models/general/acceso/schemas/paginat
 import { updateAccesoBodySchema, updateAccesoParamSchema } from '../models/general/acceso/schemas/update.acceso.schema';
 import { createAccesoSchema } from '../models/general/acceso/schemas/create.acceso.schema';
 import { RubroController } from '../controllers/general/rubro.controller';
-import { CargoController } from '../controllers/general/cargo.controller';
-import { RolController } from '../controllers/general/rol.controller';
+// import { CargoController } from '../controllers/general/cargo.controller';
+// import { RolController } from '../controllers/general/rol.controller';
 import { EquipoAccesoController } from '../controllers/general/equipo.acceso.controller';
-import { MySQLCargoRepository } from '../models/general/cargo/mysql.cargo.repository';
+// import { MySQLCargoRepository } from '../models/general/cargo/mysql.cargo.repository';
 import { rubroParamIdSchema } from '../models/general/rubro/schemas/param.id.schema';
-import { cargoParamIdSchema } from '../models/general/cargo/schemas/param.id.schema';
-import { rolParamIdSchema } from '../models/general/rol/schemas/param.id.schema';
+// import { cargoParamIdSchema } from '../models/general/cargo/schemas/param.id.schema';
+// import { rolParamIdSchema } from '../models/general/rol/schemas/param.id.schema';
 import { equipoAccesoParamIdSchema } from '../models/general/equipoacceso/schemas/param.id.schema';
 
 const mysqlControladorRepository = new MySQLContraldorRepository();
@@ -49,7 +49,7 @@ const mysqlContrataRepository = new MySQLContrataRepository();
 const mysqlAccesoRepository = new MySQLAccesoRepository();
 const mysqlRubroRepository = new MySQLRubroRepository();
 const mysqlEquipoAccesoRepository = new MySQLEquipoAccesoRepository();
-const mysqlCargoRepository = new MySQLCargoRepository();
+// const mysqlCargoRepository = new MySQLCargoRepository();
 
 const controladorController = new ControladorController(mysqlControladorRepository);
 const userController = new UserController(mysqlUserRepository, bycriptPasswordHasher, mysqlPersonalRepository, mysqlRolRepository);
@@ -57,8 +57,8 @@ const personalController = new PersonalController(mysqlPersonalRepository, mysql
 const contrataController = new ContrataController(mysqlContrataRepository, mysqlRubroRepository, mysqlPersonalRepository, mysqlUserRepository, mysqlAccesoRepository, mysqlControladorRepository);
 const accesoController = new AccesoController(mysqlAccesoRepository, mysqlPersonalRepository, mysqlEquipoAccesoRepository);
 const rubroController = new RubroController(mysqlRubroRepository);
-const cargoController = new CargoController(mysqlCargoRepository);
-const rolController = new RolController(mysqlRolRepository);
+// const cargoController = new CargoController(mysqlCargoRepository);
+// const rolController = new RolController(mysqlRolRepository);
 const equipoAccesoController = new EquipoAccesoController(mysqlEquipoAccesoRepository);
 
 export const generalRoutes = Router();
@@ -71,7 +71,7 @@ generalRoutes.get('/general/controlador/:ctrl_id', authenticate, requestValidato
 
 // ========== Usuario ==========
 // GET	/usuarios?limit=number&offset=number Listar todos los usuarios por paginacion
-generalRoutes.get('/usuarios', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ query: paginationUserSchema }), userController.listUsersOffset); // NO VA
+// generalRoutes.get('/usuarios', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ query: paginationUserSchema }), userController.listUsersOffset); // NO VA
 // GET	/usuarios/:u_uuid Obtener usuario por id
 generalRoutes.get('/usuarios/:u_uuid', authenticate, rolChecker([UserRol.Gestor, UserRol.Representante]), requestValidator({ params: updateUserParamSchema }), userController.singleUser);
 // POST	/usuarios Crear un nuevo usuario.
@@ -83,21 +83,21 @@ generalRoutes.delete('/usuarios/:u_uuid', authenticate, rolChecker([UserRol.Gest
 
 // ========== Personal ==========
 // GET	/personales?limit=number&offset=number Listar todos los personales por paginacion
-generalRoutes.get('/personales', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ query: paginationPersonalSchema }), personalController.listPersonalesOffset); // NO VA
+// generalRoutes.get('/personales', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ query: paginationPersonalSchema }), personalController.listPersonalesOffset); // NO VA
 // GET	/personales/contrata/:co_uuid?limit=number&offset=number Paginacion de los perosnales por contrata
 generalRoutes.get('/personales/contrata/:co_uuid', authenticate, rolChecker([UserRol.Representante]), requestValidator({ query: paginationPersonalSchema, params: updateContrataParamSchema }), personalController.offsetPaginationByContrata); // todos los integrantes menos el representante
 // GET /personales/:p_uuid Obtener personal por id
 generalRoutes.get('/personales/:p_uuid', authenticate, rolChecker([UserRol.Gestor, UserRol.Representante, UserRol.Integrante]), requestValidator({ params: updatePersonalParamSchema }), personalController.singlePersonal);
 // GET /personales/:p_uuid/usuario Obtener usuario por personal por id
 generalRoutes.get('/personales/:p_uuid/usuario', authenticate, rolChecker([UserRol.Gestor, UserRol.Representante]), requestValidator({ params: updatePersonalParamSchema }), personalController.singleUserPersonal);
+// GET /personales/:p_uuid/foto Obtener foto personal por id
+generalRoutes.get('/personales/:p_uuid/foto', authenticate, rolChecker([UserRol.Gestor, UserRol.Representante, UserRol.Integrante]), requestValidator({ params: updatePersonalParamSchema }), personalController.getPhoto);
 // POST	/personales Crear un nuevo personal.
 generalRoutes.post('/personales', authenticate, rolChecker([UserRol.Gestor, UserRol.Representante]), GeneralMulterMiddleware(personalController.createMulterConfig), personalController.createPersonalRepresentante); // gestor solo puede crear un representante, representante max n integrantes
 // PATCH /personales/:p_uuid Actualizar un personal.
 generalRoutes.patch('/personales/:p_uuid', authenticate, rolChecker([UserRol.Gestor, UserRol.Representante]), requestValidator({ params: updatePersonalParamSchema }), GeneralMulterMiddleware(personalController.createMulterConfig), personalController.update); // gestor : solo puede actualizar un representante , representante: solo puede actualizar a los integrantes
 // DELETE /personales/:p_uuid Eliminar un personal.
 generalRoutes.delete('/personales/:p_uuid', authenticate, rolChecker([UserRol.Gestor, UserRol.Representante]), requestValidator({ params: updatePersonalParamSchema }), personalController.delete); // gestor : solo puede eleminar un representante , representante: solo puede eleminar a los integrantes
-// GET /personales/:p_uuid/foto Obtener foto personal por id
-generalRoutes.get('/personales/:p_uuid/foto', authenticate, rolChecker([UserRol.Gestor, UserRol.Representante, UserRol.Integrante]), requestValidator({ params: updatePersonalParamSchema }), personalController.getPhoto);
 
 // ========== Contrata ==========
 // GET	/contratas?limit=number&offset=number Listar todos las contratas por paginacion
@@ -127,24 +127,24 @@ generalRoutes.delete('/accesos/:a_id', authenticate, rolChecker([UserRol.Gestor]
 
 // ========== Rubro ==========
 // GET	/rubros Listar todos los rubros
-generalRoutes.get('/rubros', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), rubroController.list);
+generalRoutes.get('/rubros', authenticate, rolChecker([UserRol.Gestor]), rubroController.list);
 // GET /rubros/:r_id Obtener rubro por id
-generalRoutes.get('/rubros/:r_id', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ params: rubroParamIdSchema }), rubroController.item);
+generalRoutes.get('/rubros/:r_id', authenticate, rolChecker([UserRol.Gestor]), requestValidator({ params: rubroParamIdSchema }), rubroController.item);
 
 // ========== Cargo ==========
 // GET	/cargos Listar todos los cargos
-generalRoutes.get('/cargos', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), cargoController.list);
+// generalRoutes.get('/cargos', authenticate, rolChecker([UserRol.Gestor ]), cargoController.list); // no va
 // GET /cargos/:c_id Obtener cargo por id
-generalRoutes.get('/cargos/:c_id', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ params: cargoParamIdSchema }), cargoController.item);
+// generalRoutes.get('/cargos/:c_id', authenticate, rolChecker([UserRol.Gestor ]), requestValidator({ params: cargoParamIdSchema }), cargoController.item); // nova
 
 // ========== Rol ==========
 // GET	/roles Listar todos los roles
-generalRoutes.get('/roles', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), rolController.list);
+// generalRoutes.get('/roles', authenticate, rolChecker([UserRol.Gestor ]), rolController.list); // no va
 // GET /roles/:rl_id Obtener rol por id
-generalRoutes.get('/roles/:rl_id', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ params: rolParamIdSchema }), rolController.item);
+// generalRoutes.get('/roles/:rl_id', authenticate, rolChecker([UserRol.Gestor ]), requestValidator({ params: rolParamIdSchema }), rolController.item); // no va
 
 // ========== Equipo de Acceso ==========
 // GET	/equiposacceso Listar todos los equipos de acceso
-generalRoutes.get('/equiposacceso', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), equipoAccesoController.list);
+generalRoutes.get('/equiposacceso', authenticate, rolChecker([UserRol.Gestor]), equipoAccesoController.list);
 // GET /equiposacceso/:rl_id Obtener equipo acceso por id
-generalRoutes.get('/equiposacceso/:ea_id', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ params: equipoAccesoParamIdSchema }), equipoAccesoController.item);
+generalRoutes.get('/equiposacceso/:ea_id', authenticate, rolChecker([UserRol.Gestor]), requestValidator({ params: equipoAccesoParamIdSchema }), equipoAccesoController.item);

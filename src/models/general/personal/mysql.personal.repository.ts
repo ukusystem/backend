@@ -12,6 +12,17 @@ interface TotalPersonalRowData extends RowDataPacket {
 }
 
 export class MySQLPersonalRespository implements PersonalRepository {
+  async countTotalMembersByCotrataId(co_id: number): Promise<number> {
+    const totals = await MySQL2.executeQuery<TotalPersonalRowData[]>({ sql: `SELECT COUNT(*) AS total FROM general.personal WHERE activo = 1 AND representante = 0 AND co_id = ? `, values: [co_id] });
+    return totals[0].total;
+  }
+  async findMembersByContrataId(co_id: number): Promise<Personal[]> {
+    const listPersonal = await MySQL2.executeQuery<PersonalRowData[]>({ sql: `SELECT * FROM general.personal WHERE activo = 1  AND representante = 0 AND co_id = ? `, values: [co_id] });
+    return listPersonal;
+  }
+  async softDeleteMembersByContrataId(co_id: number): Promise<void> {
+    await MySQL2.executeQuery<ResultSetHeader>({ sql: `UPDATE general.personal SET activo = 0 WHERE activo = 1 AND representante = 0 AND co_id = ?`, values: [co_id] });
+  }
   async findRepresentanteByCoUuId(co_uuid: string): Promise<Personal | undefined> {
     const personales = await MySQL2.executeQuery<PersonalRowData[]>({ sql: `SELECT * FROM general.personal p INNER JOIN general.contrata c ON p.co_id = c.co_id WHERE c.co_uuid = ? AND p.representante = 1 AND p.activo = 1 LIMIT 1`, values: [co_uuid] });
     return personales[0];

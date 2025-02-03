@@ -38,17 +38,17 @@ export class ContrataController {
 
       const rubroFound = await this.rubro_repository.findById(contrataDTO.r_id);
       if (rubroFound === undefined) {
-        return res.status(404).json({ success: false, message: `Rubro no disponible.` });
+        return res.status(404).json({ success: false, message: `Plan no diponible.` }); // Rubro no disponible.
       }
 
       const controllerFound = await this.controller_repository.findById(contrataDTO.ctrl_id);
       if (controllerFound === undefined) {
-        return res.status(404).json({ success: false, message: `Controlador no disponible.` });
+        return res.status(404).json({ success: false, message: `Sitio de familia no disponible.` }); // Controlador no disponible.
       }
 
       const isControllerAvailable = await this.contrata_repository.isAvailabaleController(controllerFound.ctrl_id);
       if (!isControllerAvailable) {
-        return res.status(404).json({ success: false, message: `Controlador ya esta en uso. Selecione uno diferente.` });
+        return res.status(404).json({ success: false, message: `Sitio de familia ya esta en uso. Selecione uno diferente.` }); // Controlador ya esta en uso. Selecione uno diferente.
       }
 
       const newContrata = await this.contrata_repository.create(contrataDTO);
@@ -66,7 +66,7 @@ export class ContrataController {
 
       const response: CreateEntityResponse = {
         id: newContrata.co_uuid,
-        message: 'Contrata creado satisfactoriamente',
+        message: 'Familia creado satisfactoriamente', // Contrata creado satisfactoriamente
       };
 
       res.status(201).json(response);
@@ -86,7 +86,7 @@ export class ContrataController {
       const contrataFound = await this.contrata_repository.findWithRubroByUuId(co_uuid);
 
       if (contrataFound === undefined) {
-        return res.status(400).json({ success: false, message: 'Contrata no disponible' });
+        return res.status(400).json({ success: false, message: 'Familia no disponible.' }); // Contrata no disponible
       }
 
       const finalContrataUpdateDTO: UpdateContrataDTO = {};
@@ -95,12 +95,55 @@ export class ContrataController {
       if (r_id !== undefined && r_id !== contrataFound.r_id) {
         const rubroFound = await this.rubro_repository.findById(r_id);
         if (rubroFound === undefined) {
-          return res.status(404).json({ success: false, message: `Rubro no disponible.` });
+          return res.status(404).json({ success: false, message: `Plan  no disponible.` }); // Rubro no disponible.
         }
         if (rubroFound.max_personales < contrataFound.rubro.max_personales) {
-          const currTotalPersonal = await this.personal_repository.countTotalByCotrataId(contrataFound.co_id);
-          if (currTotalPersonal > rubroFound.max_personales + 1) {
-            return res.status(400).json({ success: false, message: `El número total de personales supera el límite permitido para el plan seleccionado. Debes eliminar ${currTotalPersonal - rubroFound.max_personales} personal(es) para continuar.` });
+          const currTotalMembers = await this.personal_repository.countTotalMembersByCotrataId(contrataFound.co_id);
+          if (currTotalMembers > rubroFound.max_personales) {
+            // return res.status(400).json({ success: false, message: `El número total de personales supera el límite permitido para el plan seleccionado. Debes eliminar ${currTotalPersonal - rubroFound.max_personales} personal(es) para continuar.` });
+            // ========== eliminar personales -> eliminar usuarios -> eliminar accesos ===========
+
+            // delete : personales
+            const familyMembers = await this.personal_repository.findMembersByContrataId(contrataFound.co_id);
+
+            const personalesActivity = familyMembers.map<InsertRecordActivity>((personal) => ({
+              nombre_tabla: 'personal',
+              id_registro: personal.p_id,
+              tipo_operacion: OperationType.Delete,
+              valores_anteriores: { activo: personal.activo },
+              valores_nuevos: { activo: 0 },
+              realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
+            }));
+
+            await this.personal_repository.softDeleteMembersByContrataId(contrataFound.co_id);
+
+            // delete : users
+            const usersContrata = await this.user_repository.findMembersByContrataId(contrataFound.co_id);
+            const usersActivity = usersContrata.map<InsertRecordActivity>((user_item) => ({
+              nombre_tabla: 'usuario',
+              id_registro: user_item.u_id,
+              tipo_operacion: OperationType.Delete,
+              valores_anteriores: { activo: user_item.activo },
+              valores_nuevos: { activo: 0 },
+              realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
+            }));
+
+            await this.user_repository.softDeleteMembersByContrataId(contrataFound.co_id);
+
+            // delete : accesos
+            const accesosContrata = await this.acceso_repository.findMembersByContrataId(contrataFound.co_id);
+
+            const accesosActivity = accesosContrata.map<InsertRecordActivity>((acceso) => ({
+              nombre_tabla: 'acceso',
+              id_registro: acceso.a_id,
+              tipo_operacion: OperationType.Delete,
+              valores_anteriores: { activo: acceso.activo },
+              valores_nuevos: { activo: 0 },
+              realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
+            }));
+            await this.acceso_repository.softDeleteMembersByContrataId(contrataFound.co_id);
+
+            AuditManager.generalMultipleInsert([...personalesActivity, ...usersActivity, ...accesosActivity]);
           }
         }
         finalContrataUpdateDTO.r_id = r_id;
@@ -109,12 +152,12 @@ export class ContrataController {
       if (ctrl_id !== undefined && ctrl_id !== contrataFound.ctrl_id) {
         const controllerFound = await this.controller_repository.findById(ctrl_id);
         if (controllerFound === undefined) {
-          return res.status(404).json({ success: false, message: `Controlador no disponible.` });
+          return res.status(404).json({ success: false, message: `Sitio de familia no disponible.` }); // Controlador no disponible
         }
 
         const isControllerAvailable = await this.contrata_repository.isAvailabaleController(controllerFound.ctrl_id);
         if (!isControllerAvailable) {
-          return res.status(404).json({ success: false, message: `Controlador ya esta en uso. Selecione uno diferente.` });
+          return res.status(404).json({ success: false, message: `Sitio de familia ya esta en uso. Selecione uno diferente.` });
         }
 
         finalContrataUpdateDTO.ctrl_id = ctrl_id;
@@ -154,13 +197,13 @@ export class ContrataController {
         AuditManager.generalInsert(newActivity);
 
         const response: UpdateResponse<Contrata> = {
-          message: 'Contrata actualizado exitosamente',
+          message: 'Familia actualizado exitosamente', // Contrata actualizado exitosamente
         };
 
         return res.status(200).json(response);
       }
 
-      return res.status(200).json({ success: true, message: 'No se realizaron cambios en los datos de la contrata' });
+      return res.status(200).json({ success: true, message: 'No se realizaron cambios en los datos de la Familia' }); // No se realizaron cambios en los datos de la contrata
     });
   }
 
@@ -201,7 +244,7 @@ export class ContrataController {
       const contrataFound = await this.contrata_repository.findByUuId(co_uuid);
 
       if (contrataFound === undefined) {
-        return res.status(400).json({ success: false, message: 'Contrata no disponible' });
+        return res.status(400).json({ success: false, message: 'Familia no disponible' }); // Contrata no disponible
       }
 
       // delete : contrata
@@ -259,7 +302,7 @@ export class ContrataController {
       AuditManager.generalMultipleInsert([newActivity, ...personalesActivity, ...usersActivity, ...accesosActivity]);
 
       const response: DeleteReponse = {
-        message: 'Contrata eliminado exitosamente',
+        message: 'Familia eliminado exitosamente', // Contrata eliminado exitosamente
         id: co_uuid,
       };
       res.status(200).json(response);
@@ -271,7 +314,7 @@ export class ContrataController {
       const { co_uuid } = req.params as ContrataUuIDParam;
       const contrataFound = await this.contrata_repository.findWithRubroByUuId(co_uuid);
       if (contrataFound === undefined) {
-        return res.status(400).json({ success: false, message: 'Contrata no disponible' });
+        return res.status(400).json({ success: false, message: 'Familia no disponible' }); // Contrata no disponible
       }
       const totalPersonal = await this.personal_repository.countTotalByCotrataId(contrataFound.co_id);
 
