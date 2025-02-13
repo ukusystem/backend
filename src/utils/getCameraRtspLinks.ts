@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 // @ts-ignore
 // @ts-nocheck
 
@@ -8,7 +7,7 @@ import { Camara } from '../types/db';
 import { decrypt } from './decrypt';
 import { CustomError } from './CustomError';
 import { RowDataPacket } from 'mysql2';
-import { NodoCameraMapManager } from '../models/maps/nodo.camera';
+
 interface CamaraData extends Camara, RowDataPacket {}
 
 export function addCredentialToRtsp(rtspLink: string, username: string, password: string) {
@@ -23,90 +22,12 @@ export function addCredentialToRtsp(rtspLink: string, username: string, password
   return rtspLinkWithCredentials;
 }
 
-export const getRstpLinksByCtrlIdAndIp = async (ctrl_id: number, ip: string): Promise<string[]> => {
-  const camara = await MySQL2.executeQuery<CamaraData[]>({ sql: `SELECT * FROM ${'nodo' + ctrl_id}.camara WHERE ip = ? `, values: [ip] });
-
-  return new Promise((resolve, reject) => {
-    if (!camara[0]) {
-      const errorCamData = new Error(`Camara ${ip} no se encuentra en el servidor.`);
-      return reject(errorCamData);
-    }
-    const { usuario, contraseña } = camara[0];
-    // const usuarioDecrypt = decrypt(usuario)
-    const contraseñaDecrypt = decrypt(contraseña);
-
-    // let rtspURL : string[] = [];
-    new Cam(
-      {
-        hostname: ip,
-        username: usuario,
-        password: contraseñaDecrypt,
-        //   port: puerto,
-        timeout: 5000,
-        // preserveAddress: true,
-      },
-      async function (err: any) {
-        if (err) {
-          const errCamConnect = new CustomError(`Error al intentar establecer conexión con la cámara ${ip}`, 500, 'Onvif Camera Connection');
-          return reject(errCamConnect);
-        }
-        // eslint-disable-next-line @typescript-eslint/no-this-alias
-        const cam_obj = this;
-
-        function getStreamUriPromise() {
-          return new Promise<any>((resolve, reject) => {
-            cam_obj.getStreamUri({ protocol: 'RTSP' }, function (err: any, stream: any) {
-              if (err) {
-                const errGetStreamUri = new CustomError('Se produjo un error al intentar obtener el StreamUri RTSP ', 500, 'Onvif Stream URI');
-                return reject(errGetStreamUri);
-              } else {
-                resolve(stream.uri);
-              }
-            });
-          });
-        }
-
-        function getDeviceInformationPromise() {
-          return new Promise<any>((resolve, reject) => {
-            cam_obj.getDeviceInformation((err: any, info: any, _xml: any) => {
-              if (err) {
-                const errGetDiveceInformation = new CustomError('Se produjo un error al intentar informacion del dispositivo ', 500, 'Onvif Divice Information');
-                return reject(errGetDiveceInformation);
-              } else {
-                resolve(info);
-              }
-            });
-          });
-        }
-
-        try {
-          const info = await getDeviceInformationPromise();
-          const manufacturer = info.manufacturer;
-          if (manufacturer !== 'Dahua' && manufacturer !== 'HIKVISION') {
-            const errorManufacturer = new Error('Marca de camara no soportada');
-            throw errorManufacturer;
-          }
-
-          // Get RTSP:
-          const onvifRtspUrl = await getStreamUriPromise();
-          if (!onvifRtspUrl) {
-            const errorRtspUrl = new Error('Error al obtener link rtsp');
-            throw errorRtspUrl;
-          }
-          const mulRstp = await getMulticastRtspStreamAndSubStream(onvifRtspUrl, usuario, contraseñaDecrypt, manufacturer);
-
-          resolve(mulRstp);
-        } catch (error) {
-          reject(error);
-        }
-      },
-    );
-  });
-};
 export const getRstpLinksByCtrlIdAndCmrId = async (ctrl_id: number, cmr_id: number): Promise<string[]> => {
-  // const camara = await MySQL2.executeQuery<CamaraData[]>({sql:`SELECT * FROM ${"nodo" + ctrl_id}.camara WHERE ip = ? `, values:[ip] })
-  // obtener camara:
-  const camara = NodoCameraMapManager.getCamera(ctrl_id, cmr_id);
+  // const camara = NodoCameraMapManager.getCamera(ctrl_id, cmr_id);
+
+  const camaras = await MySQL2.executeQuery<CamaraData[]>({ sql: `SELECT * FROM ${'nodo' + ctrl_id}.camara WHERE cmr_id = ? `, values: [cmr_id] });
+
+  const camara = camaras[0];
 
   return new Promise((resolve, reject) => {
     if (camara === undefined) {

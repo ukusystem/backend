@@ -1,8 +1,8 @@
-import nodemailer from "nodemailer";
-import { google } from "googleapis";
-import { appConfig } from "../configs";
+import nodemailer from 'nodemailer';
+import { google } from 'googleapis';
+import { appConfig } from '../configs';
 
-const {client_id,client_secret,redirect_uris,refresh_token} = appConfig.email
+const { client_id, client_secret, redirect_uris, refresh_token } = appConfig.email;
 
 const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, redirect_uris);
 
@@ -10,12 +10,11 @@ oAuth2Client.setCredentials({ refresh_token: refresh_token });
 
 export async function sendMail({ toEmail }: { toEmail: string }) {
   try {
-
     const mailOptions: nodemailer.SendMailOptions = {
-      from: "Solicitud de Restablecimiento de Contraseña <your authorized email everytel2023@gmail.com>",
+      from: 'Solicitud de Restablecimiento de Contraseña <your authorized email everytel2023@gmail.com>',
       to: toEmail,
-      subject: "Solicitud de Restablecimiento de Contraseña",
-      text: "Solicito amablemente restablecer la contraseña de mi cuenta, necesito asistencia urgente para acceder. Agradezco su pronta ayuda y soporte en este proceso. Gracias por su atención.",
+      subject: 'Solicitud de Restablecimiento de Contraseña',
+      text: 'Solicito amablemente restablecer la contraseña de mi cuenta, necesito asistencia urgente para acceder. Agradezco su pronta ayuda y soporte en este proceso. Gracias por su atención.',
       html: `<p>
       Estimado equipo de soporte,
       Espero que este mensaje les encuentre bien. Me dirijo a ustedes para solicitar amablemente la restauración de mi contraseña en mi cuenta [TuNombreDeUsuario] en [NombreDeLaPlataforma/Servicio].
@@ -36,25 +35,23 @@ export async function sendMail({ toEmail }: { toEmail: string }) {
     };
 
     const transport = nodemailer.createTransport({
-    service:"gmail",
-    auth:{
-        type:"OAuth2",
-        user:"everytel2023@gmail.com",
+      service: 'gmail',
+      auth: {
+        type: 'OAuth2',
+        user: 'everytel2023@gmail.com',
         clientId: client_id,
-        clientSecret:client_secret,
+        clientSecret: client_secret,
         refreshToken: refresh_token,
         // accessToken: accessToken
-    }
+      },
     });
     const result = await transport.sendMail(mailOptions);
     return result;
-
   } catch (error) {
-    if(error instanceof Error){
-        throw new Error(`Error sending email: ${error.message}`);
-    }else{
-        throw new Error("Ocurrio un error durante el envio del email.")
+    if (error instanceof Error) {
+      throw new Error(`Error sending email: ${error.message}`);
+    } else {
+      throw new Error('Ocurrio un error durante el envio del email.');
     }
-
   }
 }

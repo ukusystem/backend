@@ -71,7 +71,7 @@ export class RecordStreamManager {
     if (currController === undefined) {
       const newCamRecordMap: CamRecordMap = new Map();
 
-      const newFfmpegProcess = spawn('ffmpeg', args, { stdio: ['ignore', 'pipe', 'ignore'] });
+      const newFfmpegProcess = spawn('ffmpeg', args, { stdio: ['ignore', 'pipe', 'ignore'], windowsHide: true });
       const videoRecordStream = fs.createWriteStream(recordPath);
 
       vmsLogger.info(`Stream Record Socket | start_recording | ctrl_id = ${ctrl_id} | cmr_id = ${cmr_id}`);
@@ -96,7 +96,7 @@ export class RecordStreamManager {
       RecordStreamManager.#records.set(ctrl_id, newCamRecordMap);
     } else {
       if (!currController.has(cmr_id)) {
-        const newFfmpegProcess = spawn('ffmpeg', args, { stdio: ['ignore', 'pipe', 'ignore'] });
+        const newFfmpegProcess = spawn('ffmpeg', args, { stdio: ['ignore', 'pipe', 'ignore'], windowsHide: true });
         const videoRecordStream = fs.createWriteStream(recordPath);
 
         vmsLogger.info(`Stream Record Socket | start_recording | ctrl_id = ${ctrl_id} | cmr_id = ${cmr_id}`);
