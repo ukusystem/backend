@@ -152,9 +152,9 @@ export class CamStreamSocketManager {
             throw new Error('Camara no encontrada');
           }
 
-          const newFfmpegArg = await getFfmpegArgs(ctrl_id, cameraFound.ip, q);
+          const newFfmpegArg = await getFfmpegArgs(ctrl_id, cameraFound.cmr_id, q);
 
-          const newFfmpegProcess = spawn('ffmpeg', newFfmpegArg, { stdio: ['ignore', 'pipe', 'ignore'] });
+          const newFfmpegProcess = spawn('ffmpeg', newFfmpegArg, { stdio: ['ignore', 'pipe', 'ignore'], windowsHide: true });
 
           CamStreamSocketManager.process[ctrl_id][cmr_id][q] = {
             ffmpegProcess: newFfmpegProcess,

@@ -116,7 +116,7 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
           });
         }
 
-        const newFfmpegProcess = spawn('ffmpeg', ffmpegArgs, { stdio: ['ignore', 'ignore', 'ignore'] });
+        const newFfmpegProcess = spawn('ffmpeg', ffmpegArgs, { stdio: ['ignore', 'ignore', 'ignore'], windowsHide: true });
 
         this.ffmpegProcess = newFfmpegProcess;
 

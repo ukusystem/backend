@@ -49,7 +49,7 @@ export class Camera {
         let isInsideImage = false;
 
         if (!ffmpegProcessImage) {
-          ffmpegProcessImage = spawn('ffmpeg', args, { stdio: ['ignore', 'pipe', 'ignore'] });
+          ffmpegProcessImage = spawn('ffmpeg', args, { stdio: ['ignore', 'pipe', 'ignore'], windowsHide: true });
         }
         // Redirigir la salida de ffmpeg al cliente Socket.IO
         ffmpegProcessImage.stdout.on('data', (data: any) => {

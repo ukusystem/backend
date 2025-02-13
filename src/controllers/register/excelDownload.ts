@@ -1,57 +1,48 @@
-import exceljs from "exceljs";
-import { Request, Response, NextFunction } from "express";
-import { asyncErrorHandler } from "../../utils/asynErrorHandler";
-import { getFormattedDateTime } from "../../utils/getFormattedDateTime";
-import { Register } from "../../models/register";
+import exceljs from 'exceljs';
+import { Request, Response, NextFunction } from 'express';
+import { asyncErrorHandler } from '../../utils/asynErrorHandler';
+import { getFormattedDateTime } from '../../utils/getFormattedDateTime';
+import { Register } from '../../models/register';
 
-export const excelDownload = asyncErrorHandler(
-  async (req: Request, res: Response, next: NextFunction) => {
+export const excelDownload = asyncErrorHandler(async (req: Request, res: Response, _next: NextFunction) => {
+  const { ctrl_id, end_date, start_date, type, col_delete, ...rest } = req.query as { type: string; ctrl_id: string; start_date: string; end_date: string; col_delete: string | undefined | string[] };
 
-    const {ctrl_id,end_date,start_date,type,col_delete,...rest} = req.query as {type: string,ctrl_id: string,start_date:string,end_date:string,col_delete: string | undefined | string[]}
+  const registerRows = await Register.getRegistrosDownload({ col_delete, ctrl_id, end_date, start_date, type, ...rest });
 
-    const registerRows = await Register.getRegistrosDownload({col_delete,ctrl_id,end_date,start_date,type,...rest})
+  //Create a Workbook
+  const workbook = new exceljs.Workbook();
+  // Set Workbook Properties
+  workbook.creator = 'Mercurial Systems';
+  workbook.lastModifiedBy = 'Mercurial Systems';
+  workbook.created = new Date();
+  workbook.modified = new Date();
 
-    //Create a Workbook
-    const workbook = new exceljs.Workbook();
-    // Set Workbook Properties
-    workbook.creator = "Mercurial Systems";
-    workbook.lastModifiedBy = "Mercurial Systems";
-    workbook.created = new Date();
-    workbook.modified = new Date();
+  //Add a Worksheet
+  const worksheet = workbook.addWorksheet('REGISTRO_' + type.toUpperCase());
 
-    //Add a Worksheet
-    const worksheet = workbook.addWorksheet("REGISTRO_" + type.toUpperCase());
-    
-    // Columns:
-    worksheet.columns = registerRows.columns.map((column) => ({
-      header: column.toUpperCase(),
-      key: column,
-      width: 20,
-    }));
+  // Columns:
+  worksheet.columns = registerRows.columns.map((column) => ({
+    header: column.toUpperCase(),
+    key: column,
+    width: 20,
+  }));
 
-    // Add Rows
-    registerRows.data.forEach((row) => {
-      worksheet.addRow(row);
-    });
+  // Add Rows
+  registerRows.data.forEach((row) => {
+    worksheet.addRow(row);
+  });
 
-    // Set font bold row 1
-    worksheet.getRow(1).eachCell((cell) => {
-      cell.font = { bold: true };
-    });
+  // Set font bold row 1
+  worksheet.getRow(1).eachCell((cell) => {
+    cell.font = { bold: true };
+  });
 
-    res.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition');
 
-    res.setHeader(
-      "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    );
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename=registro_${type}_${getFormattedDateTime()}.xlsx`
-    );
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', `attachment; filename=registro_${type}_${getFormattedDateTime()}.xlsx`);
 
-    workbook.xlsx.write(res).then(() => {
-      res.status(200);
-    });
-  }
-);
+  workbook.xlsx.write(res).then(() => {
+    res.status(200);
+  });
+});

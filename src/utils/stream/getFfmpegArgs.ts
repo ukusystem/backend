@@ -1,18 +1,18 @@
 import { ControllerMapManager } from '../../models/maps';
 import { genericLogger } from '../../services/loggers';
-import { getRstpLinksByCtrlIdAndIp } from '../getCameraRtspLinks';
+import { getRstpLinksByCtrlIdAndCmrId } from '../getCameraRtspLinks';
 
 type Calidad = 'q1' | 'q2' | 'q3';
 const TIMEOUT_DISCONNECT_STREAM: number = 5;
 
-export const getFfmpegArgs = async (ctrl_id: number, ip: string, q: Calidad) => {
+export const getFfmpegArgs = async (ctrl_id: number, cmr_id: number, q: Calidad) => {
   try {
     const ctrlConfig = ControllerMapManager.getControllerAndResolution(ctrl_id);
     if (ctrlConfig === undefined) {
       throw new Error(`Error getFfmpegArgs | Controlador ${ctrl_id} no encontrado getControllerAndResolution`);
     }
     const { resolution, controller } = ctrlConfig;
-    const [rtspUrl, rtspUrlsub] = await getRstpLinksByCtrlIdAndIp(ctrl_id, ip);
+    const [rtspUrl, rtspUrlsub] = await getRstpLinksByCtrlIdAndCmrId(ctrl_id, cmr_id);
 
     let ffmpegArg: string[] = [];
     if (q === 'q1') {
