@@ -728,7 +728,7 @@ export class BaseAttach extends Mortal {
       serie: serie ?? undefined,
       ubicacion: desc ?? undefined,
     };
-    // this._log(`Notifying web about tempertaure ${newTemp.ctrl_id}.`)
+    // this._log(`Notifying web about tempertaure node:${nodeID} id:${stID} active:${newTemp.activo}.`);
     if (active === 0) {
       sm.SensorTemperaturaManager.delete(nodeID, stID);
     } else {
@@ -772,7 +772,7 @@ export class BaseAttach extends Mortal {
   }
 
   _notifyOutput(pin: number, auto: boolean, nodeID: number, es_id: number | null = null, desc: string | null = null, state: number | null = null, active: number | null = null, order: number | null = null) {
-    // this._log(`Notifying web about output.`);
+    // this._log(`Notifying web about output ${pin} in node ${nodeID} active ${active}.`);
     const newOutput: sm.PinSalidaAddUpdateDTO = {
       ps_id: pin,
       pin: pin,
@@ -1197,7 +1197,7 @@ export class NodeAttach extends BaseAttach {
         // useful.formatTimestamp(big))
         break;
       case codes.VALUE_ALL_ENABLES:
-        // this._log(`Received all enables '${command}'`);
+        this._log(`Received all enables '${command}'`);
         const enablesData = this._parseMessage(parts, queries.enablesParse, id);
         if (!enablesData) {
           break;
@@ -1254,9 +1254,11 @@ export class NodeAttach extends BaseAttach {
         }
         for (const temp of paramsForTemps) {
           this._notifyTemp(temp[1], this.controllerID, temp[0], null, null, null);
+          this._log(`Notifying web about tempertaure node:${this.controllerID} id:${temp[1]} active:${temp[0]}.`);
         }
         for (const energy of paramsForEnergy) {
           this._notifyEnergy(energy[1], this.controllerID, energy[0], null, null, null, null, null, null, null);
+          this._log(`Notifying web about energy node:${this.controllerID} id:${energy[1]} active:${energy[0]}.`);
         }
         break;
       case codes.VALUE_ENERGY_ENABLE_ONE:

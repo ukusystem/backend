@@ -2,19 +2,7 @@ import { MySQL2 } from '../../../database/mysql';
 import { Init } from '../../../models/init';
 import { genericLogger } from '../../../services/loggers';
 import { filterUndefined } from '../../../utils/filterUndefined';
-import {
-  MedEneListAction,
-  MedEnergiaSocketDTO,
-  MedEnergiaObserver,
-  SocketMedEnergia,
-  CtrlMedEnergiaMap,
-  ObserverMedEnergiaMap,
-  MedEnergiaObj,
-  MedEnergiaMap,
-  MedEnergiaAddUpdateDTO,
-  MedEneState,
-  MedidorEnergiaRowData,
-} from './modulo.energia.types';
+import { MedEneListAction, MedEnergiaSocketDTO, MedEnergiaObserver, SocketMedEnergia, CtrlMedEnergiaMap, ObserverMedEnergiaMap, MedEnergiaObj, MedEnergiaMap, MedEnergiaAddUpdateDTO, MedEneState, MedidorEnergiaRowData } from './modulo.energia.types';
 
 export class ModuloEnergiaObserver implements MedEnergiaObserver {
   #socket: SocketMedEnergia;
@@ -92,10 +80,10 @@ export class MedidorEnergiaManager {
         // notifications:
         if (hasChangeActivo) {
           if (activo === MedEneState.Activo) {
-            MedidorEnergiaManager.notifyListMedEnergia(ctrl_id, medEnergia, 'delete');
+            MedidorEnergiaManager.notifyListMedEnergia(ctrl_id, medEnergia, 'add');
           }
           if (activo === MedEneState.Desactivado) {
-            MedidorEnergiaManager.notifyListMedEnergia(ctrl_id, medEnergia, 'add');
+            MedidorEnergiaManager.notifyListMedEnergia(ctrl_id, medEnergia, 'delete');
           }
         }
         MedidorEnergiaManager.notifyMedEnergia(ctrl_id, medEnergia);
@@ -148,16 +136,7 @@ export class MedidorEnergiaManager {
 
     if (currController === undefined) {
       //  only add
-      if (
-        activo !== undefined &&
-        amperaje !== undefined &&
-        descripcion !== undefined &&
-        fdp !== undefined &&
-        frecuencia !== undefined &&
-        potenciakwh !== undefined &&
-        potenciaw !== undefined &&
-        voltaje !== undefined
-      ) {
+      if (activo !== undefined && amperaje !== undefined && descripcion !== undefined && fdp !== undefined && frecuencia !== undefined && potenciakwh !== undefined && potenciaw !== undefined && voltaje !== undefined) {
         MedidorEnergiaManager.#add(ctrl_id, { me_id, activo, amperaje, descripcion, fdp, frecuencia, potenciakwh, potenciaw, voltaje });
       }
     } else {
@@ -165,16 +144,7 @@ export class MedidorEnergiaManager {
       if (hasMedEnergia) {
         MedidorEnergiaManager.#update(ctrl_id, me_id, medidor);
       } else {
-        if (
-          activo !== undefined &&
-          amperaje !== undefined &&
-          descripcion !== undefined &&
-          fdp !== undefined &&
-          frecuencia !== undefined &&
-          potenciakwh !== undefined &&
-          potenciaw !== undefined &&
-          voltaje !== undefined
-        ) {
+        if (activo !== undefined && amperaje !== undefined && descripcion !== undefined && fdp !== undefined && frecuencia !== undefined && potenciakwh !== undefined && potenciaw !== undefined && voltaje !== undefined) {
           MedidorEnergiaManager.#add(ctrl_id, { me_id, activo, amperaje, descripcion, fdp, frecuencia, potenciakwh, potenciaw, voltaje });
         }
       }
