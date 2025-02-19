@@ -1,8 +1,10 @@
 import { appConfig } from '../../configs';
 import { AlarmManager } from '../../controllers/socket';
+import { mqqtSerrvice } from '../../services/mqtt/MqttService';
 import { Camara } from '../../types/db';
 import { CameraMotionManager } from '../camera';
 import { CameraOnvifManager } from '../camera/onvif/camera.onvif.manager';
+import { ControllerMapManager } from '../maps';
 import { NvrManager } from '../nvr/nvr.manager';
 
 export class CameraNotifyManager {
@@ -67,6 +69,17 @@ export class CameraNotifyManager {
     }
   }
 
+  static #notifyDisconnect(ctrl_id: number, curCam: Camara, fieldsUpdate: Partial<Camara>) {
+    const { conectado, activo } = fieldsUpdate;
+    const controller = ControllerMapManager.getController(ctrl_id, true);
+    if (controller !== undefined && curCam.activo === 1) {
+      const canNotify = (activo === undefined || activo === 1) && conectado !== undefined && curCam.conectado !== conectado && conectado === 0;
+      if (canNotify) {
+        mqqtSerrvice.sendAlarmNotification({ tipo: 'alarm.camera.disconnected', titulo: 'Camara desconectado', mensaje: `La camara (${curCam.descripcion}) del controlador ${controller.nodo} se ha desconectado. Verifica su estado y conexión de red.` });
+      }
+    }
+  }
+
   static update(ctrl_id: number, curCam: Camara, fieldsUpdate: Partial<Camara>) {
     // notify Alarm
     CameraNotifyManager.#notifyUpdateToAlarm(ctrl_id, curCam, fieldsUpdate);
@@ -83,6 +96,9 @@ export class CameraNotifyManager {
 
     // notify to Onvif:
     CameraNotifyManager.#notifyUpdateToOnvif(ctrl_id, curCam, fieldsUpdate);
+
+    // alarm disconnect notify:
+    CameraNotifyManager.#notifyDisconnect(ctrl_id, curCam, fieldsUpdate);
   }
 
   static add(ctrl_id: number, newCam: Camara) {
