@@ -85,12 +85,12 @@ export class ControllerNotifyManager {
     }
   }
 
-  static #notifyDisconnect(curController: Controlador, fieldsUpdate: Partial<Controlador>) {
+  static #notifyDisconnect(curController: Controlador, fieldsUpdate: Partial<Controlador>, isAdd: boolean) {
     const { conectado, activo } = fieldsUpdate;
     if (curController.activo === 1) {
-      const canNotify = (activo === undefined || activo === 1) && conectado !== undefined && curController.conectado !== conectado && conectado === 0;
+      const canNotify = (activo === undefined || activo === 1) && conectado !== undefined && (curController.conectado !== conectado || isAdd) && conectado === 0;
       if (canNotify) {
-        mqqtSerrvice.sendAlarmNotification({ tipo: 'alarm.controller.disconnected', titulo: 'Controlador desconectado', mensaje: `El controlador ${curController.nodo} se ha desconectado. Verifica su estado y conexión de red.` });
+        mqqtSerrvice.publisAdminNotification({ evento: 'alarm.controller.disconnected', titulo: 'Controlador desconectado', mensaje: `El controlador "${curController.nodo}" se ha desconectado. Verifica su estado y conexión de red.` });
       }
     }
   }
@@ -107,11 +107,13 @@ export class ControllerNotifyManager {
     // Alarm
     ControllerNotifyManager.#notifyUpdateToAlarm(curController, fieldsUpdate);
     // Notification: disconnect
-    ControllerNotifyManager.#notifyDisconnect(curController, fieldsUpdate);
+    ControllerNotifyManager.#notifyDisconnect(curController, fieldsUpdate, false);
   }
 
   static add(newController: Controlador) {
     // sidebar_nav
     SidebarNavManager.notifyAddController(newController.ctrl_id);
+    // Notification: disconnect
+    ControllerNotifyManager.#notifyDisconnect(newController, { conectado: newController.conectado }, true);
   }
 }

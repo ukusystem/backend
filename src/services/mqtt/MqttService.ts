@@ -1,7 +1,8 @@
 import mqtt, { MqttClient } from 'mqtt';
-import { UserNotificationPayload } from '../../models/UserNotification';
 import { v4 as uuid } from 'uuid';
 import dayjs from 'dayjs';
+import { Notification } from '../../types/db';
+import { NotificationRepository } from '../../models/notification/Notification';
 interface MqttConfig {
   host: string;
   port: number;
@@ -9,13 +10,23 @@ interface MqttConfig {
   password: string;
 }
 
-export interface AlarmNotificationPayload {
+export interface NotificationPayload {
   id?: string;
   u_id?: number;
-  tipo: string;
+  evento: string;
   titulo: string;
   mensaje: string;
   fecha?: string;
+  data?: Record<string, unknown>; // Datos adicionales que puedes enviar
+}
+
+interface UserNotificationPayload {
+  id: string;
+  u_id: number;
+  tipo: string;
+  titulo: string;
+  mensaje: string;
+  fecha: string;
   data?: Record<string, unknown>; // Datos adicionales que puedes enviar
 }
 
@@ -27,6 +38,26 @@ class MqttService {
     this.client.on('connect', () => {
       console.log('✅ Conectado al broker MQTT');
     });
+  }
+
+  async #publishNotification(notification: Omit<Notification, 'n_id'>, topics: Array<string>) {
+    if (this.client.connected) {
+      // guardar notificacion
+      await NotificationRepository.save(notification);
+      topics.forEach((topic) => {
+        this.client.publish(topic, JSON.stringify(notification), { qos: 1, retain: true }, async (error) => {
+          try {
+            if (error) {
+              console.error('❌ Error al enviar notificación:', error);
+            } else {
+              console.log(`🔔 Notificación enviada | Topic "${topic}" | ${JSON.stringify(notification)}`);
+            }
+          } catch (error) {
+            console.log(error);
+          }
+        });
+      });
+    }
   }
 
   public sendUserNotification(payload: UserNotificationPayload) {
@@ -45,36 +76,44 @@ class MqttService {
     }
   }
 
-  public sendAlarmNotification(payload: AlarmNotificationPayload) {
-    const topic = this.getAlarmTopic();
+  public publisAdminNotification(payload: NotificationPayload) {
+    const topic = this.getAdminTopic();
 
-    const message: AlarmNotificationPayload = {
-      id: payload.id ?? uuid(),
-      u_id: payload.u_id,
-      tipo: payload.tipo,
+    const newNotification: Omit<Notification, 'n_id'> = {
+      n_uuid: payload.id ?? uuid(),
+      evento: payload.evento,
       titulo: payload.titulo,
       mensaje: payload.mensaje,
       fecha: payload.fecha ?? dayjs().format('YYYY-MM-DD HH:mm:ss'),
       data: payload.data,
     };
-    if (this.client.connected) {
-      this.client.publish(topic, JSON.stringify(message), { qos: 1, retain: true }, (error) => {
-        if (error) {
-          console.error('❌ Error al enviar notificación:', error);
-        } else {
-          console.log(`🔔 Notificación enviada a alarms: ${JSON.stringify(message)}`);
-          // guardar notificacion
-        }
-      });
-    }
+    this.#publishNotification(newNotification, [topic]);
+  }
+  public publisContrataNotification(payload: NotificationPayload, co_id: number) {
+    const topicContrata = this.getContrataTopic(co_id);
+    const topicAdmin = this.getAdminTopic();
+
+    const newNotification: Omit<Notification, 'n_id'> = {
+      n_uuid: payload.id ?? uuid(),
+      evento: payload.evento,
+      titulo: payload.titulo,
+      mensaje: payload.mensaje,
+      fecha: payload.fecha ?? dayjs().format('YYYY-MM-DD HH:mm:ss'),
+      data: payload.data,
+    };
+    this.#publishNotification(newNotification, [topicContrata, topicAdmin]);
   }
 
   private getUserTopic(user_id: number) {
     return `${this.BASE_TOPIC}/user/${user_id}`;
   }
 
-  private getAlarmTopic() {
-    return `${this.BASE_TOPIC}/alarms`;
+  private getAdminTopic() {
+    return `${this.BASE_TOPIC}/admin`;
+  }
+
+  private getContrataTopic(co_id: number) {
+    return `${this.BASE_TOPIC}/contrata/${co_id}`;
   }
 }
 

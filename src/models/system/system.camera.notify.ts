@@ -69,13 +69,13 @@ export class CameraNotifyManager {
     }
   }
 
-  static #notifyDisconnect(ctrl_id: number, curCam: Camara, fieldsUpdate: Partial<Camara>) {
+  static #notifyDisconnect(ctrl_id: number, curCam: Camara, fieldsUpdate: Partial<Camara>, isAdd: boolean) {
     const { conectado, activo } = fieldsUpdate;
     const controller = ControllerMapManager.getController(ctrl_id, true);
     if (controller !== undefined && curCam.activo === 1) {
-      const canNotify = (activo === undefined || activo === 1) && conectado !== undefined && curCam.conectado !== conectado && conectado === 0;
+      const canNotify = (activo === undefined || activo === 1) && conectado !== undefined && (curCam.conectado !== conectado || isAdd) && conectado === 0;
       if (canNotify) {
-        mqqtSerrvice.sendAlarmNotification({ tipo: 'alarm.camera.disconnected', titulo: 'Camara desconectado', mensaje: `La camara (${curCam.descripcion}) del controlador ${controller.nodo} se ha desconectado. Verifica su estado y conexión de red.` });
+        mqqtSerrvice.publisAdminNotification({ evento: 'alarm.camera.disconnected', titulo: 'Camara desconectado', mensaje: `La camara "${curCam.descripcion}" del controlador "${controller.nodo}" se ha desconectado. Verifica su estado y conexión de red.` });
       }
     }
   }
@@ -98,7 +98,7 @@ export class CameraNotifyManager {
     CameraNotifyManager.#notifyUpdateToOnvif(ctrl_id, curCam, fieldsUpdate);
 
     // alarm disconnect notify:
-    CameraNotifyManager.#notifyDisconnect(ctrl_id, curCam, fieldsUpdate);
+    CameraNotifyManager.#notifyDisconnect(ctrl_id, curCam, fieldsUpdate, false);
   }
 
   static add(ctrl_id: number, newCam: Camara) {
@@ -108,5 +108,8 @@ export class CameraNotifyManager {
     if ((appConfig.system.start_record_motion || appConfig.system.start_snapshot_motion) && CameraMotionManager.is_init) {
       CameraMotionManager.notifyAddUpdate(ctrl_id, newCam.cmr_id);
     }
+
+    // alarm disconnect notify:
+    CameraNotifyManager.#notifyDisconnect(ctrl_id, newCam, { conectado: newCam.conectado }, true);
   }
 }

@@ -1,3 +1,20 @@
+export interface Notification {
+  n_id: number;
+  n_uuid: string;
+  evento: string;
+  titulo: string;
+  mensaje: string;
+  data: Record<string, unknown> | undefined;
+  fecha: string;
+}
+
+export interface UserNofication {
+  nu_id: number;
+  u_id: number;
+  n_uuid: string;
+  fecha: string;
+}
+
 export interface Resolucion {
   res_id: number;
   nombre: string;

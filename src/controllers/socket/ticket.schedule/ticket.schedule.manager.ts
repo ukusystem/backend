@@ -6,6 +6,8 @@ import { CronJob } from 'cron';
 import { filterUndefined } from '../../../utils/filterUndefined';
 import { Ticket } from '../../../models/ticket';
 import { genericLogger } from '../../../services/loggers';
+import { mqqtSerrvice } from '../../../services/mqtt/MqttService';
+import { ControllerMapManager } from '../../../models/maps';
 
 export class TicketSchedule implements RegistroTicketJobSchedule {
   #cron: CronJob<null, RegTicketCronContext>;
@@ -69,6 +71,13 @@ export class TicketScheduleManager {
       // notify ticket unattended
       genericLogger.info(`TicketScheduleManager | Notify ticket unattended | ctrl_id : ${ctrl_id} | rt_id : ${newTicket.rt_id}`);
       onFinishTicket(new FinishTicket(RegTicketState.NoAtendido, ctrl_id, newTicket.rt_id));
+
+      const controller = ControllerMapManager.getController(ctrl_id, true);
+      mqqtSerrvice.publisAdminNotification({
+        evento: 'ticket.not.attended',
+        titulo: 'Ticket no atendido',
+        mensaje: `El ticket #${newTicket.rt_id} del sitio "${controller?.nodo ?? ctrl_id}" no ha sido atendido`,
+      });
       return;
     }
 
@@ -93,6 +102,13 @@ export class TicketScheduleManager {
                 onFinishTicket(new FinishTicket(RegTicketState.NoAtendido, this.ctrl_id, this.rt_id));
                 // delete ticket
                 TicketScheduleManager.#delete(this.ctrl_id, this.rt_id);
+                // notify
+                const controller = ControllerMapManager.getController(this.ctrl_id, true);
+                mqqtSerrvice.publisAdminNotification({
+                  evento: 'ticket.not.attended',
+                  titulo: 'Ticket no atendido',
+                  mensaje: `El ticket #${newTicket.rt_id} del sitio "${controller?.nodo ?? ctrl_id}" no ha sido atendido`,
+                });
               }
             }
           }

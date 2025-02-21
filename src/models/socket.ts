@@ -26,6 +26,8 @@ import { camStreamSocket } from '../controllers/socket/stream/camera.stream.sock
 import { NamespaceRegistroAcceso, registroAccesoSocket } from '../controllers/socket/registro.acceso';
 import { NamespaceTicketSchedule } from '../controllers/socket/ticket.schedule/ticket.schedule.types';
 import { ticketScheduleSocket } from '../controllers/socket/ticket.schedule/ticket.schedule.socket';
+import { socketAuthWithRoles } from '../middlewares/auth.middleware';
+import { UserRol } from '../types/rol';
 
 export class Sockets {
   #io: Server;
@@ -44,84 +46,86 @@ export class Sockets {
   }
 
   initEvents() {
-    // Manejar conexión de sockets en el namespace principal
-    this.#io.of('/').on('connection', (socket) => {
-      // Manejar cierre de conexión Socket.IO
-      // socket.on('disconnect', () => {});
-
-      // Manejar errores de Socket.IO
-      socket.on('error', (error) => {
-        console.error(`Error en la conexión Socket.IO: ${error.message}`);
-      });
-    });
-
     // Namespace "/stream/nodo_id/cmr_id/calidad"
-    this.#io.of(/^\/stream\/(\d+)\/(\d+)\/(q\d+)$/).on('connection', (socket) => {
+    const StreamNSP = this.#io.of(/^\/stream\/(\d+)\/(\d+)\/(q\d+)$/);
+    StreamNSP.use(socketAuthWithRoles([UserRol.Administrador, UserRol.Gestor]));
+    StreamNSP.on('connection', (socket) => {
       camStreamSocket(this.#io, socket);
     });
 
     // Namespace : "/sensor_temperatura/ctrl_id/id"
     const SenTempNSP: NamespaceSenTemperatura = this.#io.of(/^\/sensor_temperatura\/\d+$/);
+    SenTempNSP.use(socketAuthWithRoles([UserRol.Administrador, UserRol.Gestor]));
     SenTempNSP.on('connection', (socket) => {
       senTemperaturaSocket(this.#io, socket);
     });
 
     // Namespace : "/modulo_energia/ctrl_id"
     const ModEnergiaNSP: NamespaceMedEnergia = this.#io.of(/^\/modulo_energia\/\d+$/);
+    ModEnergiaNSP.use(socketAuthWithRoles([UserRol.Administrador, UserRol.Gestor]));
     ModEnergiaNSP.on('connection', (socket) => {
       medEnergiaSocket(this.#io, socket);
     });
 
     // Namespace: /sidebar_nav
     const SidebarNavNSP: NamespaceSidebarNav = this.#io.of('/sidebar_nav');
+    SidebarNavNSP.use(socketAuthWithRoles([UserRol.Administrador, UserRol.Gestor]));
     SidebarNavNSP.on('connection', (socket) => {
       navbarNavSocket(this.#io, socket);
     });
 
     // Namespace :  "/registro_acceso/ctrl_id"
     const RegAccesoNSP: NamespaceRegistroAcceso = this.#io.of(/^\/registro_acceso\/\d+$/);
+    RegAccesoNSP.use(socketAuthWithRoles([UserRol.Administrador, UserRol.Gestor]));
     RegAccesoNSP.on('connection', (socket) => {
       registroAccesoSocket(this.#io, socket);
     });
 
     // Namespace :  "/registro_entrada/ctrl_id"
     const RegEntNSP: NamespaceRegistroEntrada = this.#io.of(/^\/registro_entrada\/\d+$/);
+    RegEntNSP.use(socketAuthWithRoles([UserRol.Administrador, UserRol.Gestor]));
     RegEntNSP.on('connection', (socket) => {
       registroEntradaSocket(this.#io, socket);
     });
 
     // Namespace: "/tickets/ctrl_id/"
     const TicketScheduleNSP: NamespaceTicketSchedule = this.#io.of(/^\/tickets\/\d+$/);
+    TicketScheduleNSP.use(socketAuthWithRoles([UserRol.Administrador, UserRol.Gestor, UserRol.Invitado]));
     TicketScheduleNSP.on('connection', (socket) => {
       ticketScheduleSocket(this.#io, socket);
     });
 
     // Namespace: "/pin_entrada/ctrl_id"
     const PinEntradaNSP: NamespacePinEntrada = this.#io.of(/^\/pin_entrada\/\d+$/);
+    PinEntradaNSP.use(socketAuthWithRoles([UserRol.Administrador, UserRol.Gestor]));
     PinEntradaNSP.on('connection', (socket) => {
       pinEntradaSocket(this.#io, socket);
     });
 
     // Namespace: "/controller_state/ctrl_id"
     const ControllerStateNSP: NamespaceControllerState = this.#io.of(/^\/controller_state\/\d+$/);
+    ControllerStateNSP.use(socketAuthWithRoles([UserRol.Administrador, UserRol.Gestor]));
     ControllerStateNSP.on('connection', (socket) => {
       contollerStateSocket(this.#io, socket);
     });
 
     // Namespace: "/pines_salida/ctrl_id"
     const PinSalidaNSP: NamespacePinSalida = this.#io.of(/^\/pines_salida\/\d+$/);
+    PinSalidaNSP.use(socketAuthWithRoles([UserRol.Administrador, UserRol.Gestor]));
     PinSalidaNSP.on('connection', (socket) => {
       pinSalidaSocket(this.#io, socket);
     });
 
     // Namespace: "/record_stream/ctrl_id/cmr_id"
     const StreamRecordNSP: NamespaceRecordStream = this.#io.of(/^\/record_stream\/(\d+)\/\d+$/);
+    StreamRecordNSP.use(socketAuthWithRoles([UserRol.Administrador, UserRol.Gestor]));
     StreamRecordNSP.on('connection', (socket) => {
       recordStreamSocket(this.#io, socket);
     });
 
     // Namespace : "/last_snapshot/ctrl_id"
     const LastSnapshotNSP: NamespaceLastSnapshot = this.#io.of(/^\/last_snapshot\/\d+$/);
+    LastSnapshotNSP.use(socketAuthWithRoles([UserRol.Administrador, UserRol.Gestor]));
     LastSnapshotNSP.on('connection', (socket) => {
       lastSnapshotSocket(this.#io, socket);
     });
@@ -133,6 +137,7 @@ export class Sockets {
 
     // Namespace : "/last_snapshot/ctrl_id"
     const AlarmNSP: NamespaceAlarm = this.#io.of('/alarm_notification');
+    AlarmNSP.use(socketAuthWithRoles([UserRol.Administrador, UserRol.Gestor]));
     AlarmNSP.on('connection', (socket) => {
       alarmSocket(this.#io, socket);
     });
