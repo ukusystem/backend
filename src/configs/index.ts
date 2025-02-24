@@ -6,9 +6,10 @@ import { serverEnv } from './server.configs';
 import { PoolOptions } from 'mysql2';
 import { encryptEnv } from './encrypt.configs';
 import { cookieEnv } from './cookie.config';
+import { mqttEnv } from './mqtt.config';
 // import { genericLogger } from "../services/loggers";
 
-const zodEnv = jwtEnv.merge(dbEnv).merge(emailEnv).merge(serverEnv).merge(encryptEnv).merge(cookieEnv);
+const zodEnv = jwtEnv.merge(dbEnv).merge(emailEnv).merge(serverEnv).merge(encryptEnv).merge(cookieEnv).merge(mqttEnv);
 
 // declare global {
 //   namespace NodeJS {
@@ -78,6 +79,25 @@ interface IAppConfig {
     start_snapshot_motion: boolean;
     start_record_motion: boolean;
   };
+
+  mqtt: {
+    host: string;
+    port: number;
+    users: {
+      admin: {
+        user: string;
+        password: string;
+      };
+      manager: {
+        user: string;
+        password: string;
+      };
+      invited: {
+        user: string;
+        password: string;
+      };
+    };
+  };
 }
 
 const appConfig: IAppConfig = {
@@ -138,6 +158,24 @@ const appConfig: IAppConfig = {
     start_nvr: validatedEnv.START_NVR,
     start_record_motion: validatedEnv.START_RECORD_MOTION,
     start_snapshot_motion: validatedEnv.START_SNAPSHOT_MOTION,
+  },
+  mqtt: {
+    host: validatedEnv.MQTT_HOST,
+    port: validatedEnv.MQTT_PORT,
+    users: {
+      admin: {
+        user: validatedEnv.MQTT_ADMIN_USER,
+        password: validatedEnv.MQTT_ADMIN_PASSWORD,
+      },
+      manager: {
+        user: validatedEnv.MQTT_MANAGER_USER,
+        password: validatedEnv.MQTT_MANAGER_PASSWORD,
+      },
+      invited: {
+        user: validatedEnv.MQTT_INVITED_USER,
+        password: validatedEnv.MQTT_INVITED_PASSWORD,
+      },
+    },
   },
 };
 

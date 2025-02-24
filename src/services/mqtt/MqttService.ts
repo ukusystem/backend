@@ -1,8 +1,13 @@
 import mqtt, { MqttClient } from 'mqtt';
 import { v4 as uuid } from 'uuid';
 import dayjs from 'dayjs';
-import { Notification } from '../../types/db';
-import { NotificationRepository } from '../../models/notification/Notification';
+import { genericLogger } from '../loggers';
+import { appConfig } from '../../configs';
+import { UserRol } from '../../types/rol';
+import { ResultSetHeader } from 'mysql2';
+import { MySQL2 } from '../../database/mysql';
+import { Notification } from '../../models/general/Notification/Notification';
+
 interface MqttConfig {
   host: string;
   port: number;
@@ -30,33 +35,44 @@ interface UserNotificationPayload {
   data?: Record<string, unknown>; // Datos adicionales que puedes enviar
 }
 
-class MqttService {
+export class MqttService {
   private readonly client: MqttClient;
   private readonly BASE_TOPIC: string = 'notifications';
   constructor(config: MqttConfig) {
     this.client = mqtt.connect(`mqtt://${config.host}`, { port: config.port, username: config.username, password: config.password });
     this.client.on('connect', () => {
-      console.log('✅ Conectado al broker MQTT');
+      genericLogger.info('✅ Conectado al broker MQTT');
+    });
+    this.client.on('error', (error) => {
+      genericLogger.error(`❌ MqttService Error : ${error.message} `, error);
+    });
+  }
+
+  async #saveNotification(payload: Omit<Notification, 'n_id'>): Promise<void> {
+    const { n_uuid, evento, titulo, mensaje, data, fecha } = payload;
+    await MySQL2.executeQuery<ResultSetHeader>({
+      sql: `INSERT INTO general.notificacion ( n_uuid, evento, titulo, mensaje, data, fecha ) VALUES ( ? , ? , ? , ? , ? , ? )`,
+      values: [n_uuid, evento, titulo, mensaje, JSON.stringify(data), fecha],
     });
   }
 
   async #publishNotification(notification: Omit<Notification, 'n_id'>, topics: Array<string>) {
-    if (this.client.connected) {
-      // guardar notificacion
-      await NotificationRepository.save(notification);
-      topics.forEach((topic) => {
-        this.client.publish(topic, JSON.stringify(notification), { qos: 1, retain: true }, async (error) => {
-          try {
+    try {
+      if (this.client.connected) {
+        // guardar notificacion
+        await this.#saveNotification(notification);
+        topics.forEach((topic) => {
+          this.client.publish(topic, JSON.stringify(notification), { qos: 1, retain: true }, async (error) => {
             if (error) {
-              console.error('❌ Error al enviar notificación:', error);
+              genericLogger.error(`MqttService | ❌ Error al enviar notificación : ${error.message} `, error);
             } else {
-              console.log(`🔔 Notificación enviada | Topic "${topic}" | ${JSON.stringify(notification)}`);
+              genericLogger.debug(`MqttService | 🔔 Notificación enviada | Topic "${topic}" | ${JSON.stringify(notification)} `);
             }
-          } catch (error) {
-            console.log(error);
-          }
+          });
         });
-      });
+      }
+    } catch (error) {
+      genericLogger.error(`MqttService | Error al publicar notificación`, error);
     }
   }
 
@@ -104,6 +120,23 @@ class MqttService {
     this.#publishNotification(newNotification, [topicContrata, topicAdmin]);
   }
 
+  public static getUserCredentials(rol_id: number) {
+    if (rol_id === UserRol.Administrador || rol_id === UserRol.Administrador) {
+      return {
+        user: appConfig.mqtt.users.manager.user,
+        password: appConfig.mqtt.users.manager.password,
+      };
+    }
+
+    if (rol_id === UserRol.Invitado) {
+      return {
+        user: appConfig.mqtt.users.invited.user,
+        password: appConfig.mqtt.users.invited.password,
+      };
+    }
+    return null;
+  }
+
   private getUserTopic(user_id: number) {
     return `${this.BASE_TOPIC}/user/${user_id}`;
   }
@@ -117,13 +150,6 @@ class MqttService {
   }
 }
 
-const mqttConfig: MqttConfig = {
-  host: 'localhost',
-  port: 1883,
-  username: 'usuario1',
-  password: 'password123',
-};
-
-const mqqtSerrvice = new MqttService(mqttConfig);
+const mqqtSerrvice = new MqttService({ host: appConfig.mqtt.host, port: appConfig.mqtt.port, username: appConfig.mqtt.users.admin.user, password: appConfig.mqtt.users.admin.password });
 
 export { mqqtSerrvice };
