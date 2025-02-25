@@ -435,7 +435,7 @@ export class Main {
     return [worker.nombre, worker.apellido, worker.telefono, worker.dni, worker.c_id, worker.co_id, ticketID, filename];
   }
 
-  private async finishTicket(finalState: number, ticketID: number, nodeID: number) {
+  private async saveTicketState(finalState: number, ticketID: number, nodeID: number) {
     await executeQuery(BaseAttach.formatQueryWithNode(queries.finishTicket, nodeID), [finalState, useful.getCurrentDate(), ticketID]);
     this.log(`Final state of ticket ID = ${ticketID} : ${finalState}`);
   }
@@ -510,7 +510,6 @@ export class Main {
     if (!ticketData) {
       this.log(`No ticket data for ID = ${ticketID}`);
       return new RequestResult(false, `Error leyendo ticket ID = ${ticketID} de la base de datos.`);
-      // return States.ERROR;
     }
     // Monitor state by default
     let monitor = States.ERROR;
@@ -518,11 +517,11 @@ export class Main {
     const currentState = getState(ticketData[0].estd_id);
     let isFinal = false;
     switch (currentState) {
+      case States.ABSENCE:
       case States.FINISHED:
-      case States.NULLIFIED:
       case States.CANCELLED:
       case States.REJECTED:
-      case States.UNATTENDED:
+      case States.IGNORED:
         isFinal = true;
         break;
       default:
@@ -532,6 +531,7 @@ export class Main {
     switch (currentState) {
       case States.ACCEPTED:
       case States.WAITING_APPROVE:
+      case States.ATTENDED:
         second = true;
         break;
       default:
@@ -542,13 +542,11 @@ export class Main {
     if (!isExpected) {
       this.log('Error getting current ticket state. Unknown state.');
       return new RequestResult(false, `El ticket ID = ${ticketID} tiene un estado inválido.`);
-      // return States.ILLEGAL;
     }
     const newAction = getState(newFinish.action);
     if (newAction === States.IMPOSSIBLE) {
       this.log('Unknown new action.');
       return new RequestResult(false, `Acción inválida para el ticket.`);
-      // return States.ILLEGAL;
     }
 
     // Execute order
@@ -557,7 +555,6 @@ export class Main {
     if (isFinal) {
       this.log(`Ticket ID=${ticketID} is already finished with state ${currentState}`);
       return new RequestResult(false, `El ticket ya está finalizado.`);
-      // return States.EXECUTED;
     } else {
       // Can only request to accept, reject, cancel or unattended.
       if (currentState === States.WAITING_APPROVE) {
@@ -568,18 +565,17 @@ export class Main {
             // console.log(ticketData[0])
             const start = useful.datetimeToLong(ticketData[0].fechacomienzo);
             const end = useful.datetimeToLong(ticketData[0].fechatermino);
-            await this.finishTicket(States.ACCEPTED, ticketID, nodeID);
+            await this.saveTicketState(newAction, ticketID, nodeID);
             this.addTicket(nodeID, new PartialTicket(ticketID, ticketData[0].co_id, start, end));
             monitor = States.EXECUTED;
             break;
+          // The guest that created the ticket can cancel it.
           case States.CANCELLED:
           case States.REJECTED:
-          case States.UNATTENDED:
-            // At this point, the current state can only be ACCEPTED or WAITING_APPROVE so
-            // it can always be rejected.
-            await this.finishTicket(newAction, ticketID, nodeID);
-            // Ticket was never accepted so there is no need to alter the pending tickets,
-            // but anyways.
+          case States.IGNORED:
+            // In state WAITING_APPROVE it can always be rejected.
+            await this.saveTicketState(newAction, ticketID, nodeID);
+            // Ticket was never accepted so there is no need to alter the pending tickets but anyways.
             this.removeTicket(nodeID, ticketID);
             monitor = States.EXECUTED;
             break;
@@ -591,15 +587,31 @@ export class Main {
       } else if (currentState === States.ACCEPTED) {
         switch (newAction) {
           // These events can happen only if the ticket is accepted.
-          // FINISHED, NULLIFIED can happen only if the ticket is also in time.
-          // CANCELLED, REJECTED can happen only if the current time is before the start time.
-          case States.FINISHED:
-          case States.NULLIFIED:
+          // FINISHED can happen only if the ticket is also in time. A ticket should not be finished before it is attended, but anyways.
+          // CANCELLED, REJECTED can happen only if the current time is before the start time. A ticket should not be rejected after it's been accepted, but anyways.
+          // ABSENCE can happen only after the ticket has ended.
+          // case States.FINISHED:
+          // case States.REJECTED:
+          // Can be cancelled by an admin or a guest
           case States.CANCELLED:
-          case States.REJECTED:
-            await this.finishTicket(newAction, ticketID, nodeID);
-            // Ticket was never accepted so there is no need to alter the pending tickets,
-            // but anyways.
+          case States.ABSENCE:
+          case States.ATTENDED:
+            await this.saveTicketState(newAction, ticketID, nodeID);
+            if (newAction !== States.ATTENDED) {
+              this.removeTicket(nodeID, ticketID);
+            }
+            monitor = States.EXECUTED;
+            break;
+          default:
+            this.log(`Illegal new action. Current state: ${currentState} Action: ${newAction}`);
+            monitor = States.ILLEGAL;
+            break;
+        }
+      } else if (currentState === States.ATTENDED) {
+        switch (newAction) {
+          // Ticket can only be finished after it's been attended. Can be finished by an admin or the guest.
+          case States.FINISHED:
+            await this.saveTicketState(newAction, ticketID, nodeID);
             this.removeTicket(nodeID, ticketID);
             monitor = States.EXECUTED;
             break;
@@ -614,7 +626,6 @@ export class Main {
       return new RequestResult(true, `Acción ejecutada.`);
     }
     return new RequestResult(false, `Error interno.`);
-    // return monitor;
   }
 
   /**

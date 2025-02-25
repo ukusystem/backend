@@ -1459,11 +1459,19 @@ export class NodeAttach extends BaseAttach {
         this._log(`(${date}) Card read. company ID = ${companyID} Number = ${serial} result = ${autorizado} admin = ${isAdmin} reader type = ${isEntrance > 0 ? 'Entrance' : 'Exit'}`);
 
         // Set tickets as attended
-        const setRes = await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.setAttended, this.controllerID), [companyID, date, date]);
-        if (setRes) {
-          // this._log('Tickets set as attended');
+        const selectRes = await executeQuery<db2.GeneralNumber[]>(BaseAttach.formatQueryWithNode(queries.selectTicketToAttend, this.controllerID), [companyID, date, date]);
+        if (selectRes) {
+          for (const num of selectRes) {
+            const updateRes = await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.updateTicketAttended, this.controllerID), [num.entero]);
+            if (updateRes) {
+              this._log(`Ticket ID = ${num.entero} set as attended`);
+              // Notify web
+            } else {
+              this._log('ERROR Could not set ticket as attended');
+            }
+          }
         } else {
-          this._log('ERROR Setting tickets to attended');
+          this._log('ERROR Selecting tickets being attended');
         }
 
         // Get info needed to register and notify
