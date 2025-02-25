@@ -289,21 +289,23 @@ export const insertCameraState = `
 export const selectUnattendedTicket = `
 				SELECT rt_id AS entero FROM %s.registroticket
 				WHERE co_id = ? AND fechacomienzo < ? AND fechatermino > ? AND enviado = 1 AND asistencia = 0;
-			`;
+`;
 
 /**
- * @deprecated
+ * Update the ticket as attended
  */
-export const updateAttendance = `
+export const updateTicketAttended = `
 				UPDATE %s.registroticket
 				SET asistencia = 1
 				WHERE rt_id = ?;
-				`;
+`;
 
-export const setAttended = `
-				UPDATE %s.registroticket
-				SET asistencia = 1
-				WHERE co_id = ? AND fechacomienzo < ? AND fechatermino > ? AND enviado = 1 AND asistencia = 0;
+/**
+ * Select the ticket that is being attended
+ */
+export const selectTicketToAttend = `
+				SELECT rt_id FROM %s.registroticket
+				WHERE co_id = ? AND fechacomienzo < ? AND fechatermino > ? AND enviado = 1;
 `;
 
 export const insertRequest = `
