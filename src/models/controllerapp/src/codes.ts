@@ -249,6 +249,8 @@ export const VALUE_SERIAL = 0x2a0; // Get the serial number
 export const VALUE_NEED_UPDATE = 0x2a1; // Ask if an update for a specific version  is needed
 export const VALUE_VERSION = 0x2a2; // Request versionç
 export const VALUE_FIRMWARE_ADD = 0x2a3; // Send a new firmware
+export const VALUE_ALARM_THRESHOLD = 0x2a4; // Set or get the alarm threshold
+export const VALUE_ALARM_PERIOD = 0x2a5; // Set or get the alarm period
 
 export const VALUE_SOCKET_CLOSED = 0x400; // Socket was closed
 export const VALUE_AUTHORIZED = 0x401; // Card authorized
@@ -563,3 +565,9 @@ export const CMD_UPDATE_CONTINUE = 0x61e;
  * Format CMD_UPDATE_END,0,token
  */
 export const CMD_UPDATE_END = 0x61f;
+
+/**
+ * @brief Send a temperature alarm.
+ * Format: CMD_TEMP_ALARM,sensor_id,temp_value,time
+ */
+export const CMD_TEMP_ALARM = 0x620;

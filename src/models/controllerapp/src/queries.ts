@@ -55,6 +55,7 @@ export const orderParse = [tupleInt, tupleInt, tupleLong];
 export const securityStateParse = [tupleInt, tupleInt, tupleInt, tupleLong];
 export const sdStateParse = [tupleInt, tupleInt, tupleInt, tupleLong];
 export const authParse = [tupleInt, tupleInt, tupleLong];
+export const alarmParse = [tupleInt, tupleFloat, tupleLong];
 
 /* Manage tables */
 
