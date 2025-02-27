@@ -241,6 +241,12 @@ export const VALUE_MOUNTING = 0x29c; // The sd card in being mounted
 export const VALUE_SD_TECH = 0x29d; // Set or get the SD state from the technician
 export const VALUE_SD_STATE = 0x29e; // Get the complete sd state
 export const VALUE_NODE_STATE = 0x29f; // Notify the controller state to the technicians
+export const VALUE_SERIAL = 0x2a0; // Get the serial number
+export const VALUE_NEED_UPDATE = 0x2a1; // Ask if an update for a specific version  is needed
+export const VALUE_VERSION = 0x2a2; // Request versionç
+export const VALUE_FIRMWARE_ADD = 0x2a3; // Send a new firmware
+export const VALUE_ALARM_THRESHOLD = 0x2a4; // Set or get the alarm threshold
+export const VALUE_ALARM_PERIOD = 0x2a5; // Set or get the alarm period
 
 export const VALUE_SOCKET_CLOSED = 0x400; // Socket was closed
 export const VALUE_AUTHORIZED = 0x401; // Card authorized
@@ -536,3 +542,28 @@ export const CMD_KEEP_ALIVE_REQUEST = 0x61b;
  * A card reader changed authorization
  */
 export const CMD_AUTHORIZATION_CHANGED = 0x61c;
+
+/**
+ * @brief To send an update. The version is appended as separate fields
+ * Format sent by the server        CDM_UPDATE,id,major,minor,patch
+ * Format sent by the controller    CDM_UPDATE,id,response[,token]
+ */
+export const CMD_UPDATE = 0x61d;
+
+/**
+ * @brief Continue with the download of the new firmware
+ * Format CMD_UPDATE_CONTINUE,0,token,content
+ */
+export const CMD_UPDATE_CONTINUE = 0x61e;
+
+/**
+ * @brief End the download of the firmware
+ * Format CMD_UPDATE_END,0,token
+ */
+export const CMD_UPDATE_END = 0x61f;
+
+/**
+ * @brief Send a temperature alarm.
+ * Format: CMD_TEMP_ALARM,sensor_id,temp_value,time
+ */
+export const CMD_TEMP_ALARM = 0x620;

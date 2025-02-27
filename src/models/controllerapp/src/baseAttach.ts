@@ -1180,6 +1180,17 @@ export class NodeAttach extends BaseAttach {
         // this._log("Temperature time %d = %s", big.longValue(),
         // useful.formatTimestamp(big))
         break;
+      case codes.CMD_TEMP_ALARM:
+        const alarmData = this._parseMessage(parts, queries.alarmParse, id);
+        if (!alarmData) {
+          this._log(`Received temperature alarm '${command}'`);
+          break;
+        }
+        const tempID = alarmData[0].getInt();
+        const tempValue = alarmData[1].getInt();
+        const tempTime = alarmData[2].getInt();
+        this._log(`Received temperature alarm id=${tempID} value=${tempValue} time=${tempTime}`);
+        break;
       case codes.VALUE_ALL_ENABLES:
         // this._log(`Received all enables '${command}'`);
         const enablesData = this._parseMessage(parts, queries.enablesParse, id);
@@ -1240,9 +1251,11 @@ export class NodeAttach extends BaseAttach {
         }
         for (const temp of paramsForTemps) {
           this._notifyTemp(temp[1], this.controllerID, temp[0], null, null, null);
+          // this._log(`Notifying web about tempertaure node:${this.controllerID} id:${temp[1]} active:${temp[0]}.`);
         }
         for (const energy of paramsForEnergy) {
           this._notifyEnergy(energy[1], this.controllerID, energy[0], null, null, null, null, null, null, null);
+          // this._log(`Notifying web about energy node:${this.controllerID} id:${energy[1]} active:${energy[0]}.`);
         }
         break;
       case codes.VALUE_ENERGY_ENABLE_ONE:
