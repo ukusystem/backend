@@ -567,3 +567,9 @@ export const CMD_UPDATE_END = 0x61f;
  * Format: CMD_TEMP_ALARM,sensor_id,temp_value,time
  */
 export const CMD_TEMP_ALARM = 0x620;
+
+/**
+ * @brief Send on temperature state change
+ * Format: VALUE_TEMP_CHANGED, sensor_id, state
+ */
+export const CMD_TEMP_CHANGED = 0x2a6;

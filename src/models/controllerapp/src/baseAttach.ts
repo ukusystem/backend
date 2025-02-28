@@ -1136,6 +1136,7 @@ export class NodeAttach extends BaseAttach {
         break;
       case codes.CMD_TEMP:
         // this._log(`Received temp: '${command}'`)
+        this.mirrorMessage(this._appendPart(command, this.controllerID.toString()), false);
         let oneTempOptional = this._parseMessage(parts, queries.longParse);
         // Print temperatures. Not practical since a lot of controllers will send data.
         if (!oneTempOptional) {
@@ -1179,6 +1180,9 @@ export class NodeAttach extends BaseAttach {
         // this._log("Received temperatures " + sb.toString())
         // this._log("Temperature time %d = %s", big.longValue(),
         // useful.formatTimestamp(big))
+        break;
+      case codes.CMD_TEMP_CHANGED:
+        this.mirrorMessage(this._appendPart(command, this.controllerID.toString()), true);
         break;
       case codes.CMD_TEMP_ALARM:
         const alarmData = this._parseMessage(parts, queries.alarmParse, id);
