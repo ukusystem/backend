@@ -1505,14 +1505,17 @@ export class NodeAttach extends BaseAttach {
         const date = useful.formatTimestamp(cardData[5].getInt());
         this._log(`(${date}) Card read. company ID = ${companyID} Number = ${serial} result = ${autorizado} admin = ${isAdmin} reader type = ${isEntrance > 0 ? 'Entrance' : 'Exit'}`);
 
-        // Set tickets as attended
+        // Select tickets attended
         const selectRes = await executeQuery<db2.GeneralNumber[]>(BaseAttach.formatQueryWithNode(queries.selectTicketToAttend, this.controllerID), [companyID, date, date]);
         if (selectRes) {
           for (const num of selectRes) {
+            // Set tickets as attended
             const updateRes = await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.updateTicketAttended, this.controllerID), [num.entero]);
             if (updateRes) {
               this._log(`Ticket ID = ${num.entero} set as attended`);
-              // Notify web
+              // Update in database. If ticket was in the controller, it was accepted, so this state can be set.
+              Main.updateTicketState(States.ATTENDED, num.entero, this.controllerID);
+              // Notify web?
             } else {
               this._log('ERROR Could not set ticket as attended');
             }

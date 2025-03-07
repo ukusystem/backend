@@ -483,8 +483,12 @@ export class Main {
     return [worker.nombre, worker.apellido, worker.telefono, worker.dni, worker.c_id, worker.co_id, ticketID, filename];
   }
 
-  private async saveTicketState(finalState: number, ticketID: number, nodeID: number) {
+  public static async updateTicketState(finalState: number, ticketID: number, nodeID: number) {
     await executeQuery(BaseAttach.formatQueryWithNode(queries.finishTicket, nodeID), [finalState, useful.getCurrentDate(), ticketID]);
+  }
+
+  private async saveTicketState(finalState: number, ticketID: number, nodeID: number) {
+    await Main.updateTicketState(finalState, ticketID, nodeID);
     this.log(`Final state of ticket ID = ${ticketID} : ${finalState}`);
   }
 
@@ -643,11 +647,11 @@ export class Main {
           // Can be cancelled by an admin or a guest
           case States.CANCELLED:
           case States.ABSENCE:
-          case States.ATTENDED:
+            // case States.ATTENDED:
             await this.saveTicketState(newAction, ticketID, nodeID);
-            if (newAction !== States.ATTENDED) {
-              this.removeTicket(nodeID, ticketID);
-            }
+            // if (newAction !== States.ATTENDED) {
+            this.removeTicket(nodeID, ticketID);
+            // }
             monitor = States.EXECUTED;
             break;
           default:
