@@ -960,6 +960,8 @@ export class NodeAttach extends BaseAttach {
 
   private chunkIterator: MyStringIterator | null = null;
 
+  private printFlag = false;
+
   /**
    * @deprecated
    */
@@ -1094,14 +1096,13 @@ export class NodeAttach extends BaseAttach {
       );
       // this._log("Keep alive request added")
     } else {
-      // this._log("Request not send")
-      // if(useful.timeInt() % 10 === 0){
-      //   if(this.printFlag){
-      //     console.log(this._keepAliveRequestSent)
-      //     this.printFlag = false
+      // if (useful.timeInt() % 10 === 0) {
+      //   if (this.printFlag) {
+      //     // this._log(`Request not send. Sent: ${this._keepAliveRequestSent} Empty: ${this.isBufferEmpty()} Last time: ${this.lastTimeMessageSent}`);
+      //     this.printFlag = false;
       //   }
-      // }else{
-      //   this.printFlag = true
+      // } else {
+      //   this.printFlag = true;
       // }
     }
   }
@@ -1203,13 +1204,13 @@ export class NodeAttach extends BaseAttach {
       case codes.CMD_TEMP_ALARM:
         const alarmData = this._parseMessage(parts, queries.alarmParse, id);
         if (!alarmData) {
-          this._log(`Received temperature alarm '${command}'`);
+          // this._log(`Received temperature alarm '${command}'`);
           break;
         }
-        const tempID = alarmData[0].getInt();
-        const tempValue = alarmData[1].getInt();
-        const tempTime = alarmData[2].getInt();
-        this._log(`Received temperature alarm id=${tempID} value=${tempValue} time=${tempTime}`);
+        // const tempID = alarmData[0].getInt();
+        // const tempValue = alarmData[1].getInt();
+        // const tempTime = alarmData[2].getInt();
+        // this._log(`Received temperature alarm id=${tempID} value=${tempValue} time=${tempTime}`);
         break;
       case codes.VALUE_ALL_ENABLES:
         this._log(`Received all enables '${command}'`);
@@ -1959,6 +1960,8 @@ export class NodeAttach extends BaseAttach {
           this._log(`ERROR Sending hello to controller ${useful.toHex(code)}`);
           return;
         }
+        // Set this after the controller proves that can receive/respond to messages
+        this.resetKeepAliveRequest();
         // Send all cards. Inactive cards will be send with an order to erase it in the
         // controller.
         // this._log("Sending cards");
@@ -2031,7 +2034,6 @@ export class NodeAttach extends BaseAttach {
       // console.log("Try connect node, close event")
       if (this.isLogged()) {
         this._log(`The node ID = ${this.controllerID} (${this.node}) closed its socket. Reconnecting ...`);
-        this.resetKeepAliveRequest();
         await this.insertNet(false);
         this.printKeyCount(selector);
         ManagerAttach.connectedManager?.addNodeState(false, this.controllerID);
