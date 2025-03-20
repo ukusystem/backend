@@ -11,13 +11,25 @@ import { UserNoficationController } from '../controllers/general/user.notificati
 import { MySQLNotificationRepository } from '../models/general/Notification/MySQLNotificationRepository';
 import { userNotificationParamIdSchema } from '../models/general/UserNotification/schemas/ParamIdSchema';
 import { createUserNotificationSchema } from '../models/general/UserNotification/schemas/CreateUserNotificationSchema';
+import { AccesoController } from '../controllers/general/acceso.controller';
+import { MySQLAccesoRepository } from '../models/general/Acceso/MySQLAccesoRepository';
+import { MySQLPersonalRespository } from '../models/general/personal/mysql.personal.repository';
+import { MySQLEquipoAccesoRepository } from '../models/general/equipoacceso/mysql.equipo.acceso.repository';
+import { paginationAccesoSchema } from '../models/general/Acceso/schemas/pagination.acceso.schema';
+import { updateAccesoBodySchema } from '../models/general/Acceso/schemas/UpdateAccesoSchema';
+import { accesoParamIdSchema } from '../models/general/Acceso/schemas/ParamIdSchema';
+import { createAccesoSchema } from '../models/general/Acceso/schemas/CreateAccesoSchema';
 
 const mysqlControladorRepository = new MySQLContraldorRepository();
 const mysqlUserNotificationRepository = new MySQLUserNotificationRepository();
 const mysqlNotificationRepository = new MySQLNotificationRepository();
+const mysqlAccesoRepository = new MySQLAccesoRepository();
+const mysqlPersonalRepository = new MySQLPersonalRespository();
+const mysqlEquipoAccesoRepository = new MySQLEquipoAccesoRepository();
 
 const controladorController = new ControladorController(mysqlControladorRepository);
 const userNoficationController = new UserNoficationController(mysqlUserNotificationRepository, mysqlNotificationRepository);
+const accesoController = new AccesoController(mysqlAccesoRepository, mysqlPersonalRepository, mysqlEquipoAccesoRepository);
 
 export const generalRoutes = Router();
 // ========== Controlador ==========
@@ -37,3 +49,15 @@ generalRoutes.get('/notifications/:nu_id', authenticate, rolChecker([UserRol.Adm
 generalRoutes.post('/notifications', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor, UserRol.Invitado]), requestValidator({ body: createUserNotificationSchema }), userNoficationController.create);
 // PATCH /notifications/:nu_id Actualizar un notificacion como leido.
 generalRoutes.patch('/notifications/:nu_id/read', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor, UserRol.Invitado]), requestValidator({ params: userNotificationParamIdSchema }), userNoficationController.setNotificationRead);
+
+// ========== Acceso ==========
+// GET	/accesos?limit=number&offset=number Listar todos los accesos por paginacion
+generalRoutes.get('/accesos', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ query: paginationAccesoSchema }), accesoController.listAccesosWithPersonalOffset);
+// GET /accesos/:a_id Obtener acceso por id
+generalRoutes.get('/accesos/:a_id', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ params: accesoParamIdSchema }), accesoController.singleAcceso);
+// POST	/accesos Crear una nueva acceso.
+generalRoutes.post('/accesos', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ body: createAccesoSchema }), accesoController.create);
+// PATCH /accesos/:a_id Actualizar un acceso.
+generalRoutes.patch('/accesos/:a_id', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ body: updateAccesoBodySchema, params: accesoParamIdSchema }), accesoController.update);
+// DELETE /accesos/:a_id Eliminar un acceso.
+generalRoutes.delete('/accesos/:a_id', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ params: accesoParamIdSchema }), accesoController.delete);

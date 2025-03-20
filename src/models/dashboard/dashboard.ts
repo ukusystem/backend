@@ -1,8 +1,9 @@
 import { RowDataPacket } from 'mysql2';
 import { MySQL2 } from '../../database/mysql';
-import { Controlador } from '../../types/db';
-import { handleErrorWithArgument, handleErrorWithoutArgument } from '../../utils/simpleErrorHandler';
+import { Controlador, RegistroAcceso } from '../../types/db';
+import { handleErrorWithArgument } from '../../utils/simpleErrorHandler';
 import dayjs from 'dayjs';
+import { Personal } from '../general/personal/personal.entity';
 
 interface IPropMethod {
   ctrl_id: Controlador['ctrl_id'];
@@ -14,18 +15,6 @@ interface IPropMethod {
 //   total: number;
 // }
 
-interface AccesoTarjeta {
-  a_id: number;
-  serie: string;
-  ea_id: number;
-  administrador: number;
-  p_id: number;
-  nombre: string;
-  apellido: string;
-}
-
-// interface TotalRowDataPacket extends RowDataPacket, ITotal {}
-interface TotalAccesoTarjetaRowData extends RowDataPacket, AccesoTarjeta {}
 interface AcumuladoKWHRowDataPacket extends RowDataPacket {
   potenciakwh: number;
   me_id: number;
@@ -53,6 +42,32 @@ interface MaxTemperaturaRowData extends RowDataPacket {
   serie: string;
   ubicacion: string;
 }
+
+interface TotalRowData extends RowDataPacket {
+  total: number;
+}
+interface MaxRowData extends RowDataPacket {
+  max: number;
+}
+
+export interface TotalDashboardResponse {
+  data: {
+    registers?: Record<any, any>;
+    total: number;
+  };
+  start_date?: string;
+  end_date?: string;
+}
+export interface MaxDashboardResponse {
+  data: {
+    registers?: Record<any, any>;
+    max: number;
+  };
+  start_date?: string;
+  end_date?: string;
+}
+
+interface RegAccesoPersonalRowData extends RowDataPacket, RegistroAcceso, Pick<Personal, 'nombre' | 'apellido' | 'foto'> {}
 
 export class Dashboard {
   static #NUM_PARTITION: number = 50;
@@ -85,23 +100,52 @@ export class Dashboard {
     return [];
   }, 'Dashboard.getTotalActivePinSalida');
 
-  static getTotalAlarmas = handleErrorWithArgument<{ data: { alarmas: Record<any, any>[]; total_alarma: number }; start_date: string; end_date: string }, IPropMethod>(async ({ ctrl_id, isMonthly, date }) => {
+  static async getTotalAlarmas({ ctrl_id, isMonthly, date }: IPropMethod): Promise<TotalDashboardResponse> {
     const { endDate, startDate, year } = Dashboard.getStartEndDate(date, isMonthly);
     // const finalTable = DashboardConfig.salida.has_yearly_tables ?`registrosalida${year}` :"registrosalida"
     const partitioning = `PARTITION (p${year % Dashboard.#NUM_PARTITION})`;
-    const totalAlarmas = await MySQL2.executeQuery<RowDataPacket[]>({ sql: `SELECT * FROM ${'nodo' + ctrl_id}.registrosalida ${partitioning} WHERE fecha BETWEEN '${startDate}' AND '${endDate}' AND estado = 1 AND alarma = 1` });
-    if (totalAlarmas.length > 0) return { data: { alarmas: totalAlarmas, total_alarma: totalAlarmas.length }, start_date: startDate, end_date: endDate };
-    return { data: { alarmas: [], total_alarma: 0 }, start_date: startDate, end_date: endDate };
-  }, 'Dashboard.getTotalAlarmas');
+    const totals = await MySQL2.executeQuery<RowDataPacket[]>({ sql: `SELECT COUNT(*) as total FROM ${'nodo' + ctrl_id}.registrosalida ${partitioning} WHERE fecha BETWEEN '${startDate}' AND '${endDate}' AND estado = 1 AND alarma = 1` });
+    return { data: { total: totals[0]?.total ?? 0 }, start_date: startDate, end_date: endDate };
+  }
 
-  static getTotalTarjeta = handleErrorWithoutArgument<{ total_tarjeta: number; data: AccesoTarjeta[] }>(async () => {
-    const totalTarjetas = await MySQL2.executeQuery<TotalAccesoTarjetaRowData[]>({
-      // sql: `SELECT accesotarjeta.serie , accesotarjeta.administrador  , c.contrata , c.descripcion FROM (SELECT * FROM general.acceso WHERE activo = 1 AND ea_id = 1) AS accesotarjeta INNER JOIN general.contrata c ON accesotarjeta.co_id = c.co_id`,
-      sql: `SELECT accesotarjeta.* , p.nombre , p.apellido FROM (SELECT * FROM general.acceso WHERE activo = 1 AND ea_id = 1) AS accesotarjeta INNER JOIN general.personal p ON accesotarjeta.p_id = p.p_id`,
+  static async countTotalActiveOutputPins({ ctrl_id, date, isMonthly }: IPropMethod): Promise<TotalDashboardResponse> {
+    const { endDate, startDate, year } = Dashboard.getStartEndDate(date, isMonthly);
+    const partitioning = `PARTITION (p${year % Dashboard.#NUM_PARTITION})`;
+    const totals = await MySQL2.executeQuery<TotalRowData[]>({ sql: `SELECT COUNT(*) as total FROM ${'nodo' + ctrl_id}.registrosalida ${partitioning} WHERE fecha BETWEEN '${startDate}' AND '${endDate}' AND estado = 1` });
+    return { data: { total: totals[0]?.total ?? 0 }, start_date: startDate, end_date: endDate };
+  }
+  static async listUsedCards({ ctrl_id, date, isMonthly, limit, offset }: IPropMethod & { limit: number; offset: number }) {
+    const { endDate, startDate } = Dashboard.getStartEndDate(date, isMonthly);
+    const usedCards = await MySQL2.executeQuery<RegAccesoPersonalRowData[]>({
+      sql: `SELECT ra.* , p.nombre , p.apellido , p.foto  FROM ${'nodo' + ctrl_id}.registroacceso ra  INNER JOIN general.acceso a  ON ra.serie = a.serie AND ra.p_id = a.p_id AND ra.ea_id = 1 AND ra.fecha BETWEEN '${startDate}' AND '${endDate}' INNER JOIN general.personal p ON ra.p_id = p.p_id ORDER BY ra.ra_id ASC LIMIT ? OFFSET ?`,
+      values: [limit, offset],
     });
-    if (totalTarjetas.length > 0) return { total_tarjeta: totalTarjetas.length, data: totalTarjetas };
-    return { total_tarjeta: 0, data: [] };
-  }, 'Dashboard.getTotalTarjeta');
+    return usedCards;
+  }
+  static async countTotalUsedCards({ ctrl_id, date, isMonthly }: IPropMethod): Promise<number> {
+    const { endDate, startDate } = Dashboard.getStartEndDate(date, isMonthly);
+    const totals = await MySQL2.executeQuery<TotalRowData[]>({
+      sql: `SELECT COUNT(*) as total  FROM ${'nodo' + ctrl_id}.registroacceso ra  INNER JOIN general.acceso a  ON ra.serie = a.serie AND ra.p_id = a.p_id AND ra.ea_id = 1 AND ra.fecha BETWEEN '${startDate}' AND '${endDate}' INNER JOIN general.personal p ON ra.p_id = p.p_id`,
+    });
+    return totals[0]?.total ?? 0;
+  }
+
+  static async countTotalAcceptedAttendedTickets({ ctrl_id, date, isMonthly }: IPropMethod): Promise<TotalDashboardResponse> {
+    const { endDate, startDate } = Dashboard.getStartEndDate(date, isMonthly);
+    const totals = await MySQL2.executeQuery<TotalRowData[]>({ sql: `SELECT COUNT(*) as total FROM ${'nodo' + ctrl_id}.registroticket  WHERE fechacomienzo BETWEEN '${startDate}' AND '${endDate}' AND ( estd_id = 2 OR estd_id = 21 ) ` });
+    return { data: { total: totals[0]?.total ?? 0 }, start_date: startDate, end_date: endDate };
+  }
+
+  static async countTotalAssignedCards(): Promise<TotalDashboardResponse> {
+    const totals = await MySQL2.executeQuery<TotalRowData[]>({ sql: `SELECT COUNT(*) as total FROM general.acceso WHERE activo = 1 AND ea_id = 1` });
+    return { data: { total: totals[0]?.total ?? 0 } };
+  }
+  static async generalMaxTemperature({ ctrl_id, date, isMonthly }: IPropMethod): Promise<MaxDashboardResponse> {
+    const { endDate, startDate, year } = Dashboard.getStartEndDate(date, isMonthly);
+    const partitioning = `PARTITION (p${year % Dashboard.#NUM_PARTITION})`;
+    const maxs = await MySQL2.executeQuery<MaxRowData[]>({ sql: `SELECT  MAX(valor) AS max FROM ${'nodo' + ctrl_id}.registrotemperatura ${partitioning}  WHERE fecha BETWEEN '${startDate}' AND '${endDate}'` });
+    return { data: { max: maxs[0]?.max ?? 0 }, start_date: startDate, end_date: endDate };
+  }
 
   static getCameraStates = handleErrorWithArgument<{ data: Record<any, any>[] }, Pick<Controlador, 'ctrl_id'>>(async ({ ctrl_id }) => {
     const camStates = await MySQL2.executeQuery<RowDataPacket[]>({
@@ -165,7 +209,7 @@ export class Dashboard {
     return { data: resultAccesos, start_date: startDate, end_date: endDate };
   }, 'Dashboard.getTotalAccesoTarjetaRemoto');
 
-  static getAcumuladoKWH = handleErrorWithArgument<Record<any, any>, IPropMethod>(async ({ ctrl_id, isMonthly, date }) => {
+  static async getAcumuladoKWH({ ctrl_id, date, isMonthly }: IPropMethod): Promise<TotalDashboardResponse> {
     const { endDate, startDate, year } = Dashboard.getStartEndDate(date, isMonthly);
     // const finalTable = DashboardConfig.energia.has_yearly_tables ?`registroenergia${year}` :"registroenergia"
     const partitioning = `PARTITION (p${year % Dashboard.#NUM_PARTITION})`;
@@ -189,8 +233,8 @@ export class Dashboard {
 
     const acumFinal = sumAcumulados.sumFinal - sumAcumulados.sumInitial > 0 ? sumAcumulados.sumFinal - sumAcumulados.sumInitial : 0;
 
-    return { acumulado: acumFinal, data: acumuladoKwh };
-  }, 'Dashboard.getAcumuladoKWH');
+    return { data: { total: acumFinal }, start_date: startDate, end_date: endDate };
+  }
 
   static getMaxSensorTemperatura = handleErrorWithArgument<{ data: MaxTemperaturaRowData[]; start_date: string; end_date: string }, IPropMethod>(async ({ ctrl_id, isMonthly, date }) => {
     const { endDate, startDate, year } = Dashboard.getStartEndDate(date, isMonthly);

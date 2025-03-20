@@ -5,6 +5,9 @@ import { getCamarasInfoSchema, getEquipoEntradaDisponibleSchema, getEquipoEntrad
 import { authenticate, rolChecker } from '../middlewares/auth.middleware';
 import { getListControllers } from '../controllers/smartmap/getListControladores';
 import { UserRol } from '../types/rol';
+import { controllerParamIdSchema } from '../schemas/controller/controllerParamIdSchema';
+import { getInputPins } from '../controllers/smartmap/getInputPins';
+import { getOutputPins } from '../controllers/smartmap/getOutputPins';
 
 export const smartMapRoutes = Router();
 
@@ -27,3 +30,8 @@ smartMapRoutes.get('/smartmap/equipossalida/:xctrl_id', authenticate, rolChecker
 
 // EquiposSalida GET "/smartmap/equipossalida/:xctrl_id/:xes_id"
 smartMapRoutes.get('/smartmap/equipossalida/:xctrl_id/:xes_id', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ params: getEquipoSalidaSchema }), getEquiposSalida);
+
+// nuevos
+
+smartMapRoutes.get('/controller/:ctrl_id/input-pins', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ params: controllerParamIdSchema }), getInputPins);
+smartMapRoutes.get('/controller/:ctrl_id/output-pins', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ params: controllerParamIdSchema }), getOutputPins);

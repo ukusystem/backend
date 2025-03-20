@@ -3,14 +3,14 @@ import { asyncErrorHandler } from '../../utils/asynErrorHandler';
 import { Dashboard, TotalDashboardResponse } from '../../models/dashboard/dashboard';
 import { dashboardLogger } from '../../services/loggers';
 
-export const countAlarma = asyncErrorHandler(async (req: Request, res: Response, _next: NextFunction) => {
+export const totalEnergyConsumption = asyncErrorHandler(async (req: Request, res: Response, _next: NextFunction) => {
   const { ctrl_id, date, monthly } = req.query as { ctrl_id: string; date: string; monthly: string };
   try {
-    const data = await Dashboard.getTotalAlarmas({ ctrl_id: Number(ctrl_id), date: date, isMonthly: monthly === 'true' });
+    const data = await Dashboard.getAcumuladoKWH({ ctrl_id: Number(ctrl_id), date: date, isMonthly: monthly === 'true' });
     const response: TotalDashboardResponse = data;
     res.json(response);
   } catch (error) {
-    dashboardLogger.error(`Error al obtener el total de alarmas en modo armado`, error);
+    dashboardLogger.error(`Error al obtener el total consumo de energia`, error);
     const responseError: TotalDashboardResponse = { data: { total: 0 } };
     res.json(responseError);
   }
