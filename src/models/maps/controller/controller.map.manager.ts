@@ -129,3 +129,18 @@ export class ControllerMapManager {
     }
   }
 }
+
+// (() => {
+//   const getRandomBinary = (): 0 | 1 => {
+//     return Math.random() < 0.5 ? 0 : 1;
+//   };
+
+//   setInterval(() => {
+//     const fieldsUpdate: Partial<ControllerData> = {
+//       conectado: getRandomBinary(),
+//       activo: 1,
+//     };
+//     console.log('Actualizando controlador: ', fieldsUpdate);
+//     ControllerMapManager.update(1, fieldsUpdate);
+//   }, 10000);
+// })();

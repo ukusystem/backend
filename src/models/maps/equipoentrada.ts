@@ -21,6 +21,7 @@ export class EquipoEntradaMapManager {
     const currEqEnt = EquipoEntradaMapManager.#equipos.get(ee_id);
     if (currEqEnt !== undefined) {
       // const currEqEntCopy = {...currEqEnt}
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { ee_id, ...fieldsFiltered } = filterUndefined<EquipoEntrada>(fieldsUpdate);
       Object.assign(currEqEnt, fieldsFiltered);
       // notify update (currEqEntCopy,fieldsFiltered)

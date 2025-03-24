@@ -11,13 +11,16 @@ import { v4 as uuidv4 } from 'uuid';
 import { getExtesionFile } from '../../utils/getExtensionFile';
 
 import { Ticket, Personal, Solicitante } from '../../models/controllerapp/src/ticket';
-import { onTicket } from '../../models/controllerapp/controller';
+import { onFinishTicket, onTicket } from '../../models/controllerapp/controller';
 import { genericLogger } from '../../services/loggers';
 import { RequestWithUser } from '../../types/requests';
 // import { UserRol } from '../../types/rol';
 import { TicketScheduleManager } from '../socket/ticket.schedule/ticket.schedule.manager';
 import { RegistroTicketObj } from '../socket/ticket.schedule/ticket.schedule.types';
 import { TicketState } from '../../types/ticket.state';
+import { UserRol } from '../../types/rol';
+import { FinishTicket } from '../../models/controllerapp/src/finishTicket';
+import { mqqtSerrvice } from '../../services/mqtt/MqttService';
 
 export const multerCreateTicketArgs: GeneralMulterMiddlewareArgs = {
   allowedMimeTypes: ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'],
@@ -133,16 +136,24 @@ export const createTicket = asyncErrorHandler(async (req: RequestWithUser, res: 
 
     if (formValues) {
       try {
-        // const stateTicket = user.rl_id === UserRol.Administrador || user.rl_id === UserRol.Usuario ? TicketState.Aceptado : TicketState.Esperando;
         const newTicket = new Ticket(archivosData, { ...formValues.solicitante }, formValues.personales);
         const response = await onTicket(newTicket);
         if (response !== undefined) {
           if (response.resultado) {
             // success
+            const stateTicket = user.rl_id === UserRol.Administrador || user.rl_id === UserRol.Gestor ? TicketState.Aceptado : TicketState.Esperando;
 
-            const newTicketObj: RegistroTicketObj = { ...formValues.solicitante, rt_id: response.id, estd_id: TicketState.Esperando }; // estado esperando (cambiar)
+            await onFinishTicket(new FinishTicket(stateTicket, ctrl_id, response.id)); // update ticket
+
+            const newTicketObj: RegistroTicketObj = { ...formValues.solicitante, rt_id: response.id, estd_id: stateTicket }; // estado esperando (cambiar)
             TicketScheduleManager.add(ctrl_id, newTicketObj);
-
+            if (user.rl_id === UserRol.Invitado) {
+              mqqtSerrvice.publisAdminNotification({
+                evento: 'ticket.requested',
+                titulo: 'Nueva Solicitud de Ticket',
+                mensaje: `Se ha solicitado un nuevo ticket (#${response.id}) por la contrata "${user.contrata}".`,
+              });
+            }
             return res.json({ success: true, message: 'Ticket creado correctamente.' });
           } else {
             console.log(response);

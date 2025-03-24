@@ -95,13 +95,17 @@ export class NodoCameraMapManager {
   }
 }
 
-// (()=>{
-//   setTimeout(() => {
-//     console.log("========Update CTRL_ID 4 :  Cam 6 --> 1 =====")
-//     NodoCameraMapManager.update(4,6,{conectado:1})
-//   }, 20000);
-//   setTimeout(() => {
-//     console.log("========Update CTRL_ID 5 :  Cam 6 --> 1 =====")
-//     NodoCameraMapManager.update(5,6,{conectado:1})
-//   }, 30000);
-// })()
+// (() => {
+//   const getRandomBinary = (): 0 | 1 => {
+//     return Math.random() < 0.5 ? 0 : 1;
+//   };
+
+//   setInterval(() => {
+//     const fieldsUpdate: Partial<Camara> = {
+//       conectado: getRandomBinary(),
+//       activo: 1,
+//     };
+//     console.log('Actualizando Camara: ', fieldsUpdate);
+//     NodoCameraMapManager.update(1, 3, fieldsUpdate);
+//   }, 10000);
+// })();

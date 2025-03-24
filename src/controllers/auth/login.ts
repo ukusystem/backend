@@ -5,6 +5,7 @@ import { Usuario } from '../../types/usuario';
 import { Auth } from '../../models/auth';
 import { CustomError } from '../../utils/CustomError';
 import { appConfig } from '../../configs';
+import { MqttService } from '../../services/mqtt/MqttService';
 
 interface IResponseLogin {
   status: number;
@@ -17,6 +18,10 @@ interface IData {
   access_token: string;
   refresh_token: string;
   user: IUserLoginData;
+  mqtt: {
+    user: string;
+    password: string;
+  } | null;
 }
 
 interface IUserLoginData {
@@ -89,6 +94,7 @@ export const login = asyncErrorHandler(async (req: Request, res: Response, next:
       access_token: accessToken,
       refresh_token: refreshToken,
       user: userWithoutPassword,
+      mqtt: MqttService.getUserCredentials(userFound.rl_id),
     },
   };
 

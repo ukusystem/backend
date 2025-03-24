@@ -1,19 +1,10 @@
 import { MySQL2 } from '../../../database/mysql';
 import { Init } from '../../../models/init';
+import { PinEntradaNotifyManager } from '../../../models/system/system.pinentrada.notify';
 import { genericLogger } from '../../../services/loggers';
 import { filterUndefined } from '../../../utils/filterUndefined';
 import { AlarmManager } from '../alarm';
-import {
-  MapControladorPinEntrada,
-  MapObserverPinEntrada,
-  MapPinEntrada,
-  PinEntradaAddUpdateDTO,
-  PinEntradaDTO,
-  PinEntradaDTORowData,
-  PinEntradaSocketDTO,
-  PinesEntradaObserver,
-  SocketPinEntrada,
-} from './pinentrada.types';
+import { MapControladorPinEntrada, MapObserverPinEntrada, MapPinEntrada, PinEntradaAddUpdateDTO, PinEntradaDTO, PinEntradaDTORowData, PinEntradaSocketDTO, PinesEntradaObserver, SocketPinEntrada } from './pinentrada.types';
 
 export class PinesSalidaSocketObserver implements PinesEntradaObserver {
   #socket: SocketPinEntrada;
@@ -89,6 +80,7 @@ export class PinEntradaManager {
     // notifications:
     PinEntradaManager.notifyListPinesEntrada(ctrl_id, data);
     AlarmManager.notifyPinEntrada(ctrl_id, data.pe_id, 'add');
+    PinEntradaNotifyManager.add(ctrl_id, data);
   }
 
   static #update(ctrl_id: number, pe_id_update: number, fieldsToUpdate: Partial<PinEntradaDTO>) {
@@ -96,6 +88,7 @@ export class PinEntradaManager {
     if (currController !== undefined) {
       const pinEntrada = currController.get(pe_id_update);
       if (pinEntrada !== undefined) {
+        const curPinEntrada = { ...pinEntrada };
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { pe_id, ...fieldsFiltered } = filterUndefined<PinEntradaDTO>(fieldsToUpdate);
 
@@ -111,6 +104,7 @@ export class PinEntradaManager {
 
         PinEntradaManager.notifyItemPinEntrada(ctrl_id, pinEntrada);
         AlarmManager.notifyPinEntrada(ctrl_id, pe_id_update, 'update');
+        PinEntradaNotifyManager.update(ctrl_id, curPinEntrada, fieldsFiltered);
       }
     }
   }
@@ -194,3 +188,14 @@ export class PinEntradaManager {
     }
   }
 }
+
+// (() => {
+//   const getBinary = () => {
+//     return Math.random() < 0.5 ? 0 : 1;
+//   };
+//   setInterval(() => {
+//     const updated: PinEntradaAddUpdateDTO = { pe_id: 1, pin: 1, activo: 1, descripcion: undefined, ee_id: undefined, estado: getBinary() };
+//     console.log('Actualizar pin entrada', updated);
+//     PinEntradaManager.add_update(1, updated);
+//   }, 10000);
+// })();

@@ -5,5 +5,7 @@ export enum TicketState {
   Rechazado = 4,
   Finalizado = 16,
   Anulado = 17,
-  NoAtendido = 18,
+  NoAtendido = 18, // eliminar
+  Asistido = 21,
+  Inasistencia = 22,
 }

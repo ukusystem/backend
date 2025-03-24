@@ -1,9 +1,8 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import dayjs from 'dayjs';
 import { MySQL2 } from '../../database/mysql';
 import { ResultSetHeader } from 'mysql2';
 import { genericLogger } from '../../services/loggers';
+import { InsertRecordActivity } from './audit.types';
 
 type FieldName = any;
 
@@ -30,6 +29,40 @@ export class AuditManager {
         console.log(error);
       }
     });
+  }
+
+  static async generalInsert(recordData: InsertRecordActivity) {
+    try {
+      const { nombre_tabla, id_registro, tipo_operacion, valores_anteriores, valores_nuevos, realizado_por } = recordData;
+      const currentTime = dayjs().format('YYYY-MM-DD HH:mm:ss');
+      await MySQL2.executeQuery<ResultSetHeader>({
+        sql: `INSERT INTO general.registro_actividad ( nombre_tabla , id_registro , tipo_operacion , valores_anteriores , valores_nuevos , realizado_por , fecha ) VALUES ( ? , ? , ? , ? , ? , ? , ? )`,
+        values: [nombre_tabla, id_registro, tipo_operacion, valores_anteriores === null ? null : JSON.stringify(valores_anteriores), valores_nuevos === null ? null : JSON.stringify(valores_nuevos), realizado_por, currentTime],
+      });
+    } catch (error) {
+      console.log(error);
+      genericLogger.error(`AuditManager | Error al insertar registro `, error);
+    }
+  }
+  static async generalMultipleInsert(records: InsertRecordActivity[]) {
+    try {
+      const currentTime = dayjs().format('YYYY-MM-DD HH:mm:ss');
+
+      const finalRecordsValues = records.flatMap((record) => {
+        const { nombre_tabla, id_registro, tipo_operacion, valores_anteriores, valores_nuevos, realizado_por } = record;
+        return [nombre_tabla, id_registro, tipo_operacion, valores_anteriores === null ? null : JSON.stringify(valores_anteriores), valores_nuevos === null ? null : JSON.stringify(valores_nuevos), realizado_por, currentTime];
+      });
+
+      const statementValue = records.map(() => `(?, ?, ?, ?, ?, ?, ?)`).join(', ');
+
+      await MySQL2.executeQuery<ResultSetHeader>({
+        sql: `INSERT INTO general.registro_actividad ( nombre_tabla , id_registro , tipo_operacion , valores_anteriores , valores_nuevos , realizado_por , fecha ) VALUES ${statementValue}`,
+        values: finalRecordsValues,
+      });
+    } catch (error) {
+      console.log(error);
+      genericLogger.error(`AuditManager | Error al insertar registro `, error);
+    }
   }
 }
 
@@ -63,6 +96,18 @@ export function getRecordAudit<T>(current: T, update: Partial<T>): RecordAudit {
       old_value: current[keyAssert],
       new_value: value,
     };
+
+    return result;
+  }, {});
+  return records;
+}
+export function getOldRecordValues<T>(current: T, update: Partial<T>): Partial<T> {
+  const records = Object.entries(update).reduce<Partial<T>>((prev, curr) => {
+    const result = prev;
+    const [key] = curr;
+    const keyAssert = key as keyof T;
+
+    result[keyAssert] = current[keyAssert];
 
     return result;
   }, {});

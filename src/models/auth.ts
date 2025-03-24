@@ -8,7 +8,7 @@ import { appConfig } from '../configs';
 import dayjs from 'dayjs';
 import { JwtEncription } from '../utils/jwt.encription';
 
-interface JwtPayload {
+export interface JwtPayload {
   iat: number;
   exp: number;
   id: number;

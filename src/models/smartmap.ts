@@ -17,6 +17,13 @@ interface EquipoEntradaInfoRowData extends RowDataPacket, EquipoEntradaInfo {}
 interface EquipoSalidaDisponibleRowData extends RowDataPacket, EquipoSalidaDisponible {}
 interface EquipoSalidaInfoRowData extends RowDataPacket, EquipoSalidaInfo {}
 
+interface InputPinRowData extends RowDataPacket, PinesEntrada {
+  detector: string;
+}
+interface OutputPinRowData extends RowDataPacket, PinesSalida {
+  actuador: string;
+}
+
 export class SmartMap {
   static getControladorInfoByCtrlId = handleErrorWithArgument<ControladorInfo | null, { ctrl_id: number }>(async ({ ctrl_id }) => {
     const controladorInfo = await MySQL2.executeQuery<ControladorInfoRowData[]>({
@@ -68,6 +75,21 @@ export class SmartMap {
     }
     return [];
   }, 'SmartMap.getEquiposEntradaByCtrlIdAndEquiEntId');
+
+  static async getInputPins(ctrl_id: number): Promise<InputPinRowData[]> {
+    const inputPins = await MySQL2.executeQuery<InputPinRowData[]>({
+      sql: `SELECT pe.* , ee.detector FROM ${'nodo' + ctrl_id}.pinesentrada pe INNER JOIN general.equipoentrada ee ON pe.ee_id = ee.ee_id WHERE pe.activo = 1`,
+    });
+
+    return inputPins;
+  }
+  static async getOutputPins(ctrl_id: number): Promise<OutputPinRowData[]> {
+    const outputPins = await MySQL2.executeQuery<OutputPinRowData[]>({
+      sql: `SELECT ps.* , es.actuador FROM ${'nodo' + ctrl_id}.pinessalida ps INNER JOIN general.equiposalida es ON ps.es_id = es.es_id WHERE ps.activo = 1`,
+    });
+
+    return outputPins;
+  }
 
   static getEquiposSalidaDisponibleByCtrlId = handleErrorWithArgument<EquipoSalidaDisponible[] | [], { ctrl_id: number }>(async ({ ctrl_id }) => {
     const equipSalDis = await MySQL2.executeQuery<EquipoSalidaDisponibleRowData[]>({ sql: `SELECT DISTINCT es.es_id , es.actuador FROM ${'nodo' + ctrl_id}.pinessalida ps INNER JOIN general.equiposalida es ON ps.es_id = es.es_id WHERE ps.activo =1` });

@@ -109,7 +109,7 @@ export class Ticket {
 
   static getSolicitante = handleErrorWithArgument<PersonalSolicitante | null, Pick<Personal, 'p_id'>>(async ({ p_id }) => {
     const personal = await MySQL2.executeQuery<PersonalSolicitanteRowData[]>({
-      sql: `SELECT p.p_id, p.nombre, p.telefono, p.dni, p.c_id , ca.cargo , p.co_id, co.contrata , p.foto, p.correo , p.activo FROM general.personal p INNER JOIN general.cargo ca ON p.c_id = ca.c_id INNER JOIN general.contrata co ON p.co_id = co.co_id WHERE p.p_id = ?`,
+      sql: `SELECT p.p_id, p.nombre, p.apellido, p.telefono, p.dni, p.c_id , ca.cargo , p.co_id, co.contrata , p.foto, p.correo , p.activo FROM general.personal p INNER JOIN general.cargo ca ON p.c_id = ca.c_id INNER JOIN general.contrata co ON p.co_id = co.co_id WHERE p.p_id = ?`,
       values: [p_id],
     });
 
@@ -121,7 +121,7 @@ export class Ticket {
 
   static getActividaPersonal = handleErrorWithArgument<ActividaPersonalDetail[], { ctrl_id: number; rt_id: number }>(async ({ ctrl_id, rt_id }) => {
     const actividadPersonal = await MySQL2.executeQuery<ActividaPersonalDetailRowData[]>({
-      sql: `SELECT ap.ap_id, ap.nombre, ap.telefono, ap.dni , ap.c_id, ca.cargo, ap.co_id, co.contrata, ap.rt_id, ap.foto FROM ${'nodo' + ctrl_id}.actividadpersonal ap INNER JOIN general.cargo ca ON ap.c_id = ca.c_id INNER JOIN general.contrata co ON ap.co_id = co.co_id WHERE ap.rt_id = ? `,
+      sql: `SELECT ap.ap_id, ap.nombre,ap.apellido, ap.telefono, ap.dni , ap.c_id, ca.cargo, ap.co_id, co.contrata, ap.rt_id, ap.foto FROM ${'nodo' + ctrl_id}.actividadpersonal ap INNER JOIN general.cargo ca ON ap.c_id = ca.c_id INNER JOIN general.contrata co ON ap.co_id = co.co_id WHERE ap.rt_id = ? `,
       values: [rt_id],
     });
 
