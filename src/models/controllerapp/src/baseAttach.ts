@@ -1515,7 +1515,7 @@ export class NodeAttach extends BaseAttach {
             if (updateRes) {
               this._log(`Ticket ID = ${num.entero} set as attended`);
               // Update in database. If ticket was in the controller, it was accepted, so this state can be set.
-              Main.updateTicketState(States.ATTENDED, num.entero, this.controllerID);
+              Main.updateTicketState(!isEntrance ? States.FINISHED : States.ATTENDED, num.entero, this.controllerID);
               // Notify web?
             } else {
               this._log('ERROR Could not set ticket as attended');
