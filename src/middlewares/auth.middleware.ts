@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { Auth, UserInfo } from '../models/auth';
+import { Auth, JwtPayload, UserInfo } from '../models/auth';
 import { asyncErrorHandler } from '../utils/asynErrorHandler';
 import { CustomError } from '../utils/CustomError';
 import { RequestWithUser } from '../types/requests';
@@ -71,15 +71,21 @@ export const socketAuthWithRoles = (allowedRoles: UserRol[]) => {
 
 export const authenticate = asyncErrorHandler(async (req: CustomRequest, res: Response, next: NextFunction) => {
   const accessTokenCookie: string | undefined = req.cookies[appConfig.cookie.access_token.name];
+  const refreshTokenCookie: string | undefined = req.cookies[appConfig.cookie.refresh_token.name];
   const accessTokenHeader: string | undefined = req.headers.authorization !== undefined ? req.headers.authorization.split(' ')[1] : undefined;
 
-  if (accessTokenCookie === undefined && accessTokenHeader === undefined) {
+  if (accessTokenCookie === undefined && accessTokenHeader === undefined && refreshTokenCookie === undefined) {
     return res.status(401).json({ message: 'Token de acceso no proporcionado' });
   }
 
-  const accesssToken = accessTokenCookie ?? accessTokenHeader;
+  const accesssToken = refreshTokenCookie ?? accessTokenCookie ?? accessTokenHeader;
 
-  const tokenPayload = await Auth.verifyAccessToken(accesssToken);
+  let tokenPayload: JwtPayload | null = null;
+  if (refreshTokenCookie) {
+    tokenPayload = await Auth.verifyRefreshToken(accesssToken);
+  } else {
+    tokenPayload = await Auth.verifyAccessToken(accesssToken);
+  }
 
   if (tokenPayload === null) {
     return res.status(401).json({ message: 'Token de acceso inválido o expirado' });
