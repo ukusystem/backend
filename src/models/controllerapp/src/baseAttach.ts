@@ -1524,7 +1524,7 @@ export class NodeAttach extends BaseAttach {
         this.mirrorMessage(this._appendPart(command, this.controllerID.toString()), true);
         break;
       case codes.CMD_ERR:
-        this._log(`Received internal error '${command}'`);
+        // this._log(`Received internal error '${command}'`);
         const errorData = this._parseMessage(parts, queries.valueParse);
         if (!errorData) break;
         const internalErrorCode = errorData[0].getInt();
@@ -1538,7 +1538,8 @@ export class NodeAttach extends BaseAttach {
             this._log('Error measuring all temperature sensors.');
             break;
           default:
-            this._log(`Type of internal error is unknown. Value ${useful.toHex(internalErrorCode)}`);
+            // this._log(`Type of internal error is unknown. Value ${useful.toHex(internalErrorCode)}`);
+            break;
         }
         break;
       case codes.CMD_HELLO_FROM_CTRL:
