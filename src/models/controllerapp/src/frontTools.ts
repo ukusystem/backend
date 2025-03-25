@@ -103,10 +103,11 @@ export async function generateThumbs(fileData: FileToThumb): Promise<ThumbData> 
 }
 
 /**
- * ONLY for development. Deprecated to avoid accidental use :)
+ * FOR DEVELOPMENT ONLY
+ * Deprecated for safety :)
  * @deprecated
  */
-export async function testThumb() {
+export async function test_createThumb() {
   const res1 = await generateThumbs({ filepath: 'C:/Users/hansg/Pictures/m.pdf', type: 'application/pdf' });
   // const res1 = await generateThumbs({ filepath: 'C:/Users/hansg/Pictures/j.png', type: 'image/png' });
   // const res1 = await generateThumbs({ filepath: 'C:/Users/hansg/Pictures/s.mp4', type: 'video/mp4' });
