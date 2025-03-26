@@ -22,7 +22,7 @@ interface FilterSintax {
 export class MySQLContrataRepository implements ContrataRepository {
   async create(data: CreateContrataDTO): Promise<Contrata> {
     const { contrata, r_id, descripcion } = data;
-    const result = await MySQL2.executeQuery<ResultSetHeader>({ sql: `INSERT INTO general.contrata ( contrata, r_id, descripcion , activo ) VALUES ( ? , ? , ? , 1 )`, values: [contrata, r_id, descripcion] });
+    const result = await MySQL2.executeQuery<ResultSetHeader>({ sql: `INSERT INTO general.contrata ( contrata, r_id, descripcion , activo, created_at, updated_at) VALUES ( ? , ? , ? , 1, NOW(), NOW() )`, values: [contrata, r_id, descripcion] });
 
     const newContrata: Contrata = { contrata, r_id, descripcion, activo: 1, co_id: result.insertId };
     return newContrata;
