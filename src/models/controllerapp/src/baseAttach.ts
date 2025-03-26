@@ -1506,23 +1506,29 @@ export class NodeAttach extends BaseAttach {
         const date = useful.formatTimestamp(cardData[5].getInt());
         this._log(`(${date}) Card read. company ID = ${companyID} Number = ${serial} result = ${autorizado} admin = ${isAdmin} reader type = ${isEntrance > 0 ? 'Entrance' : 'Exit'}`);
 
-        // Select tickets attended
-        const selectRes = await executeQuery<db2.GeneralNumber[]>(BaseAttach.formatQueryWithNode(queries.selectTicketToAttend, this.controllerID), [companyID, date, date]);
-        if (selectRes) {
-          for (const num of selectRes) {
-            // Set tickets as attended
-            const updateRes = await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.updateTicketAttended, this.controllerID), [num.entero]);
-            if (updateRes) {
-              this._log(`Ticket ID = ${num.entero} set as attended`);
-              // Update in database. If ticket was in the controller, it was accepted, so this state can be set.
-              Main.updateTicketState(!isEntrance ? States.FINISHED : States.ATTENDED, num.entero, this.controllerID);
-              // Notify web?
-            } else {
-              this._log('ERROR Could not set ticket as attended');
+        // Admins cannot attend a ticket nor finish it
+        if (!isAdmin) {
+          // Select tickets attended
+          const selectRes = await executeQuery<db2.GeneralNumber[]>(BaseAttach.formatQueryWithNode(queries.selectTicketToAttend, this.controllerID), [companyID, date, date]);
+          if (selectRes) {
+            for (const num of selectRes) {
+              // Set tickets as attended in the column 'asistencia'
+              const updateRes = await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.updateTicketAttended, this.controllerID), [num.entero]);
+              if (updateRes) {
+                this._log(`Ticket ID = ${num.entero} set as attended`);
+                // Update in database. If ticket was in the controller, it was accepted, so this state can be set.
+                if (!isEntrance) {
+                  Main.updateTicketState(States.FINISHED, num.entero, this.controllerID);
+                }
+                // Main.updateTicketState(!isEntrance ? States.FINISHED : States.ATTENDED, num.entero, this.controllerID);
+                // Notify web?
+              } else {
+                this._log('ERROR Could not set ticket as attended');
+              }
             }
+          } else {
+            this._log('ERROR Selecting tickets being attended');
           }
-        } else {
-          this._log('ERROR Selecting tickets being attended');
         }
 
         // Get info needed to register and notify
