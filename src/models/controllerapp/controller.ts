@@ -44,9 +44,11 @@ export function notifyCamDisconnect(ctrl_id: number, cam: Camara): void {
  * @deprecated
  */
 export async function test_deleteTickets() {
-  const q_conf_actividad = `
+  const q_conf_actividad_drop = `
     ALTER TABLE nodo%s.actividadpersonal
     DROP FOREIGN KEY fk_actividadpersonal_registroticket_rt_id;
+    `;
+  const q_conf_actividad_create_cascade = `
     ALTER TABLE nodo%s.actividadpersonal 
     ADD CONSTRAINT fk_actividadpersonal_registroticket_rt_id
       FOREIGN KEY (rt_id)
@@ -54,9 +56,7 @@ export async function test_deleteTickets() {
       ON DELETE CASCADE
       ON UPDATE RESTRICT;
   `;
-  const q_conf_actividad_revert = `
-    ALTER TABLE nodo%s.actividadpersonal 
-    DROP FOREIGN KEY fk_actividadpersonal_registroticket_rt_id;
+  const q_conf_actividad_create_restrict = `
     ALTER TABLE nodo%s.actividadpersonal 
     ADD CONSTRAINT fk_actividadpersonal_registroticket_rt_id
       FOREIGN KEY (rt_id)
@@ -64,9 +64,11 @@ export async function test_deleteTickets() {
       ON DELETE RESTRICT
       ON UPDATE RESTRICT;
   `;
-  const q_conf_archivo = `
+  const q_conf_archivo_drop = `
     ALTER TABLE nodo%s.archivoticket 
     DROP FOREIGN KEY fk_archivoticket_registroticket_rt_id;
+  `;
+  const q_conf_archivo_create_cascade = `
     ALTER TABLE nodo%s.archivoticket 
     ADD CONSTRAINT fk_archivoticket_registroticket_rt_id
       FOREIGN KEY (rt_id)
@@ -74,9 +76,7 @@ export async function test_deleteTickets() {
       ON DELETE CASCADE
       ON UPDATE RESTRICT;
   `;
-  const q_conf_archivo_revert = `
-    ALTER TABLE nodo%s.archivoticket 
-    DROP FOREIGN KEY fk_archivoticket_registroticket_rt_id;
+  const q_conf_archivo_create_restrict = `
     ALTER TABLE nodo%s.archivoticket 
     ADD CONSTRAINT fk_archivoticket_registroticket_rt_id
       FOREIGN KEY (rt_id)
@@ -87,23 +87,34 @@ export async function test_deleteTickets() {
   const q_delete = `
     DELETE FROM nodo%s.registroticket WHERE rt_id>0;
   `;
-  let counter = 1;
-  const nodeStart = 2;
-  const nodeEnd = 104;
-  let currNode = nodeStart;
-  while (currNode < nodeEnd) {
-    await executeQuery<ResultSetHeader>(util.format(q_conf_actividad, currNode, currNode, currNode));
-    await executeQuery<ResultSetHeader>(util.format(q_conf_archivo, currNode, currNode, currNode));
+  let counter = 0;
+  // const nodeStart = 2;
+  // const nodeEnd = 104;
+
+  const nodeIDs: number[] = [1];
+  // for (let i = 2; i <= 104; i++) {
+  //   nodeIDs.push(i);
+  // }
+  for (const currNode of nodeIDs) {
+    await executeQuery<ResultSetHeader>(util.format(q_conf_actividad_drop, currNode));
+    await executeQuery<ResultSetHeader>(util.format(q_conf_actividad_create_cascade, currNode, currNode));
+
+    await executeQuery<ResultSetHeader>(util.format(q_conf_archivo_drop, currNode));
+    await executeQuery<ResultSetHeader>(util.format(q_conf_archivo_create_cascade, currNode, currNode));
+
     await executeQuery<ResultSetHeader>(util.format(q_delete, currNode));
-    await executeQuery<ResultSetHeader>(util.format(q_conf_actividad_revert, currNode, currNode, currNode));
-    await executeQuery<ResultSetHeader>(util.format(q_conf_archivo_revert, currNode, currNode, currNode));
-    currNode = currNode + 1;
+
+    await executeQuery<ResultSetHeader>(util.format(q_conf_actividad_drop, currNode));
+    await executeQuery<ResultSetHeader>(util.format(q_conf_actividad_create_restrict, currNode, currNode));
+
+    await executeQuery<ResultSetHeader>(util.format(q_conf_archivo_drop, currNode));
+    await executeQuery<ResultSetHeader>(util.format(q_conf_archivo_create_restrict, currNode, currNode));
     counter = counter + 1;
     if (counter % 50 === 0) {
       console.log(`Deleted from ${counter} tables`);
     }
   }
-  console.log(`Finished`);
+  console.log(`Finished ${counter} operations`);
 }
 
 /**
@@ -113,12 +124,8 @@ export async function test_deleteTickets() {
  * @deprecated
  */
 export async function test_insertFakeTickets() {
-  let counter = 1;
-  const q = `
-    INSERT INTO nodo1.registroticket (telefono, correo, descripcion, fechacomienzo, fechatermino, estd_id, fechaestadofinal, 
-    fechacreacion, prioridad, p_id, tt_id, sn_id, enviado, co_id, asistencia) 
-    VALUE (?,?,?,?,?,?,?,?,?,?,?,1,1,?,?);
-  `;
+  let counter = 0;
+  let supposedTicketID = 1000;
   const startDate = 1735707600;
   let currStart = startDate;
   const ticketSpan = 3600 * 2;
@@ -127,7 +134,48 @@ export async function test_insertFakeTickets() {
   const emails = ['mortizc@hotmail.com', 'evelyndc_10@hotndjd.com', 'antony@pruebas.com', 'miguel@pruebas.com', 'mig_1294@hotmail.com', 'hans.gutierrez.davila@uni.pe', 'darlynnn@hotmail.com'];
   const states0 = [4, 18, 2, 3];
   const states1 = [16, 2, 3];
-  const contrataPersonal = [
+  const personal = new Map<number, any>();
+  personal.set(1, {
+    name: 'Miguel',
+    last: 'Ortíz Carhuapoma',
+    phone: 987654321,
+    dni: 87654321,
+    role: 13,
+    photo: 'photos/registered\\foto1.png',
+  });
+  personal.set(2, {
+    name: 'Hans',
+    last: 'Gutiérrez Dávila',
+    phone: 987654322,
+    dni: 87654322,
+    role: 12,
+    photo: 'photos/registered\\foto2.png',
+  });
+  personal.set(3, {
+    name: 'Anthony',
+    last: 'Jaramillo Aranda',
+    phone: 987654323,
+    dni: 87654323,
+    role: 15,
+    photo: 'photos/registered\\foto3.png',
+  });
+  personal.set(4, {
+    name: 'Evelyn',
+    last: 'De la cruz Vargas',
+    phone: 987654324,
+    dni: 87654324,
+    role: 14,
+    photo: 'photos/registered\\foto4.png',
+  });
+  personal.set(5, {
+    name: 'Darlyn',
+    last: 'Narciso Narciso',
+    phone: 987654325,
+    dni: 87654325,
+    role: 11,
+    photo: 'photos/registered\\foto5.png',
+  });
+  const contrataPersonalID = [
     {
       id: 2,
       p_id: [3],
@@ -168,13 +216,23 @@ export async function test_insertFakeTickets() {
     return a[Math.floor(r * a.length)];
   };
 
+  const q_ticket = `
+    INSERT INTO nodo1.registroticket (telefono, correo, descripcion, fechacomienzo, fechatermino, estd_id, fechaestadofinal, 
+    fechacreacion, prioridad, p_id, tt_id, sn_id, enviado, co_id, asistencia) 
+    VALUE (?,?,?,?,?,?,?,?,?,?,?,1,1,?,?);
+  `;
+  const q_actividad = `
+    INSERT INTO nodo1.actividadpersonal (nombre, apellido, telefono, dni, c_id, co_id, rt_id, foto) 
+    VALUES (?,?,?,?,?,?,?,?);
+  `;
   while (currStart < endDate) {
     const r1 = Math.random();
     const b = r1 > 0.5;
     const r2 = Math.random();
-    const c = getRandItem(contrataPersonal, r1);
+    const c = getRandItem(contrataPersonalID, r1);
     const t = getRandItem(tipoDesc, r1);
-    await executeQuery<ResultSetHeader>(q, [
+    const lead_id = getRandItem(c.p_id, r1);
+    await executeQuery<ResultSetHeader>(q_ticket, [
       Math.floor(r1 * 99999999 + 900000000),
       getRandItem(emails, r1),
       getRandItem(t.desc, r2),
@@ -184,12 +242,15 @@ export async function test_insertFakeTickets() {
       useful.formatTimestamp(currStart + ticketSpan),
       useful.formatTimestamp(currStart - 3600 * 8),
       Math.floor(r1 * 3) + 1,
-      getRandItem(c.p_id, r1),
+      lead_id,
       t.id,
       c.id,
       b ? 1 : 0,
     ]);
+    const p = personal.get(lead_id);
+    await executeQuery(q_actividad, [p.name, p.last, p.phone, p.dni, p.role, c.id, supposedTicketID, p.photo]);
     currStart = currStart + startStep;
+    supposedTicketID = supposedTicketID + 1;
     counter = counter + 1;
     if (counter % 50 === 0) {
       console.log(`Inserted ${counter} tickets`);
