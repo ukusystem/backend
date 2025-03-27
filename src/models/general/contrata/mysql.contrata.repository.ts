@@ -78,11 +78,13 @@ export class MySQLContrataRepository implements ContrataRepository {
       values: [...(rubroFilter?.values || []), limit, offset],
     });
 
-    return contratas.map(({ contrata, descripcion, correo, activo, co_id, r_id, rubro, total_personal }) => ({
+    return contratas.map(({ contrata, descripcion, correo, activo, created_at, updated_at, co_id, r_id, rubro, total_personal }) => ({
       contrata,
       descripcion,
       correo,
       activo,
+      created_at,
+      updated_at,
       co_id,
       r_id,
       rubro: { r_id, rubro },
