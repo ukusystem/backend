@@ -2523,6 +2523,7 @@ export class ManagerAttach extends BaseAttach {
                 case codes.VALUE_MODE:
                 case codes.VALUE_SD_TECH:
                 case codes.VALUE_VOLTAGE:
+                case codes.VALUE_PROTOCOL:
                   // Node dependent commands
                   const targetNodeData = this._parseMessage(parts, queries.idParse, id);
                   if (!targetNodeData) break;
@@ -2686,6 +2687,7 @@ export class ManagerAttach extends BaseAttach {
                     case codes.VALUE_MODE:
                     case codes.VALUE_SD_TECH:
                     case codes.VALUE_VOLTAGE:
+                    case codes.VALUE_PROTOCOL:
                     case codes.VALUE_DELAY_TO_ARM:
                     case codes.VALUE_TICKET_DELAY_TO_ARM:
                       this._log(`Received config set command for controller 0x${useful.toHex(valueToSet)}. Received '${command}'`);
@@ -2842,8 +2844,8 @@ export class ManagerAttach extends BaseAttach {
       // The timeout generates an error in the callback?
       try {
         cp.execSync(
-          `cmd.exe /c mysqldump -u ${appConfig.db.user} -p${appConfig.db.password} nodo | mysql -u ${appConfig.db.user} -p${appConfig.db.password} ${newNode}`,
-          // `cmd.exe /c mysqldump -u root -padmin nodo | mysql -u root -padmin ${newNode}`,
+          `cmd.exe /c mysqldump -u ${appConfig.db.user} -p${appConfig.db.password} --protocol=TCP -P ${appConfig.db.port} nodo | mysql -u ${appConfig.db.user} -p${appConfig.db.password} --protocol=TCP -P ${appConfig.db.port} ${newNode}`,
+          // mysqldump -u root -padmin --protocol=TCP -P 3307 nodo | mysql -u root -padmin --protocol=TCP -P 3307 nodo1
           { timeout: BaseAttach.PROCESS_TIMEOUT },
         );
       } catch (e) {
