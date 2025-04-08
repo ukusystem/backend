@@ -2842,8 +2842,8 @@ export class ManagerAttach extends BaseAttach {
       // The timeout generates an error in the callback?
       try {
         cp.execSync(
-          `cmd.exe /c mysqldump -u ${appConfig.db.user} -p${appConfig.db.password} nodo | mysql -u ${appConfig.db.user} -p${appConfig.db.password} ${newNode}`,
-          // `cmd.exe /c mysqldump -u root -padmin nodo | mysql -u root -padmin ${newNode}`,
+          `cmd.exe /c mysqldump -u ${appConfig.db.user} -p${appConfig.db.password} --protocol=TCP -P ${appConfig.db.port} nodo | mysql -u ${appConfig.db.user} -p${appConfig.db.password} --protocol=TCP -P ${appConfig.db.port} ${newNode}`,
+          // mysqldump -u root -padmin --protocol=TCP -P 3307 nodo | mysql -u root -padmin --protocol=TCP -P 3307 nodo1
           { timeout: BaseAttach.PROCESS_TIMEOUT },
         );
       } catch (e) {
