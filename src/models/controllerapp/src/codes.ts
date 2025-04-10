@@ -5,7 +5,7 @@ export const MAX_MSG_LENGTH = 511; // The maximum message length without the nul
 // Separators
 
 export const SEP_EOL = '|'; // Separator of messages. Messages are composed of tokens. ASCII 124
-export const SEP_CMD = '`'; // Separator of tokens. ASCII 96
+export const SEP_CMD = '&'; // Separator of tokens. ASCII 96
 export const SEP_MTY = '~'; // Identifier of empty content (to be filled by receiver). ASCII 126
 export const SEP_LST = '_'; // Separator of items in a list
 export const SEP_EOL_2 = '|'; // Alternate separator
@@ -579,4 +579,4 @@ export const CMD_TEMP_ALARM = 0x620;
  * @brief Send on temperature state change
  * Format: VALUE_TEMP_CHANGED, sensor_id, state
  */
-export const CMD_TEMP_CHANGED = 0x2a6;
+export const CMD_TEMP_CHANGED = 0x621;

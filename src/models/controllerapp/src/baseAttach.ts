@@ -1394,7 +1394,10 @@ export class NodeAttach extends BaseAttach {
       case codes.VALUE_SECURITY_TICKET:
       case codes.VALUE_MODE:
       case codes.VALUE_VOLTAGE:
-        this.mirrorMessage(this._appendPart(command, this.controllerID.toString()), true);
+      case codes.VALUE_PROTOCOL:
+        if (cmdOrValue !== codes.VALUE_PROTOCOL) {
+          this.mirrorMessage(this._appendPart(command, this.controllerID.toString()), true);
+        }
 
         // Parse event data
         const data = this._parseMessage(parts, queries.valueDateParse, id);
@@ -1451,6 +1454,9 @@ export class NodeAttach extends BaseAttach {
                 break;
             }
             this.insertSilent('sd event', [useful.formatTimestamp(eventDate), state], queries.insertSD, this.controllerID, false);
+            break;
+          case codes.VALUE_PROTOCOL:
+            this._log(`Protocol of node ID ${this.controllerID} changed to ${useful.toHex(value)}`);
             break;
         }
         break;
