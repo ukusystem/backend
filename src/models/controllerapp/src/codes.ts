@@ -9,6 +9,7 @@ export const SEP_CMD = '&'; // Separator of tokens. ASCII 96
 export const SEP_MTY = '~'; // Identifier of empty content (to be filled by receiver). ASCII 126
 export const SEP_LST = '_'; // Separator of items in a list
 export const SEP_EOL_2 = '|'; // Alternate separator
+export const SEP_SIM = '^'; // Identifier of sim commands. ASCII 94
 
 export const AIO_OK = 0x000; // Successfully executed
 export const ERR = 0x001; // General error
