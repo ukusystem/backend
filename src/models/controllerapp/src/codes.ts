@@ -5,10 +5,11 @@ export const MAX_MSG_LENGTH = 511; // The maximum message length without the nul
 // Separators
 
 export const SEP_EOL = '|'; // Separator of messages. Messages are composed of tokens. ASCII 124
-export const SEP_CMD = '`'; // Separator of tokens. ASCII 96
+export const SEP_CMD = '&'; // Separator of tokens. ASCII 38
 export const SEP_MTY = '~'; // Identifier of empty content (to be filled by receiver). ASCII 126
-export const SEP_LST = '_'; // Separator of items in a list
+export const SEP_LST = '_'; // Separator of items in a list. ASCII 95
 export const SEP_EOL_2 = '|'; // Alternate separator
+export const SEP_SIM = '^'; // Identifier of sim commands. ASCII 94
 
 export const AIO_OK = 0x000; // Successfully executed
 export const ERR = 0x001; // General error
@@ -251,6 +252,9 @@ export const VALUE_VERSION = 0x2a2; // Request versionç
 export const VALUE_FIRMWARE_ADD = 0x2a3; // Send a new firmware
 export const VALUE_ALARM_THRESHOLD = 0x2a4; // Set or get the alarm threshold
 export const VALUE_ALARM_PERIOD = 0x2a5; // Set or get the alarm period
+export const VALUE_PROTOCOL = 0x2a6; // Get the current protocol used to communicate.
+export const VALUE_TCP = 0x2a7; // TCP Protocol
+export const VALUE_GSM = 0x2a8; // GSM Protocol
 
 export const VALUE_SOCKET_CLOSED = 0x400; // Socket was closed
 export const VALUE_AUTHORIZED = 0x401; // Card authorized
@@ -576,4 +580,4 @@ export const CMD_TEMP_ALARM = 0x620;
  * @brief Send on temperature state change
  * Format: VALUE_TEMP_CHANGED, sensor_id, state
  */
-export const CMD_TEMP_CHANGED = 0x2a6;
+export const CMD_TEMP_CHANGED = 0x621;
