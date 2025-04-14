@@ -73,12 +73,15 @@ export class MySQLContrataRepository implements ContrataRepository {
 
   async findByOffsetPagination(limit: number, offset: number, filters?: PaginationContrata['filters']): Promise<ContrataWithRubro[]> {
     const rubroFilter = this.getRubroFilter(filters, 'r');
+    const nombreFilter = filters?.nombre ? ` AND c.contrata LIKE ? ` : '';
+
     const contratas = await MySQL2.executeQuery<ContrataRubroRowData[]>({
-      sql: ` SELECT  c.*,  r.rubro, COUNT(p.co_id) AS total_personal FROM  general.contrata c INNER JOIN  general.rubro r ON c.r_id = r.r_id AND c.activo = 1 ${rubroFilter !== undefined ? ` AND ${rubroFilter.query} ` : ''} LEFT JOIN  general.personal p ON p.co_id = c.co_id AND p.activo = 1 GROUP BY  c.co_id, r.r_id ORDER BY  c.co_id DESC LIMIT ? OFFSET ?`,
-      values: [...(rubroFilter?.values || []), limit, offset],
+      sql: ` SELECT  c.*,  r.rubro, COUNT(p.co_id) AS total_personal, COUNT(u.u_id) AS total_cuentas_activas, COUNT(a.a_id) AS total_tarjetas FROM  general.contrata c INNER JOIN  general.rubro r ON c.r_id = r.r_id AND c.activo = 1 ${rubroFilter !== undefined ? ` AND ${rubroFilter.query} ` : ''}   ${nombreFilter} LEFT JOIN  general.personal p ON p.co_id = c.co_id AND p.activo = 1 LEFT JOIN general.usuario u ON u.p_id = p.p_id AND u.activo = 1 LEFT JOIN general.acceso a ON a.p_id = p.p_id AND a.activo = 1  
+ GROUP BY  c.co_id, r.r_id ORDER BY  c.co_id DESC LIMIT ? OFFSET ?`,
+      values: [...(rubroFilter?.values || []), ...(filters?.nombre ? [`%${filters.nombre}%`] : []), limit, offset],
     });
 
-    return contratas.map(({ contrata, descripcion, correo, activo, created_at, updated_at, co_id, r_id, rubro, total_personal }) => ({
+    return contratas.map(({ contrata, descripcion, correo, activo, created_at, updated_at, co_id, r_id, rubro, total_personal, total_cuentas_activas, total_tarjetas }) => ({
       contrata,
       descripcion,
       correo,
@@ -89,6 +92,8 @@ export class MySQLContrataRepository implements ContrataRepository {
       r_id,
       rubro: { r_id, rubro },
       total_personal,
+      total_cuentas_activas,
+      total_tarjetas,
     }));
   }
 
@@ -100,12 +105,12 @@ export class MySQLContrataRepository implements ContrataRepository {
 
   async findWithRubroById(co_id: number): Promise<ContrataWithRubro | undefined> {
     const contratas = await MySQL2.executeQuery<ContrataRubroRowData[]>({
-      sql: ` SELECT  c.*,  r.rubro, COUNT(p.co_id) AS total_personal FROM  general.contrata c INNER JOIN  general.rubro r ON c.r_id = r.r_id AND c.activo = 1 AND c.co_id = ? LEFT JOIN  general.personal p ON p.co_id = c.co_id AND p.activo = 1 GROUP BY  c.co_id, r.r_id LIMIT 1`,
+      sql: ` SELECT  c.*,  r.rubro, COUNT(p.co_id) AS total_personal, COUNT(u.u_id) AS total_cuentas_activas, COUNT(a.a_id) AS total_tarjetas FROM  general.contrata c INNER JOIN  general.rubro r ON c.r_id = r.r_id AND c.activo = 1 AND c.co_id = ? LEFT JOIN  general.personal p ON p.co_id = c.co_id AND p.activo = 1 LEFT JOIN general.usuario u ON u.p_id = p.p_id AND u.activo = 1 LEFT JOIN general.acceso a ON a.p_id = p.p_id AND a.activo = 1 GROUP BY  c.co_id, r.r_id LIMIT 1`,
       values: [co_id],
     });
     if (contratas[0]) {
-      const { contrata, descripcion, activo, co_id, r_id, rubro, total_personal } = contratas[0];
-      return { contrata, descripcion, activo, co_id, r_id, rubro: { r_id, rubro }, total_personal };
+      const { contrata, descripcion, activo, co_id, r_id, rubro, total_personal, total_cuentas_activas, total_tarjetas } = contratas[0];
+      return { contrata, descripcion, activo, co_id, r_id, rubro: { r_id, rubro }, total_personal, total_cuentas_activas, total_tarjetas };
     }
     return undefined;
   }

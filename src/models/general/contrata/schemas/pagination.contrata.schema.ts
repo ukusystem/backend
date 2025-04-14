@@ -3,6 +3,7 @@ import z from 'zod';
 const rubrosSchema = z
   .object({
     rubros: z.array(z.coerce.number({ invalid_type_error: 'rubro_id debe ser un numero' }).int("'rubro_id' debe ser un numero entero").gte(0, "'rubro_id' deber ser mayor o igual a 0")).optional(),
+    nombre: z.string().optional(),
   })
   .optional();
 export const paginationContrataSchema = z.object({

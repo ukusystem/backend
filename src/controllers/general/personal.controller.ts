@@ -18,7 +18,7 @@ import { CreatePersonalDTO } from '../../models/general/personal/dtos/create.per
 import { PersonalMapManager } from '../../models/maps';
 import { updatePersonalBodySchema } from '../../models/general/personal/schemas/update.personal.schema';
 import { UpdatePersonalDTO } from '../../models/general/personal/dtos/update.personal.dto';
-import { Personal } from '../../models/general/personal/personal.entity';
+import { Personal, PersonalWithOcupation } from '../../models/general/personal/personal.entity';
 import { CustomError } from '../../utils/CustomError';
 import { Usuario } from '../../models/general/usuario/user.entity';
 import { UserRol } from '../../types/rol';
@@ -63,6 +63,8 @@ export class PersonalController {
     const relativePath = path.relative(`${PersonalController.BASE_PROFILEPHOTO_RELATIVE_DIR}`, movePath); // photos\41862f90-7f8f-4c89-bae6-a45c74700b68.jpeg
 
     const finalRelativePath = relativePath.split(path.sep).join(path.posix.sep); // photos/41862f90-7f8f-4c89-bae6-a45c74700b68.jpeg
+    console.log('Moving file to:', movePath);
+    console.log('Moving file to relative:', finalRelativePath);
 
     return finalRelativePath;
   }
@@ -102,9 +104,15 @@ export class PersonalController {
       if (user === undefined) {
         return res.status(401).json({ message: 'No autorizado' });
       }
+      console.log('estoy aqui');
 
       try {
+        console.log(req.body);
         const formParse = JSON.parse(req.body[PersonalController.CREATE_BODY_FIELDNAME]);
+
+        if (!formParse) {
+          return res.status(400).json({ message: 'El cuerpo de la solicitud está vacío o mal formado' });
+        }
         const resultParse = createPersonalSchema.safeParse(formParse);
 
         if (!resultParse.success) {
@@ -207,6 +215,8 @@ export class PersonalController {
           this.#deleteTemporalFiles(req);
           return res.status(400).json({ success: false, message: 'Personal no disponible' });
         }
+        console.log(req.body);
+        console.log(req.files);
 
         const formParse = JSON.parse(req.body[PersonalController.CREATE_BODY_FIELDNAME]);
 
@@ -255,6 +265,8 @@ export class PersonalController {
           if (Array.isArray(filesUploaded)) {
             const file = filesUploaded[0]; // expected only one
             if (file !== undefined) {
+              console.log('aquitengofile');
+
               finalPersonalUpdateDTO.foto = this.#moveMulterFilePhoto(file);
             }
           } else {
@@ -262,6 +274,8 @@ export class PersonalController {
             if (multerFiles !== undefined) {
               const file = multerFiles[0]; // expected only one
               if (file !== undefined) {
+                console.log('aquitengofile2');
+
                 finalPersonalUpdateDTO.foto = this.#moveMulterFilePhoto(file);
               }
             }
@@ -419,6 +433,33 @@ export class PersonalController {
       const total = await this.personal_repository.countTotal();
 
       const response: OffsetPaginationResponse<Personal> = {
+        data: personales,
+        meta: {
+          limit: final_limit,
+          offset: final_offset,
+          currentCount: personales.length,
+          totalCount: total,
+        },
+      };
+
+      return res.json(response);
+    });
+  }
+
+  get listPersonalesPorcontrataOffset() {
+    return asyncErrorHandler(async (req: Request, res: Response, _next: NextFunction) => {
+      const { offset, limit, name } = req.query as { limit: string | undefined; offset: string | undefined; name: string | undefined };
+
+      const co_id = Number((req.params as { co_id: string }).co_id);
+
+      const final_limit: number = limit !== undefined ? Math.min(Math.max(Number(limit), 0), 100) : 50; // default limit : 10 ,  max limit : 100
+
+      const final_offset: number = offset !== undefined ? Number(offset) : 0; // default offset : 0
+
+      const personales = await this.personal_repository.findMembersByContrataId(co_id, name);
+      const total = await this.personal_repository.countTotal();
+
+      const response: OffsetPaginationResponse<PersonalWithOcupation> = {
         data: personales,
         meta: {
           limit: final_limit,

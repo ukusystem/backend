@@ -15,10 +15,18 @@ import { AccesoController } from '../controllers/general/acceso.controller';
 import { MySQLAccesoRepository } from '../models/general/Acceso/MySQLAccesoRepository';
 import { MySQLPersonalRespository } from '../models/general/personal/mysql.personal.repository';
 import { MySQLEquipoAccesoRepository } from '../models/general/equipoacceso/mysql.equipo.acceso.repository';
+import { MySQLRubroRepository } from '../models/general/rubro/mysql.rubro.repository';
+import { MySQLRolRepository } from '../models/general/rol/mysql.rol.repository';
+import { MySQLCargoRepository } from '../models/general/cargo/mysql.cargo.repository';
+
 import { paginationAccesoSchema } from '../models/general/Acceso/schemas/pagination.acceso.schema';
 import { updateAccesoBodySchema } from '../models/general/Acceso/schemas/UpdateAccesoSchema';
 import { accesoParamIdSchema } from '../models/general/Acceso/schemas/ParamIdSchema';
 import { createAccesoSchema } from '../models/general/Acceso/schemas/CreateAccesoSchema';
+import { RubroController } from '../controllers/general/rubro.controller';
+import { RolController } from '../controllers/general/rol.controller';
+import { CargoController } from '../controllers/general/cargo.controller';
+import { EquipoAccesoController } from '../controllers/general/equipo.acceso.controller';
 
 const mysqlControladorRepository = new MySQLContraldorRepository();
 const mysqlUserNotificationRepository = new MySQLUserNotificationRepository();
@@ -26,10 +34,19 @@ const mysqlNotificationRepository = new MySQLNotificationRepository();
 const mysqlAccesoRepository = new MySQLAccesoRepository();
 const mysqlPersonalRepository = new MySQLPersonalRespository();
 const mysqlEquipoAccesoRepository = new MySQLEquipoAccesoRepository();
+const mySQLRubroRepository = new MySQLRubroRepository();
+const mySQLRolRepository = new MySQLRolRepository();
+const mySQLCargoRepository = new MySQLCargoRepository();
 
 const controladorController = new ControladorController(mysqlControladorRepository);
 const userNoficationController = new UserNoficationController(mysqlUserNotificationRepository, mysqlNotificationRepository);
 const accesoController = new AccesoController(mysqlAccesoRepository, mysqlPersonalRepository, mysqlEquipoAccesoRepository);
+
+const rubroController = new RubroController(mySQLRubroRepository);
+const rolController = new RolController(mySQLRolRepository);
+const cargoController = new CargoController(mySQLCargoRepository);
+
+const equipoAccesoController = new EquipoAccesoController(mysqlEquipoAccesoRepository);
 
 export const generalRoutes = Router();
 // ========== Controlador ==========
@@ -61,3 +78,15 @@ generalRoutes.post('/accesos', authenticate, rolChecker([UserRol.Administrador, 
 generalRoutes.patch('/accesos/:a_id', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ body: updateAccesoBodySchema, params: accesoParamIdSchema }), accesoController.update);
 // DELETE /accesos/:a_id Eliminar un acceso.
 generalRoutes.delete('/accesos/:a_id', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ params: accesoParamIdSchema }), accesoController.delete);
+
+// ========== Rubro ==========
+generalRoutes.get('/rubros', authenticate, rubroController.list);
+
+// ========== Roles ==========
+generalRoutes.get('/roles', authenticate, rolController.list);
+
+// ========== Cargos ==========
+generalRoutes.get('/cargos', authenticate, cargoController.list);
+
+// ========== Equipo de accesos ==========
+generalRoutes.get('/equipoaccesos', authenticate, equipoAccesoController.list);
