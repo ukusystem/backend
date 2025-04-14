@@ -255,6 +255,7 @@ export const VALUE_ALARM_PERIOD = 0x2a5; // Set or get the alarm period
 export const VALUE_PROTOCOL = 0x2a6; // Get the current protocol used to communicate.
 export const VALUE_TCP = 0x2a7; // TCP Protocol
 export const VALUE_GSM = 0x2a8; // GSM Protocol
+export const VALUE_OUTPUT_ALARM_DELAY = 0x2a9; // Delay to turn off alarm
 
 export const VALUE_SOCKET_CLOSED = 0x400; // Socket was closed
 export const VALUE_AUTHORIZED = 0x401; // Card authorized
