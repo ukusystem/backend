@@ -1640,6 +1640,7 @@ export class NodeAttach extends BaseAttach {
 
       case codes.VALUE_ORDER_RESULT:
         this._log(`Received order result ${command}`);
+        this.mirrorMessage(this._appendPart(command, this.controllerID.toString()), true);
         const orderData = this._parseMessage(parts, queries.orderParse, id, false);
         if (!orderData) {
           break;
