@@ -423,13 +423,13 @@ export class PersonalController {
 
   get listPersonalesOffset() {
     return asyncErrorHandler(async (req: Request, res: Response, _next: NextFunction) => {
-      const { offset, limit } = req.query as { limit: string | undefined; offset: string | undefined };
+      const { offset, limit, name } = req.query as { limit: string | undefined; offset: string | undefined; name: string | undefined };
 
-      const final_limit: number = limit !== undefined ? Math.min(Math.max(Number(limit), 0), 100) : 10; // default limit : 10 ,  max limit : 100
+      const final_limit: number = limit !== undefined ? Math.min(Math.max(Number(limit), 0), 100) : 20; // default limit : 10 ,  max limit : 100
 
       const final_offset: number = offset !== undefined ? Number(offset) : 0; // default offset : 0
 
-      const personales = await this.personal_repository.findByOffsetPagination(final_limit, final_offset);
+      const personales = await this.personal_repository.findByOffsetPagination(final_limit, final_offset, name);
       const total = await this.personal_repository.countTotal();
 
       const response: OffsetPaginationResponse<Personal> = {

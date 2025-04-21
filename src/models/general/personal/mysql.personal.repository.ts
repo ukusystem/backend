@@ -104,8 +104,26 @@ export class MySQLPersonalRespository implements PersonalRepository {
     await MySQL2.executeQuery<ResultSetHeader>({ sql: `UPDATE general.personal SET activo = 0 WHERE activo = 1 AND p_id = ? LIMIT 1`, values: [p_id] });
   }
 
-  async findByOffsetPagination(limit: number, offset: number): Promise<Personal[]> {
-    const personales = await MySQL2.executeQuery<PersonalRowData[]>({ sql: `SELECT * FROM general.personal WHERE activo = 1 ORDER BY p_id ASC LIMIT ? OFFSET ?`, values: [limit, offset] });
+  async findByOffsetPagination(limit: number, offset: number, name?: string): Promise<Personal[]> {
+    const hasName = Boolean(name);
+
+    const nombreFilter = hasName ? ` AND nombre LIKE ?` : '';
+
+    const sql = `
+      SELECT * FROM general.personal 
+      WHERE activo = 1
+      ${nombreFilter}
+      ORDER BY p_id ASC 
+      LIMIT ? OFFSET ?
+    `;
+
+    const values = hasName ? [`%${name}%`, limit, offset] : [limit, offset];
+
+    const personales = await MySQL2.executeQuery<PersonalRowData[]>({
+      sql,
+      values,
+    });
+
     return personales;
   }
 
