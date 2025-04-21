@@ -19,5 +19,5 @@ accesoRoutes.get('/accesos', authenticate, accesoController.listAccesosOffset);
 accesoRoutes.get('/accesos/:a_id', authenticate, accesoController.singleAcceso);
 
 accesoRoutes.post('/accesos', authenticate, accesoController.create);
-accesoRoutes.delete('/accesos/:p_id', authenticate, accesoController.delete);
-accesoRoutes.put('/accesos/:p_id', authenticate, accesoController.update);
+accesoRoutes.delete('/accesos/:a_id', authenticate, accesoController.delete);
+accesoRoutes.put('/accesos/:a_id', authenticate, accesoController.update);

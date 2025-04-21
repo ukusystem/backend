@@ -62,7 +62,11 @@ export class MySQLAccesoRepository implements AccesoRepository {
   }
 
   async findById(a_id: number): Promise<Acceso | undefined> {
-    const accesos = await MySQL2.executeQuery<AccesoRowData[]>({ sql: `SELECT * FROM general.acceso WHERE a_id = ? AND activo = 1 LIMIT 1`, values: [a_id] });
+    const accesos = await MySQL2.executeQuery<AccesoRowData[]>({
+      sql: `SELECT a.*,p.nombre AS nombre_personal, p.apellido, p.p_id FROM general.acceso a 
+      INNER JOIN general.personal p ON a.p_id = p.p_id  WHERE a_id = ? AND a.activo = 1 LIMIT 1`,
+      values: [a_id],
+    });
     return accesos[0];
   }
 
