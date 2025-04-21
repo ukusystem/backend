@@ -39,7 +39,7 @@ export const tupleTxt = new IntTuple(ParseType.TYPE_STR, Codes.ERR_NO_TXT);
 export const loginParse = [tupleUser, tuplePassword, tupleInt, tupleInt, tupleInt];
 export const valueDateParse = [tupleValue, tupleLong];
 export const cmdAndIDParse = [tupleInt, tupleCmd];
-export const tempParse = [tupleInt, tupleFloat];
+export const tempParse = [tupleID, tupleFloat];
 export const IDTextParse = [tupleValue, tupleTxt];
 export const valueParse = [tupleValue];
 export const bigParse = [tupleBig];
@@ -210,10 +210,10 @@ export const securityUpdate = `
 			`;
 
 export const modeUpdate = `
-			UPDATE general.controlador
-			SET modo=?
-			WHERE ctrl_id=?;
-		`;
+				UPDATE general.controlador
+				SET modo=?
+				WHERE ctrl_id=?;
+			`;
 
 export const insertSecurity = `
 				INSERT INTO %s.registroseguridad ( estado, fecha) VALUE (?, ?);
@@ -225,16 +225,16 @@ export const insertTemperature = `
 			`;
 
 export const updateAddress = `
-			UPDATE %s.sensortemperatura
-			SET serie = ?
-			WHERE st_id = ?;
-`;
+				UPDATE %s.sensortemperatura
+				SET serie = ?
+				WHERE st_id = ?;
+			`;
 
-// export const setCurrentTemperature = `
-// 				UPDATE %s.sensortemperatura
-// 				SET actual=?
-// 				WHERE st_id = ?;
-// 			`;
+export const updateAlarmThreshold = `
+				UPDATE %s.sensortemperatura
+				SET umbral_alarma = ?
+				WHERE st_id = ?;
+			`;
 
 export const insertInputChanged = `
 				INSERT INTO %s.registroentrada (pin, estado, fecha, ee_id)

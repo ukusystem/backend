@@ -2,7 +2,7 @@
 --
 -- Host: localhost    Database: general
 -- ------------------------------------------------------
--- Server version	9.0.1
+-- Server version	8.4.4
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -66,7 +66,7 @@ CREATE TABLE `cargo` (
   `c_id` int NOT NULL AUTO_INCREMENT,
   `cargo` varchar(100) NOT NULL,
   PRIMARY KEY (`c_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -75,7 +75,7 @@ CREATE TABLE `cargo` (
 
 LOCK TABLES `cargo` WRITE;
 /*!40000 ALTER TABLE `cargo` DISABLE KEYS */;
-INSERT INTO `cargo` VALUES (1,'Gerente de proyecto'),(2,'Supervisora de Seguridad'),(3,'Técnico de Instalación'),(4,'Analista de Seguridad'),(5,'Operador de Monitoreo'),(6,'Consultora de Seguridad'),(7,'Técnico de Mantenimiento'),(8,'Especialista en Seguridad'),(9,'Coordinador de Seguridad'),(10,'Analista de Riesgos');
+INSERT INTO `cargo` VALUES (1,'Gerente de proyecto'),(2,'Supervisor de Seguridad'),(3,'Técnico de Instalación'),(4,'Analista de Seguridad'),(5,'Operador de Monitoreo'),(6,'Consultora de Seguridad'),(7,'Técnico de Mantenimiento'),(8,'Especialista en Seguridad'),(9,'Coordinador de Seguridad'),(10,'Analista de Riesgos'),(11,'Diseñador UI/UX'),(12,'Desarrollador de software'),(13,'Jefe de desarrollo'),(14,'Analista QA'),(15,'Desarrollador web');
 /*!40000 ALTER TABLE `cargo` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -285,7 +285,7 @@ CREATE TABLE `estado` (
   `estd_id` int NOT NULL AUTO_INCREMENT,
   `estado` varchar(100) NOT NULL,
   PRIMARY KEY (`estd_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -294,8 +294,62 @@ CREATE TABLE `estado` (
 
 LOCK TABLES `estado` WRITE;
 /*!40000 ALTER TABLE `estado` DISABLE KEYS */;
-INSERT INTO `estado` VALUES (1,'Esperando'),(2,'Aceptado'),(3,'Cancelado'),(4,'Rechazado'),(5,'Completado'),(6,'Error'),(7,'Montado'),(8,'Desmontado'),(9,'Expulsado'),(10,'Timeout'),(11,'Ejecutado'),(12,'Desconectado'),(13,'MalFormato'),(14,'Inexistente'),(15,'Invalido'),(16,'Finalizado'),(17,'Anulado'),(18,'NoAtendido');
+INSERT INTO `estado` VALUES (1,'Esperando'),(2,'Aceptado'),(3,'Cancelado'),(4,'Rechazado'),(5,'Completado'),(6,'Error'),(7,'Montado'),(8,'Desmontado'),(9,'Expulsado'),(10,'Timeout'),(11,'Ejecutado'),(12,'Desconectado'),(13,'MalFormato'),(14,'Inexistente'),(15,'Invalido'),(16,'Finalizado'),(17,'Anulado'),(18,'NoAtendido'),(19,'Montando'),(20,'Expulsado'),(21,'Asistido'),(22,'Inasistencia');
 /*!40000 ALTER TABLE `estado` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `firmware`
+--
+
+DROP TABLE IF EXISTS `firmware`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `firmware` (
+  `f_id` int NOT NULL AUTO_INCREMENT,
+  `archivo` varchar(200) NOT NULL,
+  `mayor` int unsigned NOT NULL,
+  `menor` int unsigned NOT NULL,
+  `parche` int unsigned NOT NULL,
+  PRIMARY KEY (`f_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `firmware`
+--
+
+LOCK TABLES `firmware` WRITE;
+/*!40000 ALTER TABLE `firmware` DISABLE KEYS */;
+/*!40000 ALTER TABLE `firmware` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `general_audit`
+--
+
+DROP TABLE IF EXISTS `general_audit`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `general_audit` (
+  `ga_id` int NOT NULL AUTO_INCREMENT,
+  `table_name` varchar(100) NOT NULL,
+  `field_name` varchar(100) NOT NULL,
+  `old_value` varchar(250) NOT NULL,
+  `new_value` varchar(250) NOT NULL,
+  `personal` varchar(250) NOT NULL,
+  `datetime` timestamp NOT NULL,
+  PRIMARY KEY (`ga_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `general_audit`
+--
+
+LOCK TABLES `general_audit` WRITE;
+/*!40000 ALTER TABLE `general_audit` DISABLE KEYS */;
+/*!40000 ALTER TABLE `general_audit` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -320,6 +374,67 @@ LOCK TABLES `marca` WRITE;
 /*!40000 ALTER TABLE `marca` DISABLE KEYS */;
 INSERT INTO `marca` VALUES (1,'Dahua'),(2,'Hikvision'),(3,'Axis');
 /*!40000 ALTER TABLE `marca` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `notificacion`
+--
+
+DROP TABLE IF EXISTS `notificacion`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `notificacion` (
+  `n_id` int NOT NULL AUTO_INCREMENT,
+  `n_uuid` varchar(250) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `evento` varchar(250) NOT NULL,
+  `titulo` varchar(250) NOT NULL,
+  `mensaje` varchar(250) NOT NULL,
+  `data` json DEFAULT NULL,
+  `fecha` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`n_id`),
+  UNIQUE KEY `n_uuid` (`n_uuid`)
+) ENGINE=InnoDB AUTO_INCREMENT=158 DEFAULT CHARSET=utf8mb3;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `notificacion`
+--
+
+LOCK TABLES `notificacion` WRITE;
+/*!40000 ALTER TABLE `notificacion` DISABLE KEYS */;
+/*!40000 ALTER TABLE `notificacion` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `notificacion_usuario`
+--
+
+DROP TABLE IF EXISTS `notificacion_usuario`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `notificacion_usuario` (
+  `nu_id` int NOT NULL AUTO_INCREMENT,
+  `u_id` int NOT NULL,
+  `n_uuid` varchar(250) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `fecha_creacion` timestamp NOT NULL,
+  `fecha_entrega` timestamp NOT NULL,
+  `fecha_lectura` timestamp NULL DEFAULT NULL,
+  `leido` tinyint(1) NOT NULL,
+  PRIMARY KEY (`nu_id`),
+  KEY `n_uuid` (`n_uuid`),
+  KEY `u_id` (`u_id`),
+  CONSTRAINT `notificacion_usuario_ibfk_1` FOREIGN KEY (`n_uuid`) REFERENCES `notificacion` (`n_uuid`),
+  CONSTRAINT `notificacion_usuario_ibfk_2` FOREIGN KEY (`u_id`) REFERENCES `usuario` (`u_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb3;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `notificacion_usuario`
+--
+
+LOCK TABLES `notificacion_usuario` WRITE;
+/*!40000 ALTER TABLE `notificacion_usuario` DISABLE KEYS */;
+/*!40000 ALTER TABLE `notificacion_usuario` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -354,7 +469,7 @@ CREATE TABLE `personal` (
 
 LOCK TABLES `personal` WRITE;
 /*!40000 ALTER TABLE `personal` DISABLE KEYS */;
-INSERT INTO `personal` VALUES (1,'Nombre','Apellido','98765432123513523614','123456782342',1,1,'photos/registered/foto1.png','user@gmail.com',1);
+INSERT INTO `personal` VALUES (1,'Nombre','Apellido','987654321','87654321',1,1,'photos/registered/foto1.png','user@gmail.com',1);
 /*!40000 ALTER TABLE `personal` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -399,7 +514,7 @@ CREATE TABLE `region` (
   `descripcion` varchar(100) NOT NULL,
   `activo` tinyint(1) NOT NULL,
   PRIMARY KEY (`rgn_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -408,8 +523,36 @@ CREATE TABLE `region` (
 
 LOCK TABLES `region` WRITE;
 /*!40000 ALTER TABLE `region` DISABLE KEYS */;
-INSERT INTO `region` VALUES (1,'Everytel','Equipos de prueba',1);
 /*!40000 ALTER TABLE `region` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `registro_actividad`
+--
+
+DROP TABLE IF EXISTS `registro_actividad`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `registro_actividad` (
+  `id_actividad` int NOT NULL AUTO_INCREMENT,
+  `nombre_tabla` varchar(255) NOT NULL,
+  `id_registro` int NOT NULL,
+  `tipo_operacion` enum('INSERCION','ACTUALIZACION','ELIMINACION') NOT NULL,
+  `valores_anteriores` json DEFAULT NULL,
+  `valores_nuevos` json DEFAULT NULL,
+  `realizado_por` varchar(255) NOT NULL,
+  `fecha` datetime DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id_actividad`)
+) ENGINE=InnoDB AUTO_INCREMENT=98 DEFAULT CHARSET=utf8mb3;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `registro_actividad`
+--
+
+LOCK TABLES `registro_actividad` WRITE;
+/*!40000 ALTER TABLE `registro_actividad` DISABLE KEYS */;
+/*!40000 ALTER TABLE `registro_actividad` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -427,7 +570,7 @@ CREATE TABLE `registrored` (
   PRIMARY KEY (`rr_id`),
   KEY `fk_registrored_controlador_co_id_idx` (`ctrl_id`),
   CONSTRAINT `fk_registrored_controlador_co_id` FOREIGN KEY (`ctrl_id`) REFERENCES `controlador` (`ctrl_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -562,6 +705,39 @@ LOCK TABLES `tipotrabajo` WRITE;
 /*!40000 ALTER TABLE `tipotrabajo` DISABLE KEYS */;
 INSERT INTO `tipotrabajo` VALUES (1,'Telecomunicaciones'),(2,'Electricidad'),(3,'Visita'),(4,'Mantenimiento');
 /*!40000 ALTER TABLE `tipotrabajo` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `user_token`
+--
+
+DROP TABLE IF EXISTS `user_token`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_token` (
+  `ut_id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `refresh_token` varchar(500) NOT NULL,
+  `issued_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `expires_at` timestamp NOT NULL,
+  `revoked` tinyint(1) NOT NULL DEFAULT '0',
+  `ip_address` varchar(45) NOT NULL,
+  `user_agent` text NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`ut_id`),
+  KEY `fk_user_token_user_u_id_idx` (`user_id`),
+  CONSTRAINT `fk_user_token_user_u_id` FOREIGN KEY (`user_id`) REFERENCES `usuario` (`u_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `user_token`
+--
+
+LOCK TABLES `user_token` WRITE;
+/*!40000 ALTER TABLE `user_token` DISABLE KEYS */;
+/*!40000 ALTER TABLE `user_token` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -1186,6 +1362,7 @@ CREATE TABLE `sensortemperatura` (
   `serie` varchar(16) NOT NULL,
   `ubicacion` varchar(100) NOT NULL,
   `activo` tinyint NOT NULL,
+  `umbral_alarma` float NOT NULL DEFAULT '0',
   PRIMARY KEY (`st_id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -1196,7 +1373,7 @@ CREATE TABLE `sensortemperatura` (
 
 LOCK TABLES `sensortemperatura` WRITE;
 /*!40000 ALTER TABLE `sensortemperatura` DISABLE KEYS */;
-INSERT INTO `sensortemperatura` VALUES (1,'A1','Ubicación 1',0),(2,'A2','Ubicación 2',0),(3,'A3','Ubicación 3',0),(4,'A4','Ubicación 4',0),(5,'A5','Ubicación 5',0),(6,'A6','Ubicación 6',0),(7,'A7','Ubicación 7',0),(8,'A8','Ubicación 8',0),(9,'A9','Ubicación 9',0),(10,'A10','Ubicación 10',0),(11,'A11','Ubicación 11',0),(12,'A12','Ubicación 12',0),(13,'A13','Ubicación 13',0),(14,'A14','Ubicación 14',0),(15,'A15','Ubicación 15',0),(16,'A16','Ubicación 16',0);
+INSERT INTO `sensortemperatura` VALUES (1,'A1','Ubicación 1',0,0),(2,'A2','Ubicación 2',0,0),(3,'A3','Ubicación 3',0,0),(4,'A4','Ubicación 4',0,0),(5,'A5','Ubicación 5',0,0),(6,'A6','Ubicación 6',0,0),(7,'A7','Ubicación 7',0,0),(8,'A8','Ubicación 8',0,0),(9,'A9','Ubicación 9',0,0),(10,'A10','Ubicación 10',0,0),(11,'A11','Ubicación 11',0,0),(12,'A12','Ubicación 12',0,0),(13,'A13','Ubicación 13',0,0),(14,'A14','Ubicación 14',0,0),(15,'A15','Ubicación 15',0,0),(16,'A16','Ubicación 16',0,0);
 /*!40000 ALTER TABLE `sensortemperatura` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1233,4 +1410,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-11-08 12:23:36
+-- Dump completed on 2025-04-21 16:31:34

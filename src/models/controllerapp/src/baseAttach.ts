@@ -1316,20 +1316,37 @@ export class NodeAttach extends BaseAttach {
       case codes.VALUE_ALL_ADDRESSES:
         // this._log(`Received all addresses '${command}'`);
 
-        const paramsForUpdate: any[] = [];
+        const addrParamsForUpdate: any[] = [];
         while (parts.length >= 2) {
           const addrData = this._parseMessage(parts, queries.IDTextParse, id, false);
           if (!addrData || addrData.length < 2) continue;
           const sensorID = addrData[0].getInt();
           const sensorAddress = addrData[1].getString();
-          paramsForUpdate.push([sensorAddress, sensorID]);
+          addrParamsForUpdate.push([sensorAddress, sensorID]);
 
           // Send the data to the web app
           this._notifyTemp(sensorID, this.controllerID, null, null, sensorAddress, null);
         }
         // this._log(`Parts remaining ${parts.length}: '${parts}'`)
-        // this._log(`Received ${paramsForUpdate.length} temperature addresses.`)
-        await executeBatchForNode(queries.updateAddress, this.controllerID, paramsForUpdate);
+        // this._log(`Received ${addrParamsForUpdate.length} temperature addresses.`)
+        await executeBatchForNode(queries.updateAddress, this.controllerID, addrParamsForUpdate);
+        break;
+      case codes.VALUE_ALL_THRESHOLDS:
+        // this._log(`Received all alarm threshold '${command}'`);
+
+        const thresParamForUpdate: any[] = [];
+        while (parts.length >= 2) {
+          const addrData = this._parseMessage(parts, queries.tempParse, id, false);
+          if (!addrData || addrData.length < 2) continue;
+          const sensorID = addrData[0].getInt();
+          const sensorThres = addrData[1].toString();
+          thresParamForUpdate.push([sensorThres, sensorID]);
+          // this._log(`thres: ${sensorThres} id: ${sensorID}`);
+          // Don't notify since this value is not shown in real time
+        }
+        // this._log(`Parts remaining ${parts.length}: '${parts}'`)
+        // this._log(`Received ${thresParamForUpdate.length} temperature addresses.`)
+        await executeBatchForNode(queries.updateAlarmThreshold, this.controllerID, thresParamForUpdate);
         break;
       case codes.VALUE_SERIAL:
         // this._log(`Received controller info '${command}'`);
@@ -1362,6 +1379,22 @@ export class NodeAttach extends BaseAttach {
         }
         this._log(`Temperature sensor address ID = ${sensorID} changed to '${sensorAddress}'`);
         this._notifyTemp(sensorID, this.controllerID, null, null, sensorAddress, null);
+        break;
+      case codes.VALUE_ALARM_THRESHOLD_CHANGED:
+        this._log(`Received threshold changed '${command}'`);
+        const thresChangeData = this._parseMessage(parts, queries.tempParse, id, false);
+        if (!thresChangeData) {
+          break;
+        }
+        const sensorIDThres = thresChangeData[0].getInt();
+        const sensorThres = thresChangeData[1].toString();
+        const changeThresRes = executeQuery(BaseAttach.formatQueryWithNode(queries.updateAlarmThreshold, this.controllerID), [sensorThres, sensorIDThres]);
+        if (!changeThresRes) {
+          this._log(`ERROR Saving alarm threshold change`);
+          break;
+        }
+        this._log(`Temperature sensor ID = ${sensorIDThres} alarm threshold changed to '${sensorThres}'`);
+        // Don't notify since this value is not shown in real time
         break;
       case codes.VALUE_INPUT_CTRL:
       case codes.VALUE_OUTPUT_CTRL:
