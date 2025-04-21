@@ -1,32 +1,38 @@
-import { Router } from "express";
-import { resolve } from "path";
-import { CustomError } from "../utils/CustomError";
+import { Router } from 'express';
+import { resolve } from 'path';
+import { CustomError } from '../utils/CustomError';
 export const frontEndRoutes = Router();
 
 const allFrontEndPaths = [
-"/",
-"/auth/login",
-"/auth/forgot-password",
-"/dashboard",
-"/vms",
-"/tickets",
-"/tickets/historial",
-"/smartmap",
-"/logs",
-"/invitado/tickets",
-"/invitado/tickets/historial",
-"/site/:ctrl_id",
-"/alarmas"
+  '/',
+  '/auth/login',
+  '/auth/forgot-password',
+  '/auth/forgot-password-success',
+  '/dashboard',
+  '/register',
+  '/site/:ctrl_id/cameras',
+  '/site/:ctrl_id/tickets',
+  '/site/:ctrl_id/alarms',
+  '/site/:ctrl_id/controls',
+  '/site/:ctrl_id/access',
+  '/site/:ctrl_id/temperature-energy',
+  '/vms',
+  '/alarm',
+  '/ticket',
+  '/create',
+  '/temperature',
+  '/energy',
+  '/company',
+  '/access',
+  '/invitado',
+  '/invitado/ticket',
+  '/invitado/ticket/create',
 ];
 
-frontEndRoutes.get(allFrontEndPaths, (req, res,next) => {
-  res.sendFile(resolve(__dirname, "../../public/index.html"), (err) => {
+frontEndRoutes.get(allFrontEndPaths, (req, res, next) => {
+  res.sendFile(resolve(__dirname, '../../public/index.html'), (err) => {
     if (err) {
-      const errFileNotFound = new CustomError(
-        `index.html no disponible`,
-        404,
-        "Not Found"
-      );
+      const errFileNotFound = new CustomError(`index.html no disponible`, 404, 'Not Found');
       next(errFileNotFound);
     }
   });

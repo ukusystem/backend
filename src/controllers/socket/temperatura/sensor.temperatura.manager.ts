@@ -2,6 +2,7 @@ import { MySQL2 } from '../../../database/mysql';
 import { Init } from '../../../models/init';
 import { genericLogger } from '../../../services/loggers';
 import { filterUndefined } from '../../../utils/filterUndefined';
+import { TemperatureManager } from '../temperature.region/temperature.manager';
 import { ControllerSenTempMap, SensorTemperaturaObserver, SenTempAction, SenTempState, SocketSenTemperatura, ObserverSenTempMap, SenTemperarturaObj, SenTemperaturaMap, SensorTemperaturaRowData, SenTemperaturaAddUpdateDTO, SenTemperaturaSocketDTO } from './sensor.temperatura.types';
 
 export class SenTempSocketObserver implements SensorTemperaturaObserver {
@@ -57,6 +58,7 @@ export class SensorTemperaturaManager {
     // notifications:
     if (sensor.activo === SenTempState.Activo) {
       SensorTemperaturaManager.notifyListSenTemp(ctrl_id, sensor, 'add');
+      TemperatureManager.notifyTemperature(ctrl_id, sensor, 'add');
     }
   }
 
@@ -83,6 +85,7 @@ export class SensorTemperaturaManager {
           }
         }
         SensorTemperaturaManager.notifySenTemp(ctrl_id, senTemperatura);
+        TemperatureManager.notifyTemperature(ctrl_id, senTemperatura, 'update');
       }
     }
   }
@@ -96,6 +99,7 @@ export class SensorTemperaturaManager {
         if (hasDeleted) {
           // notifications:
           SensorTemperaturaManager.notifyListSenTemp(ctrl_id, senTemperatura, 'delete');
+          TemperatureManager.notifyTemperature(ctrl_id, senTemperatura, 'delete');
         }
         return hasDeleted;
       }
@@ -169,3 +173,38 @@ export class SensorTemperaturaManager {
     return undefined;
   }
 }
+
+// (async () => {
+//   setInterval(() => {
+//     const getRandomNumber = (min: number, max: number) => {
+//       return Math.floor(Math.random() * (max - min + 1)) + min;
+//     };
+//     const randomTemperature = getRandomNumber(0, 50);
+//     const newDTO: SenTemperaturaAddUpdateDTO = {
+//       st_id: 1,
+//       serie: 'FDSJFDSIHFASD',
+//       ubicacion: `Ubicación 1 ${randomTemperature}`,
+//       actual: randomTemperature,
+//       activo: 1,
+//     };
+//     const ctrl_id = 1;
+//     console.log('actulizando: ', ctrl_id, newDTO);
+//     SensorTemperaturaManager.add_update(ctrl_id, newDTO);
+//   }, 10000);
+//   setTimeout(() => {
+//     console.log('Eliminando', 1, 2);
+//     SensorTemperaturaManager.delete(1, 2);
+//   }, 40000);
+//   setTimeout(() => {
+//     const newDTO: SenTemperaturaAddUpdateDTO = {
+//       st_id: 30,
+//       serie: 'fds3289sdf',
+//       ubicacion: `Ubicación Nuevo `,
+//       actual: 30,
+//       activo: 1,
+//     };
+//     const ctrl_id = 1;
+//     console.log('Agregando ====', ctrl_id, newDTO);
+//     SensorTemperaturaManager.add_update(ctrl_id, newDTO);
+//   }, 20000);
+// })();

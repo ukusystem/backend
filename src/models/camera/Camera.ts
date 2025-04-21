@@ -30,7 +30,7 @@ type CamResponse = Record<
       {
         ctrl_id: number;
         nodo: string;
-        camaras: (CameraInfo & Pick<Controlador, 'ctrl_id' | 'nodo'> & { region: string })[];
+        camaras: (CameraInfo & Pick<Controlador, 'ctrl_id' | 'nodo' | 'rgn_id'> & { region: string })[];
       }
     >;
   }
@@ -126,7 +126,7 @@ export class Camera {
 
           result[rgn_id].controllers[ctrl_id] = result[rgn_id].controllers[ctrl_id] || { ctrl_id, nodo, camaras: [] };
 
-          result[rgn_id].controllers[ctrl_id].camaras = cams.map((cam) => ({ ...cam, nodo, ctrl_id, region }));
+          result[rgn_id].controllers[ctrl_id].camaras = cams.map((cam) => ({ ...cam, nodo, ctrl_id, region, rgn_id: rgn_id }));
         }
 
         return result;

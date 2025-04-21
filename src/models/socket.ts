@@ -28,6 +28,10 @@ import { NamespaceTicketSchedule } from '../controllers/socket/ticket.schedule/t
 import { ticketScheduleSocket } from '../controllers/socket/ticket.schedule/ticket.schedule.socket';
 import { socketAuthWithRoles } from '../middlewares/auth.middleware';
 import { UserRol } from '../types/rol';
+import { NamespaceTemperature } from '../controllers/socket/temperature.region/temperature.types';
+import { temperatureSocket } from '../controllers/socket/temperature.region/temperature.socket';
+import { NamespaceEnergy } from '../controllers/socket/energy.region/energy.types';
+import { energySocket } from '../controllers/socket/energy.region/energy.socket';
 
 export class Sockets {
   #io: Server;
@@ -58,6 +62,20 @@ export class Sockets {
     SenTempNSP.use(socketAuthWithRoles([UserRol.Administrador, UserRol.Gestor]));
     SenTempNSP.on('connection', (socket) => {
       senTemperaturaSocket(this.#io, socket);
+    });
+
+    // Namespace : "/temperature"
+    const TemperatureNSP: NamespaceTemperature = this.#io.of('/temperature');
+    TemperatureNSP.use(socketAuthWithRoles([UserRol.Administrador, UserRol.Gestor]));
+    TemperatureNSP.on('connection', (socket) => {
+      temperatureSocket(this.#io, socket);
+    });
+
+    // Namespace : "/energy"
+    const EnergyNSP: NamespaceEnergy = this.#io.of('/energy');
+    EnergyNSP.use(socketAuthWithRoles([UserRol.Administrador, UserRol.Gestor]));
+    EnergyNSP.on('connection', (socket) => {
+      energySocket(this.#io, socket);
     });
 
     // Namespace : "/modulo_energia/ctrl_id"

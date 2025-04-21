@@ -77,13 +77,14 @@ export class ServerApp {
     this.#app.use(
       cors({
         credentials: true,
-        origin: ['http://localhost:5173', 'http://localhost:5174'],
+        origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:4173'],
       }),
     );
     this.#app.use(express.urlencoded({ extended: false }));
     // Desplegar el directorio público
     this.#app.use(express.static(path.resolve(__dirname, '../../public')));
-    this.#app.use(express.static(path.resolve(__dirname, '../../')));
+    this.#app.use(express.static(path.resolve(__dirname, '../../deteccionmovimiento')));
+    this.#app.use(express.static(path.resolve(__dirname, '../../assets')));
     this.#app.use(express.static(path.resolve(__dirname, '../../nvr')));
 
     // Parsear y transformar el req.body en json
