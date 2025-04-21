@@ -29,6 +29,10 @@ import { genericLogger } from '../services/loggers';
 import { RegistroEntradaManager } from '../controllers/socket/registro.entrada';
 import { TokenManger } from './token.manager';
 import { generalRoutes } from '../routes/general.routes';
+import { contrataRoutes } from '../routes/contrata.routes';
+import { personalRoutes } from '../routes/personal.routes';
+import { accesoRoutes } from '../routes/acceso.routes';
+import { usuarioRoutes } from '../routes/usuario.routes';
 
 // import { createServer as createServerHttps } from "https";
 // import fs from "fs";
@@ -83,8 +87,9 @@ export class ServerApp {
     this.#app.use(express.urlencoded({ extended: false }));
     // Desplegar el directorio público
     this.#app.use(express.static(path.resolve(__dirname, '../../public')));
-    this.#app.use(express.static(path.resolve(__dirname, '../../deteccionmovimiento')));
-    this.#app.use(express.static(path.resolve(__dirname, '../../assets')));
+    this.#app.use(express.static(path.resolve(__dirname, '../../archivos/personal/')));
+
+    this.#app.use(express.static(path.resolve(__dirname, '../../')));
     this.#app.use(express.static(path.resolve(__dirname, '../../nvr')));
 
     // Parsear y transformar el req.body en json
@@ -115,6 +120,10 @@ export class ServerApp {
     this.#app.use(this.#baseApiPath, siteRoutes);
     // ==== General ====
     this.#app.use(this.#baseApiPath, generalRoutes);
+    this.#app.use(this.#baseApiPath, contrataRoutes);
+    this.#app.use(this.#baseApiPath, personalRoutes);
+    this.#app.use(this.#baseApiPath, accesoRoutes);
+    this.#app.use(this.#baseApiPath, usuarioRoutes);
 
     // FrontEnd
     this.#app.use(frontEndRoutes);

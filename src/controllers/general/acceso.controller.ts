@@ -164,13 +164,13 @@ export class AccesoController {
   }
   get listAccesosWithPersonalOffset() {
     return asyncErrorHandler(async (req: Request, res: Response, _next: NextFunction) => {
-      const { offset, limit } = req.query as { limit: string | undefined; offset: string | undefined };
+      const { offset, limit, serie } = req.query as { limit: string | undefined; offset: string | undefined; serie: string | undefined };
 
       const final_limit: number = limit !== undefined ? Math.min(Math.max(Number(limit), 0), 100) : 10; // default limit : 10 ,  max limit : 100
 
       const final_offset: number = offset !== undefined ? Number(offset) : 0; // default offset : 0
 
-      const accesos = await this.acceso_repository.findWithPersonalByOffsetPagination(final_limit, final_offset);
+      const accesos = await this.acceso_repository.findWithPersonalByOffsetPagination(final_limit, final_offset, serie);
       const total = await this.acceso_repository.countTotal();
       const response: OffsetPaginationResponse<Acceso> = {
         data: accesos,

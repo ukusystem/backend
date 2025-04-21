@@ -8,15 +8,32 @@ import { UpdateAccesoDTO } from './dtos/UpdateAccesoDTO';
 import { Personal } from '../personal/personal.entity';
 
 interface AccesoRowData extends RowDataPacket, Acceso {}
-interface AccesoPersonalRowData extends RowDataPacket, Acceso, Pick<Personal, 'nombre' | 'apellido' | 'foto'> {}
+interface AccesoPersonalRowData extends RowDataPacket, Acceso, Pick<Personal, 'nombre' | 'apellido' | 'foto' | 'telefono'> {
+  contrata: string;
+  tipo: string;
+}
 interface TotalAccespRowData extends RowDataPacket {
   total: number;
 }
 
 export class MySQLAccesoRepository implements AccesoRepository {
-  async findWithPersonalByOffsetPagination(limit: number, offset: number): Promise<AccesoWithPersonal[]> {
-    const accesos = await MySQL2.executeQuery<AccesoPersonalRowData[]>({ sql: `SELECT a.* , p.nombre , p.apellido , p.foto  FROM general.acceso a INNER JOIN general.personal p ON a.p_id = p.p_id AND a.activo = 1 ORDER BY a.a_id ASC LIMIT ? OFFSET ?`, values: [limit, offset] });
-    return accesos.map<AccesoWithPersonal>(({ a_id, serie, administrador, p_id, ea_id, activo, nombre, apellido, foto }) => ({ a_id, serie, administrador, p_id, ea_id, activo, personal: { nombre, apellido, foto } }));
+  async findWithPersonalByOffsetPagination(limit: number, offset: number, serie?: string): Promise<AccesoWithPersonal[]> {
+    const serieFilter = serie !== undefined ? ` AND a.serie LIKE ? ` : '';
+    const accesos = await MySQL2.executeQuery<AccesoPersonalRowData[]>({
+      sql: `
+      SELECT a.*, p.nombre AS nombre_personal, p.apellido, p.foto, p.telefono, c.contrata, e.nombre AS tipo
+      FROM general.acceso a 
+      INNER JOIN general.personal p ON a.p_id = p.p_id 
+      INNER JOIN general.contrata c ON p.co_id = c.co_id 
+      INNER JOIN general.equipoacceso e ON a.ea_id = e.ea_id 
+      WHERE a.activo = 1 
+       ${serieFilter}
+      ORDER BY a.a_id ASC 
+      LIMIT ? OFFSET ?
+      `,
+      values: [...(serie !== undefined ? [`%${serie}%`] : []), limit, offset],
+    });
+    return accesos.map<AccesoWithPersonal>(({ a_id, serie, administrador, p_id, ea_id, activo, nombre_personal, apellido, foto, telefono, contrata, tipo }) => ({ a_id, serie, administrador, p_id, ea_id, activo, personal: { nombre: nombre_personal, apellido, foto, telefono }, contrata, tipo }));
   }
   async findMembersByContrataId(co_id: number): Promise<Array<Acceso>> {
     const accesos = await MySQL2.executeQuery<AccesoRowData[]>({ sql: `SELECT a.* FROM general.acceso a INNER JOIN general.personal p  ON a.p_id = p.p_id AND a.activo = 1 AND p.representante = 0 AND p.co_id = ?`, values: [co_id] });
@@ -45,7 +62,11 @@ export class MySQLAccesoRepository implements AccesoRepository {
   }
 
   async findById(a_id: number): Promise<Acceso | undefined> {
-    const accesos = await MySQL2.executeQuery<AccesoRowData[]>({ sql: `SELECT * FROM general.acceso WHERE a_id = ? AND activo = 1 LIMIT 1`, values: [a_id] });
+    const accesos = await MySQL2.executeQuery<AccesoRowData[]>({
+      sql: `SELECT a.*,p.nombre AS nombre_personal, p.apellido, p.p_id FROM general.acceso a 
+      INNER JOIN general.personal p ON a.p_id = p.p_id  WHERE a_id = ? AND a.activo = 1 LIMIT 1`,
+      values: [a_id],
+    });
     return accesos[0];
   }
 
