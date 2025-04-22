@@ -87,10 +87,10 @@ export class ServerApp {
     this.#app.use(express.urlencoded({ extended: false }));
     // Desplegar el directorio público
     this.#app.use(express.static(path.resolve(__dirname, '../../public')));
-    this.#app.use(express.static(path.resolve(__dirname, '../../archivos/personal/')));
-
-    this.#app.use(express.static(path.resolve(__dirname, '../../')));
+    this.#app.use(express.static(path.resolve(__dirname, '../../deteccionmovimiento')));
+    this.#app.use(express.static(path.resolve(__dirname, '../../assets')));
     this.#app.use(express.static(path.resolve(__dirname, '../../nvr')));
+    this.#app.use(express.static(path.resolve(__dirname, '../../archivos/personal/')));
 
     // Parsear y transformar el req.body en json
     this.#app.use(express.json({ limit: '10mb' }));
