@@ -7,6 +7,8 @@ import { PaginationContrata } from './schemas/pagination.contrata.schema';
 export interface ContrataWithRubro extends Contrata {
   rubro: Rubro;
   total_personal: number;
+  total_cuentas_activas: number;
+  total_tarjetas: number;
 }
 
 export interface ContrataRepository {

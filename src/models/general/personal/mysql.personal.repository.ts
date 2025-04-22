@@ -1,10 +1,13 @@
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import { MySQL2 } from '../../../database/mysql';
-import { Personal } from './personal.entity';
+import { Personal, PersonalWithOcupation, SinglePersonal } from './personal.entity';
 import { PersonalRepository } from './personal.repository';
 import { CreatePersonalDTO } from './dtos/create.personal.dto';
 import { UpdatePersonalDTO } from './dtos/update.personal.dto';
 interface PersonalRowData extends RowDataPacket, Personal {}
+interface PersonalWithOcupationRowData extends RowDataPacket, PersonalWithOcupation {}
+
+interface SinglePersonalRowData extends RowDataPacket, SinglePersonal {}
 
 interface TotalPersonalRowData extends RowDataPacket {
   total: number;
@@ -15,10 +18,28 @@ export class MySQLPersonalRespository implements PersonalRepository {
     const totals = await MySQL2.executeQuery<TotalPersonalRowData[]>({ sql: `SELECT COUNT(*) AS total FROM general.personal WHERE activo = 1 AND representante = 0 AND co_id = ? `, values: [co_id] });
     return totals[0].total;
   }
-  async findMembersByContrataId(co_id: number): Promise<Personal[]> {
-    const listPersonal = await MySQL2.executeQuery<PersonalRowData[]>({ sql: `SELECT * FROM general.personal WHERE activo = 1  AND representante = 0 AND co_id = ? `, values: [co_id] });
+  async findMembersByContrataId(co_id: number, name?: string): Promise<PersonalWithOcupation[]> {
+    const nombreFilter = name ? ` AND p.nombre LIKE ?` : '';
+
+    const sql = `
+      SELECT p.*, 
+      c.cargo,
+             COUNT(a.a_id) AS cantidad_tarjetas, 
+             COUNT(u.u_id) AS cantidad_cuentas  
+      FROM general.personal p 
+      INNER JOIN general.cargo c ON p.c_id = c.c_id
+      LEFT JOIN general.acceso a ON p.p_id = a.p_id AND a.activo = 1 
+      LEFT JOIN general.usuario u ON p.p_id = u.p_id AND u.activo = 1 
+      WHERE p.activo = 1 AND co_id = ?${nombreFilter} 
+      GROUP BY p.p_id`;
+
+    const values: (number | string)[] = [co_id];
+    if (name) values.push(`%${name}%`);
+
+    const listPersonal = await MySQL2.executeQuery<PersonalWithOcupationRowData[]>({ sql, values });
     return listPersonal;
   }
+
   async softDeleteMembersByContrataId(co_id: number): Promise<void> {
     await MySQL2.executeQuery<ResultSetHeader>({ sql: `UPDATE general.personal SET activo = 0 WHERE activo = 1 AND representante = 0 AND co_id = ?`, values: [co_id] });
   }
@@ -83,8 +104,26 @@ export class MySQLPersonalRespository implements PersonalRepository {
     await MySQL2.executeQuery<ResultSetHeader>({ sql: `UPDATE general.personal SET activo = 0 WHERE activo = 1 AND p_id = ? LIMIT 1`, values: [p_id] });
   }
 
-  async findByOffsetPagination(limit: number, offset: number): Promise<Personal[]> {
-    const personales = await MySQL2.executeQuery<PersonalRowData[]>({ sql: `SELECT * FROM general.personal WHERE activo = 1 ORDER BY p_id ASC LIMIT ? OFFSET ?`, values: [limit, offset] });
+  async findByOffsetPagination(limit: number, offset: number, name?: string): Promise<Personal[]> {
+    const hasName = Boolean(name);
+
+    const nombreFilter = hasName ? ` AND nombre LIKE ?` : '';
+
+    const sql = `
+      SELECT * FROM general.personal 
+      WHERE activo = 1
+      ${nombreFilter}
+      ORDER BY p_id ASC 
+      LIMIT ? OFFSET ?
+    `;
+
+    const values = hasName ? [`%${name}%`, limit, offset] : [limit, offset];
+
+    const personales = await MySQL2.executeQuery<PersonalRowData[]>({
+      sql,
+      values,
+    });
+
     return personales;
   }
 
@@ -94,7 +133,27 @@ export class MySQLPersonalRespository implements PersonalRepository {
   }
 
   async findById(p_id: number): Promise<Personal | undefined> {
-    const listPersonal = await MySQL2.executeQuery<PersonalRowData[]>({ sql: `SELECT * FROM general.personal WHERE p_id = ? AND activo = 1 LIMIT 1`, values: [p_id] });
+    const listPersonal = await MySQL2.executeQuery<SinglePersonalRowData[]>({
+      sql: `   SELECT 
+        p.*,
+        c.cargo AS cargo_nombre,
+        u.u_id AS u_id,
+        u.usuario AS usuario,
+         COUNT(a.a_id) AS cantidad_tarjetas, 
+             COUNT(u.u_id) AS cantidad_cuentas  
+      FROM 
+        general.personal p
+      INNER JOIN 
+        general.cargo c ON p.c_id = c.c_id
+              LEFT JOIN general.acceso a ON p.p_id = a.p_id AND a.activo = 1 
+      LEFT JOIN general.usuario u ON p.p_id = u.p_id AND u.activo = 1 
+      WHERE 
+        p.p_id = ? AND p.activo = 1
+      GROUP BY 
+      p.p_id, c.cargo, u.u_id, u.usuario
+      LIMIT 1`,
+      values: [p_id],
+    });
     return listPersonal[0];
   }
 }
