@@ -31,7 +31,7 @@ const allFrontEndPaths = [
 ];
 
 frontEndRoutes.get(allFrontEndPaths, (req, res, next) => {
-  res.sendFile(resolve(__dirname, '../../dist/index.html'), (err) => {
+  res.sendFile(resolve(__dirname, '../../public/index.html'), (err) => {
     if (err) {
       const errFileNotFound = new CustomError(`index.html no disponible`, 404, 'Not Found');
       next(errFileNotFound);
