@@ -35,16 +35,12 @@ export interface UserToken {
 interface UserTokenRowData extends RowDataPacket, UserToken {}
 
 export interface CreateUserTokenDTO {
-  // ut_id: number;
   user_id: number;
   refresh_token: string;
   issued_at: string;
   expires_at: string;
-  // revoked: number; default 0
   ip_address?: string;
   user_agent?: string;
-  // created_at?: string;
-  // updated_at?: string;
 }
 
 export class Auth {
@@ -72,7 +68,6 @@ export class Auth {
   static async createUserToken(user_id: number, refresh_token: string, ip?: string, user_agent?: string) {
     const tokenPayload = Auth.decodeToken(refresh_token);
     const refresh_token_encrypt = JwtEncription.encrypt(refresh_token);
-
     const issued_at = dayjs(tokenPayload.iat * 1000).format('YYYY-MM-DD HH:mm:ss');
     const expires_at = dayjs(tokenPayload.exp * 1000).format('YYYY-MM-DD HH:mm:ss');
 
@@ -93,8 +88,9 @@ export class Auth {
   }
 
   static async getTokenStored(user_id: number, refresh_token_input: string): Promise<UserToken | undefined> {
+    const curDate = dayjs().format('YYYY-MM-DD HH:mm:ss');
     const user_tokens = await MySQL2.executeQuery<UserTokenRowData[]>({
-      sql: `SELECT * FROM general.user_token WHERE user_id = ? AND revoked = 0 AND expires_at > NOW()`,
+      sql: `SELECT * FROM general.user_token WHERE user_id = ? AND revoked = 0 AND expires_at > '${curDate}'`,
       values: [user_id],
     });
     for (const token of user_tokens) {
@@ -124,7 +120,7 @@ export class Auth {
 
   static generateAccessToken = simpleErrorHandler<string, string | object | Buffer>((payload) => {
     return new Promise<string>((resolve, reject) => {
-      jwt.sign(payload, appConfig.jwt.access_token.secret, { expiresIn: appConfig.jwt.access_token.expire }, (err, token) => {
+      jwt.sign(payload, appConfig.jwt.access_token.secret, { expiresIn: appConfig.jwt.access_token.expire / 1000 }, (err, token) => {
         if (err) reject(err);
         if (token !== undefined) {
           resolve(token);
@@ -137,7 +133,7 @@ export class Auth {
 
   static generateRefreshToken = simpleErrorHandler<string, string | object | Buffer>((payload) => {
     return new Promise<string>((resolve, reject) => {
-      jwt.sign(payload, appConfig.jwt.refresh_token.secret, { expiresIn: appConfig.jwt.refresh_token.expire }, (err, token) => {
+      jwt.sign(payload, appConfig.jwt.refresh_token.secret, { expiresIn: appConfig.jwt.refresh_token.expire / 1000 }, (err, token) => {
         if (err) reject(err);
         if (token !== undefined) {
           resolve(token);

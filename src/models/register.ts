@@ -59,6 +59,7 @@ export class Register {
     }
     general_query = general_query.concat(' ', where_clause, ' ', additional_where_clause, ' ', orderby_clause, ' ', limit_clause);
 
+    console.log(general_query);
     const registros = await MySQL2.executeQuery<RowDataPacket[]>({ sql: general_query });
 
     return { data: p_action === 'prev' ? registros.reverse() : registros, order_by: registerOption.order_by };

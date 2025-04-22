@@ -14,6 +14,8 @@ export const verify = asyncErrorHandler(async (req: Request, res: Response, _nex
     return res.status(401).json({ message: 'Token de actualización no proporcionado.' });
   }
 
+  console.log(refreshToken);
+
   const tokenPayload = await Auth.verifyRefreshToken(refreshToken);
 
   if (tokenPayload === null) {
@@ -44,7 +46,7 @@ export const verify = asyncErrorHandler(async (req: Request, res: Response, _nex
     // secure: process.env.NODE_ENV === "production", // acceso solo con https
     sameSite: 'strict', // acceso del mismo dominio
     // maxAge: 1000*60*60 // expiracion 1h
-    maxAge: appConfig.cookie.access_token.max_age, // expiracion 1m
+    maxAge: appConfig.jwt.access_token.expire,
   });
 
   // res.cookie(appConfig.cookie.refresh_token.name, newRefreshToken, {
