@@ -1213,7 +1213,7 @@ export class NodeAttach extends BaseAttach {
         // this._log(`Received temperature alarm id=${tempID} value=${tempValue} time=${tempTime}`);
         break;
       case codes.VALUE_ALL_ENABLES:
-        this._log(`Received all enables '${command}'`);
+        // this._log(`Received all enables '${command}'`);
         const enablesData = this._parseMessage(parts, queries.enablesParse, id);
         if (!enablesData) {
           break;
@@ -1348,6 +1348,20 @@ export class NodeAttach extends BaseAttach {
         // this._log(`Received ${thresParamForUpdate.length} temperature addresses.`)
         await executeBatchForNode(queries.updateAlarmThreshold, this.controllerID, thresParamForUpdate);
         break;
+      case codes.VALUE_ALL_ORDER_STATES:
+        // this._log(`Received order states '${command}'`);
+        // Also update the technician
+        this.mirrorMessage(this._appendPart(command, this.controllerID.toString()), true);
+        while (parts.length >= 2) {
+          const orderData = this._parseMessage(parts, queries.pinStateParse, id, false);
+          if (!orderData || orderData.length < 2) continue;
+          const outputID = orderData[0].getInt();
+          const orderCompact = orderData[1].getInt();
+          const outputOrder = orderCompact === 0 ? codes.VALUE_TO_INACTIVE : orderCompact === 1 ? codes.VALUE_TO_ACTIVE : orderCompact === 2 ? codes.VALUE_TO_AUTO : codes.VALUE_TO_AUTO;
+          // this._log(`id: ${outputID} order: ${outputOrder}`);
+          this._notifyOutput(outputID, false, this.controllerID, null, null, null, null, this.getOrderToNotify(outputOrder));
+        }
+        break;
       case codes.VALUE_SERIAL:
         // this._log(`Received controller info '${command}'`);
         this.mirrorMessage(this._appendPart(command, this.controllerID.toString()), true);
@@ -1356,8 +1370,8 @@ export class NodeAttach extends BaseAttach {
           break;
         }
         const serialNumber = serialData[0].getString();
-        const version = serialData[1].getString();
-        this._log(`Received controller info: Serial '${serialNumber}' Version '${version}'`);
+        // const version = serialData[1].getString();
+        // this._log(`Received controller info: Serial '${serialNumber}' Version '${version}'`);
         // this._log(serialData[0].getString());
         const serialRes = await executeQuery<ResultSetHeader>(queries.nodeUpdateSerial, [serialNumber, this.controllerID]);
         if (!serialRes) {
@@ -1678,22 +1692,8 @@ export class NodeAttach extends BaseAttach {
         if (!orderData) {
           break;
         }
-        let newOrder: 1 | 0 | -1 | null = null;
         const originalOrder = orderData[1].getInt();
-        switch (originalOrder) {
-          case codes.VALUE_TO_ACTIVE:
-            newOrder = 1;
-            break;
-          case codes.VALUE_TO_INACTIVE:
-            newOrder = -1;
-            break;
-          case codes.VALUE_TO_AUTO:
-            newOrder = 0;
-            break;
-          default:
-            this._log(`Wrong order result received from controller ${originalOrder}`);
-            break;
-        }
+        const newOrder = this.getOrderToNotify(originalOrder);
         this._notifyOutput(orderData[0].getInt(), false, this.controllerID, null, null, null, null, newOrder);
         break;
       case codes.VALUE_SECURITY_STATE:
@@ -1721,7 +1721,7 @@ export class NodeAttach extends BaseAttach {
         }
         break;
       case codes.VALUE_SD_STATE:
-        this._log(`Received sd state from controller ${command}`);
+        // this._log(`Received sd state from controller ${command}`);
         const sdData = this._parseMessage(parts, queries.sdStateParse, id, false);
         if (sdData) {
           const sdProgramming = sdData[1].getInt();
@@ -1751,11 +1751,11 @@ export class NodeAttach extends BaseAttach {
         }
         break;
       case codes.CMD_UPDATE:
-        this._log(`Received update response '${command}'`);
+        // this._log(`Received update response '${command}'`);
         // Parse response
         const updateRes = this._parseMessage(parts, [queries.tupleInt]);
         if (!updateRes || updateRes[0].getInt() !== codes.AIO_OK) {
-          this._log(`No response found or update not needed`);
+          // this._log(`No response found or update not needed`);
           break;
         }
 
@@ -1776,9 +1776,32 @@ export class NodeAttach extends BaseAttach {
     return true;
   }
 
+  /**
+   * Get the order to notify the web.
+   * @param originalOrder Can only be VALUE_TO_ACTIVE, VALUE_TO_INACTIVE or VALUE_TO_AUTO
+   */
+  getOrderToNotify(originalOrder: number): 1 | 0 | -1 | null {
+    let newOrder: 1 | 0 | -1 | null = null;
+    switch (originalOrder) {
+      case codes.VALUE_TO_ACTIVE:
+        newOrder = 1;
+        break;
+      case codes.VALUE_TO_INACTIVE:
+        newOrder = -1;
+        break;
+      case codes.VALUE_TO_AUTO:
+        newOrder = 0;
+        break;
+      default:
+        this._log(`Wrong order result received from controller ${originalOrder}`);
+        break;
+    }
+    return newOrder;
+  }
+
   askSendFirmware(chunks: string[], version: FirmwareVersion) {
     // Ask controller if this update is needed
-    this._log(`Consulting controller for update to version ${version.major}.${version.minor}.${version.patch}`);
+    // this._log(`Consulting controller for update to version ${version.major}.${version.minor}.${version.patch}`);
     this.addCommandForController(codes.CMD_UPDATE, -1, null, [chunks.length.toString(), version.major.toString(), version.minor.toString(), version.patch.toString()], (code, tokenData) => {
       if (code !== codes.AIO_OK) {
         this._log('Update not nedded by controller');
@@ -1814,7 +1837,7 @@ export class NodeAttach extends BaseAttach {
 
   disableArmButton(state: boolean, log: boolean = true) {
     if (log) {
-      this._log(`Setting button disable to '${state}'`);
+      // this._log(`Setting button disable to '${state}'`);
     }
     sm.ControllerStateManager.socketAddUpdate(this.controllerID, { disableSecurityButton: state });
   }
@@ -2532,6 +2555,7 @@ export class ManagerAttach extends BaseAttach {
                   const cardData = this._parseMessage(parts, queries.cardParse, id);
                   if (!cardData) break;
                   await this._updateItem('card', cardData, queries.cardUpdate, id);
+                  // a_id  serie=?, administrador=?, co_id=?, ea_id=?, activo=?
                   this.updateCardInControllersGeneral(selector, cardData[0].getInt(), cardData[3].getInt(), cardData[1].getInt(), cardData[2].getInt() > 0);
                   break;
                 case codes.VALUE_CARD_EMPTY:

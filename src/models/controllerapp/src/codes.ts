@@ -258,6 +258,7 @@ export const VALUE_GSM = 0x2a8; // GSM Protocol
 export const VALUE_OUTPUT_ALARM_DELAY = 0x2a9; // Delay to turn off alarm
 export const VALUE_ALARM_THRESHOLD_CHANGED = 0x2aa; // Alarm Threshold changed
 export const VALUE_ALL_THRESHOLDS = 0x2ab; // Send all temperature sensors alarm thresholds
+export const VALUE_ALL_ORDER_STATES = 0x2ac; // Send all order states to the server
 
 export const VALUE_SOCKET_CLOSED = 0x400; // Socket was closed
 export const VALUE_AUTHORIZED = 0x401; // Card authorized
