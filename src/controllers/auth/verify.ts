@@ -14,8 +14,6 @@ export const verify = asyncErrorHandler(async (req: Request, res: Response, _nex
     return res.status(401).json({ message: 'Token de actualización no proporcionado.' });
   }
 
-  console.log(refreshToken);
-
   const tokenPayload = await Auth.verifyRefreshToken(refreshToken);
 
   if (tokenPayload === null) {
