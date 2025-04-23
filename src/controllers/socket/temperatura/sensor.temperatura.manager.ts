@@ -79,9 +79,11 @@ export class SensorTemperaturaManager {
         if (hasChangeActivo) {
           if (activo === SenTempState.Activo) {
             SensorTemperaturaManager.notifyListSenTemp(ctrl_id, senTemperatura, 'add');
+            TemperatureManager.notifyTemperature(ctrl_id, senTemperatura, 'add');
           }
           if (activo === SenTempState.Desactivado) {
             SensorTemperaturaManager.notifyListSenTemp(ctrl_id, senTemperatura, 'delete');
+            TemperatureManager.notifyTemperature(ctrl_id, senTemperatura, 'delete');
           }
         }
         SensorTemperaturaManager.notifySenTemp(ctrl_id, senTemperatura);

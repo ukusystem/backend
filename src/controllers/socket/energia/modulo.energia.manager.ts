@@ -83,9 +83,11 @@ export class MedidorEnergiaManager {
         if (hasChangeActivo) {
           if (activo === MedEneState.Activo) {
             MedidorEnergiaManager.notifyListMedEnergia(ctrl_id, medEnergia, 'add');
+            EnergyManager.notifyEnergy(ctrl_id, medEnergia, 'add');
           }
           if (activo === MedEneState.Desactivado) {
             MedidorEnergiaManager.notifyListMedEnergia(ctrl_id, medEnergia, 'delete');
+            EnergyManager.notifyEnergy(ctrl_id, medEnergia, 'delete');
           }
         }
         MedidorEnergiaManager.notifyMedEnergia(ctrl_id, medEnergia);

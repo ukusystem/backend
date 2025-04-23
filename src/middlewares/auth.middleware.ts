@@ -6,6 +6,7 @@ import { RequestWithUser } from '../types/requests';
 import { appConfig } from '../configs';
 import { UserRol } from '../types/rol';
 import { Socket } from 'socket.io';
+import { socketHandShakeSchema } from '../schemas/auth/socket.handshake';
 // import { socketHandShakeSchema } from '../schemas/auth/socket.handshake';
 
 export interface CustomRequest extends Request {
@@ -32,17 +33,27 @@ export const socketAuthWithRoles = (allowedRoles: UserRol[]) => {
     try {
       const cookies = getCookies(socket.request.headers.cookie, [appConfig.cookie.refresh_token.name, appConfig.cookie.access_token.name]);
 
-      if (cookies[appConfig.cookie.refresh_token.name] === undefined) {
+      const refreshTokenCookie = cookies[appConfig.cookie.refresh_token.name];
+      let accessTokenHeader = undefined;
+
+      const result = socketHandShakeSchema.safeParse(socket.handshake.auth);
+      if (result.success) {
+        accessTokenHeader = result.data.token;
+      }
+
+      const accesssToken = refreshTokenCookie ?? accessTokenHeader;
+
+      if (accesssToken === undefined) {
         return next(new Error('Token de acceso no proporcionado'));
       }
-      // const result = socketHandShakeSchema.safeParse(socket.handshake.auth);
-      // if (!result.success) {
-      //   return next(new Error('Token de acceso no proporcionado'));
-      // }
 
-      // const { token } = result.data;
+      let tokenPayload: JwtPayload | null = null;
+      if (refreshTokenCookie) {
+        tokenPayload = await Auth.verifyRefreshToken(accesssToken);
+      } else {
+        tokenPayload = await Auth.verifyAccessToken(accesssToken);
+      }
 
-      const tokenPayload = await Auth.verifyRefreshToken(cookies[appConfig.cookie.refresh_token.name]);
       if (!tokenPayload) {
         return next(new Error('Token de acceso inválido o expirado'));
       }
