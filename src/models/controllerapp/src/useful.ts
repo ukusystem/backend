@@ -7,6 +7,7 @@ import bcrypt from 'bcrypt';
 import dayjs from 'dayjs';
 import path from 'path';
 import * as codes from './codes';
+import { FirmwareVersion } from './firmware';
 // import process from 'node:process'
 const BCRYPT_STRENGTH = 12;
 const MAX_FILE_SIZE_B = 5 * 1000 * 1000;
@@ -53,6 +54,46 @@ export function isLinux(): boolean {
   return osName === 'linux';
 }
 
+/**
+ * @param buffer Buffer to get the file content from.
+ * @return The version object, or null if the data could not be found in the predefined position.
+ */
+function getVersionFromBuffer(buffer: Buffer): FirmwareVersion | null {
+  const start = 0x30;
+  const length = 16;
+  const sub = buffer.subarray(start, start + length);
+  // console.log(buffer.subarray(0, start).toString('hex'));
+  // console.log(sub.toString('hex'));
+  // console.log("Base64 head '" + buffer.toString('base64').substring(0, 30) + "' Hex head '" + buffer.subarray(0, start + length).toString('hex') + "'");
+  const versionString = sub.toString();
+  const verParts = versionString.split('.');
+  const major = parseInt(verParts[0]);
+  const minor = parseInt(verParts[1]);
+  const patch = parseInt(verParts[2]);
+  if (major >= 0 && minor >= 0 && patch >= 0) {
+    return { major: major, minor: minor, patch: patch };
+  }
+  return null;
+}
+
+export async function getVersionFromFile(path: string): Promise<FirmwareVersion | null> {
+  const fileBuffer = await readFileAsBuffer(path);
+  if (!fileBuffer) {
+    return null;
+  }
+  return getVersionFromBuffer(fileBuffer);
+}
+
+/**
+ * Like {@linkcode getVersionFromBuffer} but it gets the content from a base64 string.
+ * @param base64Content
+ * @returns
+ */
+export function getVersionFromBase64(base64Content: string): FirmwareVersion | null {
+  const versionString = Buffer.from(base64Content, 'base64');
+  return getVersionFromBuffer(versionString);
+}
+
 export function toHex(number: number): string {
   return '0x' + number.toString(16);
 }
@@ -97,8 +138,13 @@ export function getStateName(state: number): string {
 }
 
 export async function readFileAsBase64(path: string): Promise<string | null> {
+  const buf = await readFileAsBuffer(path);
+  return buf ? buf.toString('base64') : null;
+}
+
+export async function readFileAsBuffer(path: string): Promise<Buffer | null> {
   try {
-    return (await fs.readFile(path)).toString('base64');
+    return await fs.readFile(path);
   } catch (e) {
     console.log(e);
   }
@@ -117,7 +163,7 @@ export async function readWorkerPhotoAsBase64(filename: string): Promise<string 
  * @param byteSize The size in bytes written to the file. If an error occurs, this value is set to `-1`.
  * @returns True if the write was successful, false otherwise.
  */
-async function writeFileFromBase64(base64: string, filePath: string, byteSize: AtomicNumber): Promise<boolean> {
+export async function writeFileFromBase64(base64: string, filePath: string, byteSize: AtomicNumber): Promise<boolean> {
   try {
     const temp = Buffer.from(base64, 'base64');
     if (temp.length <= MAX_FILE_SIZE_B) {
@@ -185,7 +231,7 @@ export function getPathForWorkerPhoto(workerID: number): string {
  * Write a file to a path proper for an unregistered worker photo, using {@linkcode PHOTOS_RELATIVE_PATH}, the database name and the file name provided.
  *
  * @param base64
- * @param filename
+ * @param milis
  * @param nodeID The node ID to built the database name with.
  * @param byteSize
  * @return

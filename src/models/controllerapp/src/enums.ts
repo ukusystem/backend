@@ -43,10 +43,13 @@ export const States = {
   NONEXISTENT: 14,
   ILLEGAL: 15,
   FINISHED: 16,
-  NULLIFIED: 17,
-  UNATTENDED: 18,
+  // Nullified was discarted as a ticket state
+  // NULLIFIED: 17,
+  IGNORED: 18,
   MOUNTING: 19,
   EJECTING: 20,
+  ATTENDED: 21,
+  ABSENCE: 22,
 };
 
 export function getState(id: number): number {

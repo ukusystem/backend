@@ -5,10 +5,11 @@ export const MAX_MSG_LENGTH = 511; // The maximum message length without the nul
 // Separators
 
 export const SEP_EOL = '|'; // Separator of messages. Messages are composed of tokens. ASCII 124
-export const SEP_CMD = '`'; // Separator of tokens. ASCII 96
+export const SEP_CMD = '&'; // Separator of tokens. ASCII 38
 export const SEP_MTY = '~'; // Identifier of empty content (to be filled by receiver). ASCII 126
-export const SEP_LST = '_'; // Separator of items in a list
+export const SEP_LST = '_'; // Separator of items in a list. ASCII 95
 export const SEP_EOL_2 = '|'; // Alternate separator
+export const SEP_SIM = '^'; // Identifier of sim commands. ASCII 94
 
 export const AIO_OK = 0x000; // Successfully executed
 export const ERR = 0x001; // General error
@@ -70,13 +71,17 @@ export const ERR_NO_ALARM = 0x037; // No alarm found
 export const ERR_NO_OFFSET = 0x038; // No offset found
 export const ERR_NO_CHANGE = 0x039; // There was no change / The value is the same as the previous
 export const ERR_NO_LOGGED_IN = 0x03a; // The user is not logged in
-export const ERR_TIMEOUT = 0x03b; // Operation timeout
+export const J_ERR_TIMEOUT = 0x03b; // Operation timeout
 export const ERR_NO_ADMIN = 0x03c; // Missing admin info
 export const ERR_NO_INT = 0x03d; // Missing integer
 export const ERR_NO_BIG = 0x03e; // Missing BigIngeter. Used in Java
 export const ERR_NO_CARD_READER_TYPE = 0x03f; // Missing card reader type
 export const ERR_NO_LONG = 0x040; // Missing long.
 export const ERR_NO_FLOAT = 0x041; // Missing float.
+export const ERR_INCOMPATIBLE = 0x042; // Version is not compatible
+export const ERR_NOT_NEEDED = 0x043; // An update for the send version is not needed
+export const ERR_TOO_OLD = 0x044; // The firmware sent is too old for the server
+export const ERR_CORRUPTED = 0x045; // The data sent is corrupted
 
 export const VALUE_ONE_LINK = 0x200; // Set or get one output link
 export const VALUE_ACTIVE_DELAY = 0x201; // Set or get delay to active
@@ -241,6 +246,18 @@ export const VALUE_MOUNTING = 0x29c; // The sd card in being mounted
 export const VALUE_SD_TECH = 0x29d; // Set or get the SD state from the technician
 export const VALUE_SD_STATE = 0x29e; // Get the complete sd state
 export const VALUE_NODE_STATE = 0x29f; // Notify the controller state to the technicians
+export const VALUE_SERIAL = 0x2a0; // Get the serial number
+export const VALUE_NEED_UPDATE = 0x2a1; // Ask if an update for a specific version  is needed
+export const VALUE_VERSION = 0x2a2; // Request versionç
+export const VALUE_FIRMWARE_ADD = 0x2a3; // Send a new firmware
+export const VALUE_ALARM_THRESHOLD = 0x2a4; // Set or get the alarm threshold
+export const VALUE_ALARM_PERIOD = 0x2a5; // Set or get the alarm period
+export const VALUE_PROTOCOL = 0x2a6; // Get the current protocol used to communicate.
+export const VALUE_TCP = 0x2a7; // TCP Protocol
+export const VALUE_GSM = 0x2a8; // GSM Protocol
+export const VALUE_OUTPUT_ALARM_DELAY = 0x2a9; // Delay to turn off alarm
+export const VALUE_ALARM_THRESHOLD_CHANGED = 0x2aa; // Alarm Threshold changed
+export const VALUE_ALL_THRESHOLDS = 0x2ab; // Send all temperature sensors alarm thresholds
 
 export const VALUE_SOCKET_CLOSED = 0x400; // Socket was closed
 export const VALUE_AUTHORIZED = 0x401; // Card authorized
@@ -536,3 +553,34 @@ export const CMD_KEEP_ALIVE_REQUEST = 0x61b;
  * A card reader changed authorization
  */
 export const CMD_AUTHORIZATION_CHANGED = 0x61c;
+
+/**
+ * @brief To send an update. The version is appended as separate fields
+ * Format sent by the server        CDM_UPDATE,id,major,minor,patch
+ * Format sent by the controller    CDM_UPDATE,id,response[,token]
+ */
+export const CMD_UPDATE = 0x61d;
+
+/**
+ * @brief Continue with the download of the new firmware
+ * Format CMD_UPDATE_CONTINUE,0,token,content
+ */
+export const CMD_UPDATE_CONTINUE = 0x61e;
+
+/**
+ * @brief End the download of the firmware
+ * Format CMD_UPDATE_END,0,token
+ */
+export const CMD_UPDATE_END = 0x61f;
+
+/**
+ * @brief Send a temperature alarm.
+ * Format: CMD_TEMP_ALARM,sensor_id,temp_value,time
+ */
+export const CMD_TEMP_ALARM = 0x620;
+
+/**
+ * @brief Send on temperature state change
+ * Format: VALUE_TEMP_CHANGED, sensor_id, state
+ */
+export const CMD_TEMP_CHANGED = 0x621;

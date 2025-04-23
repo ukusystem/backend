@@ -4,7 +4,7 @@
     "Serial": 10134776,
     "WorkerID": 1,
     "TypeID": 1,
-    "IsAdmin": false,
+    "IsAdmin": true,
     "IsDisabled": false
   },
   {
@@ -25,7 +25,7 @@
   },
   {
     "ID": 4,
-    "Serial": 9673362,
+    "Serial": 10081840,
     "WorkerID": 4,
     "TypeID": 1,
     "IsAdmin": false,
@@ -33,7 +33,7 @@
   },
   {
     "ID": 5,
-    "Serial": 9672827,
+    "Serial": 10093924,
     "WorkerID": 5,
     "TypeID": 1,
     "IsAdmin": false,
@@ -81,10 +81,10 @@
   },
   {
     "ID": 11,
-    "Serial": 1,
-    "WorkerID": 1,
-    "TypeID": 1,
-    "IsAdmin": false,
+    "Serial": 12345678,
+    "WorkerID": 2,
+    "TypeID": 3,
+    "IsAdmin": true,
     "IsDisabled": true
   },
   {

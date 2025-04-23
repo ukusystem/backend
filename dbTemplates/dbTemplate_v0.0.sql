@@ -75,7 +75,7 @@ CREATE TABLE `cargo` (
 
 LOCK TABLES `cargo` WRITE;
 /*!40000 ALTER TABLE `cargo` DISABLE KEYS */;
-INSERT INTO `cargo` VALUES (1,'Gerente de proyecto'),(2,'Supervisora de Seguridad'),(3,'Técnico de Instalación'),(4,'Analista de Seguridad'),(5,'Operador de Monitoreo'),(6,'Consultora de Seguridad'),(7,'Técnico de Mantenimiento'),(8,'Especialista en Seguridad'),(9,'Coordinador de Seguridad'),(10,'Analista de Riesgos');
+INSERT INTO `cargo` VALUES (1,'Gerente de proyecto'),(2,'Supervisor de Seguridad'),(3,'Técnico de Instalación'),(4,'Analista de Seguridad'),(5,'Operador de Monitoreo'),(6,'Consultora de Seguridad'),(7,'Técnico de Mantenimiento'),(8,'Especialista en Seguridad'),(9,'Coordinador de Seguridad'),(10,'Analista de Riesgos'),(11,'Diseñador UI/UX'),(12,'Desarrollador de software'),(13,'Jefe de desarrollo'),(14,'Analista QA'),(15,'Desarrollador web');
 /*!40000 ALTER TABLE `cargo` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -299,6 +299,60 @@ INSERT INTO `estado` VALUES (1,'Esperando'),(2,'Aceptado'),(3,'Cancelado'),(4,'R
 UNLOCK TABLES;
 
 --
+-- Table structure for table `firmware`
+--
+
+DROP TABLE IF EXISTS `firmware`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `firmware` (
+  `f_id` int NOT NULL AUTO_INCREMENT,
+  `archivo` varchar(200) NOT NULL,
+  `mayor` int unsigned NOT NULL,
+  `menor` int unsigned NOT NULL,
+  `parche` int unsigned NOT NULL,
+  PRIMARY KEY (`f_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `firmware`
+--
+
+LOCK TABLES `firmware` WRITE;
+/*!40000 ALTER TABLE `firmware` DISABLE KEYS */;
+/*!40000 ALTER TABLE `firmware` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `general_audit`
+--
+
+DROP TABLE IF EXISTS `general_audit`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `general_audit` (
+  `ga_id` int NOT NULL AUTO_INCREMENT,
+  `table_name` varchar(100) NOT NULL,
+  `field_name` varchar(100) NOT NULL,
+  `old_value` varchar(250) NOT NULL,
+  `new_value` varchar(250) NOT NULL,
+  `personal` varchar(250) NOT NULL,
+  `datetime` timestamp NOT NULL,
+  PRIMARY KEY (`ga_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `general_audit`
+--
+
+LOCK TABLES `general_audit` WRITE;
+/*!40000 ALTER TABLE `general_audit` DISABLE KEYS */;
+/*!40000 ALTER TABLE `general_audit` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `marca`
 --
 
@@ -427,7 +481,7 @@ CREATE TABLE `registrored` (
   PRIMARY KEY (`rr_id`),
   KEY `fk_registrored_controlador_co_id_idx` (`ctrl_id`),
   CONSTRAINT `fk_registrored_controlador_co_id` FOREIGN KEY (`ctrl_id`) REFERENCES `controlador` (`ctrl_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -488,7 +542,7 @@ CREATE TABLE `rol` (
 
 LOCK TABLES `rol` WRITE;
 /*!40000 ALTER TABLE `rol` DISABLE KEYS */;
-INSERT INTO `rol` VALUES (1,'Invitado','Acceso de solo lectura',1),(2,'Usuario','Acceso limitado a funciones específicas',1),(3,'Supervisor','Gestión y supervisión de contenidos',1),(4,'Editor','Edición y publicación de contenidos',1),(5,'Administrador','Acceso completo a la administración del sitio',1),(6,'Desarrollador','Desarrollo y pruebas de la plataforma web',1),(7,'Analista','Análisis de datos y generación de informes',1),(8,'Consultor','Asesoramiento y recomendaciones de mejoras',1),(9,'Moderador','Moderación de comentarios y foros',1),(10,'Suscriptor','Acceso a contenido premium',1);
+INSERT INTO `rol` VALUES (1,'Invitado','Creación de tickets',1),(2,'Gestor','Funciones web',1),(3,'Supervisor','Gestión y supervisión de contenidos',0),(4,'Editor','Edición y publicación de contenidos',0),(5,'Administrador','Acceso completo al sistema',1);
 /*!40000 ALTER TABLE `rol` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -562,6 +616,39 @@ LOCK TABLES `tipotrabajo` WRITE;
 /*!40000 ALTER TABLE `tipotrabajo` DISABLE KEYS */;
 INSERT INTO `tipotrabajo` VALUES (1,'Telecomunicaciones'),(2,'Electricidad'),(3,'Visita'),(4,'Mantenimiento');
 /*!40000 ALTER TABLE `tipotrabajo` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `user_token`
+--
+
+DROP TABLE IF EXISTS `user_token`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `user_token` (
+  `ut_id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int NOT NULL,
+  `refresh_token` varchar(500) NOT NULL,
+  `issued_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `expires_at` timestamp NOT NULL,
+  `revoked` tinyint(1) NOT NULL DEFAULT '0',
+  `ip_address` varchar(45) NOT NULL,
+  `user_agent` text NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`ut_id`),
+  KEY `fk_user_token_user_u_id_idx` (`user_id`),
+  CONSTRAINT `fk_user_token_user_u_id` FOREIGN KEY (`user_id`) REFERENCES `usuario` (`u_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `user_token`
+--
+
+LOCK TABLES `user_token` WRITE;
+/*!40000 ALTER TABLE `user_token` DISABLE KEYS */;
+/*!40000 ALTER TABLE `user_token` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -755,6 +842,35 @@ LOCK TABLES `medidorenergia` WRITE;
 /*!40000 ALTER TABLE `medidorenergia` DISABLE KEYS */;
 INSERT INTO `medidorenergia` VALUES (1,'Medidor 1',0),(2,'Medidor 2',0),(3,'Medidor 3',0),(4,'Medidor 4',0),(5,'Medidor 5',0),(6,'Medidor 6',0),(7,'Medidor 7',0),(8,'Medidor 8',0);
 /*!40000 ALTER TABLE `medidorenergia` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `nvrpreferencia`
+--
+
+DROP TABLE IF EXISTS `nvrpreferencia`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `nvrpreferencia` (
+  `nvrpref_id` int NOT NULL AUTO_INCREMENT,
+  `dia` tinyint unsigned NOT NULL,
+  `tiempo_inicio` time NOT NULL,
+  `tiempo_final` time NOT NULL,
+  `cmr_id` int NOT NULL,
+  `activo` tinyint unsigned NOT NULL,
+  PRIMARY KEY (`nvrpref_id`),
+  KEY `cmr_id` (`cmr_id`),
+  CONSTRAINT `nvrpreferencia_ibfk_1` FOREIGN KEY (`cmr_id`) REFERENCES `camara` (`cmr_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `nvrpreferencia`
+--
+
+LOCK TABLES `nvrpreferencia` WRITE;
+/*!40000 ALTER TABLE `nvrpreferencia` DISABLE KEYS */;
+/*!40000 ALTER TABLE `nvrpreferencia` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -1204,4 +1320,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-11-04 12:14:22
+-- Dump completed on 2025-01-02 17:27:19

@@ -122,8 +122,9 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
 
         this.ffmpegProcess = newFfmpegProcess;
 
-        this.ffmpegProcess.on('close', async (code, signal) => {
-          cameraLogger.debug(`CameraMotionProcess | Proceso ffmpeg cerrado con código ${code} y señal ${signal} | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id}`);
+        // this.ffmpegProcess.on('close', async (code, signal) => {
+        this.ffmpegProcess.on('close', async (code) => {
+          // cameraLogger.debug(`CameraMotionProcess | Proceso ffmpeg cerrado con código ${code} y señal ${signal} | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id}`);
 
           // abort controllers:
           controllerSnapshot.abort();
@@ -137,15 +138,16 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
 
               insertPathToDB(recordSubDirectory, this.ctrl_id, this.cmr_id, 1);
             }
-          } else {
-            cameraLogger.error(`CameraMotionProcess  | Proceso ffmpeg cerrado con código de error: ${code} | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id}`);
-            // Eliminar video.
-            fs.unlink(recordFilePath, (err) => {
-              if (err) {
-                cameraLogger.error(`CameraMotionProcess | Error al eliminar video: ${recordFilePath} | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id}`, err);
-              }
-            });
           }
+          // else {
+          //   cameraLogger.error(`CameraMotionProcess  | Proceso ffmpeg cerrado con código de error: ${code} | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id}`);
+          //   // Eliminar video.
+          //   fs.unlink(recordFilePath, (err) => {
+          //     if (err) {
+          //       cameraLogger.error(`CameraMotionProcess | Error al eliminar video: ${recordFilePath} | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id}`, err);
+          //     }
+          //   });
+          // }
 
           if (this.ffmpegProcess !== undefined) {
             // this.ffmpegProcess.kill();
@@ -153,7 +155,7 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
           }
 
           if (this.isActiveMotion) {
-            cameraLogger.debug(`CameraMotionProcess | Evento motion continua activo | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id}`);
+            // cameraLogger.debug(`CameraMotionProcess | Evento motion continua activo | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id}`);
             const isConnected = await this.isCamConnected();
             if (isConnected) {
               return this.snapshotRecord(rtspUrl);

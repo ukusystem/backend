@@ -29,9 +29,14 @@ import * as db2 from './db2';
 import * as net from 'net';
 import * as cp from 'child_process';
 import { Camara } from '../../../types/db';
+import { FirmwareVersion } from './firmware';
 // import { ControllerStateManager } from '../../../controllers/socket';
 
 export class Main {
+  private static readonly VERSION_MAJOR = 0;
+  private static readonly VERSION_MINOR = 4;
+  private static readonly VERSION_PATCH = 3;
+
   /**
    * Whether the object has already been created and the service has already started running
    */
@@ -52,6 +57,8 @@ export class Main {
 
   private static readonly ALIVE_CAMERA_PING_INTERVAL_MS = parseInt(process.env.CAMERA_PING_INTERVAL ?? '4') * 1000;
   private static readonly ALIVE_CAMERA_PING_TIMEOUT_MS = parseInt(process.env.CAMERA_PING_TIMEOUT ?? '2') * 1000;
+
+  private static readonly WAIT_UPDATE_FOR_ALL_INTERVAL = 1 * 1000;
 
   private static readonly LOGGER_RELATIVE_PATH = './logs';
   private readonly tag = '█ ';
@@ -97,6 +104,9 @@ export class Main {
   flag = true;
 
   constructor() {
+    // console.log(Encryption.decrypt('hQGr0tZg83kUEIZsr+lPwg==', true));
+    // console.log(Encryption.decrypt('hQGr0tZg83kUEIZsr+lPwg==', false));
+
     // const enc = Encryption.encrypt("admin",true)
     // console.log(enc)
     // console.log(Encryption.decrypt(enc??'', true))
@@ -126,7 +136,7 @@ export class Main {
 
     /* Init messages */
 
-    this.log('█ Controller service v 0.3 █');
+    this.log(`█ Controller service v ${Main.VERSION_MAJOR}.${Main.VERSION_MINOR}.${Main.VERSION_PATCH} █`);
     this.log(`Running on ${useful.isWindows() ? 'Windows' : useful.isLinux() ? 'Linux' : 'Unknown OS'}`);
 
     /* Events to clean up */
@@ -185,6 +195,46 @@ export class Main {
     setTimeout(this.startCamerasCheck, Main.ALIVE_CAMERA_PING_INTERVAL_MS);
 
     this.startTicketsCheck();
+  }
+
+  public static getVersionString(): string {
+    return `${Main.VERSION_MAJOR}.${Main.VERSION_MINOR}.${Main.VERSION_PATCH}`;
+  }
+
+  /**
+   * Compare a version with the server's
+   * @param major
+   * @param minor
+   * @param patch
+   * @returns
+   * @see {@linkcode Main.compareVersions}
+   */
+  public static compareVersionWithMain(major: number, minor: number, patch: number): 1 | 0 | -1 {
+    return this.compareVersions({ major: Main.VERSION_MAJOR, minor: Main.VERSION_MINOR, patch: Main.VERSION_PATCH }, { major: major, minor: minor, patch: patch });
+  }
+
+  /**
+   * Compare two versions.
+   * @param ver1
+   * @param ver2
+   * @returns 1 if first version is newer than the second, 0 if the same and -1 if older.
+   */
+  public static compareVersions(ver1: FirmwareVersion, ver2: FirmwareVersion) {
+    if (ver1.major === ver2.major && ver1.minor === ver2.minor && ver1.patch === ver2.patch) {
+      return 0;
+    } else if (ver1.major > ver2.major || (ver1.major === ver2.major && ver1.minor > ver2.minor) || (ver1.major === ver2.major && ver1.minor === ver2.minor && ver1.patch > ver2.patch)) {
+      return 1;
+    }
+    return -1;
+  }
+
+  /**
+   *
+   * @param major
+   * @returns 1 if the provided major is older, 0 if the same, -1 if newer.
+   */
+  public static compareMajorWithMain(major: number): 1 | 0 | -1 {
+    return Main.VERSION_MAJOR > major ? 1 : Main.VERSION_MAJOR < major ? -1 : 0;
   }
 
   /**
@@ -291,7 +341,6 @@ export class Main {
       }
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     this.managerServer.on('error', (e: any) => {
       this.log(`ERROR listening to managers. Code ${e.code}`);
     });
@@ -318,7 +367,6 @@ export class Main {
       const newNode = NodeAttach.getInstanceFromPacket(node, this.logger);
       this.selector.nodeAttachments.push(newNode);
     }
-
     this.log(`Loaded ${this.selector.nodeAttachments.length} nodes.`);
     return true;
   }
@@ -430,13 +478,17 @@ export class Main {
    * @param filename Value to fill in the column called 'foto'.
    * @returns Array of parameters.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   private workerToArrayForQuery(worker: Personal, ticketID: number, filename: string | null): any[] {
     return [worker.nombre, worker.apellido, worker.telefono, worker.dni, worker.c_id, worker.co_id, ticketID, filename];
   }
 
-  private async finishTicket(finalState: number, ticketID: number, nodeID: number) {
+  public static async updateTicketState(finalState: number, ticketID: number, nodeID: number) {
     await executeQuery(BaseAttach.formatQueryWithNode(queries.finishTicket, nodeID), [finalState, useful.getCurrentDate(), ticketID]);
+  }
+
+  private async saveTicketState(finalState: number, ticketID: number, nodeID: number) {
+    await Main.updateTicketState(finalState, ticketID, nodeID);
     this.log(`Final state of ticket ID = ${ticketID} : ${finalState}`);
   }
 
@@ -458,7 +510,7 @@ export class Main {
           }
           this.log(`Remove message ID = ${msgID} by timeout.`);
           // Message has to be removed anyways
-          node.removePendingMessageByID(msgID, codes.ERR_TIMEOUT, true, false);
+          node.removePendingMessageByID(msgID, codes.J_ERR_TIMEOUT, true, false);
           node.disableArmButton(false);
           resolve(new RequestResult(false, `El controlador ID = ${controllerID} no ha respondido a tiempo.`));
         }, Main.REQUEST_TIMEOUT);
@@ -510,7 +562,6 @@ export class Main {
     if (!ticketData) {
       this.log(`No ticket data for ID = ${ticketID}`);
       return new RequestResult(false, `Error leyendo ticket ID = ${ticketID} de la base de datos.`);
-      // return States.ERROR;
     }
     // Monitor state by default
     let monitor = States.ERROR;
@@ -518,11 +569,11 @@ export class Main {
     const currentState = getState(ticketData[0].estd_id);
     let isFinal = false;
     switch (currentState) {
+      case States.ABSENCE:
       case States.FINISHED:
-      case States.NULLIFIED:
       case States.CANCELLED:
       case States.REJECTED:
-      case States.UNATTENDED:
+      case States.IGNORED:
         isFinal = true;
         break;
       default:
@@ -532,6 +583,7 @@ export class Main {
     switch (currentState) {
       case States.ACCEPTED:
       case States.WAITING_APPROVE:
+      case States.ATTENDED:
         second = true;
         break;
       default:
@@ -542,13 +594,11 @@ export class Main {
     if (!isExpected) {
       this.log('Error getting current ticket state. Unknown state.');
       return new RequestResult(false, `El ticket ID = ${ticketID} tiene un estado inválido.`);
-      // return States.ILLEGAL;
     }
     const newAction = getState(newFinish.action);
     if (newAction === States.IMPOSSIBLE) {
       this.log('Unknown new action.');
       return new RequestResult(false, `Acción inválida para el ticket.`);
-      // return States.ILLEGAL;
     }
 
     // Execute order
@@ -557,7 +607,6 @@ export class Main {
     if (isFinal) {
       this.log(`Ticket ID=${ticketID} is already finished with state ${currentState}`);
       return new RequestResult(false, `El ticket ya está finalizado.`);
-      // return States.EXECUTED;
     } else {
       // Can only request to accept, reject, cancel or unattended.
       if (currentState === States.WAITING_APPROVE) {
@@ -568,18 +617,17 @@ export class Main {
             // console.log(ticketData[0])
             const start = useful.datetimeToLong(ticketData[0].fechacomienzo);
             const end = useful.datetimeToLong(ticketData[0].fechatermino);
-            await this.finishTicket(States.ACCEPTED, ticketID, nodeID);
+            await this.saveTicketState(newAction, ticketID, nodeID);
             this.addTicket(nodeID, new PartialTicket(ticketID, ticketData[0].co_id, start, end));
             monitor = States.EXECUTED;
             break;
+          // The guest that created the ticket can cancel it.
           case States.CANCELLED:
           case States.REJECTED:
-          case States.UNATTENDED:
-            // At this point, the current state can only be ACCEPTED or WAITING_APPROVE so
-            // it can always be rejected.
-            await this.finishTicket(newAction, ticketID, nodeID);
-            // Ticket was never accepted so there is no need to alter the pending tickets,
-            // but anyways.
+          case States.IGNORED:
+            // In state WAITING_APPROVE it can always be rejected.
+            await this.saveTicketState(newAction, ticketID, nodeID);
+            // Ticket was never accepted so there is no need to alter the pending tickets but anyways.
             this.removeTicket(nodeID, ticketID);
             monitor = States.EXECUTED;
             break;
@@ -591,15 +639,31 @@ export class Main {
       } else if (currentState === States.ACCEPTED) {
         switch (newAction) {
           // These events can happen only if the ticket is accepted.
-          // FINISHED, NULLIFIED can happen only if the ticket is also in time.
-          // CANCELLED, REJECTED can happen only if the current time is before the start time.
-          case States.FINISHED:
-          case States.NULLIFIED:
+          // FINISHED can happen only if the ticket is also in time. A ticket should not be finished before it is attended, but anyways.
+          // CANCELLED, REJECTED can happen only if the current time is before the start time. A ticket should not be rejected after it's been accepted, but anyways.
+          // ABSENCE can happen only after the ticket has ended.
+          // case States.FINISHED:
+          // case States.REJECTED:
+          // Can be cancelled by an admin or a guest
           case States.CANCELLED:
-          case States.REJECTED:
-            await this.finishTicket(newAction, ticketID, nodeID);
-            // Ticket was never accepted so there is no need to alter the pending tickets,
-            // but anyways.
+          case States.ABSENCE:
+            // case States.ATTENDED:
+            await this.saveTicketState(newAction, ticketID, nodeID);
+            // if (newAction !== States.ATTENDED) {
+            this.removeTicket(nodeID, ticketID);
+            // }
+            monitor = States.EXECUTED;
+            break;
+          default:
+            this.log(`Illegal new action. Current state: ${currentState} Action: ${newAction}`);
+            monitor = States.ILLEGAL;
+            break;
+        }
+      } else if (currentState === States.ATTENDED) {
+        switch (newAction) {
+          // Ticket can only be finished after it's been attended. Can be finished by an admin or the guest.
+          case States.FINISHED:
+            await this.saveTicketState(newAction, ticketID, nodeID);
             this.removeTicket(nodeID, ticketID);
             monitor = States.EXECUTED;
             break;
@@ -614,7 +678,6 @@ export class Main {
       return new RequestResult(true, `Acción ejecutada.`);
     }
     return new RequestResult(false, `Error interno.`);
-    // return monitor;
   }
 
   /**
@@ -724,7 +787,7 @@ export class Main {
           }
           this.log(`Remove message ID = ${msgID} by timeout.`);
           // Message has to be removed anyways
-          nodeKey.removePendingMessageByID(msgID, codes.ERR_TIMEOUT, true, false);
+          nodeKey.removePendingMessageByID(msgID, codes.J_ERR_TIMEOUT, true, false);
           monitor = States.TIMEOUT;
           await this.registerOrder(newOrder, monitor);
           // resolve(monitor)

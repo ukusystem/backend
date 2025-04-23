@@ -17,7 +17,7 @@ import { SystemManager } from '../../../models/system';
 import { appConfig } from '../../../configs';
 import { Main } from './main';
 // import { ControllerMapManager } from "@maps/index";
-import { ControllerMapManager } from '../../maps';
+import { ControllerMapManager, RegionMapManager } from '../../maps';
 import { NodeTickets } from './nodeTickets';
 // import { NodoCameraMapManager } from "@maps/nodo.camera";
 import { NodoCameraMapManager } from '../../maps/nodo.camera';
@@ -32,6 +32,10 @@ import * as codes from './codes';
 import * as db2 from './db2';
 // import * as sm from "@ctrls/socket";
 import * as sm from '../../../controllers/socket';
+import path from 'path';
+import { FirmwareVersion } from './firmware';
+import { MyStringIterator } from './myStringIterator';
+import { createHash } from 'crypto';
 
 /**
  * Base attachment for the sockets
@@ -41,6 +45,11 @@ export class BaseAttach extends Mortal {
   static readonly UNREACHABLE_INTERVAL_MS = 60 * 1000;
   static readonly DEFAULT_ADDRESS = '0.0.0.0';
   private static readonly BASE_NODE_NAME = 'nodo';
+  /**
+   * Byte length of a chunk to send as part of an update. This will be encoded in base64 format, so the final length of the chunk is 4/3 of this value.
+   * Currently the final chunk is expected to be 400 bytes.
+   */
+  static readonly CHUNK_LENGTH = 300;
 
   /**
    * Inner socket used for communication with the controllers and managers.
@@ -221,6 +230,7 @@ export class BaseAttach extends Mortal {
     } else {
       const nodeAttach = <NodeAttach>key;
       if (key instanceof NodeAttach) {
+        nodeAttach.disableArmButton(true, false);
         // Delay connection if was unreachable
         setTimeout(
           () => {
@@ -394,7 +404,7 @@ export class BaseAttach extends Mortal {
    * @param execute Whether to execute the action.
    * @returns True if the message was found and removed.
    */
-  removePendingMessageByID(id: number, code: number, logFinish: boolean = true, execute: boolean = true): boolean {
+  removePendingMessageByID(id: number, code: number, logFinish: boolean = true, execute: boolean = true, data?: DataStruct): boolean {
     if (this.pendingMessages.has(id)) {
       const finished = this.pendingMessages.get(id);
       if (finished && this.pendingMessages.delete(id)) {
@@ -402,7 +412,7 @@ export class BaseAttach extends Mortal {
           // this._log(`Message ${id} ended with code ${useful.toHex(code)}.`);
         }
         if (finished.action && execute) {
-          finished.action(code);
+          finished.action(code, data);
         }
         return true;
       } else {
@@ -464,7 +474,7 @@ export class BaseAttach extends Mortal {
   async _insertItem(name: string, items: DataStruct[] | null, insertQuery: string, id: number, nodeID: number = -1): Promise<boolean> {
     if (!items) return false;
     // Extract the selected field in each item.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const params: any[] = [];
     for (let i = 0; i < items.length; i++) {
       params[i] = items[i].selected;
@@ -489,7 +499,7 @@ export class BaseAttach extends Mortal {
    *                   formatted.
    * @returns True if the operation was successful, false otherwise.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   async _saveItemGeneral(name: string, parameters: any[], query: string, id: number, nodeID: number): Promise<boolean> {
     // this._log(`Saved: ${name}`);
     if (await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(query, nodeID), parameters)) {
@@ -604,6 +614,10 @@ export class BaseAttach extends Mortal {
     this._addResponse(id, codes.ERR_UNKNOWN_VALUE);
   }
 
+  _addIncompatible(id: number) {
+    this._addResponse(id, codes.ERR_INCOMPATIBLE);
+  }
+
   /**
    * Clear all remaining messages, signal to close the channel after the next send
    * and add a {@link codes.ERR_ANOTHER_CONNECTED}. The channel is supposed to be
@@ -714,7 +728,7 @@ export class BaseAttach extends Mortal {
       serie: serie ?? undefined,
       ubicacion: desc ?? undefined,
     };
-    // this._log(`Notifying web about tempertaure ${newTemp.ctrl_id}.`)
+    // this._log(`Notifying web about tempertaure node:${nodeID} id:${stID} active:${newTemp.activo}.`);
     if (active === 0) {
       sm.SensorTemperaturaManager.delete(nodeID, stID);
     } else {
@@ -758,7 +772,7 @@ export class BaseAttach extends Mortal {
   }
 
   _notifyOutput(pin: number, auto: boolean, nodeID: number, es_id: number | null = null, desc: string | null = null, state: number | null = null, active: number | null = null, order: number | null = null) {
-    // this._log(`Notifying web about output.`);
+    // this._log(`Notifying web about output ${pin} in node ${nodeID} active ${active}.`);
     const newOutput: sm.PinSalidaAddUpdateDTO = {
       ps_id: pin,
       pin: pin,
@@ -944,6 +958,10 @@ export class NodeAttach extends BaseAttach {
   private user;
   private password;
 
+  private chunkIterator: MyStringIterator | null = null;
+
+  private printFlag = false;
+
   /**
    * @deprecated
    */
@@ -1078,14 +1096,13 @@ export class NodeAttach extends BaseAttach {
       );
       // this._log("Keep alive request added")
     } else {
-      // this._log("Request not send")
-      // if(useful.timeInt() % 10 === 0){
-      //   if(this.printFlag){
-      //     console.log(this._keepAliveRequestSent)
-      //     this.printFlag = false
+      // if (useful.timeInt() % 10 === 0) {
+      //   if (this.printFlag) {
+      //     // this._log(`Request not send. Sent: ${this._keepAliveRequestSent} Empty: ${this.isBufferEmpty()} Last time: ${this.lastTimeMessageSent}`);
+      //     this.printFlag = false;
       //   }
-      // }else{
-      //   this.printFlag = true
+      // } else {
+      //   this.printFlag = true;
       // }
     }
   }
@@ -1136,6 +1153,7 @@ export class NodeAttach extends BaseAttach {
         break;
       case codes.CMD_TEMP:
         // this._log(`Received temp: '${command}'`)
+        this.mirrorMessage(this._appendPart(command, this.controllerID.toString()), false);
         let oneTempOptional = this._parseMessage(parts, queries.longParse);
         // Print temperatures. Not practical since a lot of controllers will send data.
         if (!oneTempOptional) {
@@ -1153,7 +1171,7 @@ export class NodeAttach extends BaseAttach {
         const currDate = useful.formatTimestamp(tempStamp);
         // const tempYear = useful.getYearFromTimestamp(tempStamp);
         // Get individual measures
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const paramsForRegister: any[] = [];
         // const paramsForCurrent: any[] = [];
         // Parse every sensor reading from the message. They come in pairs, so there must be at least two items.
@@ -1180,25 +1198,37 @@ export class NodeAttach extends BaseAttach {
         // this._log("Temperature time %d = %s", big.longValue(),
         // useful.formatTimestamp(big))
         break;
+      case codes.CMD_TEMP_CHANGED:
+        this.mirrorMessage(this._appendPart(command, this.controllerID.toString()), true);
+        break;
+      case codes.CMD_TEMP_ALARM:
+        const alarmData = this._parseMessage(parts, queries.alarmParse, id);
+        if (!alarmData) {
+          // this._log(`Received temperature alarm '${command}'`);
+          break;
+        }
+        // const tempID = alarmData[0].getInt();
+        // const tempValue = alarmData[1].getInt();
+        // const tempTime = alarmData[2].getInt();
+        // this._log(`Received temperature alarm id=${tempID} value=${tempValue} time=${tempTime}`);
+        break;
       case codes.VALUE_ALL_ENABLES:
-        // this._log(`Received all enables '${command}'`);
+        this._log(`Received all enables '${command}'`);
         const enablesData = this._parseMessage(parts, queries.enablesParse, id);
         if (!enablesData) {
           break;
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const paramsForInputs: any[] = [];
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const paramsForOutputs: any[] = [];
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const paramsForTemps: any[] = [];
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const paramsForEnergy: any[] = [];
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const paramsForInputStates: any[] = [];
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
         const paramsForOutputStates: any[] = [];
 
         const inputCount = enablesData[0];
@@ -1240,9 +1270,11 @@ export class NodeAttach extends BaseAttach {
         }
         for (const temp of paramsForTemps) {
           this._notifyTemp(temp[1], this.controllerID, temp[0], null, null, null);
+          // this._log(`Notifying web about tempertaure node:${this.controllerID} id:${temp[1]} active:${temp[0]}.`);
         }
         for (const energy of paramsForEnergy) {
           this._notifyEnergy(energy[1], this.controllerID, energy[0], null, null, null, null, null, null, null);
+          // this._log(`Notifying web about energy node:${this.controllerID} id:${energy[1]} active:${energy[0]}.`);
         }
         break;
       case codes.VALUE_ENERGY_ENABLE_ONE:
@@ -1282,22 +1314,55 @@ export class NodeAttach extends BaseAttach {
         this.removePendingMessageByID(id, availableData[0].getInt(), false);
         break;
       case codes.VALUE_ALL_ADDRESSES:
-        // this._log(`Received all addresses '${command}'`)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const paramsForUpdate: any[] = [];
+        // this._log(`Received all addresses '${command}'`);
+
+        const addrParamsForUpdate: any[] = [];
         while (parts.length >= 2) {
           const addrData = this._parseMessage(parts, queries.IDTextParse, id, false);
           if (!addrData || addrData.length < 2) continue;
           const sensorID = addrData[0].getInt();
           const sensorAddress = addrData[1].getString();
-          paramsForUpdate.push([sensorAddress, sensorID]);
+          addrParamsForUpdate.push([sensorAddress, sensorID]);
 
           // Send the data to the web app
           this._notifyTemp(sensorID, this.controllerID, null, null, sensorAddress, null);
         }
         // this._log(`Parts remaining ${parts.length}: '${parts}'`)
-        // this._log(`Received ${paramsForUpdate.length} temperature addresses.`)
-        await executeBatchForNode(queries.updateAddress, this.controllerID, paramsForUpdate);
+        // this._log(`Received ${addrParamsForUpdate.length} temperature addresses.`)
+        await executeBatchForNode(queries.updateAddress, this.controllerID, addrParamsForUpdate);
+        break;
+      case codes.VALUE_ALL_THRESHOLDS:
+        // this._log(`Received all alarm threshold '${command}'`);
+
+        const thresParamForUpdate: any[] = [];
+        while (parts.length >= 2) {
+          const addrData = this._parseMessage(parts, queries.tempParse, id, false);
+          if (!addrData || addrData.length < 2) continue;
+          const sensorID = addrData[0].getInt();
+          const sensorThres = addrData[1].toString();
+          thresParamForUpdate.push([sensorThres, sensorID]);
+          // this._log(`thres: ${sensorThres} id: ${sensorID}`);
+          // Don't notify since this value is not shown in real time
+        }
+        // this._log(`Parts remaining ${parts.length}: '${parts}'`)
+        // this._log(`Received ${thresParamForUpdate.length} temperature addresses.`)
+        await executeBatchForNode(queries.updateAlarmThreshold, this.controllerID, thresParamForUpdate);
+        break;
+      case codes.VALUE_SERIAL:
+        // this._log(`Received controller info '${command}'`);
+        this.mirrorMessage(this._appendPart(command, this.controllerID.toString()), true);
+        const serialData = this._parseMessage(parts, [queries.tupleTxt, queries.tupleTxt], id, false);
+        if (!serialData) {
+          break;
+        }
+        const serialNumber = serialData[0].getString();
+        const version = serialData[1].getString();
+        this._log(`Received controller info: Serial '${serialNumber}' Version '${version}'`);
+        // this._log(serialData[0].getString());
+        const serialRes = await executeQuery<ResultSetHeader>(queries.nodeUpdateSerial, [serialNumber, this.controllerID]);
+        if (!serialRes) {
+          this._log(`Could not update serial for controller ID = ${this.controllerID}`);
+        }
         break;
       case codes.VALUE_ADDRESS_CHANGED:
         this._log(`Received address changed '${command}'`);
@@ -1314,6 +1379,22 @@ export class NodeAttach extends BaseAttach {
         }
         this._log(`Temperature sensor address ID = ${sensorID} changed to '${sensorAddress}'`);
         this._notifyTemp(sensorID, this.controllerID, null, null, sensorAddress, null);
+        break;
+      case codes.VALUE_ALARM_THRESHOLD_CHANGED:
+        this._log(`Received threshold changed '${command}'`);
+        const thresChangeData = this._parseMessage(parts, queries.tempParse, id, false);
+        if (!thresChangeData) {
+          break;
+        }
+        const sensorIDThres = thresChangeData[0].getInt();
+        const sensorThres = thresChangeData[1].toString();
+        const changeThresRes = executeQuery(BaseAttach.formatQueryWithNode(queries.updateAlarmThreshold, this.controllerID), [sensorThres, sensorIDThres]);
+        if (!changeThresRes) {
+          this._log(`ERROR Saving alarm threshold change`);
+          break;
+        }
+        this._log(`Temperature sensor ID = ${sensorIDThres} alarm threshold changed to '${sensorThres}'`);
+        // Don't notify since this value is not shown in real time
         break;
       case codes.VALUE_INPUT_CTRL:
       case codes.VALUE_OUTPUT_CTRL:
@@ -1458,12 +1539,29 @@ export class NodeAttach extends BaseAttach {
         const date = useful.formatTimestamp(cardData[5].getInt());
         this._log(`(${date}) Card read. company ID = ${companyID} Number = ${serial} result = ${autorizado} admin = ${isAdmin} reader type = ${isEntrance > 0 ? 'Entrance' : 'Exit'}`);
 
-        // Set tickets as attended
-        const setRes = await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.setAttended, this.controllerID), [companyID, date, date]);
-        if (setRes) {
-          // this._log('Tickets set as attended');
-        } else {
-          this._log('ERROR Setting tickets to attended');
+        // Admins cannot attend a ticket nor finish it
+        if (!isAdmin) {
+          // Select tickets attended
+          const selectRes = await executeQuery<db2.GeneralNumber[]>(BaseAttach.formatQueryWithNode(queries.selectTicketToAttend, this.controllerID), [companyID, date, date]);
+          if (selectRes) {
+            for (const num of selectRes) {
+              // Set tickets as attended in the column 'asistencia'
+              const updateRes = await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.updateTicketAttended, this.controllerID), [num.entero]);
+              if (updateRes) {
+                this._log(`Ticket ID = ${num.entero} set as attended`);
+                // Update in database. If ticket was in the controller, it was accepted, so this state can be set.
+                if (!isEntrance) {
+                  Main.updateTicketState(States.FINISHED, num.entero, this.controllerID);
+                }
+                // Main.updateTicketState(!isEntrance ? States.FINISHED : States.ATTENDED, num.entero, this.controllerID);
+                // Notify web?
+              } else {
+                this._log('ERROR Could not set ticket as attended');
+              }
+            }
+          } else {
+            this._log('ERROR Selecting tickets being attended');
+          }
         }
 
         // Get info needed to register and notify
@@ -1493,7 +1591,7 @@ export class NodeAttach extends BaseAttach {
         this.mirrorMessage(this._appendPart(command, this.controllerID.toString()), true);
         break;
       case codes.CMD_ERR:
-        this._log(`Received internal error '${command}'`);
+        // this._log(`Received internal error '${command}'`);
         const errorData = this._parseMessage(parts, queries.valueParse);
         if (!errorData) break;
         const internalErrorCode = errorData[0].getInt();
@@ -1507,19 +1605,75 @@ export class NodeAttach extends BaseAttach {
             this._log('Error measuring all temperature sensors.');
             break;
           default:
-            this._log(`Type of internal error is unknown. Value ${useful.toHex(internalErrorCode)}`);
+            // this._log(`Type of internal error is unknown. Value ${useful.toHex(internalErrorCode)}`);
+            break;
         }
         break;
+
+      // This message means that the login was successful
       case codes.CMD_HELLO_FROM_CTRL:
         this._log('Received hello from controller. Logged in.');
         this.setLogged(true);
 
+        // Register connection
         this.removePendingMessageByID(id, codes.AIO_OK);
         this.insertNet(true);
         // this._log("Logged in to controller");
+
+        // Consult version and update
+
+        // Verify version with the database
+        const storedVersionsData = await executeQuery<db2.FirmwareData[]>(queries.firmwareOrderSelect, null);
+        if (!storedVersionsData) {
+          this._log(`UPDATING_CONTROLLER: Could not read firmware list from database`);
+          break;
+        }
+
+        let validFile: string | null = null;
+        let validVersion: FirmwareVersion | null = null;
+        for (const firm of storedVersionsData) {
+          const fileBuffer = await useful.readFileAsBuffer(firm.archivo);
+          if (!fileBuffer) {
+            this._log(`Could not read file ${firm.archivo}`);
+            continue;
+          }
+          const fileBase64 = fileBuffer.toString('base64');
+
+          const shaRes = Selector.checkFirmwareShaFromBase64(fileBase64);
+          if (!shaRes) {
+            this._log(`File sha256 check failed`);
+            continue;
+          }
+
+          const fileVer = useful.getVersionFromBase64(fileBase64);
+          if (!fileVer) {
+            this._log(`File has no version`);
+            continue;
+          }
+
+          const matchVersion = Main.compareVersions(fileVer, { major: firm.mayor, minor: firm.minor, patch: firm.patch });
+          if (!matchVersion) {
+            this._log(`File version and database' doesn't match`);
+            continue;
+          }
+
+          validFile = fileBase64;
+          validVersion = fileVer;
+          break;
+        }
+
+        if (!validFile || !validVersion) {
+          this._log(`There was no valid firmware`);
+          break;
+        }
+        const chunks = _selector.splitFirmware(validFile);
+        this.askSendFirmware(chunks, validVersion);
+
         break;
+
       case codes.VALUE_ORDER_RESULT:
         this._log(`Received order result ${command}`);
+        this.mirrorMessage(this._appendPart(command, this.controllerID.toString()), true);
         const orderData = this._parseMessage(parts, queries.orderParse, id, false);
         if (!orderData) {
           break;
@@ -1596,14 +1750,72 @@ export class NodeAttach extends BaseAttach {
           this.mirrorMessage(this._appendPart(command, this.controllerID.toString()), true);
         }
         break;
+      case codes.CMD_UPDATE:
+        this._log(`Received update response '${command}'`);
+        // Parse response
+        const updateRes = this._parseMessage(parts, [queries.tupleInt]);
+        if (!updateRes || updateRes[0].getInt() !== codes.AIO_OK) {
+          this._log(`No response found or update not needed`);
+          break;
+        }
+
+        // Parse token if update is needed
+        const tokenRes = this._parseMessage(parts, [queries.tupleInt]);
+        if (!tokenRes) {
+          this._log(`Update needed but no token received`);
+          break;
+        }
+        // const token = tokenRes[0].getInt();
+
+        this.removePendingMessageByID(id, updateRes[0].getInt(), true, true, tokenRes[0]);
+
+        break;
       default:
         return false;
     }
     return true;
   }
 
-  disableArmButton(state: boolean) {
-    this._log(`Setting button disable to '${state}'`);
+  askSendFirmware(chunks: string[], version: FirmwareVersion) {
+    // Ask controller if this update is needed
+    this._log(`Consulting controller for update to version ${version.major}.${version.minor}.${version.patch}`);
+    this.addCommandForController(codes.CMD_UPDATE, -1, null, [chunks.length.toString(), version.major.toString(), version.minor.toString(), version.patch.toString()], (code, tokenData) => {
+      if (code !== codes.AIO_OK) {
+        this._log('Update not nedded by controller');
+        return;
+      }
+
+      if (!tokenData) {
+        this._log('No token received');
+        return;
+      }
+      const token = tokenData.getInt();
+
+      // Get the first chunk to send
+      this.initIterator(chunks);
+      if (!this.chunkIterator) {
+        this._log(`Update needed but no firmware chunks found`);
+        this.chunkIterator = null;
+        return;
+      }
+      const count = this.chunkIterator.count();
+      let nextChunk = this.chunkIterator.next();
+
+      // Send all remaining chunks
+      while (nextChunk) {
+        this.addCommandForController(codes.CMD_UPDATE_CONTINUE, 0, null, [token.toString(), nextChunk]);
+        nextChunk = this.chunkIterator.next();
+      }
+      this.addCommandForController(codes.CMD_UPDATE_END, 0, null, [token.toString()]);
+      this._log(`Chunks (${count}) added to controller ID ${this.controllerID}`);
+      this.chunkIterator = null;
+    });
+  }
+
+  disableArmButton(state: boolean, log: boolean = true) {
+    if (log) {
+      this._log(`Setting button disable to '${state}'`);
+    }
     sm.ControllerStateManager.socketAddUpdate(this.controllerID, { disableSecurityButton: state });
   }
 
@@ -1652,7 +1864,6 @@ export class NodeAttach extends BaseAttach {
     return { pinID: pinID, enable: pinEnable };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private fillParams(itemCount: DataStruct, value: DataStruct, paramList: any[]) {
     const count = itemCount.getInt();
     const enables = BigInt(value.getInt());
@@ -1676,7 +1887,7 @@ export class NodeAttach extends BaseAttach {
    * @param id
    * @param nodeID
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   private async insertSilent(name: string, parameters: any[], query: string, nodeID: number, logSuccess: boolean) {
     if (!parameters) return;
     const fullQuery = BaseAttach.formatQueryWithNode(query, nodeID);
@@ -1707,7 +1918,16 @@ export class NodeAttach extends BaseAttach {
   async insertNet(state: boolean) {
     await executeQuery(queries.insertNet, [this.controllerID, useful.getCurrentDate(), state]);
     await executeQuery(queries.insertCtrlState, [state, this.controllerID]);
+    ControllerMapManager.update(this.controllerID, { conectado: state ? 1 : 0 });
     this._log(`Inserting: Net state ${state ? 'conectado' : 'desconectado'}`);
+  }
+
+  /**
+   *
+   * @param arrays Array of chunks of data encoded in base64
+   */
+  initIterator(arrays: string[]) {
+    this.chunkIterator = new MyStringIterator(arrays);
   }
 
   /**
@@ -1770,6 +1990,7 @@ export class NodeAttach extends BaseAttach {
    */
   tryConnectNode(selector: Selector, log: boolean, push: boolean = true) {
     const controllerSocket = net.createConnection(this.port, this.ip, () => {
+      // console.log(this._currentSocket?.writableLength);
       if (log) {
         this._log('Socket connect callback');
       }
@@ -1780,6 +2001,8 @@ export class NodeAttach extends BaseAttach {
           this._log(`ERROR Sending hello to controller ${useful.toHex(code)}`);
           return;
         }
+        // Set this after the controller proves that can receive/respond to messages
+        this.resetKeepAliveRequest();
         // Send all cards. Inactive cards will be send with an order to erase it in the
         // controller.
         // this._log("Sending cards");
@@ -1813,7 +2036,7 @@ export class NodeAttach extends BaseAttach {
     });
 
     // Triggers 'end' and 'close' events
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     controllerSocket.on('error', (err: any) => {
       this.unreached = false;
       // this._log(`Error on controller ${err.code}`);
@@ -1852,7 +2075,6 @@ export class NodeAttach extends BaseAttach {
       // console.log("Try connect node, close event")
       if (this.isLogged()) {
         this._log(`The node ID = ${this.controllerID} (${this.node}) closed its socket. Reconnecting ...`);
-        this.resetKeepAliveRequest();
         await this.insertNet(false);
         this.printKeyCount(selector);
         ManagerAttach.connectedManager?.addNodeState(false, this.controllerID);
@@ -1886,6 +2108,8 @@ export class NodeAttach extends BaseAttach {
  */
 export class ManagerAttach extends BaseAttach {
   private address = BaseAttach.DEFAULT_ADDRESS;
+  private FIRMWARE_RELATIVE_PATH = 'firmware';
+  private FIRMWARE_BASE_FILENAME = 'firmware_';
 
   /**
    * Current logged in manager. Can be null if none is connected or none of the
@@ -1963,6 +2187,15 @@ export class ManagerAttach extends BaseAttach {
         if (!loginData) break;
         const user = loginData[0].getString();
         const password = loginData[1].getString();
+        const major = loginData[1].getInt();
+        // const minor = loginData[1].getInt();
+        // const patch = loginData[1].getInt();
+        if (Main.compareMajorWithMain(major) !== 0) {
+          this._log(`Technician version is not compatible`);
+          this._addIncompatible(id);
+          break;
+        }
+
         // Don't log password
         this._log(`Manager logging in as '${user}'`);
         if (ManagerAttach.isAnotherLoggedIn) {
@@ -2127,19 +2360,28 @@ export class ManagerAttach extends BaseAttach {
                 case codes.VALUE_GROUP:
                 case codes.VALUE_GROUP_ADD:
                   const regionData = this._parseMessage(parts, queries.regionParse, id);
+                  if (!regionData) {
+                    break;
+                  }
+                  const groupID = regionData[0].getInt();
+                  const name = regionData[1].getString();
+                  const desc = regionData[2].getString();
                   switch (valueToSet) {
                     case codes.VALUE_GROUP:
                       await this._updateItem('region', regionData, queries.regionUpdate, id);
+                      RegionMapManager.update(groupID, { region: name, descripcion: desc });
                       break;
                     case codes.VALUE_GROUP_ADD:
                       await this._insertItem('region', regionData, queries.regionInsert, id);
+                      RegionMapManager.add(groupID, { activo: 1, rgn_id: groupID, region: name, descripcion: desc });
                       break;
                     default:
                       this._logFeelThroughHex(valueToSet);
                   }
                   break;
                 case codes.VALUE_GROUP_DISABLE:
-                  await this.disableItem('region', parts, queries.regionDisable, id);
+                  const disabledGroupID = await this.disableItem('region', parts, queries.regionDisable, id);
+                  RegionMapManager.update(disabledGroupID, { activo: 0 });
                   break;
                 case codes.VALUE_NODE:
                 case codes.VALUE_NODE_ADD:
@@ -2229,6 +2471,9 @@ export class ManagerAttach extends BaseAttach {
                     const a = useful.getCurrentDate();
                     // consolethis._log\(a)
                     userData[queries.userDateIndex].setString(a);
+                  } else {
+                    // Remove data value since it can be '~', which is not a valid date value. The query does not expect a date value in these cases.
+                    userData.splice(queries.userDateIndex, 1);
                   }
                   // Save user
                   switch (valueToSet) {
@@ -2489,6 +2734,109 @@ export class ManagerAttach extends BaseAttach {
                       this._logFeelThroughHex(valueToSet);
                   }
                   break;
+                case codes.VALUE_FIRMWARE_ADD:
+                  // this._log(`Received firmware`);
+                  const firmwareData = this._parseMessage(parts, [queries.tupleTxt], id, true);
+                  if (!firmwareData) {
+                    this._addResponse(id, codes.ERR);
+                    this._log(`There is no firmware in the message`);
+                    break;
+                  }
+                  const firmwareBase64 = firmwareData[0].getString();
+
+                  const compareRes = Selector.checkFirmwareShaFromBase64(firmwareBase64);
+
+                  if (!compareRes) {
+                    this._log(`Firmware has invalid content. Sha256 mismatch.`);
+                    // this._log(`Sha256 calculated: '${calculatedSha.toString('hex')}' Sha256 in file: '${hashInFile.toString('hex')}'`);
+                    this._addResponse(id, codes.ERR_CORRUPTED);
+                    break;
+                  }
+
+                  // Get version fom content
+                  // this._log(`Getting version from content`);
+                  // console.log(firmwareBase64);
+                  const newVer = useful.getVersionFromBase64(firmwareBase64);
+                  if (!newVer || !(newVer.major >= 0 && newVer.minor >= 0 && newVer.patch >= 0)) {
+                    this._addResponse(id, codes.ERR_CORRUPTED);
+                    this._log(`Firmware version not found or format not expected`);
+                    break;
+                  }
+
+                  // Check version
+                  // this._log(`Checking version`);
+                  if (Main.compareMajorWithMain(newVer.major) !== 0) {
+                    this._addResponse(id, codes.ERR_INCOMPATIBLE);
+                    this._log(`Firmware version (${newVer.major}.${newVer.minor}.${newVer.patch}) not allowed`);
+                    break;
+                  }
+
+                  // Validate with versions in database
+                  // this._log(`Validating with database`);
+                  const storedVersionsData = await executeQuery<db2.FirmwareData[]>(queries.firmwareOrderSelect, null);
+                  if (!storedVersionsData) {
+                    this._addResponse(id, codes.ERR);
+                    this._log(`Could not read firmware list from database`);
+                    break;
+                  }
+                  let validationResult = false;
+                  let atLeastOneFound = false;
+                  for (const firm of storedVersionsData) {
+                    this._log(`Verifying with file ${firm.archivo} (${firm.mayor}.${firm.menor}.${firm.parche})`);
+                    const fileVer = await useful.getVersionFromFile(firm.archivo);
+                    if (fileVer) {
+                      atLeastOneFound = true;
+                      const databaseVer = { major: firm.mayor, minor: firm.menor, patch: firm.parche };
+                      if (Main.compareVersions(fileVer, databaseVer) !== 0) {
+                        this._log(`File and database versions are not the same. Discarted.`);
+                        continue;
+                      }
+                      // At this point one file in the server in valid so the loop should end in this iteration
+                      if (Main.compareVersions(newVer, fileVer) === 1) {
+                        validationResult = true;
+                      } else {
+                        this._log(`Firmware version is not newer than the current`);
+                        this._addResponse(id, codes.ERR_TOO_OLD);
+                      }
+                      break;
+                    } else {
+                      this._log(`File firmware version or file not found`);
+                    }
+                  }
+                  if (!validationResult && atLeastOneFound) {
+                    this._log(`Firmware could not be validated with previous ones`);
+                    this._addResponse(id, codes.ERR);
+                    break;
+                  }
+
+                  // Write to file
+                  // this._log(`Writing to file`);
+                  const firmSize = new AtomicNumber();
+                  const firmwareFilename = useful.getReplacedPath(path.join(this.FIRMWARE_RELATIVE_PATH, this.FIRMWARE_BASE_FILENAME + Date.now().toString()));
+                  const res = await useful.writeFileFromBase64(firmwareBase64, firmwareFilename, firmSize);
+                  if (!res) {
+                    this._addResponse(id, codes.ERR);
+                    this._log(`Could not write firmware to file`);
+                    break;
+                  }
+
+                  // Save in database
+                  // this._log(`Saving in database`);
+                  const insertFirmRes = await executeQuery<ResultSetHeader>(queries.firmwareInsert, [firmwareFilename, newVer.major, newVer.minor, newVer.patch]);
+                  if (!insertFirmRes) {
+                    this._log(`Firmware could not be inserted`);
+                    this._addResponse(id, codes.ERR);
+                    break;
+                  }
+
+                  // Notify success
+                  this._log(`New firmware version is newer. Registered.`);
+                  this._addResponse(id, codes.AIO_OK);
+
+                  // Pass firmware to try to update all controllers
+                  await selector.setFirmwareForAll(firmwareFilename, newVer);
+
+                  break;
                 default:
                   this._log(`Unknown set value. Received '${command}' Value ${useful.toHex(valueToSet)}`);
                   this._addUnknownValue(id);
@@ -2528,8 +2876,8 @@ export class ManagerAttach extends BaseAttach {
       // The timeout generates an error in the callback?
       try {
         cp.execSync(
-          `cmd.exe /c mysqldump -u ${appConfig.db.user} -p${appConfig.db.password} nodo | mysql -u ${appConfig.db.user} -p${appConfig.db.password} ${newNode}`,
-          // `cmd.exe /c mysqldump -u root -padmin nodo | mysql -u root -padmin ${newNode}`,
+          `cmd.exe /c mysqldump -u ${appConfig.db.user} -p${appConfig.db.password} --protocol=TCP -P ${appConfig.db.port} nodo | mysql -u ${appConfig.db.user} -p${appConfig.db.password} --protocol=TCP -P ${appConfig.db.port} ${newNode}`,
+          // mysqldump -u root -padmin --protocol=TCP -P 3307 nodo | mysql -u root -padmin --protocol=TCP -P 3307 nodo1
           { timeout: BaseAttach.PROCESS_TIMEOUT },
         );
       } catch (e) {
@@ -2619,8 +2967,6 @@ export class ManagerAttach extends BaseAttach {
       // Create attachment and connect the socket
 
       const newAttach = NodeAttach.getInstanceFromPacket(newData, this._logger);
-      // newAttach.completeData = newCompleteData
-      // currentAttach = newAttach
       newAttach.tryConnectNode(selector, true);
     } else {
       /**
@@ -2968,7 +3314,7 @@ export class ManagerAttach extends BaseAttach {
   private async addGeneral(id: number, log: boolean) {
     const generalResponse = await executeQuery<db2.GeneralData[]>(queries.generalSelect);
     if (generalResponse && generalResponse.length === 1) {
-      this._addOne(new Message(codes.VALUE_GENERAL, id, [generalResponse[0].nombreempresa, generalResponse[0].correoadministrador]).setLogOnSend(log));
+      this._addOne(new Message(codes.VALUE_GENERAL, id, [generalResponse[0].nombreempresa, generalResponse[0].correoadministrador, Main.getVersionString()]).setLogOnSend(log));
     } else {
       this._log('Error getting general info.');
     }
@@ -3000,6 +3346,84 @@ export class ManagerAttach extends BaseAttach {
 export class Selector {
   nodeAttachments: NodeAttach[] = [];
   readonly managerConnections: ManagerAttach[] = [];
+
+  /**
+   * Decode a base64 string, split it into chunks of a maximum length ({@linkcode BaseAttach.CHUNK_LENGTH}) and encode each chunk again in base64.
+   * @returns The array of base64 chunks.
+   */
+  public splitFirmware(base64Content: string): string[] {
+    const newFirmwareBuffer = Buffer.from(base64Content, 'base64');
+    const firmwareChunks: string[] = [];
+    // console.log(
+    //   `Base64 head '${newFirmware64.substring(0, 30)}' Hex head '${Buffer.from(newFirmware64, 'base64')
+    //     .subarray(0, 0x30 + 16)
+    //     .toString('hex')}'`,
+    // );
+    // console.log(newFirmwareBuffer.subarray(0, 0x30).toString('hex'));
+    let lastIndex = 0;
+    let counter = 0;
+
+    for (let i = 0; i < newFirmwareBuffer.length; i = i + BaseAttach.CHUNK_LENGTH) {
+      lastIndex = i + BaseAttach.CHUNK_LENGTH;
+      const sub = newFirmwareBuffer.subarray(i, lastIndex);
+      firmwareChunks.push(sub.toString('base64'));
+      counter = counter + 1;
+
+      // if (i + BaseAttach.CHUNK_LENGTH >= newFirmwareBuffer.length) {
+      //   console.log(`Last chunk '${sub.toString('hex')}'`);
+      // }
+    }
+
+    // Apparently never used. In case of getting the last part.
+    // if (lastIndex < newFirmwareBuffer.length) {
+    //   firmwareChunks.push(newFirmwareBuffer.subarray(lastIndex).toString('base64'));
+    //   counter = counter + 1;
+    //   console.log('Tail caught');
+    // }
+
+    // console.log(`Splitted in ${firmwareChunks.length} chunks. Counter ${counter}`);
+
+    return firmwareChunks;
+  }
+
+  /**
+   * Calculate the sha256 from the file and compare it with the value within it.
+   * This works with a firmware content generated by compiling with Esp-idf.
+   * @param base64 Content of the file
+   * @returns True if the calculated value and the read one match.
+   */
+  public static checkFirmwareShaFromBase64(base64: string): boolean {
+    // console.log(calculatedSha);
+    // console.log(hashInFile);
+    // console.log(`Compare result: ${compareRes}`);
+    const newBuffer = Buffer.from(base64, 'base64');
+    const bufferToHash = newBuffer.subarray(0, -32);
+    const hashInFile = newBuffer.subarray(-32);
+    const calculatedSha = createHash('sha256').update(bufferToHash).digest();
+    return calculatedSha.compare(hashInFile) === 0;
+  }
+
+  /**
+   * Use a firmware buffer and a version to try to update all currently connected controllers.
+   * @param newFirmwareFilename The file containing the firmware to update with. The file should have been generated when the firmware was received.
+   * @param version Version object. It should be generated parsing the firmware.
+   */
+  public async setFirmwareForAll(newFirmwareFilename: string, version: FirmwareVersion) {
+    const newFirmware64 = await useful.readFileAsBase64(newFirmwareFilename);
+    if (!newFirmware64) {
+      console.log('ERROR Reading file just created?');
+      return;
+    }
+
+    const firmwareChunks = this.splitFirmware(newFirmware64);
+
+    for (const node of this.nodeAttachments) {
+      if (!node.isLogged()) {
+        continue;
+      }
+      node.askSendFirmware(firmwareChunks, version);
+    }
+  }
 
   /**
    * Check the selector's registered channels for an attachment with a
