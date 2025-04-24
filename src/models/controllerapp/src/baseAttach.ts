@@ -245,48 +245,6 @@ export class BaseAttach extends Mortal {
   }
 
   /**
-   *
-   * @param nodeID
-   * @param month
-   * @param year
-   * @param current
-   * @returns
-   * @deprecated
-   */
-  static async _checkTablesStatic(nodeID: number, month: number, year: number, current: boolean): Promise<boolean> {
-    const nodeDB = BaseAttach.getNodeDBName(nodeID);
-    if (current) {
-      // Verify that a temperature table of the current year exists.
-      if (!(await BaseAttach.createTables(nodeDB, year))) {
-        return false;
-      }
-    }
-    // Next year's table
-    if (month >= 11) {
-      if (!(await BaseAttach.createTables(nodeDB, year + 1))) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  /**
-   *
-   * @param name
-   * @param year
-   * @returns
-   * @deprecated
-   */
-  private static async createTables(name: string, year: number): Promise<boolean> {
-    const result =
-      Boolean(await executeQuery<ResultSetHeader>(util.format(queries.createTemperatureTable, name, year, year, name))) &&
-      Boolean(await executeQuery<ResultSetHeader>(util.format(queries.createEnergyTable, name, year, year, name))) &&
-      Boolean(await executeQuery<ResultSetHeader>(util.format(queries.createInputRegistreTable, name, year, year))) &&
-      Boolean(await executeQuery<ResultSetHeader>(util.format(queries.createOutputRegistreTable, name, year, year)));
-    return result;
-  }
-
-  /**
    * Attach one piece of data previously received to a buffer and parses the complete messages, saving the incomplete
    * ones to a field.
    *
@@ -2308,9 +2266,9 @@ export class ManagerAttach extends BaseAttach {
                     // Just to check on keys. No other particular reason.
                     // printKeyCount(selector)
                     break;
-                  case codes.VALUE_WORKER:
-                    await this.addWorkers(id, false);
-                    break;
+                  // case codes.VALUE_WORKER:
+                  //   await this.addWorkers(id, false);
+                  //   break;
 
                   // Useful?
                   // case codes.VALUE_SECURITY:
@@ -2451,116 +2409,6 @@ export class ManagerAttach extends BaseAttach {
                   }
                   // After the node related order has been processed
                   this.printKeyCount(selector);
-                  break;
-                case codes.VALUE_COMPANY:
-                case codes.VALUE_COMPANY_ADD:
-                  const companyData = this._parseMessage(parts, queries.companyParse, id);
-                  switch (valueToSet) {
-                    case codes.VALUE_COMPANY:
-                      await this._updateItem('company', companyData, queries.companyUpdate, id);
-                      this.printKeyCount(selector);
-                      break;
-                    case codes.VALUE_COMPANY_ADD:
-                      await this._insertItem('company', companyData, queries.companyInsert, id);
-                      break;
-                    default:
-                      this._logFeelThroughHex(valueToSet);
-                  }
-                  break;
-                case codes.VALUE_COMPANY_DISABLE:
-                  await this.disableItem('company', parts, queries.companyDisable, id);
-                  break;
-                case codes.VALUE_USER:
-                case codes.VALUE_USER_ADD:
-                case codes.VALUE_USER_PASSWORD:
-                  const userWithPassword = valueToSet === codes.VALUE_USER_PASSWORD || valueToSet === codes.VALUE_USER_ADD;
-                  // consolethis._log\(userWithPassword)
-                  const q = userWithPassword ? queries.userParsePwd : queries.userParse;
-                  // consolethis._log\(q)
-                  const userData = this._parseMessage(parts, q, id);
-                  if (!userData) break;
-                  // Encrypt password
-                  if (userWithPassword) {
-                    const userPassword = userData[queries.userPasswordIndex];
-                    const encrytedUserPassword = await useful.bCryptEncode(userPassword.getString());
-                    if (!encrytedUserPassword) {
-                      this._log('Error encrypting user password.');
-                      break;
-                    }
-                    userPassword.setString(encrytedUserPassword);
-                  }
-                  // Set date for a new user
-                  if (valueToSet === codes.VALUE_USER_ADD) {
-                    const a = useful.getCurrentDate();
-                    // consolethis._log\(a)
-                    userData[queries.userDateIndex].setString(a);
-                  } else {
-                    // Remove data value since it can be '~', which is not a valid date value. The query does not expect a date value in these cases.
-                    userData.splice(queries.userDateIndex, 1);
-                  }
-                  // Save user
-                  switch (valueToSet) {
-                    case codes.VALUE_USER:
-                      await this._updateItem('user', userData, queries.userUpdate, id);
-                      break;
-                    case codes.VALUE_USER_ADD:
-                      await this._insertItem('user', userData, queries.userInsert, id);
-                      break;
-                    case codes.VALUE_USER_PASSWORD:
-                      await this._updateItem('user', userData, queries.userUpdatePwd, id);
-                      break;
-                    default:
-                      this._logFeelThroughHex(valueToSet);
-                  }
-                  break;
-                case codes.VALUE_USER_DISABLE:
-                  await this.disableItem('user', parts, queries.userDisable, id);
-                  break;
-                case codes.VALUE_WORKER:
-                case codes.VALUE_WORKER_ADD:
-                case codes.VALUE_WORKER_PHOTO:
-                  // p_id, nombre, telefono, dni, c_id, co_id, foto, correo, activo
-                  this._log(`Received set worker '${useful.trimString(command)}'.`);
-                  const workerData = this._parseMessage(parts, queries.workerParse, id);
-                  if (!workerData) break;
-                  const workerID = workerData[queries.workerIDIndex].getInt();
-                  const workerPhoto = workerData[queries.workerPhotoIndex];
-                  if (valueToSet === codes.VALUE_WORKER_PHOTO || valueToSet === codes.VALUE_WORKER_ADD) {
-                    this._log('Writing photo file...');
-                    const fileSize = new AtomicNumber();
-                    if (await useful.writePhotoFromBase64(workerPhoto.getString(), workerID, fileSize)) {
-                      this._log(`New photo saved for worker ID = ${workerID}. File size = ${fileSize.inner} bytes`);
-                    } else {
-                      this._log(`Error writing photo for worker ID = ${workerID}`);
-                    }
-                  }
-                  workerPhoto.setString(useful.getReplacedPath(useful.getPathForWorkerPhoto(workerID)));
-                  switch (valueToSet) {
-                    case codes.VALUE_WORKER:
-                    case codes.VALUE_WORKER_PHOTO:
-                      await this._updateItem('worker', workerData, queries.workerUpdate, id);
-                      break;
-                    case codes.VALUE_WORKER_ADD:
-                      await this._insertItem('worker', workerData, queries.workerInsert, id);
-                      break;
-                    default:
-                      this._logFeelThroughHex(valueToSet);
-                      break;
-                  }
-                  break;
-                case codes.VALUE_WORKER_DISABLE:
-                  await this.disableItem('worker', parts, queries.workerDisable, id);
-                  break;
-                case codes.VALUE_CARD:
-                  const cardData = this._parseMessage(parts, queries.cardParse, id);
-                  if (!cardData) break;
-                  await this._updateItem('card', cardData, queries.cardUpdate, id);
-                  // a_id  serie=?, administrador=?, co_id=?, ea_id=?, activo=?
-                  this.updateCardInControllersGeneral(selector, cardData[0].getInt(), cardData[3].getInt(), cardData[1].getInt(), cardData[2].getInt() > 0);
-                  break;
-                case codes.VALUE_CARD_EMPTY:
-                  const cardID = await this.disableItem('card', parts, queries.cardDisable, id);
-                  this.removeCardInControllers(selector, cardID);
                   break;
 
                 // Commands that require a node ID
@@ -3262,44 +3110,6 @@ export class ManagerAttach extends BaseAttach {
     const q = util.format(queries.nextIDForGeneral, tableName);
     // consolethis._log\(q)
     return executeQuery<db2.ID[]>(q, null, true);
-  }
-
-  /**
-   * Send a list of active workers from the table `general.personal`
-   *
-   * @param endID ID of the end message.
-   * @param log   Whether to log or not the messages send for each item.
-   */
-  private async addWorkers(endID: number, log: boolean) {
-    const workerData = await executeQuery<db2.Personal2[]>(queries.workersSelect);
-    const nextID = await this.getNextID('personal');
-    if (!workerData || !nextID) {
-      return;
-    }
-    // let count = 0;
-    // Add individual workers
-    if (workerData.length > 0) {
-      const workerKeys = Object.keys(workerData[0]);
-      const photoIndex = workerKeys.indexOf('foto');
-      for (const worker of workerData) {
-        const workerValues = Object.values(worker);
-        const base64Values = await useful.readWorkerPhotoAsBase64(worker.foto);
-        const body: string[] = [];
-        for (let j = 0; j < workerKeys.length; j++) {
-          body.push(j === photoIndex ? (base64Values ?? codes.SEP_MTY) : workerValues[j].toString());
-        }
-        const msg = new Message(codes.VALUE_WORKER, 0, body).setLogOnSend(log);
-        // this._log(useful.lastPart(msg.message))
-        this._addOne(msg);
-        // count++;
-      }
-    }
-    // this._log(`Added ${count} workers with value ${useful.toHex(codes.VALUE_WORKER)}`);
-    // Add end of workers
-    if (nextID && nextID.length === 1) {
-      this._addEnd(codes.VALUE_WORKER_END, endID, nextID[0].AUTO_INCREMENT);
-      // this._log("Added end workers.");
-    }
   }
 
   /**
