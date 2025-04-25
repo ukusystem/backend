@@ -25,7 +25,7 @@ const allFrontEndPaths = [
   '/energy',
   '/company',
   '/access',
-  'detalle-empresa/:co_id',
+  '/detalle-empresa/:co_id',
   '/invitado',
   '/invitado/ticket',
   '/invitado/ticket/create',
