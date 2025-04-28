@@ -712,10 +712,14 @@ export class Main {
         this.log(`Invalid worker: ${worker}`);
         continue;
       }
+
+      // WORKER PHOTOS ARE NO LONGER WRITTEN HERE, BUT THE PATHS ARE RECEIVED INSTEAD IN THE SAME FIELD
       // Write photo, if conditions are met
-      const byteSize = new AtomicNumber();
-      const newFileName = useful.getReplacedPath((await this.processPhotoField(worker, byteSize, nodeID)) ?? 'error');
-      this.log(`File writing result: Filename = '${newFileName ?? '<photo not present>'}' Written = ${byteSize.inner} bytes`);
+      // const byteSize = new AtomicNumber();
+      // const newFileName = useful.getReplacedPath((await this.processPhotoField(worker, byteSize, nodeID)) ?? 'error');
+      const newFileName = worker.foto;
+      // this.log(`File writing result: Filename = '${newFileName ?? '<photo not present>'}' Written = ${byteSize.inner} bytes`);
+
       // Save worker. All workers who are going to visit the node must have been sent
       // in the JSON.
       if (await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.insertWorker, nodeID), this.workerToArrayForQuery(worker, insertedID, newFileName))) {

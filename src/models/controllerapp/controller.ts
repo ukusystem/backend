@@ -44,6 +44,7 @@ export function notifyCamDisconnect(ctrl_id: number, cam: Camara): void {
  * @deprecated
  */
 export async function test_deleteTickets() {
+  console.log('Deleting tickets');
   const q_conf_actividad_drop = `
     ALTER TABLE nodo%s.actividadpersonal
     DROP FOREIGN KEY fk_actividadpersonal_registroticket_rt_id;
@@ -114,7 +115,7 @@ export async function test_deleteTickets() {
       console.log(`Deleted from ${counter} tables`);
     }
   }
-  console.log(`Finished ${counter} operations`);
+  console.log(`Finished operations for ${counter} node(s)`);
 }
 
 /**
@@ -124,14 +125,15 @@ export async function test_deleteTickets() {
  * @deprecated
  */
 export async function test_insertFakeTickets() {
+  console.log('Inserting fake tickets');
   let counter = 0;
   let supposedTicketID = 1000;
-  const startDate = 1735707600;
+  const startDate = 1735707600; // 1 de enero del 2025
   let currStart = startDate;
   const ticketSpan = 3600 * 2;
   const startStep = 3600 * 5;
-  const endDate = 1742792400;
-  const emails = ['mortizc@hotmail.com', 'evelyndc_10@hotndjd.com', 'antony@pruebas.com', 'miguel@pruebas.com', 'mig_1294@hotmail.com', 'hans.gutierrez.davila@uni.pe', 'darlynnn@hotmail.com'];
+  const endDate = 1745172000; // 20 de abril del 2025
+  const emails = ['mortizc@hotmail.com', 'evelyndc_10@hotmail.com', 'antony@pruebas.com', 'miguel@pruebas.com', 'mig_1294@hotmail.com', 'hans.gutierrez.davila@uni.pe', 'darlynnn@hotmail.com'];
   const states0 = [4, 18, 2, 3];
   const states1 = [16, 2, 3];
   const personal = new Map<number, any>();
@@ -217,9 +219,9 @@ export async function test_insertFakeTickets() {
   };
 
   const q_ticket = `
-    INSERT INTO nodo1.registroticket (telefono, correo, descripcion, fechacomienzo, fechatermino, estd_id, fechaestadofinal, 
+    INSERT INTO nodo1.registroticket (rt_id, telefono, correo, descripcion, fechacomienzo, fechatermino, estd_id, fechaestadofinal, 
     fechacreacion, prioridad, p_id, tt_id, sn_id, enviado, co_id, asistencia) 
-    VALUE (?,?,?,?,?,?,?,?,?,?,?,1,1,?,?);
+    VALUE (?,?,?,?,?,?,?,?,?,?,?,?,1,1,?,?);
   `;
   const q_actividad = `
     INSERT INTO nodo1.actividadpersonal (nombre, apellido, telefono, dni, c_id, co_id, rt_id, foto) 
@@ -233,6 +235,7 @@ export async function test_insertFakeTickets() {
     const t = getRandItem(tipoDesc, r1);
     const lead_id = getRandItem(c.p_id, r1);
     await executeQuery<ResultSetHeader>(q_ticket, [
+      supposedTicketID,
       Math.floor(r1 * 99999999 + 900000000),
       getRandItem(emails, r1),
       getRandItem(t.desc, r2),

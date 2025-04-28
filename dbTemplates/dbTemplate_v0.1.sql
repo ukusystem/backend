@@ -117,6 +117,8 @@ CREATE TABLE `contrata` (
   `r_id` int NOT NULL,
   `descripcion` varchar(100) NOT NULL,
   `activo` tinyint(1) NOT NULL,
+  `updated_at` timestamp NOT NULL ON UPDATE CURRENT_TIMESTAMP,
+  `created_at` timestamp NOT NULL,
   PRIMARY KEY (`co_id`),
   KEY `fk_contrata_rubro_r_id_idx` (`r_id`),
   CONSTRAINT `fk_contrata_rubro_r_id` FOREIGN KEY (`r_id`) REFERENCES `rubro` (`r_id`)
@@ -244,7 +246,7 @@ CREATE TABLE `equipoentrada` (
 
 LOCK TABLES `equipoentrada` WRITE;
 /*!40000 ALTER TABLE `equipoentrada` DISABLE KEYS */;
-INSERT INTO `equipoentrada` VALUES (1,'General','D1',1),(2,'Detector de movimiento','D2',1),(3,'Detector de calor','D3',1),(4,'Detector de gas','D4',1),(5,'Detector de intrusión','D5',1),(6,'Detector de vibración','D6',1),(7,'Detector de agua','D7',1),(8,'Detector de luz','D8',1),(9,'Detector de sonido','D9',1),(10,'Detector de proximidad','D10',1),(11,'Boton','D11',1),(12,'Interruptor','D12',1),(13,'Contacto magnético','D13',1),(14,'Detector de rotura de vidrio','D14',1),(15,'Detector de humo','D15',1),(16,'Pulsador de incendio','D16',1);
+INSERT INTO `equipoentrada` VALUES (1,'General','D1',1),(2,'Detector de movimiento','D2',1),(3,'Detector de calor','D3',1),(4,'Detector de gas','D4',1),(5,'Detector de intrusión','D5',1),(6,'Detector de vibración','D6',1),(7,'Detector de agua','D7',1),(8,'Detector de luz','D8',1),(9,'Detector de sonido','D9',1),(10,'Detector de proximidad','D10',1),(11,'Boton','D11',1),(12,'Interruptor','D12',1),(13,'Contacto magnético','D13',1),(14,'Detector de rotura de vidrio','D14',1),(15,'Detector de humo','D15',1),(16,'Pulsador de incendio','D16',1),(17,'Detector de energía','D17',1);
 /*!40000 ALTER TABLE `equipoentrada` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -270,7 +272,7 @@ CREATE TABLE `equiposalida` (
 
 LOCK TABLES `equiposalida` WRITE;
 /*!40000 ALTER TABLE `equiposalida` DISABLE KEYS */;
-INSERT INTO `equiposalida` VALUES (1,'General','A1',1),(2,'Iluminación (Control de luz)','A2',1),(3,'Ventilación (Aire acondicionado)','A3',1),(4,'Calefacción (Control de temperatura)','A4',1),(5,'Persianas (Control de apertura/cierre)','A5',1),(6,'Alarma (Activación/desactivación)','A6',1),(7,'Riego automático','A7',1),(8,'Audio (Control de altavoces)','A8',1),(9,'Video (Control de cámaras)','A9',1),(10,'Control de humedad','A10',1),(11,'Control de gas','A11',1),(12,'Control de agua','A12',1),(13,'Control de energía','A13',1),(14,'Control de movimiento','A14',1),(15,'Control de acceso','A15',1),(16,'Control de seguridad','A16',1),(17,'Control de emergencia','A17',1),(18,'Control de tráfico','A18',1),(19,'Control de elevadores','A19',1),(20,'Control de ascensores','A20',1),(21,'Alarma contra incendio','A21',1),(22,'Acceso (Apertura de puerta)','A22',1);
+INSERT INTO `equiposalida` VALUES (1,'General','A1',1),(2,'Iluminación (Control de luz)','A2',1),(3,'Ventilación (Aire acondicionado)','A3',1),(4,'Calefacción (Control de temperatura)','A4',1),(5,'Persianas (Control de apertura/cierre)','A5',1),(6,'Alarma (Activación/desactivación)','A6',1),(7,'Riego automático','A7',1),(8,'Audio (Control de altavoces)','A8',1),(9,'Video (Control de cámaras)','A9',1),(10,'Control de humedad','A10',1),(11,'Control de gas','A11',1),(12,'Control de agua','A12',1),(13,'Control de energía','A13',1),(14,'Control de movimiento','A14',1),(15,'Control de acceso','A15',1),(16,'Control de seguridad','A16',1),(17,'Control de emergencia','A17',1),(18,'Control de tráfico','A18',1),(19,'Control de elevadores','A19',1),(20,'Control de ascensores','A20',1),(21,'Alarma contra incendio','A21',1),(22,'Acceso (Apertura de puerta)','A22',1),(23,'Alarma de energía','A23',1);
 /*!40000 ALTER TABLE `equiposalida` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -393,7 +395,7 @@ CREATE TABLE `notificacion` (
   `fecha` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`n_id`),
   UNIQUE KEY `n_uuid` (`n_uuid`)
-) ENGINE=InnoDB AUTO_INCREMENT=158 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -425,7 +427,7 @@ CREATE TABLE `notificacion_usuario` (
   KEY `u_id` (`u_id`),
   CONSTRAINT `notificacion_usuario_ibfk_1` FOREIGN KEY (`n_uuid`) REFERENCES `notificacion` (`n_uuid`),
   CONSTRAINT `notificacion_usuario_ibfk_2` FOREIGN KEY (`u_id`) REFERENCES `usuario` (`u_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -543,7 +545,7 @@ CREATE TABLE `registro_actividad` (
   `realizado_por` varchar(255) NOT NULL,
   `fecha` datetime DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id_actividad`)
-) ENGINE=InnoDB AUTO_INCREMENT=98 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -570,7 +572,7 @@ CREATE TABLE `registrored` (
   PRIMARY KEY (`rr_id`),
   KEY `fk_registrored_controlador_co_id_idx` (`ctrl_id`),
   CONSTRAINT `fk_registrored_controlador_co_id` FOREIGN KEY (`ctrl_id`) REFERENCES `controlador` (`ctrl_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
