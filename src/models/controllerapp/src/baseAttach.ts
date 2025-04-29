@@ -1797,7 +1797,7 @@ export class NodeAttach extends BaseAttach {
     if (log) {
       // this._log(`Setting button disable to '${state}'`);
     }
-    sm.ControllerStateManager.socketAddUpdate(this.controllerID, { disableSecurityButton: state });
+    sm.ControllerStateManager.addUpdateNewStates(this.controllerID, { disableSecurityButton: state });
   }
 
   private async saveSecurity(nodeID: number, security: boolean, date: number, msgID: number) {

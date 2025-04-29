@@ -98,10 +98,9 @@ export class ControllerStateManager {
     return controllerInfo;
   }
 
-  static socketAddUpdate(ctrl_id: number, data: NewStatesController) {
+  static addUpdateNewStates(ctrl_id: number, data: NewStatesController) {
     const dataFiltered = filterUndefined<NewStatesController>(data);
     ControllerStateManager.#newStates.set(ctrl_id, dataFiltered);
-
     if (dataFiltered.disableSecurityButton !== undefined) {
       ControllerStateManager.#notifyUpdateSecurityButton(ctrl_id, dataFiltered.disableSecurityButton);
     }
@@ -111,14 +110,3 @@ export class ControllerStateManager {
     return ControllerStateManager.#newStates.get(ctrl_id);
   }
 }
-
-// (() => {
-//   setTimeout(() => {
-//     ControllerStateManager.socketAddUpdate(1, { disableSecurityButton: false });
-//     console.log({ disableSecurityButton: false });
-//   }, 20000);
-//   setTimeout(() => {
-//     ControllerStateManager.socketAddUpdate(1, { disableSecurityButton: true });
-//     console.log({ disableSecurityButton: true });
-//   }, 40000);
-// })();
