@@ -14,7 +14,7 @@ const accesoController = new AccesoController(mySQLAccesoRepository, mysqlPerson
 
 export const accesoRoutes = Router();
 // ========== Controlador ==========
-
+accesoRoutes.get('/accesos/json/download', accesoController.getAccessToJson);
 accesoRoutes.get('/accesos', authenticate, accesoController.listAccesosOffset);
 accesoRoutes.get('/accesos/:a_id', authenticate, accesoController.singleAcceso);
 

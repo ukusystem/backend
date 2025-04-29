@@ -24,4 +24,6 @@ export interface AccesoRepository {
   findByOffsetPagination(limit: number, offset: number): Promise<Acceso[]>;
   findWithPersonalByOffsetPagination(limit: number, offset: number, serie?: string): Promise<AccesoWithPersonal[]>;
   countTotal(filters?: any): Promise<number>;
+  findInactive(): Promise<number>;
+  getAllAccessToJson(): Promise<Acceso[]>;
 }

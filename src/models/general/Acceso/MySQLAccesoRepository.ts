@@ -15,7 +15,9 @@ interface AccesoPersonalRowData extends RowDataPacket, Acceso, Pick<Personal, 'n
 interface TotalAccespRowData extends RowDataPacket {
   total: number;
 }
-
+interface InactiveAccessRowData extends RowDataPacket {
+  total: number;
+}
 export class MySQLAccesoRepository implements AccesoRepository {
   async findWithPersonalByOffsetPagination(limit: number, offset: number, serie?: string): Promise<AccesoWithPersonal[]> {
     const serieFilter = serie !== undefined ? ` AND a.serie LIKE ? ` : '';
@@ -28,7 +30,7 @@ export class MySQLAccesoRepository implements AccesoRepository {
       INNER JOIN general.equipoacceso e ON a.ea_id = e.ea_id 
       WHERE a.activo = 1 
        ${serieFilter}
-      ORDER BY a.a_id ASC 
+      ORDER BY a.created_at DESC
       LIMIT ? OFFSET ?
       `,
       values: [...(serie !== undefined ? [`%${serie}%`] : []), limit, offset],
@@ -88,7 +90,6 @@ export class MySQLAccesoRepository implements AccesoRepository {
       },
       { setQuery: '', setValues: [] },
     );
-
     await MySQL2.executeQuery<ResultSetHeader>({ sql: `UPDATE general.acceso SET ${queryValues.setQuery} WHERE a_id = ? LIMIT 1`, values: [...queryValues.setValues, a_id] });
   }
 
@@ -104,5 +105,22 @@ export class MySQLAccesoRepository implements AccesoRepository {
   async countTotal(_filters?: any): Promise<number> {
     const totals = await MySQL2.executeQuery<TotalAccespRowData[]>({ sql: `SELECT COUNT(*) AS total FROM general.acceso WHERE activo = 1` });
     return totals[0].total;
+  }
+  async findInactive(): Promise<number> {
+    const totals = await MySQL2.executeQuery<InactiveAccessRowData[]>({
+      sql: `SELECT a_id AS inactive FROM acceso WHERE activo = 0 ORDER BY a_id ASC LIMIT 1`,
+    });
+    return totals[0].inactive;
+  }
+  async getAllAccessToJson(): Promise<Acceso[]> {
+    const results = await MySQL2.executeQuery<AccesoRowData[]>({
+      sql: `
+        SELECT 
+          *
+        FROM general.acceso
+      `,
+    });
+
+    return results;
   }
 }

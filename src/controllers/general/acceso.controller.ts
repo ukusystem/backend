@@ -43,22 +43,31 @@ export class AccesoController {
       if (equipoAccesoFound === undefined) {
         return res.status(404).json({ success: false, message: `Equipo Acceso no disponible.` });
       }
+      const idInactiveAccess = await this.acceso_repository.findInactive();
 
-      const newAcceso = await this.acceso_repository.create(accesoDTO);
+      if (idInactiveAccess === undefined) {
+        return res.status(404).json({ success: false, message: `No hay espacio para tarjetas disponible.` });
+      }
+      const accessToCreate: UpdateAccesoDTO = {
+        ...accesoDTO,
+        activo: 1,
+        created_at: new Date(),
+      };
+      await this.acceso_repository.update(idInactiveAccess, accessToCreate);
 
       const newActivity: InsertRecordActivity = {
         nombre_tabla: 'acceso',
-        id_registro: newAcceso.a_id,
+        id_registro: idInactiveAccess,
         tipo_operacion: OperationType.Create,
         valores_anteriores: null,
-        valores_nuevos: newAcceso,
+        valores_nuevos: accesoDTO,
         realizado_por: `${user.u_id} . ${user.nombre} ${user.apellido}`,
       };
 
       AuditManager.generalInsert(newActivity);
 
       const response: CreateEntityResponse = {
-        id: newAcceso.a_id,
+        id: idInactiveAccess,
         message: 'Acceso creado satisfactoriamente',
       };
 
@@ -228,6 +237,20 @@ export class AccesoController {
       }
       const response: EntityResponse<Acceso> = accesoFound;
       res.status(200).json(response);
+    });
+  }
+  get getAccessToJson() {
+    return asyncErrorHandler(async (req: Request, res: Response, _next: NextFunction) => {
+      console.log('llegue aqui');
+
+      const accesos = await this.acceso_repository.getAllAccessToJson();
+      const response: Acceso[] = accesos;
+      if (!response || response.length === 0) {
+        return res.status(404).json({ success: false, message: 'No hay datos para exportar' });
+      }
+      res.setHeader('Content-Disposition', 'attachment; filename=accesos.json');
+      res.setHeader('Content-Type', 'application/json');
+      res.send(JSON.stringify(response, null, 2));
     });
   }
 }
