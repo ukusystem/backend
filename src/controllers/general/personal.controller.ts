@@ -11,7 +11,7 @@ import { PersonalRepository } from '../../models/general/personal/personal.repos
 import { ContrataRepository } from '../../models/general/contrata/contrata.repository';
 import { UserRepository } from '../../models/general/usuario/user.repository';
 
-import { deleteTemporalFiles, GeneralMulterMiddlewareArgs } from '../../middlewares/multer.middleware';
+import { deleteTemporalFilesMulter, MulterMiddlewareConfig } from '../../middlewares/multer.middleware';
 import { getExtesionFile } from '../../utils/getExtensionFile';
 import { createPersonalSchema } from '../../models/general/personal/schemas/create.personal.schema';
 import { CreatePersonalDTO } from '../../models/general/personal/dtos/create.personal.dto';
@@ -41,8 +41,8 @@ export class PersonalController {
   static readonly BASE_PROFILEPHOTO_RELATIVE_DIR: string = './archivos/personal';
 
   #deleteTemporalFiles(req: Request) {
-    if (req.files !== undefined) deleteTemporalFiles(req.files);
-    if (req.file !== undefined) deleteTemporalFiles([req.file]);
+    if (req.files !== undefined) deleteTemporalFilesMulter(req.files);
+    if (req.file !== undefined) deleteTemporalFilesMulter([req.file]);
   }
 
   #moveMulterFilePhoto(file: Express.Multer.File): string {
@@ -89,12 +89,15 @@ export class PersonalController {
     return finalRelativePath;
   }
 
-  get createMulterConfig(): GeneralMulterMiddlewareArgs {
+  get createMulterConfig(): MulterMiddlewareConfig {
     return {
-      allowedMimeTypes: ['image/jpeg', 'image/jpg', 'image/png'],
       bodyFields: [PersonalController.CREATE_BODY_FIELDNAME],
-      fields: [{ name: PersonalController.CREATE_FILE_FIELDNAME, maxCount: 1 }],
-      limits: { files: 1, fileSize: 5 * 1024 * 1024, fieldSize: 5 * 1024 * 1024 },
+      fieldConfigs: [{ field: { name: PersonalController.CREATE_FILE_FIELDNAME, maxCount: 1 }, allowedMimeTypes: ['image/jpeg', 'image/jpg', 'image/png'], maxFileSize: 5 * 1024 * 1024 }],
+      limits: {
+        files: 1,
+        fileSize: 5 * 1024 * 1024, // 5MB
+        fieldSize: 5 * 1024 * 1024, // 5MB
+      },
     };
   }
 

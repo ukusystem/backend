@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import {
-  createTicket,
+  createTicketController,
   downloadArchivo,
   downloadArchivoRespaldo,
   downloadFotoActividadPersonal,
@@ -16,8 +16,8 @@ import {
   getSingleRegistroTicket,
   getTicketDetalles,
   getTipoTrabajo,
-  multerCreateTicketArgs,
-  multerUpdAchRespArgs,
+  multerCreateTicketConfig,
+  multerUpdateFilesTicketConfig,
   upadateTicket,
   updateArchivoRespaldo,
 } from '../controllers/ticket';
@@ -38,12 +38,12 @@ import {
   updateTicketSchema,
 } from '../schemas/ticket';
 import { authenticate } from '../middlewares/auth.middleware';
-import { GeneralMulterMiddleware } from '../middlewares/multer.middleware';
+import { multerMiddleware } from '../middlewares/multer.middleware';
 
 export const ticketRoutes = Router();
 
 // Create POST /ticket/formdata
-ticketRoutes.post('/ticket/create', authenticate, GeneralMulterMiddleware(multerCreateTicketArgs), createTicket); // validado
+ticketRoutes.post('/ticket/create', authenticate, multerMiddleware(multerCreateTicketConfig), createTicketController); // validado
 
 // TipoTrabajo GET "/ticket/tipotrabajo"
 ticketRoutes.get('/ticket/tipotrabajo', authenticate, getTipoTrabajo); // no necesita validar
@@ -89,7 +89,7 @@ ticketRoutes.get('/user/foto', authenticate, requestValidator({ query: getFotoAc
 ticketRoutes.post('/ticket/download/archivo', authenticate, requestValidator({ body: downloadArchivoSchema }), downloadArchivo);
 
 // UpdateArchivosRespaldo POST "/ticket/update/archivorespaldo"
-ticketRoutes.post('/ticket/update/archivorespaldo', authenticate, GeneralMulterMiddleware(multerUpdAchRespArgs), updateArchivoRespaldo);
+ticketRoutes.post('/ticket/update/archivorespaldo', authenticate, multerMiddleware(multerUpdateFilesTicketConfig), updateArchivoRespaldo);
 
 // DownloadPdfDetalles GET "/ticket/download?rt_id=number&ctrl_id=number"
 ticketRoutes.get('/ticket/download', authenticate, requestValidator({ query: downloadPdfDetallesSchema }), downloadPdfDetalles);
