@@ -9,8 +9,8 @@ export interface UserNoficationData extends UserNofication {
 }
 export interface UserNotificationRepository {
   create(data: CreateUserNotificationDTO): Promise<UserNofication>;
-  update(u_id: number, nu_id: number, fieldsUpdate: UpdateUserNotificationDTO): Promise<void>;
-  findById(u_id: number, nu_id: number): Promise<Nullable<UserNofication>>;
+  update(u_id: number, nu_id: string, fieldsUpdate: UpdateUserNotificationDTO): Promise<void>;
+  findById(u_id: number, nu_id: string): Promise<Nullable<UserNofication>>;
   findByUuId(u_id: number, n_uuid: string): Promise<Nullable<UserNofication>>;
   findByOffsetPagination(u_id: number, limit: number, offset: number): Promise<UserNoficationData[]>;
   countTotal(u_id: number): Promise<number>;

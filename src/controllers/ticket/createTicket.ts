@@ -17,7 +17,7 @@ import { RegistroTicketObj } from '../socket/ticket.schedule/ticket.schedule.typ
 import { TicketState } from '../../types/ticket.state';
 import { UserRol } from '../../types/rol';
 import { FinishTicket } from '../../models/controllerapp/src/finishTicket';
-import { mqqtSerrvice } from '../../services/mqtt/MqttService';
+import { mqttSerrvice } from '../../services/mqtt/MqttService';
 
 import { ensureDirExists, moveFile, toPosixPath } from '../../utils/file';
 import { deleteTemporalFilesMulter, MulterMiddlewareConfig } from '../../middlewares/multer.middleware';
@@ -189,7 +189,7 @@ export const createTicketController = asyncErrorHandler(async (req: RequestWithU
     const newTicketObj: RegistroTicketObj = { ...formDataValid.solicitante, rt_id: response.id, estd_id: stateTicket }; // estado esperando (cambiar)
     TicketScheduleManager.add(ctrl_id, newTicketObj);
     if (user.rl_id === UserRol.Invitado) {
-      mqqtSerrvice.publisAdminNotification({
+      mqttSerrvice.publisAdminNotification({
         evento: 'ticket.requested',
         titulo: 'Nueva Solicitud de Ticket',
         mensaje: `Se ha solicitado un nuevo ticket (#${response.id}) por la contrata "${user.contrata}".`,

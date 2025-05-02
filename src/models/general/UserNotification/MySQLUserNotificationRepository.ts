@@ -23,9 +23,10 @@ export class MySQLUserNotificationRepository implements UserNotificationReposito
     const totals = await MySQL2.executeQuery<TotalUserNotificationRowData[]>({ sql: `SELECT COUNT(*) AS total FROM general.notificacion_usuario WHERE u_id = ? `, values: [u_id] });
     return totals[0].total;
   }
+
   async findByOffsetPagination(u_id: number, limit: number, offset: number): Promise<UserNoficationData[]> {
     const contratas = await MySQL2.executeQuery<UserNotificationFullRowData[]>({
-      sql: `SELECT nu.* ,n_id ,evento, titulo, mensaje, data, fecha FROM general.notificacion_usuario nu INNER JOIN general.notificacion n ON nu.n_uuid = n.n_uuid AND nu.u_id = ? ORDER BY nu.nu_id DESC LIMIT ? OFFSET ?`,
+      sql: `SELECT nu.* ,n_id ,evento, titulo, mensaje, data, fecha FROM general.notificacion_usuario nu INNER JOIN general.notificacion n ON nu.n_uuid = n.n_uuid AND nu.u_id = ? ORDER BY n.fecha DESC LIMIT ? OFFSET ?`,
       values: [u_id, limit, offset],
     });
 
@@ -49,14 +50,14 @@ export class MySQLUserNotificationRepository implements UserNotificationReposito
     }));
   }
   async create(data: CreateUserNotificationDTO): Promise<UserNofication> {
-    const { u_id, n_uuid, fecha_entrega } = data;
+    const { nu_id, u_id, n_uuid, fecha_entrega } = data;
     const fecha_creacion = dayjs().format('YYYY-MM-DD HH:mm:ss');
     const fecha_lectura = null;
     const leido = 0;
-    const result = await MySQL2.executeQuery<ResultSetHeader>({ sql: `INSERT INTO general.notificacion_usuario ( u_id, n_uuid, fecha_creacion, fecha_entrega, fecha_lectura, leido ) VALUES ( ? , ? , ? , ? , ? , ? )`, values: [u_id, n_uuid, fecha_creacion, fecha_entrega, fecha_lectura, leido] });
-    return { nu_id: result.insertId, u_id, n_uuid, fecha_creacion, fecha_entrega, fecha_lectura, leido };
+    await MySQL2.executeQuery<ResultSetHeader>({ sql: `INSERT INTO general.notificacion_usuario ( nu_id, u_id, n_uuid, fecha_creacion, fecha_entrega, fecha_lectura, leido ) VALUES ( ? , ? , ? , ? , ? , ? , ? )`, values: [nu_id, u_id, n_uuid, fecha_creacion, fecha_entrega, fecha_lectura, leido] });
+    return { nu_id, u_id, n_uuid, fecha_creacion, fecha_entrega, fecha_lectura, leido };
   }
-  async update(u_id: number, nu_id: number, fieldsUpdate: UpdateUserNotificationDTO): Promise<void> {
+  async update(u_id: number, nu_id: string, fieldsUpdate: UpdateUserNotificationDTO): Promise<void> {
     const keyValueList = Object.entries(fieldsUpdate).filter(([, value]) => value !== undefined);
     const queryValues = keyValueList.reduce<{ setQuery: string; setValues: string[] }>(
       (prev, cur, index, arr) => {
@@ -70,7 +71,7 @@ export class MySQLUserNotificationRepository implements UserNotificationReposito
     );
     await MySQL2.executeQuery<ResultSetHeader>({ sql: `UPDATE general.notificacion_usuario SET ${queryValues.setQuery} WHERE u_id = ? AND  nu_id = ?  LIMIT 1`, values: [...queryValues.setValues, u_id, nu_id] });
   }
-  async findById(u_id: number, nu_id: number): Promise<Nullable<UserNofication>> {
+  async findById(u_id: number, nu_id: string): Promise<Nullable<UserNofication>> {
     const userNotifications = await MySQL2.executeQuery<UserNotificationRowData[]>({ sql: `SELECT * FROM general.notificacion_usuario WHERE u_id = ? AND  nu_id = ? LIMIT 1`, values: [u_id, nu_id] });
     return userNotifications[0];
   }

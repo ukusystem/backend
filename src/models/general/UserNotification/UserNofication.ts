@@ -1,5 +1,5 @@
 export interface UserNofication {
-  nu_id: number;
+  nu_id: string;
   u_id: number;
   n_uuid: string;
   fecha_creacion: string;
