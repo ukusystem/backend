@@ -1,6 +1,7 @@
 import { Personal } from '../personal/personal.entity';
 import { Acceso } from './Acceso';
 import { CreateAccesoDTO } from './dtos/CreateAccesoDTO';
+import { ImportAccesoDTO } from './dtos/ImportAccesoDTO';
 import { UpdateAccesoDTO } from './dtos/UpdateAccesoDTO';
 
 export interface AccesoWithPersonal extends Acceso {
@@ -26,4 +27,8 @@ export interface AccesoRepository {
   countTotal(filters?: any): Promise<number>;
   findInactive(): Promise<number>;
   getAllAccessToJson(): Promise<Acceso[]>;
+  deleteAllAccess(): Promise<void>;
+  insertAccessBulk(data: ImportAccesoDTO[]): Promise<void>;
+  findTipoAccesoByIds(ids: number[]): Promise<number[]>;
+  findPersonalByIds(ids: number[]): Promise<number[]>;
 }

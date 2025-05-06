@@ -6,6 +6,7 @@ import { AccesoRepository, AccesoWithPersonal } from './AccesoRepository';
 import { CreateAccesoDTO } from './dtos/CreateAccesoDTO';
 import { UpdateAccesoDTO } from './dtos/UpdateAccesoDTO';
 import { Personal } from '../personal/personal.entity';
+import { ImportAccesoDTO } from './dtos/ImportAccesoDTO';
 
 interface AccesoRowData extends RowDataPacket, Acceso {}
 interface AccesoPersonalRowData extends RowDataPacket, Acceso, Pick<Personal, 'nombre' | 'apellido' | 'foto' | 'telefono'> {
@@ -122,5 +123,33 @@ export class MySQLAccesoRepository implements AccesoRepository {
     });
 
     return results;
+  }
+  async deleteAllAccess(): Promise<void> {
+    await MySQL2.executeQuery({ sql: 'DELETE FROM acceso' });
+  }
+
+  async insertAccessBulk(data: ImportAccesoDTO[]): Promise<void> {
+    const now = new Date();
+    const values = data.map((d) => [d.serie, d.administrador, d.ea_id, d.p_id, d.activo, now, now]);
+    await MySQL2.executeQuery({
+      sql: 'INSERT INTO acceso (serie, administrador, ea_id, p_id, activo, created_at, updated_at) VALUES ?',
+      values: [values],
+    });
+  }
+
+  async findTipoAccesoByIds(ids: number[]): Promise<number[]> {
+    const result = await MySQL2.executeQuery<any[]>({
+      sql: 'SELECT ea_id FROM general.equipoacceso WHERE ea_id IN (?)',
+      values: [ids],
+    });
+    return result.map((r) => r.ea_id);
+  }
+
+  async findPersonalByIds(ids: number[]): Promise<number[]> {
+    const result = await MySQL2.executeQuery<any[]>({
+      sql: 'SELECT p_id FROM general.personal WHERE p_id IN (?)',
+      values: [ids],
+    });
+    return result.map((r) => r.p_id);
   }
 }

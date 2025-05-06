@@ -104,10 +104,8 @@ export class PersonalController {
       if (user === undefined) {
         return res.status(401).json({ message: 'No autorizado' });
       }
-      console.log('estoy aqui');
 
       try {
-        console.log(req.body);
         const formParse = JSON.parse(req.body[PersonalController.CREATE_BODY_FIELDNAME]);
 
         if (!formParse) {
