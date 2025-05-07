@@ -2,7 +2,7 @@ import { NodeAttach, ManagerAttach, Selector, BaseAttach } from './baseAttach';
 import { States, getState } from './enums';
 import { PartialTicket } from './partialTicket';
 import { RequestResult } from './requestResult';
-import { AtomicNumber } from './atomicNumber';
+// import { AtomicNumber } from './atomicNumber';
 import { FinishTicket } from './finishTicket';
 import { NodeTickets } from './nodeTickets';
 import { executeQuery } from './dbManager';
@@ -30,6 +30,7 @@ import * as net from 'net';
 import * as cp from 'child_process';
 import { Camara } from '../../../types/db';
 import { FirmwareVersion } from './firmware';
+// import { printComs } from './serial';
 // import { ControllerStateManager } from '../../../controllers/socket';
 
 export class Main {
@@ -58,7 +59,7 @@ export class Main {
   private static readonly ALIVE_CAMERA_PING_INTERVAL_MS = parseInt(process.env.CAMERA_PING_INTERVAL ?? '4') * 1000;
   private static readonly ALIVE_CAMERA_PING_TIMEOUT_MS = parseInt(process.env.CAMERA_PING_TIMEOUT ?? '2') * 1000;
 
-  private static readonly WAIT_UPDATE_FOR_ALL_INTERVAL = 1 * 1000;
+  // private static readonly WAIT_UPDATE_FOR_ALL_INTERVAL = 1 * 1000;
 
   private static readonly LOGGER_RELATIVE_PATH = './logs';
   private readonly tag = '█ ';
@@ -843,32 +844,32 @@ export class Main {
    * @param nodeID The ID of the node for which the ticket was created for.
    * @returns The proper filename to save in the database, or an error message if an error occurs.
    */
-  private async processPhotoField(worker: Personal, byteSize: AtomicNumber, nodeID: number): Promise<string | null> {
-    const millis = Date.now();
-    const fotoOptional = worker.foto;
-    // Initial state. the case where (isNew && fotoOptional.isPresent()) can still
-    // change, depending on the success of the file written and that value is set
-    // inside the writing function.
-    byteSize.inner = !worker.isNew !== !fotoOptional ? 0 : -1;
-    // Photo can be optional
-    if (worker.isNew) {
-      if (fotoOptional) {
-        // The final byte size is defined here, if this case occurs
-        if (await useful.writeNewTicketPhotoFromBase64(fotoOptional, millis, nodeID, byteSize)) {
-          return useful.getReplacedPath(useful.getPathForNewWorkerPhoto(nodeID, millis));
-        } else {
-          return 'error-WritingFile';
-        }
-      } else {
-        //				return "error-PhotoWasOptional";
-        return null;
-      }
-    }
-    // Photo file name is mandatory
-    else {
-      return fotoOptional ?? 'error-NoFotoOfExistingWorker';
-    }
-  }
+  // private async processPhotoField(worker: Personal, byteSize: AtomicNumber, nodeID: number): Promise<string | null> {
+  //   const millis = Date.now();
+  //   const fotoOptional = worker.foto;
+  //   // Initial state. the case where (isNew && fotoOptional.isPresent()) can still
+  //   // change, depending on the success of the file written and that value is set
+  //   // inside the writing function.
+  //   byteSize.inner = !worker.isNew !== !fotoOptional ? 0 : -1;
+  //   // Photo can be optional
+  //   if (worker.isNew) {
+  //     if (fotoOptional) {
+  //       // The final byte size is defined here, if this case occurs
+  //       if (await useful.writeNewTicketPhotoFromBase64(fotoOptional, millis, nodeID, byteSize)) {
+  //         return useful.getReplacedPath(useful.getPathForNewWorkerPhoto(nodeID, millis));
+  //       } else {
+  //         return 'error-WritingFile';
+  //       }
+  //     } else {
+  //       //				return "error-PhotoWasOptional";
+  //       return null;
+  //     }
+  //   }
+  //   // Photo file name is mandatory
+  //   else {
+  //     return fotoOptional ?? 'error-NoFotoOfExistingWorker';
+  //   }
+  // }
 
   /**
    * Load accepted tickets from the database. This is called once on every start
@@ -1080,7 +1081,7 @@ export class Main {
           node.resetKeepAliveRequest();
           await node.insertNet(false);
           node.printKeyCount(selector);
-          ManagerAttach.connectedManager?.addNodeState(false, node.controllerID);
+          ManagerAttach.connectedManager?.addNodeState(codes.VALUE_DISCONNECTED, node.controllerID);
         }
       }
     }

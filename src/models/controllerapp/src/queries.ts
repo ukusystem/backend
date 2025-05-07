@@ -393,7 +393,7 @@ export const nodeGetForUpdate = `
  * motionsnapshotseconds, res_id_motionsnapshot, motionsnapshotinterval,
  * res_id_streamprimary, streamprimaryfps,
  * res_id_streamsecondary, streamsecondaryfps,
- * res_id_streamauxiliary, streamauxiliaryfps,
+ * res_id_streamauxiliary, streamauxiliaryfps, celular
  * modo,
  */
 
@@ -408,7 +408,7 @@ export const nodeSelect = `
 					res_id_streamprimary, streamprimaryfps, 
 					res_id_streamsecondary, streamsecondaryfps, 
 					res_id_streamauxiliary, streamauxiliaryfps,
-					modo
+					modo, celular
 
 				FROM general.controlador
 				WHERE activo=1;
@@ -428,8 +428,8 @@ export const nodeUpdate = `
 					motionsnapshotseconds=?, res_id_motionsnapshot=?, motionsnapshotinterval=?, 
 					res_id_streamprimary=?, streamprimaryfps=?, 
 					res_id_streamsecondary=?, streamsecondaryfps=?, 
-					res_id_streamauxiliary=?, streamauxiliaryfps=?
-
+					res_id_streamauxiliary=?, streamauxiliaryfps=?, celular=?
+					
 				WHERE ctrl_id=?;
 			`;
 
@@ -448,7 +448,7 @@ export const nodeUpdatePwd = `
 					motionsnapshotseconds=?, res_id_motionsnapshot=?, motionsnapshotinterval=?, 
 					res_id_streamprimary=?, streamprimaryfps=?, 
 					res_id_streamsecondary=?, streamsecondaryfps=?, 
-					res_id_streamauxiliary=?, streamauxiliaryfps=?,
+					res_id_streamauxiliary=?, streamauxiliaryfps=?, celular=?,
 
 					contraseña=?
 				WHERE ctrl_id=?;
@@ -465,7 +465,7 @@ export const nodeUpdateTrivial = `
 				motionsnapshotseconds=?, res_id_motionsnapshot=?, motionsnapshotinterval=?, 
 				res_id_streamprimary=?, streamprimaryfps=?, 
 				res_id_streamsecondary=?, streamsecondaryfps=?, 
-				res_id_streamauxiliary=?, streamauxiliaryfps=?
+				res_id_streamauxiliary=?, streamauxiliaryfps=?, celular=?
 			WHERE ctrl_id=?;
 		`;
 
@@ -485,7 +485,7 @@ export const nodeInsert = `
 					motionsnapshotseconds, res_id_motionsnapshot, motionsnapshotinterval, 
 					res_id_streamprimary, streamprimaryfps, 
 					res_id_streamsecondary, streamsecondaryfps, 
-					res_id_streamauxiliary, streamauxiliaryfps,
+					res_id_streamauxiliary, streamauxiliaryfps, celular
 
 					contraseña, modo, seguridad, conectado, activo, serie)
 				VALUE (
@@ -497,7 +497,7 @@ export const nodeInsert = `
 					?, ?, ?,
 					?, ?,
 					?, ?,
-					?, ?,
+					?, ?, ?
 
 					?, 0, 0, 0, 1, '-')
 			`;
@@ -508,7 +508,21 @@ export const nodeDisable = `
 				WHERE ctrl_id=?;
 			`;
 
-export const indexForTrivial = [0, 1, 2, 3, 4, 5, 6, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25];
+/**
+ID,
+Name, Group, Address, Description,
+Latitude, Longitude, User,
+IP, Mask, Gateway, Port, Person1,
+Person2,
+
+RecordDuration, RecordResolution, RecordFPS,
+SnapDuration, SnapResolution, SnapInterval,
+PrimaryResolution, PrimaryFPS,
+SecondaryResolution, SecondaryFPS,
+AuxiliaryResolution, AuxiliaryFPS,
+Cellphone
+ */
+export const indexForTrivial = [0, 1, 2, 3, 4, 5, 6, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26];
 
 export const nodeSelectID = `
 				SELECT ctrl_id AS entero FROM general.controlador
@@ -546,6 +560,7 @@ export const nodeParse = [
   tupleInt,
   tupleID,
   tupleInt,
+  tupleTxt,
   // tupleInt
 ];
 
@@ -802,15 +817,15 @@ export const tableTuples = [
  */
 
 export const generalSelect = `
-				SELECT nombreempresa, correoadministrador FROM general.configuracion LIMIT 1;
+				SELECT nombreempresa, celular, com FROM general.configuracion LIMIT 1;
 `;
 
 export const generalUpdate = `
 				UPDATE general.configuracion
-				SET nombreempresa=?, correoadministrador=? WHERE conf_id >0;
+				SET nombreempresa=?, celular=?, com=? WHERE conf_id >0;
 `;
 
-export const generalParse = [tupleTxt, tupleTxt];
+export const generalParse = [tupleTxt, tupleInt, tupleTxt];
 
 /* Firmwares */
 

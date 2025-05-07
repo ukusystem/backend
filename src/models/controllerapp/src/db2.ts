@@ -17,6 +17,8 @@ export interface FirmwareData extends RowDataPacket {
 export interface GeneralData extends RowDataPacket {
   nombreempresa: string;
   correoadministrador: string;
+  celular: number;
+  com: string;
 }
 
 /**

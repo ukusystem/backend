@@ -261,6 +261,8 @@ export const VALUE_ALARM_THRESHOLD_CHANGED = 0x2aa; // Alarm Threshold changed
 export const VALUE_ALL_THRESHOLDS = 0x2ab; // Send all temperature sensors alarm thresholds
 export const VALUE_ALL_ORDER_STATES = 0x2ac; // Send all order states to the server
 export const VALUE_SERVER_PHONE = 0x2ad; // Set the server phone number
+export const VALUE_COM = 0x2ae; // Get the COMs available
+export const VALUE_COMS_END = 0x2af; // End COMs
 
 export const VALUE_SOCKET_CLOSED = 0x400; // Socket was closed
 export const VALUE_AUTHORIZED = 0x401; // Card authorized

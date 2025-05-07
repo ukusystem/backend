@@ -36,6 +36,7 @@ import path from 'path';
 import { FirmwareVersion } from './firmware';
 import { MyStringIterator } from './myStringIterator';
 import { createHash } from 'crypto';
+import { getComs } from './serial';
 
 /**
  * Base attachment for the sockets
@@ -918,7 +919,7 @@ export class NodeAttach extends BaseAttach {
 
   private chunkIterator: MyStringIterator | null = null;
 
-  private printFlag = false;
+  private lastChannelConnected = false;
 
   /**
    * @deprecated
@@ -944,8 +945,6 @@ export class NodeAttach extends BaseAttach {
    * the socket is programmed to closed.
    */
   private loggedToController = false;
-
-  // private printFlag = true
 
   constructor(nodeID: number, nodeName: string, nodeIP: string, nodePort: number, nodeUser: string, nodePassword: string, currentLogger: Logger) {
     super(currentLogger);
@@ -1039,29 +1038,8 @@ export class NodeAttach extends BaseAttach {
     }
     if (!this._keepAliveRequestSent && this.isBufferEmpty() && useful.timeInt() >= this.lastTimeMessageSent + Main.ALIVE_REQUEST_INTERVAL) {
       this._keepAliveRequestSent = true;
-      this._addOne(
-        new Message(
-          codes.CMD_KEEP_ALIVE_REQUEST,
-          0,
-          // , [] ,
-          // (header)=>{
-          //   if(header  === codes.CMD_KEEP_ALIVE){
-          //     this._keepAliveRequestSent = false
-          //     // this._log("Keep alive response received")
-          //   }
-          // }
-        ),
-      );
+      this._addOne(new Message(codes.CMD_KEEP_ALIVE_REQUEST, 0));
       // this._log("Keep alive request added")
-    } else {
-      // if (useful.timeInt() % 10 === 0) {
-      //   if (this.printFlag) {
-      //     // this._log(`Request not send. Sent: ${this._keepAliveRequestSent} Empty: ${this.isBufferEmpty()} Last time: ${this.lastTimeMessageSent}`);
-      //     this.printFlag = false;
-      //   }
-      // } else {
-      //   this.printFlag = true;
-      // }
     }
   }
 
@@ -1587,6 +1565,8 @@ export class NodeAttach extends BaseAttach {
         this._log('Received hello from controller. Logged in.');
         this.setLogged(true);
 
+        ManagerAttach.connectedManager?.addNodeState(codes.VALUE_CONNECTED, this.controllerID);
+
         // Register connection
         this.removePendingMessageByID(id, codes.AIO_OK);
         this.insertNet(true);
@@ -1972,10 +1952,12 @@ export class NodeAttach extends BaseAttach {
   tryConnectNode(selector: Selector, log: boolean, push: boolean = true) {
     const controllerSocket = net.createConnection(this.port, this.ip, () => {
       // console.log(this._currentSocket?.writableLength);
+      this.lastChannelConnected = true;
       if (log) {
         this._log('Socket connect callback');
       }
       this.unreached = false;
+      ManagerAttach.connectedManager?.addNodeState(codes.VALUE_DENIED, this.controllerID);
       this.addLogin();
       this.addHello(-1, 0, async (code: number) => {
         if (code !== codes.AIO_OK) {
@@ -1994,7 +1976,6 @@ export class NodeAttach extends BaseAttach {
           }
         }
       });
-      ManagerAttach.connectedManager?.addNodeState(true, this.controllerID);
     });
 
     controllerSocket.on('data', (data: Buffer) => {
@@ -2051,15 +2032,19 @@ export class NodeAttach extends BaseAttach {
         // this._log(`Socket end in close callback`);
       });
 
-      // controllerSocket.destroy();
-
       // console.log("Try connect node, close event")
       if (this.isLogged()) {
         this._log(`The node ID = ${this.controllerID} (${this.node}) closed its socket. Reconnecting ...`);
         await this.insertNet(false);
         this.printKeyCount(selector);
-        ManagerAttach.connectedManager?.addNodeState(false, this.controllerID);
+        ManagerAttach.connectedManager?.addNodeState(codes.VALUE_DISCONNECTED, this.controllerID);
+      } else {
+        if (this.lastChannelConnected) {
+          this._log('Channel disconnected (falling edge)');
+          ManagerAttach.connectedManager?.addNodeState(codes.VALUE_DISCONNECTED, this.controllerID);
+        }
       }
+      this.lastChannelConnected = false;
       BaseAttach.simpleReconnect(selector, this, this.unreached);
     });
 
@@ -2110,19 +2095,6 @@ export class ManagerAttach extends BaseAttach {
    * True when the other end of the manager channel is logged in.
    */
   private loggedIn = false;
-
-  /**
-   * Reference to save the parts of ``VALUE_NODE`` command. This will be used when the
-   * controller confirms the changes or when there was no socket for the
-   * controller.
-   */
-  // private completeNodeData: DataStruct[] | null = null;
-
-  /**
-   * Reference to save the trivial part of a ``VALUE_NODE`` command. This will be used
-   * to update the socket's attachment only when it is logged to the controller.
-   */
-  // private halfForTrivial: DataStruct[] | null = null;
 
   /**
    * True when the edition of the node involves changing the password.
@@ -2261,20 +2233,14 @@ export class ManagerAttach extends BaseAttach {
                   case codes.VALUE_GENERAL:
                     await this.addGeneral(id, false);
                     break;
+                  case codes.VALUE_COM:
+                    await this.addComs(id, true);
+                    break;
                   case codes.VALUE_NODE:
                     await this.addNodes(selector, id, false);
                     // Just to check on keys. No other particular reason.
                     // printKeyCount(selector)
                     break;
-                  // case codes.VALUE_WORKER:
-                  //   await this.addWorkers(id, false);
-                  //   break;
-
-                  // Useful?
-                  // case codes.VALUE_SECURITY:
-                  // case codes.VALUE_VOLTAGE:
-                  // case codes.VALUE_SD:
-
                   case codes.VALUE_INPUT_CTRL:
                   case codes.VALUE_OUTPUT_CTRL:
                   case codes.VALUE_TEMP_SENSOR_CTRL:
@@ -2726,8 +2692,15 @@ export class ManagerAttach extends BaseAttach {
     return true;
   }
 
-  addNodeState(state: boolean, nodeID: number) {
-    this._addOne(new Message(codes.VALUE_NODE_STATE, 0, [(state ? codes.VALUE_CONNECTED : codes.VALUE_DISCONNECTED).toString(), nodeID.toString()]).setLogOnSend(true));
+  /**
+   * Add the node state (VALUE_CONNECTED or VALUE_DISCONNECTED) to the technician
+   * @param state
+   * @param nodeID
+   */
+  addNodeState(state: number, nodeID: number) {
+    if (state === codes.VALUE_CONNECTED || state === codes.VALUE_DISCONNECTED || state === codes.VALUE_DENIED) {
+      this._addOne(new Message(codes.VALUE_NODE_STATE, 0, [state.toString(), nodeID.toString()]).setLogOnSend(true));
+    }
   }
 
   /**
@@ -2912,11 +2885,6 @@ export class ManagerAttach extends BaseAttach {
     }
     try {
       if (notify && currentAttach) {
-        // this.completeNodeData?.map((v, i)=>{
-        //   console.log(`${i} - ${v}`)
-        // })
-        // console.log(this.completeNodeData)
-
         // this._log('Notifying web about controller');
         const cd = currentAttach.completeData;
         ControllerMapManager.update(currentAttach.controllerID, {
@@ -3148,13 +3116,25 @@ export class ManagerAttach extends BaseAttach {
   private async addGeneral(id: number, log: boolean) {
     const generalResponse = await executeQuery<db2.GeneralData[]>(queries.generalSelect);
     if (generalResponse && generalResponse.length === 1) {
-      this._addOne(new Message(codes.VALUE_GENERAL, id, [generalResponse[0].nombreempresa, generalResponse[0].correoadministrador, Main.getVersionString()]).setLogOnSend(log));
+      this._addOne(new Message(codes.VALUE_GENERAL, id, [generalResponse[0].nombreempresa, generalResponse[0].celular.toString(), generalResponse[0].com, Main.getVersionString()]).setLogOnSend(log));
     } else {
       this._log('Error getting general info.');
     }
   }
 
+  private async addComs(id: number, log: boolean) {
+    const coms = await getComs();
+    for (const com of coms) {
+      this._addOne(new Message(codes.VALUE_COM, 0, [com.path]).setLogOnSend(true));
+    }
+    this._addOne(new Message(codes.VALUE_COMS_END, id).setLogOnSend(true));
+    if (log) {
+      this._log('Added COMs end.');
+    }
+  }
+
   private async updateGeneral(items: DataStruct[]): Promise<boolean> {
+    // nombre, celular, com
     const data = items.map((i) => {
       return i.getString();
     });
@@ -3164,7 +3144,7 @@ export class ManagerAttach extends BaseAttach {
       this._log(`Notifying general data.`);
       SystemManager.updateGeneral({
         COMPANY_NAME: data[0],
-        EMAIL_ADMIN: data[1],
+        EMAIL_ADMIN: 'a@b.c',
       });
       return true;
     } else {
@@ -3283,7 +3263,7 @@ export class Selector {
    * @param selector Selector containing the sockets currently being used.
    * @param nodeID   The ID of the node being tested. The same ID that is being
    *                 used in the database.
-   * @returns True if the node is connected, false otherwise.
+   * @returns The code of the node state VALUE_CONNECTED, VALUE_DISCONNECTED or VALUE_DENIED.
    */
   getNodeState(nodeID: number): number {
     const nodeAttach = this.getNodeAttachByID(nodeID);
