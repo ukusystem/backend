@@ -825,6 +825,9 @@ export const generalUpdate = `
 				SET nombreempresa=?, celular=?, com=? WHERE conf_id >0;
 `;
 
+/**
+ * nombre, celular, com
+ */
 export const generalParse = [tupleTxt, tupleInt, tupleTxt];
 
 /* Firmwares */

@@ -1624,7 +1624,7 @@ export class NodeAttach extends BaseAttach {
         break;
 
       case codes.VALUE_ORDER_RESULT:
-        this._log(`Received order result ${command}`);
+        // this._log(`Received order result ${command}`);
         this.mirrorMessage(this._appendPart(command, this.controllerID.toString()), true);
         const orderData = this._parseMessage(parts, queries.orderParse, id, false);
         if (!orderData) {
@@ -2770,7 +2770,7 @@ export class ManagerAttach extends BaseAttach {
    * @param id             ID of the message being processed.
    */
   private async completeReconnect(selector: Selector, nodeID: number, forceReconnect: boolean, id: number, newCompleteData: DataStruct[] | null = null) {
-    this._log('Reconnecting completely the channel');
+    // this._log('Reconnecting completely the channel');
     // The channel must be reconnected anyways. This ensures that there will be a
     // channel for that controller after this method returns.
     const currentAttach = selector.getNodeAttachByID(nodeID);
@@ -2860,7 +2860,7 @@ export class ManagerAttach extends BaseAttach {
          * in.
          */
         currentAttach.completeData = newCompleteData;
-        console.log(`Current complete data:\n${currentAttach.completeData}`);
+        // console.log(`Current complete data:\n${currentAttach.completeData}`);
         const halfForTrivialData: DataStruct[] = [];
         for (let i = 0; i < queries.indexForTrivial.length; i++) {
           if (newCompleteData.length > queries.indexForTrivial[i]) {
@@ -3125,19 +3125,20 @@ export class ManagerAttach extends BaseAttach {
   private async addComs(id: number, log: boolean) {
     const coms = await getComs();
     for (const com of coms) {
-      this._addOne(new Message(codes.VALUE_COM, 0, [com.path]).setLogOnSend(true));
+      this._addOne(new Message(codes.VALUE_COM, 0, [com.path, com.name]).setLogOnSend(true));
     }
     this._addOne(new Message(codes.VALUE_COMS_END, id).setLogOnSend(true));
     if (log) {
-      this._log('Added COMs end.');
+      // this._log('Added COMs end.');
     }
   }
 
   private async updateGeneral(items: DataStruct[]): Promise<boolean> {
     // nombre, celular, com
     const data = items.map((i) => {
-      return i.getString();
+      return i.toString();
     });
+    // console.log(data);
     const res = await executeQuery<ResultSetHeader>(queries.generalUpdate, data);
     if (res) {
       // Notify web about general data

@@ -805,7 +805,8 @@ export class Main {
           monitor = States.EXECUTED;
           await this.registerOrder(newOrder, monitor);
           // resolve(monitor)
-          resolve(new RequestResult(true, `Orden para pines ejecutada.`));
+          const res = code === codes.AIO_OK;
+          resolve(new RequestResult(res, `Orden para pines ejecutada ${res ? 'correctamente' : `con errores ${useful.toHex(code)}`}.`));
           this.log(`Response from controller ${useful.toHex(code)}`);
         });
         this.log('Added order for controller. Waiting response...');
