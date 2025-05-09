@@ -9,7 +9,7 @@ import { verifyImageMarkers } from '../../utils/stream';
 import { CustomError } from '../../utils/CustomError';
 import { cameraLogger } from '../../services/loggers';
 import { CameraOnvifManager } from './onvif/camera.onvif.manager';
-import { ControlPTZDTO } from './onvif/camera.onvif.types';
+import { ControlImagingDTO, ControlPTZDTO } from './onvif/camera.onvif.types';
 
 type CameraInfo = Pick<Camara, 'cmr_id' | 'ip' | 'descripcion' | 'puertows' | 'tc_id'> & Pick<TipoCamara, 'tipo'> & Pick<Marca, 'marca'>;
 
@@ -104,6 +104,10 @@ export class Camera {
   static async controlPTZ({ action, velocity, movement, cmr_id, ctrl_id }: ControlPTZDTO & CamIdentifier) {
     const data: ControlPTZDTO = { action, velocity, movement };
     await CameraOnvifManager.controlPTZ(ctrl_id, cmr_id, data);
+  }
+
+  static async controlImaging(ctrl_id: number, cmr_id: number, data: ControlImagingDTO) {
+    await CameraOnvifManager.controlImaging(ctrl_id, cmr_id, data);
   }
 
   static async presetPTZ({ cmr_id, ctrl_id, preset }: CamIdentifier & { preset: number }) {

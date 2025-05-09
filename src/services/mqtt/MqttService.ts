@@ -38,6 +38,8 @@ interface UserNotificationPayload {
 export class MqttService {
   private readonly client: MqttClient;
   private readonly BASE_TOPIC: string = 'notifications';
+  private canPublish = false;
+
   constructor(config: MqttConfig) {
     this.client = mqtt.connect(`mqtt://${config.host}`, { port: config.port, username: config.username, password: config.password });
     this.client.on('connect', () => {
@@ -46,6 +48,15 @@ export class MqttService {
     this.client.on('error', (error) => {
       genericLogger.error(`❌ MqttService Error : ${error.message} `, error);
     });
+
+    // Esperar 2 minutos desde la creación para permitir publicaciones
+    setTimeout(
+      () => {
+        this.canPublish = true;
+        // console.log('✅ MqttService ahora puede publicar notificaciones');
+      },
+      2 * 60 * 1000,
+    );
   }
 
   async #saveNotification(payload: Omit<Notification, 'n_id'>): Promise<void> {
@@ -57,6 +68,10 @@ export class MqttService {
   }
 
   async #publishNotification(notification: Omit<Notification, 'n_id'>, topics: Array<string>) {
+    if (!this.canPublish) {
+      // console.log(`⌛ Aún no se permite publicar. Esperando ventana de 2 minutos.`);
+      return;
+    }
     try {
       if (this.client.connected) {
         // guardar notificacion
@@ -77,6 +92,10 @@ export class MqttService {
   }
 
   public sendUserNotification(payload: UserNotificationPayload) {
+    if (!this.canPublish) {
+      // console.log(`⌛ Aún no se permite publicar. Esperando ventana de 2 minutos.`);
+      return;
+    }
     const topic = this.getUserTopic(payload.u_id);
 
     const message = JSON.stringify(payload);
@@ -86,7 +105,6 @@ export class MqttService {
           console.error('❌ Error al enviar notificación:', error);
         } else {
           console.log(`🔔 Notificación enviada a ${payload.u_id}: ${message}`);
-          // guardar notificacion
         }
       });
     }
@@ -150,6 +168,6 @@ export class MqttService {
   }
 }
 
-const mqqtSerrvice = new MqttService({ host: appConfig.mqtt.host, port: appConfig.mqtt.port, username: appConfig.mqtt.users.admin.user, password: appConfig.mqtt.users.admin.password });
+const mqttSerrvice = new MqttService({ host: appConfig.mqtt.host, port: appConfig.mqtt.port, username: appConfig.mqtt.users.admin.user, password: appConfig.mqtt.users.admin.password });
 
-export { mqqtSerrvice };
+export { mqttSerrvice };

@@ -8,6 +8,12 @@ export const createUserNotificationSchema = z.object({
       invalid_type_error: "'n_uuid' debe ser una cadena de texto",
     })
     .uuid({ message: "'n_uuid' no es un identificador válido" }),
+  nu_id: z
+    .string({
+      required_error: "'nu_id' es obligatorio",
+      invalid_type_error: "'nu_id' debe ser una cadena de texto",
+    })
+    .uuid({ message: "'nu_id' no es un identificador válido" }),
   fecha_entrega: z
     .string({
       required_error: "'fecha_entrega' es obligatorio",

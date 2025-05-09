@@ -132,7 +132,7 @@ export class Ticket {
   }, 'Ticket.getActividaPersonal');
 
   static getArchivosCargados = handleErrorWithArgument<ArchivoTicket[], { ctrl_id: number; rt_id: number }>(async ({ ctrl_id, rt_id }) => {
-    const archivos = await MySQL2.executeQuery<ArchivoRowData[]>({ sql: `SELECT * FROM ${'nodo' + ctrl_id}.archivoticket a WHERE a.rt_id = ? `, values: [rt_id] });
+    const archivos = await MySQL2.executeQuery<ArchivoRowData[]>({ sql: `SELECT * FROM nodo${ctrl_id}.archivoticket a WHERE a.rt_id = ? `, values: [rt_id] });
 
     if (archivos.length > 0) {
       return archivos;

@@ -73,6 +73,7 @@ interface IAppConfig {
   mqtt: {
     host: string;
     port: number;
+    port_ws: number;
     users: {
       admin: {
         user: string;
@@ -150,6 +151,8 @@ const appConfig: IAppConfig = {
   mqtt: {
     host: validatedEnv.MQTT_HOST,
     port: validatedEnv.MQTT_PORT,
+    port_ws: validatedEnv.MQTT_PORT_WS,
+
     users: {
       admin: {
         user: validatedEnv.MQTT_ADMIN_USER,

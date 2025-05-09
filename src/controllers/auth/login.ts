@@ -19,9 +19,11 @@ interface IData {
   refresh_token: string;
   user: IUserLoginData;
   mqtt: {
-    user: string;
-    password: string;
-  } | null;
+    user?: string;
+    password?: string;
+    host?: string;
+    port?: number;
+  };
 }
 
 interface IUserLoginData {
@@ -84,6 +86,7 @@ export const login = asyncErrorHandler(async (req: Request, res: Response, next:
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { contraseña: contraseñaFound, ...userWithoutPassword } = userFound;
+  const credentialsMqtt = MqttService.getUserCredentials(userFound.rl_id);
 
   const response: IResponseLogin = {
     status: 200,
@@ -93,7 +96,12 @@ export const login = asyncErrorHandler(async (req: Request, res: Response, next:
       access_token: accessToken,
       refresh_token: refreshToken,
       user: userWithoutPassword,
-      mqtt: MqttService.getUserCredentials(userFound.rl_id),
+      mqtt: {
+        user: credentialsMqtt?.user,
+        password: credentialsMqtt?.password,
+        host: appConfig.mqtt.host,
+        port: appConfig.mqtt.port_ws,
+      },
     },
   };
 

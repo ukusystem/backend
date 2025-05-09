@@ -1,4 +1,4 @@
-import { mqqtSerrvice } from '../../services/mqtt/MqttService';
+import { mqttSerrvice } from '../../services/mqtt/MqttService';
 import { PinesEntrada } from '../../types/db';
 import { ControllerMapManager, EquipoEntradaMapManager } from '../maps';
 import { ControllerMode, ControllerSecurity } from './system.state.types';
@@ -14,7 +14,7 @@ export class PinEntradaNotifyManager {
       if (controller.modo === ControllerMode.Seguridad && controller.seguridad === ControllerSecurity.Armado) {
         const canNotify = (activo === undefined || activo === 1) && estado !== undefined && (curPinEnt.estado !== estado || isAdd) && estado === 1;
         if (canNotify) {
-          mqqtSerrvice.publisAdminNotification({ evento: 'alarm.pinentrada.activated', titulo: 'Detector Activado', mensaje: `El detector "${equipoEntrada.detector}" asignado al pin "${finalPin}" del controlador "${controller.nodo}" ha sido activado.` });
+          mqttSerrvice.publisAdminNotification({ evento: 'alarm.pinentrada.activated', titulo: 'Detector Activado', mensaje: `El detector "${equipoEntrada.detector}" asignado al pin "${finalPin}" del controlador "${controller.nodo}" ha sido activado.` });
         }
       }
     }

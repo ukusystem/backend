@@ -17,10 +17,12 @@ import { RegistroTicketObj } from '../socket/ticket.schedule/ticket.schedule.typ
 import { TicketState } from '../../types/ticket.state';
 import { UserRol } from '../../types/rol';
 import { FinishTicket } from '../../models/controllerapp/src/finishTicket';
-import { mqqtSerrvice } from '../../services/mqtt/MqttService';
+import { mqttSerrvice } from '../../services/mqtt/MqttService';
 
 import { ensureDirExists, moveFile, toPosixPath } from '../../utils/file';
 import { deleteTemporalFilesMulter, MulterMiddlewareConfig } from '../../middlewares/multer.middleware';
+import { generateThumbs } from '../../models/controllerapp/src/frontTools';
+import { ControllerMapManager } from '../../models/maps';
 
 enum TicketFormKeys {
   Formulario = 'formulario',
@@ -112,7 +114,7 @@ export const createTicketController = asyncErrorHandler(async (req: RequestWithU
   //Cuando todo es correcto:
   const fileUploaded = req.files;
 
-  const archivosData: { ruta: string; nombreoriginal: string; tipo: string }[] = [];
+  const archivosData: { ruta: string; nombreoriginal: string; tipo: string; tamaño: number; thumbnail: string | null }[] = [];
   let personales = formDataValid.personales;
 
   if (fileUploaded && !Array.isArray(fileUploaded)) {
@@ -128,12 +130,29 @@ export const createTicketController = asyncErrorHandler(async (req: RequestWithU
 
         moveFile(file.path, movePath);
 
+        let thumbnailPathResult: string | null = null;
+        try {
+          const thumbnailPath = path.resolve(`./archivos/ticket/nodo${ctrl_id}/${dateFormat}/${nameFileUuid}_thumbnail.jpg`);
+          ensureDirExists(path.dirname(thumbnailPath));
+          const { result, thumbBase64 } = await generateThumbs({ filepath: movePath, type: file.mimetype });
+
+          if (result) {
+            const imageBuffer = Buffer.from(thumbBase64, 'base64');
+            fs.writeFileSync(thumbnailPath, imageBuffer);
+            thumbnailPathResult = toPosixPath(path.relative('./archivos/ticket', thumbnailPath));
+          }
+        } catch (error) {
+          genericLogger.error(`Error al generar y guardar el thumbnail para el archivo "${file.originalname}" (tipo: ${file.mimetype}) `, error);
+        }
+
         const relativePath = toPosixPath(path.relative('./archivos/ticket', movePath));
 
         archivosData.push({
           ruta: relativePath,
           nombreoriginal: file.originalname,
           tipo: file.mimetype,
+          tamaño: file.size,
+          thumbnail: thumbnailPathResult,
         });
       }
     }
@@ -186,13 +205,14 @@ export const createTicketController = asyncErrorHandler(async (req: RequestWithU
 
     await onFinishTicket(new FinishTicket(stateTicket, ctrl_id, response.id)); // update ticket
 
-    const newTicketObj: RegistroTicketObj = { ...formDataValid.solicitante, rt_id: response.id, estd_id: stateTicket }; // estado esperando (cambiar)
+    const newTicketObj: RegistroTicketObj = { ...formDataValid.solicitante, rt_id: response.id, estd_id: stateTicket };
     TicketScheduleManager.add(ctrl_id, newTicketObj);
     if (user.rl_id === UserRol.Invitado) {
-      mqqtSerrvice.publisAdminNotification({
+      const controllerSite = ControllerMapManager.getController(ctrl_id);
+      mqttSerrvice.publisAdminNotification({
         evento: 'ticket.requested',
         titulo: 'Nueva Solicitud de Ticket',
-        mensaje: `Se ha solicitado un nuevo ticket (#${response.id}) por la contrata "${user.contrata}".`,
+        mensaje: `Se ha solicitado un nuevo ticket (#${response.id}) por la contrata "${user.contrata}", para el nodo '${controllerSite?.nodo ?? ctrl_id}'.`,
       });
     }
     return res.json({ success: true, message: 'Ticket creado correctamente.' });

@@ -22,12 +22,12 @@ interface AcumuladoKWHRowDataPacket extends RowDataPacket {
 }
 
 interface TotalAccesoTarjetaRemoto {
-  tarjeta: { total_registrado: number; total_noregistrado: number };
+  tarjeta: { total_registrado_aceptado: number; total_registrado_denegado: number; total_noregistrado_denegado: number };
   remoto: { total_remoto: number };
 }
 
 interface AccesoTarjetaRowData extends RowDataPacket {
-  acceso_tarjeta: 'no_registrado' | 'registrado' | 'otros';
+  acceso_tarjeta: 'no_registrado_denegado' | 'registrado_denegado' | 'registrado_aceptado' | 'otros';
   total: number;
 }
 interface AccesoRemotoRowData extends RowDataPacket {
@@ -48,6 +48,13 @@ interface TotalRowData extends RowDataPacket {
 }
 interface MaxRowData extends RowDataPacket {
   max: number;
+}
+interface MaxModEnergyRowData extends RowDataPacket {
+  me_id: number;
+  descripcion: string;
+  max_voltaje: number;
+  max_amperaje: number;
+  max_potenciaw: number;
 }
 
 export interface TotalDashboardResponse {
@@ -136,6 +143,16 @@ export class Dashboard {
     return { data: { total: totals[0]?.total ?? 0 }, start_date: startDate, end_date: endDate };
   }
 
+  static async maxModEnergy({ ctrl_id, date, isMonthly }: IPropMethod) {
+    const { endDate, startDate, year } = Dashboard.getStartEndDate(date, isMonthly);
+    const partitioning = `PARTITION (p${year % Dashboard.#NUM_PARTITION})`;
+    const maxModEnergies = await MySQL2.executeQuery<MaxModEnergyRowData[]>({
+      sql: `SELECT  re.me_id, me.descripcion, MAX(re.voltaje) AS max_voltaje, MAX(re.amperaje) AS max_amperaje, MAX(re.potenciaw) AS max_potenciaw FROM nodo${ctrl_id}.registroenergia ${partitioning} re INNER JOIN nodo${ctrl_id}.medidorenergia me ON re.me_id = me.me_id WHERE re.fecha BETWEEN '${startDate}' AND '${endDate}' GROUP BY re.me_id, me.descripcion`,
+    });
+
+    return { data: maxModEnergies, start_date: startDate, end_date: endDate };
+  }
+
   static async countTotalAssignedCards(): Promise<TotalDashboardResponse> {
     const totals = await MySQL2.executeQuery<TotalRowData[]>({ sql: `SELECT COUNT(*) as total FROM general.acceso WHERE activo = 1 AND ea_id = 1` });
     return { data: { total: totals[0]?.total ?? 0 } };
@@ -188,16 +205,17 @@ export class Dashboard {
   static getTotalAccesoTarjetaRemoto = handleErrorWithArgument<{ data: TotalAccesoTarjetaRemoto; start_date: string; end_date: string }, IPropMethod>(async ({ ctrl_id, isMonthly, date }) => {
     const { endDate, startDate, year } = Dashboard.getStartEndDate(date, isMonthly);
     const partitioning = `PARTITION (p${year % Dashboard.#NUM_PARTITION})`;
-    const queryAccesoTarjeta = `SELECT CASE WHEN (p_id = 0 AND autorizacion = 0) THEN 'no_registrado' WHEN (p_id >= 1 AND autorizacion = 1) THEN 'registrado' ELSE 'otros' END AS acceso_tarjeta, COUNT(*) AS total FROM  ${'nodo' + ctrl_id}.registroacceso WHERE tipo = 1 AND fecha BETWEEN '${startDate}' AND '${endDate}' GROUP BY acceso_tarjeta`;
-    const queryAccesoRemoto = `SELECT COUNT(*) as total_acceso_remoto FROM ${'nodo' + ctrl_id}.registrosalida ${partitioning} WHERE es_id = 1 AND estado = 1 AND fecha BETWEEN '${startDate}' AND '${endDate}'`;
+    const queryAccesoTarjeta = `SELECT CASE WHEN (p_id = 0 AND autorizacion = 0) THEN 'no_registrado_denegado' WHEN (p_id >= 1 AND autorizacion = 0) THEN 'registrado_denegado' WHEN (p_id >= 1 AND autorizacion = 1) THEN 'registrado_aceptado' ELSE 'otros' END AS acceso_tarjeta, COUNT(*) AS total FROM  ${'nodo' + ctrl_id}.registroacceso WHERE tipo = 1 AND fecha BETWEEN '${startDate}' AND '${endDate}' GROUP BY acceso_tarjeta`;
+    const queryAccesoRemoto = `SELECT COUNT(*) AS total_acceso_remoto FROM ${'nodo' + ctrl_id}.registrosalida ${partitioning} WHERE es_id = 22 AND estado = 1 AND fecha BETWEEN '${startDate}' AND '${endDate}'`;
 
-    const resultAccesos: TotalAccesoTarjetaRemoto = { tarjeta: { total_registrado: 0, total_noregistrado: 0 }, remoto: { total_remoto: 0 } };
+    const resultAccesos: TotalAccesoTarjetaRemoto = { tarjeta: { total_noregistrado_denegado: 0, total_registrado_aceptado: 0, total_registrado_denegado: 0 }, remoto: { total_remoto: 0 } };
 
     const totalAccesoTarjeta = await MySQL2.executeQuery<AccesoTarjetaRowData[]>({ sql: queryAccesoTarjeta });
     if (totalAccesoTarjeta.length > 0) {
       totalAccesoTarjeta.forEach((totalAcc) => {
-        if (totalAcc.acceso_tarjeta === 'registrado') resultAccesos.tarjeta.total_registrado = totalAcc.total;
-        if (totalAcc.acceso_tarjeta === 'no_registrado') resultAccesos.tarjeta.total_noregistrado = totalAcc.total;
+        if (totalAcc.acceso_tarjeta === 'no_registrado_denegado') resultAccesos.tarjeta.total_noregistrado_denegado = totalAcc.total;
+        if (totalAcc.acceso_tarjeta === 'registrado_aceptado') resultAccesos.tarjeta.total_registrado_aceptado = totalAcc.total;
+        if (totalAcc.acceso_tarjeta === 'registrado_denegado') resultAccesos.tarjeta.total_registrado_denegado = totalAcc.total;
       });
     }
 
@@ -254,38 +272,3 @@ export class Dashboard {
     return { data: [], start_date: startDate, end_date: endDate };
   }, 'Dashboard.getMaxSensorTemperatura');
 }
-
-// type RegisterType =  "acceso" | "energia" | "entrada" | "estadocamara" | "microsd" | "peticion" | "salida" | "seguridad" | "temperatura" | "ticket";
-
-// const DashboardConfig: {[key in RegisterType]: { has_yearly_tables: boolean };} = {
-//   acceso: {
-//     has_yearly_tables: false,
-//   },
-//   energia: {
-//     has_yearly_tables: false, // true
-//   },
-//   entrada: {
-//     has_yearly_tables: false,// true *
-//   },
-//   estadocamara: {
-//     has_yearly_tables: false,
-//   },
-//   microsd: {
-//     has_yearly_tables: false,
-//   },
-//   peticion: {
-//     has_yearly_tables: false,
-//   },
-//   salida: {
-//     has_yearly_tables: false, // true *
-//   },
-//   seguridad: {
-//     has_yearly_tables: false,
-//   },
-//   temperatura: {
-//     has_yearly_tables: false,
-//   },
-//   ticket: {
-//     has_yearly_tables: false,
-//   },
-// };
