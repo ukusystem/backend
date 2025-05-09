@@ -12,6 +12,6 @@ export interface UserNotificationRepository {
   update(u_id: number, nu_id: string, fieldsUpdate: UpdateUserNotificationDTO): Promise<void>;
   findById(u_id: number, nu_id: string): Promise<Nullable<UserNofication>>;
   findByUuId(u_id: number, n_uuid: string): Promise<Nullable<UserNofication>>;
-  findByOffsetPagination(u_id: number, limit: number, offset: number): Promise<UserNoficationData[]>;
+  findByOffsetPagination(u_id: number, limit: number, offset: number, unread?: boolean): Promise<UserNoficationData[]>;
   countTotal(u_id: number): Promise<number>;
 }

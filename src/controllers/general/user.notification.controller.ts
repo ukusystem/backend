@@ -75,14 +75,14 @@ export class UserNoficationController {
       if (user === undefined) {
         return res.status(401).json({ message: 'No autorizado' });
       }
-      const { offset, limit } = req.query as PaginationUserNotification;
+      const { offset, limit, unread } = req.query as PaginationUserNotification;
 
       const final_limit: number = limit !== undefined ? Math.min(Math.max(Number(limit), 0), 100) : 10; // default limit : 10 ,  max limit : 100
 
       const final_offset: number = offset !== undefined ? Number(offset) : 0; // default offset : 0
 
-      const userNotifications = await this.user_notification_repository.findByOffsetPagination(user.u_id, final_limit, final_offset);
-      const total = await this.user_notification_repository.countTotal(user.u_id);
+      const userNotifications = await this.user_notification_repository.findByOffsetPagination(user.u_id, final_limit, final_offset, unread === 'true');
+      // const total = await this.user_notification_repository.countTotal(user.u_id);
 
       const response: OffsetPaginationResponse<UserNoficationData> = {
         data: userNotifications,
@@ -90,7 +90,7 @@ export class UserNoficationController {
           limit: final_limit,
           offset: final_offset,
           currentCount: userNotifications.length,
-          totalCount: total,
+          totalCount: 0,
         },
       };
 

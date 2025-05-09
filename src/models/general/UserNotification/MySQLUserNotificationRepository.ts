@@ -24,9 +24,9 @@ export class MySQLUserNotificationRepository implements UserNotificationReposito
     return totals[0].total;
   }
 
-  async findByOffsetPagination(u_id: number, limit: number, offset: number): Promise<UserNoficationData[]> {
+  async findByOffsetPagination(u_id: number, limit: number, offset: number, unread?: boolean): Promise<UserNoficationData[]> {
     const contratas = await MySQL2.executeQuery<UserNotificationFullRowData[]>({
-      sql: `SELECT nu.* ,n_id ,evento, titulo, mensaje, data, fecha FROM general.notificacion_usuario nu INNER JOIN general.notificacion n ON nu.n_uuid = n.n_uuid AND nu.u_id = ? ORDER BY n.fecha DESC LIMIT ? OFFSET ?`,
+      sql: `SELECT nu.* ,n_id ,evento, titulo, mensaje, data, fecha FROM general.notificacion_usuario nu INNER JOIN general.notificacion n ON nu.n_uuid = n.n_uuid AND nu.u_id = ? ${unread ? `AND nu.leido = 0` : ''} ORDER BY n.fecha DESC LIMIT ? OFFSET ?`,
       values: [u_id, limit, offset],
     });
 

@@ -1,5 +1,20 @@
 import { Router } from 'express';
-import { accesoTarjetaRemoto, activePinEntrada, activePinSalida, totalEnergyConsumption, cameraStates, countAlarma, totalAssignedCards, maxTemperaturaSensor, ticketContrata, countActiveOutputPins, countAcceptedAttendedTickets, generalMaxTemperature, listUsedCard } from '../controllers/dashboard';
+import {
+  accesoTarjetaRemoto,
+  activePinEntrada,
+  activePinSalida,
+  totalEnergyConsumption,
+  cameraStates,
+  countAlarma,
+  totalAssignedCards,
+  maxTemperaturaSensor,
+  ticketContrata,
+  countActiveOutputPins,
+  countAcceptedAttendedTickets,
+  generalMaxTemperature,
+  listUsedCard,
+  maxModEnergy,
+} from '../controllers/dashboard';
 import { requestValidator } from '../middlewares/validator.middleware';
 import { dashboardSharedPaginationSchema, dashboardSharedSchema } from '../schemas/dashboard';
 import { dashboardStates } from '../controllers/dashboard/dashboardStates';
@@ -23,5 +38,6 @@ dashboardRouter.get('/dashboard/total/assigned-card', authenticate, rolChecker([
 dashboardRouter.get('/dashboard/max/temperature-general', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ query: dashboardSharedSchema }), generalMaxTemperature);
 dashboardRouter.get('/dashboard/total/energy-consumption', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ query: dashboardSharedSchema }), totalEnergyConsumption); // cambio /kwh
 dashboardRouter.get('/dashboard/list/used-card', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ query: dashboardSharedPaginationSchema }), listUsedCard);
+dashboardRouter.get('/dashboard/max/energy-module', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ query: dashboardSharedSchema }), maxModEnergy);
 
 export { dashboardRouter };

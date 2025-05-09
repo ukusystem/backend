@@ -10,7 +10,7 @@ export const getRegistroTickets = asyncErrorHandler(async (req: RequestWithUser,
     limit: string;
     filters?:
       | {
-          state?: ('1' | '2' | '3' | '4' | '16' | '17' | '18')[] | undefined;
+          state?: ('1' | '2' | '3' | '4' | '16' | '17' | '18' | '21' | '22')[] | undefined;
           dateRange?:
             | {
                 end: string;

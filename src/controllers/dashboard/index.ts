@@ -11,3 +11,4 @@ export * from './countActiveOutputPins';
 export * from './countAcceptedAttendedTickets';
 export * from './generalMaxTemperature';
 export * from './listUsedCard';
+export * from './maxModEnergy';
