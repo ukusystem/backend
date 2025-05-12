@@ -289,7 +289,7 @@ export const ticketSelectOne = `
 			`;
 
 export const insertDocument = `
-				INSERT INTO %s.archivoticket ( ruta, nombreoriginal, tipo, rt_id) VALUE (?, ?, ?, ?);
+				INSERT INTO %s.archivoticket ( ruta, nombreoriginal, tipo, rt_id, tamaño, thumbnail) VALUE (?, ?, ?, ?, ?, ?);
 			`;
 
 /* Common queries */

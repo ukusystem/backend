@@ -731,7 +731,7 @@ export class Main {
     }
     // Save documents
     for (const doc of newTicket.archivos_cargados) {
-      if (await executeQuery(BaseAttach.formatQueryWithNode(queries.insertDocument, nodeID), [doc.ruta, doc.nombreoriginal, doc.tipo, insertedID])) {
+      if (await executeQuery(BaseAttach.formatQueryWithNode(queries.insertDocument, nodeID), [doc.ruta, doc.nombreoriginal, doc.tipo, insertedID, doc.tamaño, doc.thumbnail])) {
         this.log(`Added file: Ticket ID ${insertedID} Name '${doc}'`);
       } else {
         this.log(`Error adding file: Ticket ID ${insertedID} Name '${doc}'`);
