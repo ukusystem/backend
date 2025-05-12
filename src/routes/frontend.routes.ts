@@ -20,7 +20,7 @@ const allFrontEndPaths = [
   '/vms',
   '/alarm',
   '/ticket',
-  '/create',
+  '/ticket/create',
   '/temperature',
   '/energy',
   '/company',

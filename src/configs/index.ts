@@ -74,6 +74,7 @@ interface IAppConfig {
     host: string;
     port: number;
     port_ws: number;
+    publish_timeout: number;
     users: {
       admin: {
         user: string;
@@ -152,7 +153,7 @@ const appConfig: IAppConfig = {
     host: validatedEnv.MQTT_HOST,
     port: validatedEnv.MQTT_PORT,
     port_ws: validatedEnv.MQTT_PORT_WS,
-
+    publish_timeout: validatedEnv.MQTT_PUBLISH_TIMEOUT,
     users: {
       admin: {
         user: validatedEnv.MQTT_ADMIN_USER,
@@ -170,7 +171,6 @@ const appConfig: IAppConfig = {
   },
 };
 
-// genericLogger.debug("Configuraciones de entorno cargadas",appConfig);
 console.log('Configuraciones variables de entorno cargadas:\n', appConfig);
 
 export { appConfig };
