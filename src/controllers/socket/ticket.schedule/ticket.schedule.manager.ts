@@ -6,7 +6,7 @@ import { CronJob } from 'cron';
 import { filterUndefined } from '../../../utils/filterUndefined';
 import { Ticket } from '../../../models/ticket';
 import { genericLogger } from '../../../services/loggers';
-import { mqttSerrvice } from '../../../services/mqtt/MqttService';
+import { mqttService } from '../../../services/mqtt/MqttService';
 import { ControllerMapManager } from '../../../models/maps';
 
 export class TicketSchedule implements RegistroTicketJobSchedule {
@@ -73,11 +73,14 @@ export class TicketScheduleManager {
       onFinishTicket(new FinishTicket(RegTicketState.NoAtendido, ctrl_id, newTicket.rt_id));
 
       const controller = ControllerMapManager.getController(ctrl_id, true);
-      mqttSerrvice.publisAdminNotification({
-        evento: 'ticket.not.attended',
-        titulo: 'Ticket no atendido',
-        mensaje: `El ticket #${newTicket.rt_id} del sitio "${controller?.nodo ?? ctrl_id}" no ha sido atendido`,
-      });
+      mqttService.publisAdminNotification(
+        {
+          evento: 'ticket.not.attended',
+          titulo: 'Ticket no atendido',
+          mensaje: `El ticket #${newTicket.rt_id} del sitio "${controller?.nodo ?? ctrl_id}" no ha sido atendido`,
+        },
+        true,
+      );
       return;
     }
 
@@ -104,11 +107,14 @@ export class TicketScheduleManager {
                 TicketScheduleManager.#delete(this.ctrl_id, this.rt_id);
                 // notify
                 const controller = ControllerMapManager.getController(this.ctrl_id, true);
-                mqttSerrvice.publisAdminNotification({
-                  evento: 'ticket.not.attended',
-                  titulo: 'Ticket no atendido',
-                  mensaje: `El ticket #${newTicket.rt_id} del sitio "${controller?.nodo ?? ctrl_id}" no ha sido atendido`,
-                });
+                mqttService.publisAdminNotification(
+                  {
+                    evento: 'ticket.not.attended',
+                    titulo: 'Ticket no atendido',
+                    mensaje: `El ticket #${newTicket.rt_id} del sitio "${controller?.nodo ?? ctrl_id}" no ha sido atendido`,
+                  },
+                  true,
+                );
               }
             }
           }

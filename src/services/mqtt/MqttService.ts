@@ -25,20 +25,11 @@ export interface NotificationPayload {
   data?: Record<string, unknown>; // Datos adicionales que puedes enviar
 }
 
-interface UserNotificationPayload {
-  id: string;
-  u_id: number;
-  tipo: string;
-  titulo: string;
-  mensaje: string;
-  fecha: string;
-  data?: Record<string, unknown>; // Datos adicionales que puedes enviar
-}
-
 export class MqttService {
   private readonly client: MqttClient;
   private readonly BASE_TOPIC: string = 'notifications';
   private canPublish = false;
+  private pendingNotifications: Map<string, { notification: Omit<Notification, 'n_id'>; topics: string[] }> = new Map();
 
   constructor(config: MqttConfig) {
     this.client = mqtt.connect(`mqtt://${config.host}`, { port: config.port, username: config.username, password: config.password });
@@ -49,14 +40,10 @@ export class MqttService {
       genericLogger.error(`❌ MqttService Error : ${error.message} `, error);
     });
 
-    // Esperar 2 minutos desde la creación para permitir publicaciones
-    setTimeout(
-      () => {
-        this.canPublish = true;
-        // console.log('✅ MqttService ahora puede publicar notificaciones');
-      },
-      2 * 60 * 1000,
-    );
+    setTimeout(() => {
+      this.canPublish = true;
+      this.#publisPendingNotifications();
+    }, appConfig.mqtt.publish_timeout * 1000);
   }
 
   async #saveNotification(payload: Omit<Notification, 'n_id'>): Promise<void> {
@@ -67,9 +54,19 @@ export class MqttService {
     });
   }
 
-  async #publishNotification(notification: Omit<Notification, 'n_id'>, topics: Array<string>) {
+  #publisPendingNotifications() {
+    const notifications = Array.from(this.pendingNotifications.values());
+    notifications.forEach(({ notification, topics }) => {
+      this.#publishNotification(notification, topics);
+    });
+    this.pendingNotifications.clear();
+  }
+
+  async #publishNotification(notification: Omit<Notification, 'n_id'>, topics: Array<string>, confirm?: boolean) {
     if (!this.canPublish) {
-      // console.log(`⌛ Aún no se permite publicar. Esperando ventana de 2 minutos.`);
+      if (confirm) {
+        this.pendingNotifications.set(notification.n_uuid, { notification: notification, topics: topics });
+      }
       return;
     }
     try {
@@ -91,26 +88,7 @@ export class MqttService {
     }
   }
 
-  public sendUserNotification(payload: UserNotificationPayload) {
-    if (!this.canPublish) {
-      // console.log(`⌛ Aún no se permite publicar. Esperando ventana de 2 minutos.`);
-      return;
-    }
-    const topic = this.getUserTopic(payload.u_id);
-
-    const message = JSON.stringify(payload);
-    if (this.client.connected) {
-      this.client.publish(topic, message, { qos: 1, retain: true }, (error) => {
-        if (error) {
-          console.error('❌ Error al enviar notificación:', error);
-        } else {
-          console.log(`🔔 Notificación enviada a ${payload.u_id}: ${message}`);
-        }
-      });
-    }
-  }
-
-  public publisAdminNotification(payload: NotificationPayload) {
+  public publisAdminNotification(payload: NotificationPayload, confirm?: boolean) {
     const topic = this.getAdminTopic();
 
     const newNotification: Omit<Notification, 'n_id'> = {
@@ -121,9 +99,9 @@ export class MqttService {
       fecha: payload.fecha ?? dayjs().format('YYYY-MM-DD HH:mm:ss'),
       data: payload.data,
     };
-    this.#publishNotification(newNotification, [topic]);
+    this.#publishNotification(newNotification, [topic], confirm);
   }
-  public publisContrataNotification(payload: NotificationPayload, co_id: number) {
+  public publisContrataNotification(payload: NotificationPayload, co_id: number, confirm?: boolean) {
     const topicContrata = this.getContrataTopic(co_id);
     const topicAdmin = this.getAdminTopic();
 
@@ -135,7 +113,7 @@ export class MqttService {
       fecha: payload.fecha ?? dayjs().format('YYYY-MM-DD HH:mm:ss'),
       data: payload.data,
     };
-    this.#publishNotification(newNotification, [topicContrata, topicAdmin]);
+    this.#publishNotification(newNotification, [topicContrata, topicAdmin], confirm);
   }
 
   public static getUserCredentials(rol_id: number) {
@@ -155,10 +133,6 @@ export class MqttService {
     return null;
   }
 
-  private getUserTopic(user_id: number) {
-    return `${this.BASE_TOPIC}/user/${user_id}`;
-  }
-
   private getAdminTopic() {
     return `${this.BASE_TOPIC}/admin`;
   }
@@ -168,6 +142,6 @@ export class MqttService {
   }
 }
 
-const mqttSerrvice = new MqttService({ host: appConfig.mqtt.host, port: appConfig.mqtt.port, username: appConfig.mqtt.users.admin.user, password: appConfig.mqtt.users.admin.password });
+const mqttService = new MqttService({ host: appConfig.mqtt.host, port: appConfig.mqtt.port, username: appConfig.mqtt.users.admin.user, password: appConfig.mqtt.users.admin.password });
 
-export { mqttSerrvice };
+export { mqttService };

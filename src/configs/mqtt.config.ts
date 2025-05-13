@@ -10,4 +10,5 @@ export const mqttEnv = z.object({
   MQTT_MANAGER_PASSWORD: z.string(),
   MQTT_INVITED_USER: z.string(),
   MQTT_INVITED_PASSWORD: z.string(),
+  MQTT_PUBLISH_TIMEOUT: z.coerce.number().int().positive().default(60),
 });

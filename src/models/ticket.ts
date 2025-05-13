@@ -9,8 +9,9 @@ import dayjs from 'dayjs';
 import { RegistroTicketPagination } from '../schemas/ticket';
 import { UserRol } from '../types/rol';
 
-type PersonalInfo = Pick<Personal, 'p_id' | 'nombre' | 'apellido' | 'telefono' | 'dni' | 'c_id' | 'co_id' | 'foto'>;
+type PersonalInfo = Pick<Personal, 'p_id' | 'nombre' | 'apellido' | 'telefono' | 'dni' | 'c_id' | 'co_id' | 'foto'> & Pick<Cargo, 'cargo'>;
 type PersonalSolicitante = Personal & Pick<Cargo, 'cargo'> & Pick<Contrata, 'contrata'>;
+type ControllerInfo = Pick<Controlador, 'ctrl_id' | 'nodo' | 'rgn_id'> & Pick<Region, 'region'>;
 type RegionNodo = Pick<Region, 'region'> & Pick<Controlador, 'ctrl_id' | 'nodo'>;
 type ActividaPersonalDetail = ActividadPersonal & Pick<Cargo, 'cargo'> & Pick<Contrata, 'contrata'>;
 type TotalRegistroTicket = { total: number };
@@ -72,7 +73,7 @@ export class Ticket {
   }, 'Ticket.getTiposTrabajo');
 
   static getPersonalesByContrataId = handleErrorWithArgument<PersonalInfo[], Pick<Contrata, 'co_id'>>(async ({ co_id }) => {
-    const personalesContrata = await MySQL2.executeQuery<PersonalRowData[]>({ sql: `SELECT p_id, nombre,apellido, telefono, dni, c_id , co_id, foto FROM general.personal p WHERE p.co_id = ? AND p.activo = 1`, values: [co_id] });
+    const personalesContrata = await MySQL2.executeQuery<PersonalRowData[]>({ sql: `SELECT p_id, nombre,apellido, telefono, dni , co_id, foto, c.c_id, c.cargo FROM general.personal p INNER JOIN general.cargo c ON p.c_id = c.c_id WHERE p.co_id = ? AND p.activo = 1`, values: [co_id] });
 
     if (personalesContrata.length > 0) {
       return personalesContrata;
@@ -336,23 +337,44 @@ export class Ticket {
     }
   }, 'Ticket.getTotalRegistroTicketByCtrlId');
 
-  static getAllTicketDetails = handleErrorWithArgument<null | { solicitante: PersonalSolicitante; ticket: RegistroTicketDetail; personales: ActividaPersonalDetail[]; archivos_respaldo: ArchivoTicket[] }, { rt_id: number; ctrl_id: number; user: UserInfo }>(async ({ ctrl_id, rt_id, user }) => {
-    const ticket = await Ticket.getSingleRegistroTicketByCtrlIdAndRtId({ ctrl_id, rt_id, user });
-    if (ticket) {
-      const solicitante = await Ticket.getSolicitante({ p_id: ticket.p_id });
-      const personales = await Ticket.getActividaPersonal({ ctrl_id, rt_id: ticket.rt_id });
-      const archivosRespaldo = await Ticket.getArchivosCargados({ ctrl_id, rt_id: ticket.rt_id });
+  static getAllTicketDetails = handleErrorWithArgument<null | { solicitante: PersonalSolicitante; ticket: RegistroTicketDetail; personales: ActividaPersonalDetail[]; archivos_respaldo: ArchivoTicket[]; controller: ControllerInfo }, { rt_id: number; ctrl_id: number; user: UserInfo }>(
+    async ({ ctrl_id, rt_id, user }) => {
+      const ticket = await Ticket.getSingleRegistroTicketByCtrlIdAndRtId({ ctrl_id, rt_id, user });
+      if (ticket) {
+        const solicitante = await Ticket.getSolicitante({ p_id: ticket.p_id });
+        const personales = await Ticket.getActividaPersonal({ ctrl_id, rt_id: ticket.rt_id });
+        const archivosRespaldo = await Ticket.getArchivosCargados({ ctrl_id, rt_id: ticket.rt_id });
+        const controller = await Ticket.getControllerInfo(ctrl_id);
 
-      const result = {
-        solicitante: solicitante!,
-        ticket,
-        personales,
-        archivos_respaldo: archivosRespaldo,
-      };
+        const result = {
+          solicitante: solicitante!,
+          ticket,
+          personales,
+          archivos_respaldo: archivosRespaldo,
+          controller: controller!,
+        };
 
-      return result;
-    }
+        return result;
+      }
 
-    return null;
-  }, 'Ticket.getAllTicketDetails');
+      return null;
+    },
+    'Ticket.getAllTicketDetails',
+  );
+
+  static async getControllerInfo(ctrl_id: number): Promise<ControllerInfo | undefined> {
+    const controllers = await MySQL2.executeQuery<ControllerRowData[]>({
+      sql: `SELECT c.ctrl_id ,c.nodo ,c.rgn_id , r.region FROM general.controlador c INNER JOIN general.region r ON c.rgn_id = r.rgn_id WHERE ctrl_id = ?`,
+      values: [ctrl_id],
+    });
+
+    return controllers[0];
+  }
+}
+
+interface ControllerRowData extends RowDataPacket {
+  ctrl_id: number;
+  nodo: string;
+  rgn_id: number;
+  region: string;
 }
