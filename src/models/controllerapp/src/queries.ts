@@ -485,7 +485,7 @@ export const nodeInsert = `
 					motionsnapshotseconds, res_id_motionsnapshot, motionsnapshotinterval, 
 					res_id_streamprimary, streamprimaryfps, 
 					res_id_streamsecondary, streamsecondaryfps, 
-					res_id_streamauxiliary, streamauxiliaryfps, celular
+					res_id_streamauxiliary, streamauxiliaryfps, celular,
 
 					contraseña, modo, seguridad, conectado, activo, serie)
 				VALUE (
@@ -497,7 +497,7 @@ export const nodeInsert = `
 					?, ?, ?,
 					?, ?,
 					?, ?,
-					?, ?, ?
+					?, ?, ?,
 
 					?, 0, 0, 0, 1, '-')
 			`;
@@ -532,37 +532,7 @@ export const nodeSelectID = `
 /**
  * Tuples to parse the node data without a password.
  */
-export const nodeParse = [
-  tupleID,
-  tupleTxt,
-  tupleID,
-  tupleTxt,
-  tupleTxt,
-  tupleTxt,
-  tupleTxt,
-  tupleTxt,
-  tupleTxt,
-  tupleTxt,
-  tupleTxt,
-  //   tupleTxt,
-  tupleInt,
-  tupleTxt,
-  tupleTxt,
-  tupleInt,
-  tupleID,
-  tupleInt,
-  tupleInt,
-  tupleID,
-  tupleInt,
-  tupleID,
-  tupleInt,
-  tupleID,
-  tupleInt,
-  tupleID,
-  tupleInt,
-  tupleTxt,
-  // tupleInt
-];
+export const nodeParse = [tupleID, tupleTxt, tupleID, tupleTxt, tupleTxt, tupleTxt, tupleTxt, tupleTxt, tupleTxt, tupleTxt, tupleTxt, tupleInt, tupleTxt, tupleTxt, tupleInt, tupleID, tupleInt, tupleInt, tupleID, tupleInt, tupleID, tupleInt, tupleID, tupleInt, tupleID, tupleInt, tupleInt];
 
 /**
  * Tuples to parse the node data expecting a password as the last item.

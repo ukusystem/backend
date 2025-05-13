@@ -8,6 +8,7 @@ topic readwrite #
 user mqtt_gestor
 topic read notifications/admin
 
+
 # El usuario invitado solo puede leer notificaciones dentro del topic "contrata".
 user mqtt_invitado
 topic read notifications/contrata/#

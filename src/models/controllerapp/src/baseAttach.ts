@@ -1446,6 +1446,7 @@ export class NodeAttach extends BaseAttach {
         const pin = pinData[0].getInt();
         const state = pinData[1].getInt() === codes.VALUE_TO_ACTIVE ? 1 : 0;
         const pinDate = pinData[2].getInt();
+        // const alarm = pinData[3].getInt(); // Whether the output was an alarm
 
         // Send to technician (s)
         this.mirrorMessage(this._appendPart(command, this.controllerID.toString()), true);
@@ -1467,7 +1468,7 @@ export class NodeAttach extends BaseAttach {
             await this.insertInputOutput(this.controllerID, pinData, false);
             // Notify output changed
             // Not used since in the web app the real time output state is not shown
-            // this._notifyOutput(pin,true,this.controllerID, null,null,state, null,null)
+            this._notifyOutput(pin, true, this.controllerID, null, null, state, null, null);
 
             break;
         }
@@ -2791,6 +2792,7 @@ export class ManagerAttach extends BaseAttach {
 
       // Save all the data that was received. This should update the entry in the
       // database when there was one but, somehow, its key wasn't registered.
+      // console.log(newCompleteData);
       if (await this._insertItem('node', newCompleteData, queries.nodeInsert, id)) {
         notify = true;
       } else {
