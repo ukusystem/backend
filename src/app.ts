@@ -30,8 +30,6 @@ import { SystemManager } from './models/system';
     server.runController();
 
     await TicketScheduleManager.init();
-
-    // test()
   } catch (error) {
     console.error(error);
     process.exit(1);

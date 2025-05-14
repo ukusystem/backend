@@ -31,8 +31,8 @@ export class UserNoficationController {
 
       const userNotification = await this.user_notification_repository.findByUuId(user.u_id, notificationFound.n_uuid);
 
-      if (userNotification !== null || userNotification !== undefined) {
-        return res.status(404).json({ success: false, message: `La notificacion ya se encuentra registrado` });
+      if (userNotification) {
+        return res.status(202).json({ success: true, message: `La notificacion ya se encuentra registrado` });
       }
 
       const newUserNotification = await this.user_notification_repository.create({ ...userNotificationDTO, u_id: user.u_id });
@@ -54,7 +54,7 @@ export class UserNoficationController {
 
       const { nu_id } = req.params as { nu_id: string };
 
-      const userNotificationFound = await this.user_notification_repository.findById(user.u_id, Number(nu_id));
+      const userNotificationFound = await this.user_notification_repository.findById(user.u_id, nu_id);
       if (!userNotificationFound) {
         return res.status(404).json({ success: false, message: `Notificacion de usuario no diponible.` });
       }
@@ -75,14 +75,14 @@ export class UserNoficationController {
       if (user === undefined) {
         return res.status(401).json({ message: 'No autorizado' });
       }
-      const { offset, limit } = req.query as PaginationUserNotification;
+      const { offset, limit, unread } = req.query as PaginationUserNotification;
 
       const final_limit: number = limit !== undefined ? Math.min(Math.max(Number(limit), 0), 100) : 10; // default limit : 10 ,  max limit : 100
 
       const final_offset: number = offset !== undefined ? Number(offset) : 0; // default offset : 0
 
-      const userNotifications = await this.user_notification_repository.findByOffsetPagination(user.u_id, final_limit, final_offset);
-      const total = await this.user_notification_repository.countTotal(user.u_id);
+      const userNotifications = await this.user_notification_repository.findByOffsetPagination(user.u_id, final_limit, final_offset, unread === 'true');
+      // const total = await this.user_notification_repository.countTotal(user.u_id);
 
       const response: OffsetPaginationResponse<UserNoficationData> = {
         data: userNotifications,
@@ -90,7 +90,7 @@ export class UserNoficationController {
           limit: final_limit,
           offset: final_offset,
           currentCount: userNotifications.length,
-          totalCount: total,
+          totalCount: 0,
         },
       };
 
@@ -105,7 +105,7 @@ export class UserNoficationController {
         return res.status(401).json({ message: 'No autorizado' });
       }
       const { nu_id } = req.params as { nu_id: string };
-      const userNotification = await this.user_notification_repository.findById(user.u_id, Number(nu_id));
+      const userNotification = await this.user_notification_repository.findById(user.u_id, nu_id);
       if (!userNotification) {
         return res.status(400).json({ success: false, message: 'Notificacion de usuario no disponible' });
       }

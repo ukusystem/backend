@@ -1,6 +1,9 @@
 import { AlarmManager, CamStreamQuality, CamStreamSocketManager, ControllerStateManager, PinEntradaManager, SidebarNavManager } from '../../controllers/socket';
-import { mqqtSerrvice } from '../../services/mqtt/MqttService';
+import { EnergyManager } from '../../controllers/socket/energy.region/energy.manager';
+import { TemperatureManager } from '../../controllers/socket/temperature.region/temperature.manager';
+import { mqttService } from '../../services/mqtt/MqttService';
 import { Controlador } from '../../types/db';
+import { filterUndefined } from '../../utils/filterUndefined';
 
 export class ControllerNotifyManager {
   static #notifyUpdateToStream(curController: Controlador, fieldsUpdate: Partial<Controlador>) {
@@ -81,7 +84,23 @@ export class ControllerNotifyManager {
       (activo !== undefined && curController.activo !== activo);
 
     if (hasChanges) {
+      const newController = { ...curController };
+      Object.assign(newController, filterUndefined(filterUndefined));
+
+      const controllerNotify = {
+        activo: newController.activo,
+        conectado: newController.conectado,
+        ctrl_id: newController.ctrl_id,
+        descripcion: newController.descripcion,
+        direccion: newController.direccion,
+        modo: newController.modo,
+        nodo: newController.nodo,
+        rgn_id: newController.rgn_id,
+        seguridad: newController.seguridad,
+      };
       AlarmManager.notifyController(curController.ctrl_id, 'update');
+      TemperatureManager.notifyController(curController.ctrl_id, controllerNotify, 'update');
+      EnergyManager.notifyController(curController.ctrl_id, controllerNotify, 'update');
     }
   }
 
@@ -90,7 +109,7 @@ export class ControllerNotifyManager {
     if (curController.activo === 1) {
       const canNotify = (activo === undefined || activo === 1) && conectado !== undefined && (curController.conectado !== conectado || isAdd) && conectado === 0;
       if (canNotify) {
-        mqqtSerrvice.publisAdminNotification({ evento: 'alarm.controller.disconnected', titulo: 'Controlador desconectado', mensaje: `El controlador "${curController.nodo}" se ha desconectado. Verifica su estado y conexión de red.` });
+        mqttService.publisAdminNotification({ evento: 'alarm.controller.disconnected', titulo: 'Controlador desconectado', mensaje: `El controlador "${curController.nodo}" se ha desconectado. Verifica su estado y conexión de red.` });
       }
     }
   }
@@ -115,5 +134,36 @@ export class ControllerNotifyManager {
     SidebarNavManager.notifyAddController(newController.ctrl_id);
     // Notification: disconnect
     ControllerNotifyManager.#notifyDisconnect(newController, { conectado: newController.conectado }, true);
+
+    const controllerNotify = {
+      activo: newController.activo,
+      conectado: newController.conectado,
+      ctrl_id: newController.ctrl_id,
+      descripcion: newController.descripcion,
+      direccion: newController.direccion,
+      modo: newController.modo,
+      nodo: newController.nodo,
+      rgn_id: newController.rgn_id,
+      seguridad: newController.seguridad,
+    };
+
+    TemperatureManager.notifyController(newController.ctrl_id, controllerNotify, 'add');
+    EnergyManager.notifyController(newController.ctrl_id, controllerNotify, 'add');
+  }
+
+  static delete(controller: Controlador) {
+    const controllerNotify = {
+      activo: controller.activo,
+      conectado: controller.conectado,
+      ctrl_id: controller.ctrl_id,
+      descripcion: controller.descripcion,
+      direccion: controller.direccion,
+      modo: controller.modo,
+      nodo: controller.nodo,
+      rgn_id: controller.rgn_id,
+      seguridad: controller.seguridad,
+    };
+    TemperatureManager.notifyController(controller.ctrl_id, controllerNotify, 'delete');
+    EnergyManager.notifyController(controller.ctrl_id, controllerNotify, 'delete');
   }
 }

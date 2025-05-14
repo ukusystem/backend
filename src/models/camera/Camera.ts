@@ -9,7 +9,7 @@ import { verifyImageMarkers } from '../../utils/stream';
 import { CustomError } from '../../utils/CustomError';
 import { cameraLogger } from '../../services/loggers';
 import { CameraOnvifManager } from './onvif/camera.onvif.manager';
-import { ControlPTZDTO } from './onvif/camera.onvif.types';
+import { ControlImagingDTO, ControlPTZDTO } from './onvif/camera.onvif.types';
 
 type CameraInfo = Pick<Camara, 'cmr_id' | 'ip' | 'descripcion' | 'puertows' | 'tc_id'> & Pick<TipoCamara, 'tipo'> & Pick<Marca, 'marca'>;
 
@@ -30,7 +30,7 @@ type CamResponse = Record<
       {
         ctrl_id: number;
         nodo: string;
-        camaras: (CameraInfo & Pick<Controlador, 'ctrl_id' | 'nodo'> & { region: string })[];
+        camaras: (CameraInfo & Pick<Controlador, 'ctrl_id' | 'nodo' | 'rgn_id'> & { region: string })[];
       }
     >;
   }
@@ -106,6 +106,10 @@ export class Camera {
     await CameraOnvifManager.controlPTZ(ctrl_id, cmr_id, data);
   }
 
+  static async controlImaging(ctrl_id: number, cmr_id: number, data: ControlImagingDTO) {
+    await CameraOnvifManager.controlImaging(ctrl_id, cmr_id, data);
+  }
+
   static async presetPTZ({ cmr_id, ctrl_id, preset }: CamIdentifier & { preset: number }) {
     await CameraOnvifManager.presetPTZ(ctrl_id, cmr_id, preset);
   }
@@ -126,7 +130,7 @@ export class Camera {
 
           result[rgn_id].controllers[ctrl_id] = result[rgn_id].controllers[ctrl_id] || { ctrl_id, nodo, camaras: [] };
 
-          result[rgn_id].controllers[ctrl_id].camaras = cams.map((cam) => ({ ...cam, nodo, ctrl_id, region }));
+          result[rgn_id].controllers[ctrl_id].camaras = cams.map((cam) => ({ ...cam, nodo, ctrl_id, region, rgn_id: rgn_id }));
         }
 
         return result;

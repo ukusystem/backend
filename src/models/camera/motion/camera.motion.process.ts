@@ -108,7 +108,9 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
 
                     CameraMotionManager.notifyImageMotion(this.ctrl_id, imageBase64);
 
-                    insertPathToDB(snapshotFilePath, this.ctrl_id, this.cmr_id, 0);
+                    const snapshotSubDirectory = path.relative('./deteccionmovimiento', snapshotFilePath);
+
+                    insertPathToDB(snapshotSubDirectory, this.ctrl_id, this.cmr_id, 0);
                   }
                 });
               }
@@ -132,7 +134,9 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
           if (code === 0) {
             cameraLogger.debug(`CameraMotionProcess| Proceso ffmpeg completado sin errores | ctrl_id: ${this.ctrl_id} | cmr_id: ${this.cmr_id}`);
             if (appConfig.system.start_record_motion) {
-              insertPathToDB(recordFilePath, this.ctrl_id, this.cmr_id, 1);
+              const recordSubDirectory = path.relative('./deteccionmovimiento', recordFilePath);
+
+              insertPathToDB(recordSubDirectory, this.ctrl_id, this.cmr_id, 1);
             }
           }
           // else {

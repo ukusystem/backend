@@ -7,15 +7,8 @@ import { PoolOptions } from 'mysql2';
 import { encryptEnv } from './encrypt.configs';
 import { cookieEnv } from './cookie.config';
 import { mqttEnv } from './mqtt.config';
-// import { genericLogger } from "../services/loggers";
 
 const zodEnv = jwtEnv.merge(dbEnv).merge(emailEnv).merge(serverEnv).merge(encryptEnv).merge(cookieEnv).merge(mqttEnv);
-
-// declare global {
-//   namespace NodeJS {
-//     // interface ProcessEnv extends IJwtEnv , IDbEnv , IEmailEnv , IServerEnv, IEncryptEnv ,ICookieEnv {}
-//   }
-// }
 
 const result = zodEnv.safeParse(process.env);
 
@@ -25,7 +18,6 @@ if (!result.success) {
     status: errorDetail.code,
     path: errorDetail.path,
   }));
-  // genericLogger.error(`Validación de variables de entorno fallida`,listErrors);
   console.log('Validación de variables de entorno fallida\n', listErrors);
 
   throw new Error(`Environment variable validation error:`);
@@ -43,11 +35,11 @@ interface IAppConfig {
   jwt: {
     access_token: {
       secret: string;
-      expire: string;
+      expire: number;
     };
     refresh_token: {
       secret: string;
-      expire: string;
+      expire: number;
     };
     encrypt: {
       secret: string;
@@ -55,11 +47,9 @@ interface IAppConfig {
   };
   cookie: {
     access_token: {
-      max_age: number;
       name: string;
     };
     refresh_token: {
-      max_age: number;
       name: string;
     };
   };
@@ -83,6 +73,8 @@ interface IAppConfig {
   mqtt: {
     host: string;
     port: number;
+    port_ws: number;
+    publish_timeout: number;
     users: {
       admin: {
         user: string;
@@ -123,11 +115,9 @@ const appConfig: IAppConfig = {
   cookie: {
     access_token: {
       name: validatedEnv.COOKIE_ACCESS_TOKEN_NAME,
-      max_age: validatedEnv.COOKIE_ACCESS_TOKEN_MAX_AGE,
     },
     refresh_token: {
       name: validatedEnv.COOKIE_REFRESH_TOKEN_NAME,
-      max_age: validatedEnv.COOKIE_REFRESH_TOKEN_MAX_AGE,
     },
   },
   encrypt: {
@@ -162,6 +152,8 @@ const appConfig: IAppConfig = {
   mqtt: {
     host: validatedEnv.MQTT_HOST,
     port: validatedEnv.MQTT_PORT,
+    port_ws: validatedEnv.MQTT_PORT_WS,
+    publish_timeout: validatedEnv.MQTT_PUBLISH_TIMEOUT,
     users: {
       admin: {
         user: validatedEnv.MQTT_ADMIN_USER,
@@ -179,7 +171,6 @@ const appConfig: IAppConfig = {
   },
 };
 
-// genericLogger.debug("Configuraciones de entorno cargadas",appConfig);
 console.log('Configuraciones variables de entorno cargadas:\n', appConfig);
 
 export { appConfig };

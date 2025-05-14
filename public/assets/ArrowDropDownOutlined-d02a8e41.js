@@ -1,1 +1,0 @@
-import{Q as r,U as t,j as a}from"./index-82986cbd.js";var e={},o=t;Object.defineProperty(e,"__esModule",{value:!0});var u=e.default=void 0,i=o(r()),d=a;u=e.default=(0,i.default)((0,d.jsx)("path",{d:"m7 10 5 5 5-5z"}),"ArrowDropDownOutlined");export{u as d};

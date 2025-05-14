@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 import { simpleErrorHandler } from '../utils/simpleErrorHandler';
 
-import { Contrata, Personal, Rol, Rubro, Usuario } from '../types/db';
+import { Cargo, Contrata, Personal, Rol, Rubro, Usuario } from '../types/db';
 import { appConfig } from '../configs';
 import dayjs from 'dayjs';
 import { JwtEncription } from '../utils/jwt.encription';
@@ -15,7 +15,12 @@ export interface JwtPayload {
   rol: string;
 }
 
-export type UserInfo = Pick<Usuario, 'u_id' | 'usuario' | 'contraseña' | 'rl_id' | 'fecha' | 'p_id'> & Pick<Personal, 'nombre' | 'apellido' | 'dni' | 'telefono' | 'correo' | 'c_id' | 'foto'> & Pick<Contrata, 'contrata' | 'co_id'> & Pick<Rubro, 'rubro'> & Pick<Rol, 'rl_id' | 'rol' | 'descripcion'>;
+export type UserInfo = Pick<Usuario, 'u_id' | 'usuario' | 'contraseña' | 'rl_id' | 'fecha' | 'p_id'> &
+  Pick<Personal, 'nombre' | 'apellido' | 'dni' | 'telefono' | 'correo' | 'c_id' | 'foto'> &
+  Pick<Contrata, 'contrata' | 'co_id'> &
+  Pick<Rubro, 'rubro'> &
+  Pick<Rol, 'rl_id' | 'rol' | 'descripcion'> &
+  Pick<Cargo, 'cargo'>;
 
 interface UserFound extends RowDataPacket, UserInfo {}
 
@@ -35,22 +40,18 @@ export interface UserToken {
 interface UserTokenRowData extends RowDataPacket, UserToken {}
 
 export interface CreateUserTokenDTO {
-  // ut_id: number;
   user_id: number;
   refresh_token: string;
   issued_at: string;
   expires_at: string;
-  // revoked: number; default 0
   ip_address?: string;
   user_agent?: string;
-  // created_at?: string;
-  // updated_at?: string;
 }
 
 export class Auth {
   static findUser = simpleErrorHandler<UserInfo | null, Pick<Usuario, 'usuario'>>(async ({ usuario }) => {
     const userFound = await MySQL2.executeQuery<UserFound[]>({
-      sql: `SELECT u.u_id, u.usuario, u.contraseña, u.rl_id, u.fecha, u.p_id, p.nombre, p.apellido, p.dni, p.telefono, p.correo, p.c_id, p.foto, c.contrata , c.co_id, c.r_id, ru.rubro, r.rol, r.descripcion FROM general.usuario u INNER JOIN general.rol r ON u.rl_id = r.rl_id INNER JOIN general.personal p ON u.p_id = p.p_id INNER JOIN general.contrata c ON p.co_id = c.co_id INNER JOIN general.rubro ru ON c.r_id = ru.r_id  WHERE u.usuario = ?  AND u.activo = 1`,
+      sql: `SELECT u.u_id, u.usuario, u.contraseña, u.rl_id, u.fecha, u.p_id, p.nombre, p.apellido, p.dni, p.telefono, p.correo, p.c_id, p.foto, c.contrata , c.co_id, c.r_id, ru.rubro, r.rol, r.descripcion, ca.cargo FROM general.usuario u INNER JOIN general.rol r ON u.rl_id = r.rl_id INNER JOIN general.personal p ON u.p_id = p.p_id INNER JOIN general.contrata c ON p.co_id = c.co_id INNER JOIN general.rubro ru ON c.r_id = ru.r_id INNER JOIN general.cargo ca ON p.c_id = ca.c_id WHERE u.usuario = ?  AND u.activo = 1`,
       values: [usuario],
     });
 
@@ -72,7 +73,6 @@ export class Auth {
   static async createUserToken(user_id: number, refresh_token: string, ip?: string, user_agent?: string) {
     const tokenPayload = Auth.decodeToken(refresh_token);
     const refresh_token_encrypt = JwtEncription.encrypt(refresh_token);
-
     const issued_at = dayjs(tokenPayload.iat * 1000).format('YYYY-MM-DD HH:mm:ss');
     const expires_at = dayjs(tokenPayload.exp * 1000).format('YYYY-MM-DD HH:mm:ss');
 
@@ -93,8 +93,9 @@ export class Auth {
   }
 
   static async getTokenStored(user_id: number, refresh_token_input: string): Promise<UserToken | undefined> {
+    const curDate = dayjs().format('YYYY-MM-DD HH:mm:ss');
     const user_tokens = await MySQL2.executeQuery<UserTokenRowData[]>({
-      sql: `SELECT * FROM general.user_token WHERE user_id = ? AND revoked = 0 AND expires_at > NOW()`,
+      sql: `SELECT * FROM general.user_token WHERE user_id = ? AND revoked = 0 AND expires_at > '${curDate}'`,
       values: [user_id],
     });
     for (const token of user_tokens) {
@@ -111,7 +112,7 @@ export class Auth {
 
   static findUserById = simpleErrorHandler<UserInfo | null, Pick<Usuario, 'u_id'>>(async ({ u_id }) => {
     const userFound = await MySQL2.executeQuery<UserFound[]>({
-      sql: `SELECT u.u_id, u.usuario, u.contraseña, u.rl_id, u.fecha, u.p_id, p.nombre, p.apellido, p.dni, p.telefono, p.correo, p.c_id, p.foto, c.contrata , c.co_id, c.r_id, r.rol, r.descripcion FROM general.usuario u INNER JOIN general.rol r ON u.rl_id = r.rl_id INNER JOIN general.personal p ON u.p_id = p.p_id INNER JOIN general.contrata c ON p.co_id = c.co_id WHERE u.u_id = ? AND u.activo = 1`,
+      sql: `SELECT u.u_id, u.usuario, u.contraseña, u.rl_id, u.fecha, u.p_id, p.nombre, p.apellido, p.dni, p.telefono, p.correo, p.c_id, p.foto, c.contrata , c.co_id, c.r_id, ru.rubro, r.rol, r.descripcion, ca.cargo FROM general.usuario u INNER JOIN general.rol r ON u.rl_id = r.rl_id INNER JOIN general.personal p ON u.p_id = p.p_id INNER JOIN general.contrata c ON p.co_id = c.co_id INNER JOIN general.rubro ru ON c.r_id = ru.r_id INNER JOIN general.cargo ca ON p.c_id = ca.c_id WHERE u.u_id = ? AND u.activo = 1`,
       values: [u_id],
     });
 
@@ -124,7 +125,7 @@ export class Auth {
 
   static generateAccessToken = simpleErrorHandler<string, string | object | Buffer>((payload) => {
     return new Promise<string>((resolve, reject) => {
-      jwt.sign(payload, appConfig.jwt.access_token.secret, { expiresIn: appConfig.jwt.access_token.expire }, (err, token) => {
+      jwt.sign(payload, appConfig.jwt.access_token.secret, { expiresIn: appConfig.jwt.access_token.expire / 1000 }, (err, token) => {
         if (err) reject(err);
         if (token !== undefined) {
           resolve(token);
@@ -137,7 +138,7 @@ export class Auth {
 
   static generateRefreshToken = simpleErrorHandler<string, string | object | Buffer>((payload) => {
     return new Promise<string>((resolve, reject) => {
-      jwt.sign(payload, appConfig.jwt.refresh_token.secret, { expiresIn: appConfig.jwt.refresh_token.expire }, (err, token) => {
+      jwt.sign(payload, appConfig.jwt.refresh_token.secret, { expiresIn: appConfig.jwt.refresh_token.expire / 1000 }, (err, token) => {
         if (err) reject(err);
         if (token !== undefined) {
           resolve(token);

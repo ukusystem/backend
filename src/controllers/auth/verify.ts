@@ -3,6 +3,7 @@ import { Auth } from '../../models/auth';
 import { asyncErrorHandler } from '../../utils/asynErrorHandler';
 
 import { appConfig } from '../../configs';
+import { MqttService } from '../../services/mqtt/MqttService';
 
 export const verify = asyncErrorHandler(async (req: Request, res: Response, _next: NextFunction) => {
   const refreshTokenCookie: string | undefined = req.cookies[appConfig.cookie.refresh_token.name];
@@ -44,7 +45,7 @@ export const verify = asyncErrorHandler(async (req: Request, res: Response, _nex
     // secure: process.env.NODE_ENV === "production", // acceso solo con https
     sameSite: 'strict', // acceso del mismo dominio
     // maxAge: 1000*60*60 // expiracion 1h
-    maxAge: appConfig.cookie.access_token.max_age, // expiracion 1m
+    maxAge: appConfig.jwt.access_token.expire,
   });
 
   // res.cookie(appConfig.cookie.refresh_token.name, newRefreshToken, {
@@ -54,6 +55,8 @@ export const verify = asyncErrorHandler(async (req: Request, res: Response, _nex
   //   maxAge: appConfig.cookie.refresh_token.max_age, // expiracion 1d
   // });
 
+  const credentialsMqtt = MqttService.getUserCredentials(userFound.rl_id);
+
   const response = {
     status: 200,
     message: 'Refresh token successful',
@@ -62,6 +65,12 @@ export const verify = asyncErrorHandler(async (req: Request, res: Response, _nex
       access_token: newAccessToken,
       // refresh_token: newRefreshToken,
       user: userWithoutPassword,
+      mqtt: {
+        user: credentialsMqtt?.user,
+        password: credentialsMqtt?.password,
+        host: appConfig.mqtt.host,
+        port: appConfig.mqtt.port_ws,
+      },
     },
   };
 

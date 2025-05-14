@@ -111,8 +111,14 @@ export class ControllerMapManager {
   }
 
   static delete(ctrl_id: number): boolean {
-    const deleteSuccessful = ControllerMapManager.#controllers.delete(ctrl_id);
-    return deleteSuccessful;
+    const controllerFound = ControllerMapManager.#controllers.get(ctrl_id);
+    if (controllerFound) {
+      ControllerMapManager.#controllers.delete(ctrl_id);
+      ControllerNotifyManager.delete(controllerFound);
+      return true;
+    }
+
+    return false;
   }
 
   static async init() {
@@ -129,18 +135,3 @@ export class ControllerMapManager {
     }
   }
 }
-
-// (() => {
-//   const getRandomBinary = (): 0 | 1 => {
-//     return Math.random() < 0.5 ? 0 : 1;
-//   };
-
-//   setInterval(() => {
-//     const fieldsUpdate: Partial<ControllerData> = {
-//       conectado: getRandomBinary(),
-//       activo: 1,
-//     };
-//     console.log('Actualizando controlador: ', fieldsUpdate);
-//     ControllerMapManager.update(1, fieldsUpdate);
-//   }, 10000);
-// })();

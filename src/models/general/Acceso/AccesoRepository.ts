@@ -4,7 +4,9 @@ import { CreateAccesoDTO } from './dtos/CreateAccesoDTO';
 import { UpdateAccesoDTO } from './dtos/UpdateAccesoDTO';
 
 export interface AccesoWithPersonal extends Acceso {
-  personal: Pick<Personal, 'nombre' | 'apellido' | 'foto'>;
+  personal: Pick<Personal, 'nombre' | 'apellido' | 'foto' | 'telefono'>;
+  contrata: string;
+  tipo: string;
 }
 
 export interface AccesoRepository {
@@ -20,6 +22,6 @@ export interface AccesoRepository {
   softDeleteMembersByContrataId(co_id: number): Promise<void>;
   softDeleteByPersonalId(p_id: number): Promise<void>;
   findByOffsetPagination(limit: number, offset: number): Promise<Acceso[]>;
-  findWithPersonalByOffsetPagination(limit: number, offset: number): Promise<AccesoWithPersonal[]>;
+  findWithPersonalByOffsetPagination(limit: number, offset: number, serie?: string): Promise<AccesoWithPersonal[]>;
   countTotal(filters?: any): Promise<number>;
 }
