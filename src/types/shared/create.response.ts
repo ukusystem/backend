@@ -1,4 +1,4 @@
 export interface CreateEntityResponse {
-  id: number;
+  id: number | string;
   message: string;
 }

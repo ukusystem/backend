@@ -316,6 +316,8 @@ export interface ArchivoTicket {
   nombreoriginal: string;
   tipo: string;
   rt_id: number;
+  tamaño: number;
+  thumbnail: string | null;
 }
 
 export interface ActividadPersonal {

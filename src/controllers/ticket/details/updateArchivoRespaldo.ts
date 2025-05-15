@@ -1,147 +1,130 @@
-import { Request, Response, NextFunction } from "express";
-import path from 'path'
-import { asyncErrorHandler } from "../../../utils/asynErrorHandler";
-import { ZodError } from "zod";
-import { MySQL2 } from "../../../database/mysql";
-import { CustomError } from "../../../utils/CustomError";
-import { Ticket } from "../../../models/ticket";
-import { GeneralMulterMiddlewareArgs, deleteTemporalFiles } from "../../../middlewares/multer.middleware";
-import { updateArchivosRespaldoSchema } from "../../../schemas/ticket";
-import { getFormattedDate } from "../../../utils/getFormattedDateTime";
+import { Request, Response, NextFunction } from 'express';
+import path from 'path';
+import fs from 'fs';
+import { asyncErrorHandler } from '../../../utils/asynErrorHandler';
+import { MySQL2 } from '../../../database/mysql';
+import { CustomError } from '../../../utils/CustomError';
+import { Ticket } from '../../../models/ticket';
+import { updateArchivosRespaldoSchema } from '../../../schemas/ticket';
+import { getFormattedDate } from '../../../utils/getFormattedDateTime';
 import { v4 as uuidv4 } from 'uuid';
-import { getExtesionFile } from "../../../utils/getExtensionFile";
-import fs from 'fs'
+import { getExtesionFile } from '../../../utils/getExtensionFile';
+import { ensureDirExists, moveFile, toPosixPath } from '../../../utils/file';
+import { deleteTemporalFilesMulter, MulterMiddlewareConfig } from '../../../middlewares/multer.middleware';
+import { generateThumbs } from '../../../models/controllerapp/src/frontTools';
+import { genericLogger } from '../../../services/loggers';
 
-export const multerUpdAchRespArgs: GeneralMulterMiddlewareArgs = {
-  allowedMimeTypes: ["image/jpeg", "image/jpg", "image/png", "application/pdf", "video/mp4"],
-  bodyFields: ["formvalues"],
-  fields: [{ name: "archivos" }],
-  limits: { files: 5, fileSize: 10 * 1024 * 1024, fieldSize: 5 * 1024 * 1024 },
+enum UpdateFilesTicketKeys {
+  Formulario = 'formulario',
+  ArchivoRespaldo = 'archivo_respaldo',
+}
+export const multerUpdateFilesTicketConfig: MulterMiddlewareConfig = {
+  bodyFields: [UpdateFilesTicketKeys.Formulario],
+  fieldConfigs: [{ field: { name: UpdateFilesTicketKeys.ArchivoRespaldo, maxCount: 5 }, allowedMimeTypes: ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf', 'video/mp4'], maxFileSize: 10 * 1024 * 1024 }],
+  limits: {
+    // files: 5, // máximo 5 archivos binarios en total (suma de todos los campos)
+    fileSize: 10 * 1024 * 1024, // tamaño máximo por archivo binario: 10MB
+    fieldSize: 5 * 1024 * 1024, // tamaño máximo por campo de texto (ej: 'formulario'): 5MB
+  },
 };
 
-export const updateArchivoRespaldo = asyncErrorHandler( async (req: Request, res: Response, next: NextFunction) => {
-  // Validar formulario
+export const updateArchivoRespaldo = asyncErrorHandler(async (req: Request, res: Response, next: NextFunction) => {
+  const cleanUp = () => {
+    if (req.files) {
+      deleteTemporalFilesMulter(req.files);
+    }
+  };
+
+  let parsedFormulario;
   try {
-    await updateArchivosRespaldoSchema.parseAsync(JSON.parse(req.body.formvalues)); // Validate  requests
-  } catch (error) {
-    if (error instanceof ZodError) {
-      if(req.files) deleteTemporalFiles(req.files) // limpiar
-      return res.status(400).json( error.errors.map((errorDetail) => ({ message: errorDetail.message, status: errorDetail.code})));
-    }
-    if(error instanceof SyntaxError){
-      if(req.files) deleteTemporalFiles(req.files) // limpiar   
-      return res.status(400).json({status: 400,message: error.message,});
-    }
-    
-    // If error is not from zod then return generic error message
-    if(req.files) deleteTemporalFiles(req.files) // limpiar
-    return res.status(500).send("Ocurrió un error al realizar la solicitud. Por favor, comunícate con el equipo de soporte.");
+    parsedFormulario = JSON.parse(req.body[UpdateFilesTicketKeys.Formulario]);
+  } catch {
+    cleanUp();
+    return res.status(400).json({
+      status: 400,
+      message: `El campo '${UpdateFilesTicketKeys.Formulario}' no contiene un JSON válido.`,
+    });
   }
 
-  //Cuando todo es correcto:
-  const formValues = JSON.parse(req.body.formvalues) as { ctrl_id:number, rt_id: number}
-  const {ctrl_id,rt_id} = formValues 
-
-  const archivosCargados = req.files
-  let archivosData : {ruta: string;nombreoriginal: string;tipo: string;}[] = []
-
-  if(archivosCargados){
-    if (Array.isArray(archivosCargados)) {
-        for (const file of archivosCargados) {
-            const dateFormat = getFormattedDate()
-            const nameFileUuid = uuidv4()
-            const extensionFile = getExtesionFile(file.originalname)
-
-            const movePath = path.resolve(`./archivos/ticket/${"nodo" + ctrl_id}/${dateFormat}/${nameFileUuid}.${extensionFile}`)
-
-            // Comprobar directorio de destino
-            const directorioDestino = path.dirname(movePath);
-            if (!fs.existsSync(directorioDestino)) {
-                fs.mkdirSync(directorioDestino, { recursive: true });
-            }
-
-            // Mover archivo de la carpeta temporal
-            fs.renameSync(file.path,movePath)
-
-            const relativePath = path.relative("./archivos/ticket", movePath); // nodoXX\27-02-2024\1709065263868-hombre.png
-            const finalRelativePath = relativePath.split(path.sep).join(path.posix.sep); // Prueba/27-02-2024/1709065364652-hombre.png
-            const archItem = {ruta: finalRelativePath, nombreoriginal:file.originalname,tipo: file.mimetype}
-
-            archivosData.push(archItem)
-
-        }
-    } else {
-        for (const fieldname in archivosCargados) {
-          for (const file of archivosCargados[fieldname]) {
-            
-            const dateFormat = getFormattedDate()
-            const nameFileUuid = uuidv4()
-            const extensionFile = getExtesionFile(file.originalname)
-
-            const movePath = path.resolve(`./archivos/ticket/${"nodo" + ctrl_id}/${dateFormat}/${nameFileUuid}.${extensionFile}`)
-
-            // Comprobar directorio de destino
-            const directorioDestino = path.dirname(movePath);
-            if (!fs.existsSync(directorioDestino)) {
-                fs.mkdirSync(directorioDestino, { recursive: true });
-            }
-
-            // Mover archivo de la carpeta temporal
-            fs.renameSync(file.path,movePath)
-
-            const relativePath = path.relative("./archivos/ticket", movePath); // nodoXX\27-02-2024\1709065263868-hombre.png
-            const finalRelativePath = relativePath.split(path.sep).join(path.posix.sep); // Prueba/27-02-2024/1709065364652-hombre.png
-            const archItem = {ruta: finalRelativePath, nombreoriginal:file.originalname,tipo: file.mimetype}
-            archivosData.push(archItem)
-          }
-        }
-    }
+  const result = updateArchivosRespaldoSchema.safeParse(parsedFormulario);
+  if (!result.success) {
+    cleanUp();
+    return res.status(400).json(
+      result.error.errors.map((errorDetail) => ({
+        message: errorDetail.message,
+        status: errorDetail.code,
+      })),
+    );
   }
 
-  // let archivosRespaldo: ArchivoTicket[] | null = null
+  const formDataValid = result.data;
 
-  let errorInsertRows: Error | CustomError | null = null;
-  if (formValues) {
-    const mysqlconn = await MySQL2.getConnection()
+  const { ctrl_id, rt_id } = formDataValid;
 
-    for (let i = 0; i < archivosData.length; i++) {
-      try {
-        // Código que puede lanzar una excepción
-        const {nombreoriginal,ruta,tipo} = archivosData[i]
-        await mysqlconn.query(`INSERT INTO ${ "nodo" + ctrl_id }.archivoticket (ruta,nombreoriginal,tipo,rt_id) VALUES ( ? , ? , ? , ? )`, [ruta, nombreoriginal, tipo, rt_id]);
-      } catch (error) {
-        // Manejo de la excepción
-        if (error instanceof Error) {
-          if ("code" in error) {
-            if (error.code == "ER_NO_REFERENCED_ROW_2") { 
-              const errTicketId = new CustomError( "El id del registro de ticket no existe", 400, "Numero de ticket invalido" );
-              errorInsertRows = errTicketId;
-            }else if(error.code == "ER_BAD_DB_ERROR"){
-              const errCtrlId = new CustomError( "El id del controlador no existe", 400, "Controlador incorrecto." );
-              errorInsertRows = errCtrlId;
-            }else{
-              const errInsert = new CustomError( "Ocurrio un error inesperado al intentar insertar registros a la DB.", 400, "Error no contemplado" );
-              errorInsertRows = errInsert
-            }
+  // const archivosCargados = req.files;
+  const fileUploaded = req.files;
+  const archivosData: { ruta: string; nombreoriginal: string; tipo: string; tamaño: number; thumbnail: string | null }[] = [];
+
+  if (fileUploaded && !Array.isArray(fileUploaded)) {
+    const archivoRespaldo = fileUploaded[UpdateFilesTicketKeys.ArchivoRespaldo];
+
+    if (archivoRespaldo) {
+      for (const file of archivoRespaldo) {
+        const dateFormat = getFormattedDate();
+        const nameFileUuid = uuidv4();
+        const extensionFile = getExtesionFile(file.originalname);
+
+        const movePath = path.resolve(`./archivos/ticket/nodo${ctrl_id}/${dateFormat}/${nameFileUuid}.${extensionFile}`);
+
+        moveFile(file.path, movePath);
+
+        let thumbnailPathResult: string | null = null;
+        try {
+          const thumbnailPath = path.resolve(`./archivos/ticket/nodo${ctrl_id}/${dateFormat}/${nameFileUuid}_thumbnail.jpg`);
+          ensureDirExists(path.dirname(thumbnailPath));
+          const { result, thumbBase64 } = await generateThumbs({ filepath: movePath, type: file.mimetype });
+
+          if (result) {
+            const imageBuffer = Buffer.from(thumbBase64, 'base64');
+            fs.writeFileSync(thumbnailPath, imageBuffer);
+            thumbnailPathResult = toPosixPath(path.relative('./archivos/ticket', thumbnailPath));
           }
-        }else{
-          const errInsert = new CustomError( "Ocurrio un error inesperado al intentar insertar registros a la DB.", 400, "Error no contemplado" );
-          errorInsertRows = errInsert
+        } catch (error) {
+          genericLogger.error(`Error al generar y guardar el thumbnail para el archivo "${file.originalname}" (tipo: ${file.mimetype}) `, error);
         }
-        
-        break; // Salir del bucle
+
+        const relativePath = toPosixPath(path.relative('./archivos/ticket', movePath));
+
+        archivosData.push({
+          ruta: relativePath,
+          nombreoriginal: file.originalname,
+          tipo: file.mimetype,
+          tamaño: file.size,
+          thumbnail: thumbnailPathResult,
+        });
       }
     }
-
-    MySQL2.releaseConnection(mysqlconn)
   }
 
-  if (errorInsertRows) {
-    if(req.files) deleteTemporalFiles(req.files) // limpiar
-    return next(errorInsertRows);
+  try {
+    const values: any[] = [];
+
+    for (const archivo of archivosData) {
+      const { nombreoriginal, ruta, tipo, tamaño, thumbnail } = archivo;
+      values.push(ruta, nombreoriginal, tipo, rt_id, tamaño, thumbnail);
+    }
+
+    const placeholders = archivosData.map(() => `(?, ?, ?, ?, ?, ?)`).join(', ');
+
+    const sql = `INSERT INTO nodo${ctrl_id}.archivoticket (ruta, nombreoriginal, tipo, rt_id, tamaño, thumbnail) VALUES ${placeholders}`;
+
+    await MySQL2.executeQuery({ sql: sql, values: values });
+  } catch {
+    cleanUp();
+    const errInsert = new CustomError('Ocurrio un error inesperado al intentar insertar registros a la DB.', 400, 'Error no contemplado');
+    return next(errInsert);
   }
 
-  const nuevosArchivoResp = await Ticket.getArchivosCargados({ctrl_id, rt_id})
-  return res.json({ message: "Se agregaron correctamente los nuevos archivos de respaldo.", data: nuevosArchivoResp});
-  }
-);
+  const nuevosArchivoResp = await Ticket.getArchivosCargados({ ctrl_id, rt_id });
+  return res.json({ message: 'Se agregaron correctamente los nuevos archivos de respaldo.', data: nuevosArchivoResp });
+});

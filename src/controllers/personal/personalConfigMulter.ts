@@ -1,9 +1,8 @@
-import { GeneralMulterMiddlewareArgs } from '../../middlewares/multer.middleware';
+import { MulterMiddlewareConfig } from '../../middlewares/multer.middleware';
 
-export const multerCreatePersonalArgs: GeneralMulterMiddlewareArgs = {
-  allowedMimeTypes: ['image/jpeg', 'image/jpg', 'image/png'],
+export const multerCreatePersonalArgs: MulterMiddlewareConfig = {
   bodyFields: ['form'],
-  fields: [{ name: 'files', maxCount: 1 }],
+  fieldConfigs: [{ field: { name: 'files', maxCount: 1 }, allowedMimeTypes: ['image/jpeg', 'image/jpg', 'image/png'], maxFileSize: 5 * 1024 * 1024 }],
   limits: {
     files: 1,
     fileSize: 5 * 1024 * 1024, // 5MB

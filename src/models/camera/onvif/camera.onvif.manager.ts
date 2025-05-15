@@ -2,7 +2,7 @@
 
 import { Cam } from 'onvif';
 import { NodoCameraMapManager } from '../../maps/nodo.camera';
-import { CamMovement, CamOnvifMap, ControlPTZDTO, CtrlOnvifMap, MovePTZ_DTO, OnvifInstance } from './camera.onvif.types';
+import { CamImaging, CamMovement, CamOnvifMap, ControlImagingDTO, ControlPTZDTO, CtrlOnvifMap, MovePTZ_DTO, OnvifInstance } from './camera.onvif.types';
 import { decrypt } from '../../../utils/decrypt';
 
 export class CameraOnvifManager {
@@ -103,6 +103,59 @@ export class CameraOnvifManager {
     } else {
       throw new Error(`Instancia onvif no encontrado`);
     }
+  }
+
+  static async controlImaging(ctrl_id: number, cmr_id: number, data: ControlImagingDTO): Promise<void> {
+    const { velocity, action, movement } = data;
+    const camImagings: { [move in CamImaging]: { speed: number } } = {
+      FocusFar: { speed: velocity },
+      FocusNear: { speed: -velocity },
+      IrisLarge: { speed: velocity },
+      IrisSmall: { speed: -velocity },
+    };
+
+    const movementData = camImagings[movement];
+    if (movementData === undefined) {
+      throw new Error('El tipo de movimiento de la cámara no está disponible');
+    }
+
+    const camOnvif = await CameraOnvifManager.#getOnvifInstance(ctrl_id, cmr_id);
+
+    const videoSourceToken = camOnvif.activeSource?.sourceToken;
+
+    if (!videoSourceToken) {
+      throw new Error('No se pudo obtener el token de video source');
+    }
+
+    // revisar GetMoveOptions
+
+    if (action === 'start') {
+      return new Promise<void>((resolve, reject) => {
+        camOnvif.imagingMove(
+          {
+            token: videoSourceToken,
+            continuous: {
+              speed: movementData.speed, // Min and Max values defined by the GetMoveOptions if support the continuous movement
+            },
+          },
+          (err: any) => {
+            if (err) {
+              reject(new Error('Error al mover el enfoque'));
+            }
+            resolve();
+          },
+        );
+      });
+    }
+
+    return new Promise<void>((resolve, reject) => {
+      camOnvif.imagingStop({ token: videoSourceToken }, (stopErr: any) => {
+        if (stopErr) {
+          reject(new Error('Error al detener el enfoque'));
+        }
+        resolve();
+      });
+    });
   }
 
   static async controlPTZ(ctrl_id: number, cmr_id: number, data: ControlPTZDTO): Promise<void> {

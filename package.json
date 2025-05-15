@@ -37,6 +37,7 @@
     "nodemailer": "^6.9.8",
     "onvif": "^0.7.0",
     "pdfmake": "^0.2.9",
+    "serialport": "^13.0.0",
     "server": "file:",
     "socket.io": "^4.7.4",
     "uuid": "^9.0.1",

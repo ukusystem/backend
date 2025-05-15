@@ -82,6 +82,7 @@ export const ERR_INCOMPATIBLE = 0x042; // Version is not compatible
 export const ERR_NOT_NEEDED = 0x043; // An update for the send version is not needed
 export const ERR_TOO_OLD = 0x044; // The firmware sent is too old for the server
 export const ERR_CORRUPTED = 0x045; // The data sent is corrupted
+export const ERR_NO_PHONE = 0x046; // No valid phone number found
 
 export const VALUE_ONE_LINK = 0x200; // Set or get one output link
 export const VALUE_ACTIVE_DELAY = 0x201; // Set or get delay to active
@@ -258,6 +259,10 @@ export const VALUE_GSM = 0x2a8; // GSM Protocol
 export const VALUE_OUTPUT_ALARM_DELAY = 0x2a9; // Delay to turn off alarm
 export const VALUE_ALARM_THRESHOLD_CHANGED = 0x2aa; // Alarm Threshold changed
 export const VALUE_ALL_THRESHOLDS = 0x2ab; // Send all temperature sensors alarm thresholds
+export const VALUE_ALL_ORDER_STATES = 0x2ac; // Send all order states to the server
+export const VALUE_SERVER_PHONE = 0x2ad; // Set the server phone number
+export const VALUE_COM = 0x2ae; // Get the COMs available
+export const VALUE_COMS_END = 0x2af; // End COMs
 
 export const VALUE_SOCKET_CLOSED = 0x400; // Socket was closed
 export const VALUE_AUTHORIZED = 0x401; // Card authorized
@@ -584,3 +589,8 @@ export const CMD_TEMP_ALARM = 0x620;
  * Format: VALUE_TEMP_CHANGED, sensor_id, state
  */
 export const CMD_TEMP_CHANGED = 0x621;
+
+/**
+ * @brief The server sent a SIM keep alive to the controller
+ */
+export const CMD_SERVER_SIM_ALIVE = 0x622;
