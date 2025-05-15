@@ -19,7 +19,7 @@
 -- Current Database: `general`
 --
 
-CREATE DATABASE /*!32312 IF NOT EXISTS*/ `general` /*!40100 DEFAULT CHARACTER SET utf8mb3 */ /*!80016 DEFAULT ENCRYPTION='N' */;
+CREATE DATABASE /*!32312 IF NOT EXISTS*/ `general` /*!40100 DEFAULT CHARACTER SET utf8mb4 */ /*!80016 DEFAULT ENCRYPTION='N' */;
 
 USE `general`;
 
@@ -42,7 +42,7 @@ CREATE TABLE `acceso` (
   KEY `fk_acceso_personal_p_id_idx` (`p_id`),
   CONSTRAINT `fk_acceso_equipoacceso_ea_id` FOREIGN KEY (`ea_id`) REFERENCES `equipoacceso` (`ea_id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `fk_acceso_personal_p_id` FOREIGN KEY (`p_id`) REFERENCES `personal` (`p_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=101 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -66,7 +66,7 @@ CREATE TABLE `cargo` (
   `c_id` int NOT NULL AUTO_INCREMENT,
   `cargo` varchar(100) NOT NULL,
   PRIMARY KEY (`c_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=16 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -88,12 +88,12 @@ DROP TABLE IF EXISTS `configuracion`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `configuracion` (
   `conf_id` int NOT NULL AUTO_INCREMENT,
-  `nombreempresa` varchar(100) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
-  `correoadministrador` varchar(100) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `nombreempresa` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `correoadministrador` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `celular` int NOT NULL DEFAULT '0',
   `com` varchar(6) NOT NULL DEFAULT '',
   PRIMARY KEY (`conf_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -118,13 +118,13 @@ CREATE TABLE `contrata` (
   `contrata` varchar(100) NOT NULL,
   `r_id` int NOT NULL,
   `descripcion` varchar(100) NOT NULL,
-  `activo` tinyint(1) NOT NULL,
+  `activo` tinyint NOT NULL,
   `updated_at` timestamp NOT NULL ON UPDATE CURRENT_TIMESTAMP,
   `created_at` timestamp NOT NULL,
   PRIMARY KEY (`co_id`),
   KEY `fk_contrata_rubro_r_id_idx` (`r_id`),
   CONSTRAINT `fk_contrata_rubro_r_id` FOREIGN KEY (`r_id`) REFERENCES `rubro` (`r_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -191,7 +191,7 @@ CREATE TABLE `controlador` (
   CONSTRAINT `fk_controlador_resolucion_res_id_3` FOREIGN KEY (`res_id_streamprimary`) REFERENCES `resolucion` (`res_id`),
   CONSTRAINT `fk_controlador_resolucion_res_id_4` FOREIGN KEY (`res_id_streamsecondary`) REFERENCES `resolucion` (`res_id`),
   CONSTRAINT `fk_controlador_resolucion_res_id_5` FOREIGN KEY (`res_id_streamauxiliary`) REFERENCES `resolucion` (`res_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -214,7 +214,7 @@ CREATE TABLE `equipoacceso` (
   `ea_id` int NOT NULL AUTO_INCREMENT,
   `nombre` varchar(100) NOT NULL,
   PRIMARY KEY (`ea_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -238,9 +238,9 @@ CREATE TABLE `equipoentrada` (
   `ee_id` int NOT NULL AUTO_INCREMENT,
   `detector` varchar(100) NOT NULL,
   `descripcion` varchar(100) NOT NULL,
-  `activo` tinyint(1) NOT NULL,
+  `activo` tinyint NOT NULL,
   PRIMARY KEY (`ee_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -264,9 +264,9 @@ CREATE TABLE `equiposalida` (
   `es_id` int NOT NULL AUTO_INCREMENT,
   `actuador` varchar(100) NOT NULL,
   `descripcion` varchar(100) NOT NULL,
-  `activo` tinyint(1) NOT NULL,
+  `activo` tinyint NOT NULL,
   PRIMARY KEY (`es_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=24 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -290,7 +290,7 @@ CREATE TABLE `estado` (
   `estd_id` int NOT NULL AUTO_INCREMENT,
   `estado` varchar(100) NOT NULL,
   PRIMARY KEY (`estd_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -317,7 +317,7 @@ CREATE TABLE `firmware` (
   `menor` int unsigned NOT NULL,
   `parche` int unsigned NOT NULL,
   PRIMARY KEY (`f_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -345,7 +345,7 @@ CREATE TABLE `general_audit` (
   `personal` varchar(250) NOT NULL,
   `datetime` timestamp NOT NULL,
   PRIMARY KEY (`ga_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -368,7 +368,7 @@ CREATE TABLE `marca` (
   `m_id` int NOT NULL AUTO_INCREMENT,
   `marca` varchar(100) NOT NULL,
   PRIMARY KEY (`m_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -390,7 +390,7 @@ DROP TABLE IF EXISTS `notificacion`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `notificacion` (
   `n_id` int NOT NULL AUTO_INCREMENT,
-  `n_uuid` varchar(250) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `n_uuid` varchar(250) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `evento` varchar(250) NOT NULL,
   `titulo` varchar(250) NOT NULL,
   `mensaje` varchar(250) NOT NULL,
@@ -398,7 +398,7 @@ CREATE TABLE `notificacion` (
   `fecha` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`n_id`),
   UNIQUE KEY `n_uuid` (`n_uuid`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -420,18 +420,18 @@ DROP TABLE IF EXISTS `notificacion_usuario`;
 CREATE TABLE `notificacion_usuario` (
   `nu_id` varchar(250) NOT NULL,
   `u_id` int NOT NULL,
-  `n_uuid` varchar(250) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `n_uuid` varchar(250) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `fecha_creacion` timestamp NOT NULL,
   `fecha_entrega` timestamp NOT NULL,
   `fecha_lectura` timestamp NULL DEFAULT NULL,
-  `leido` tinyint(1) NOT NULL,
+  `leido` tinyint NOT NULL,
   PRIMARY KEY (`nu_id`),
   UNIQUE KEY `unique_user_notification` (`u_id`,`n_uuid`),
   KEY `n_uuid` (`n_uuid`),
   KEY `u_id` (`u_id`),
   CONSTRAINT `notificacion_usuario_ibfk_1` FOREIGN KEY (`n_uuid`) REFERENCES `notificacion` (`n_uuid`),
   CONSTRAINT `notificacion_usuario_ibfk_2` FOREIGN KEY (`u_id`) REFERENCES `usuario` (`u_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -460,13 +460,13 @@ CREATE TABLE `personal` (
   `co_id` int NOT NULL,
   `foto` varchar(100) NOT NULL,
   `correo` varchar(100) NOT NULL,
-  `activo` tinyint(1) NOT NULL,
+  `activo` tinyint NOT NULL,
   PRIMARY KEY (`p_id`),
   KEY `fk_personal_contrata_co_id_idx` (`co_id`),
   KEY `fk_personal_cargo_c_id_idx` (`c_id`),
   CONSTRAINT `fk_personal_cargo_c_id` FOREIGN KEY (`c_id`) REFERENCES `cargo` (`c_id`),
   CONSTRAINT `fk_personal_contrata_co_id` FOREIGN KEY (`co_id`) REFERENCES `contrata` (`co_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -488,14 +488,14 @@ DROP TABLE IF EXISTS `preferenciasvms`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `preferenciasvms` (
   `prfvms_id` int NOT NULL AUTO_INCREMENT,
-  `preferencia` varchar(100) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `preferencia` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `u_id` int NOT NULL,
   `configdata` json NOT NULL,
-  `activo` tinyint(1) NOT NULL,
+  `activo` tinyint NOT NULL,
   PRIMARY KEY (`prfvms_id`),
   KEY `fk_preferenciasvms_usuario_u_id_idx` (`u_id`),
   CONSTRAINT `fk_preferenciasvms_usuario_u_id` FOREIGN KEY (`u_id`) REFERENCES `usuario` (`u_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -518,9 +518,9 @@ CREATE TABLE `region` (
   `rgn_id` int NOT NULL AUTO_INCREMENT,
   `region` varchar(100) NOT NULL,
   `descripcion` varchar(100) NOT NULL,
-  `activo` tinyint(1) NOT NULL,
+  `activo` tinyint NOT NULL,
   PRIMARY KEY (`rgn_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -549,7 +549,7 @@ CREATE TABLE `registro_actividad` (
   `realizado_por` varchar(255) NOT NULL,
   `fecha` datetime DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id_actividad`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -576,7 +576,7 @@ CREATE TABLE `registrored` (
   PRIMARY KEY (`rr_id`),
   KEY `fk_registrored_controlador_co_id_idx` (`ctrl_id`),
   CONSTRAINT `fk_registrored_controlador_co_id` FOREIGN KEY (`ctrl_id`) REFERENCES `controlador` (`ctrl_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -597,12 +597,12 @@ DROP TABLE IF EXISTS `resolucion`;
 /*!50503 SET character_set_client = utf8mb4 */;
 CREATE TABLE `resolucion` (
   `res_id` int NOT NULL AUTO_INCREMENT,
-  `nombre` varchar(100) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
-  `relacionaspecto` varchar(100) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `nombre` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `relacionaspecto` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `ancho` int NOT NULL,
   `altura` int NOT NULL,
   PRIMARY KEY (`res_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -626,9 +626,9 @@ CREATE TABLE `rol` (
   `rl_id` int NOT NULL AUTO_INCREMENT,
   `rol` varchar(100) NOT NULL,
   `descripcion` varchar(100) NOT NULL,
-  `activo` tinyint(1) NOT NULL,
+  `activo` tinyint NOT NULL,
   PRIMARY KEY (`rl_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=11 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -652,7 +652,7 @@ CREATE TABLE `rubro` (
   `r_id` int NOT NULL AUTO_INCREMENT,
   `rubro` varchar(100) NOT NULL,
   PRIMARY KEY (`r_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=21 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -676,7 +676,7 @@ CREATE TABLE `tipocamara` (
   `tc_id` int NOT NULL AUTO_INCREMENT,
   `tipo` varchar(100) NOT NULL,
   PRIMARY KEY (`tc_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -700,7 +700,7 @@ CREATE TABLE `tipotrabajo` (
   `tt_id` int NOT NULL AUTO_INCREMENT,
   `nombre` varchar(100) NOT NULL,
   PRIMARY KEY (`tt_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -726,7 +726,7 @@ CREATE TABLE `user_token` (
   `refresh_token` varchar(500) NOT NULL,
   `issued_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `expires_at` timestamp NOT NULL,
-  `revoked` tinyint(1) NOT NULL DEFAULT '0',
+  `revoked` tinyint NOT NULL DEFAULT '0',
   `ip_address` varchar(45) NOT NULL,
   `user_agent` text NOT NULL,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -734,7 +734,7 @@ CREATE TABLE `user_token` (
   PRIMARY KEY (`ut_id`),
   KEY `fk_user_token_user_u_id_idx` (`user_id`),
   CONSTRAINT `fk_user_token_user_u_id` FOREIGN KEY (`user_id`) REFERENCES `usuario` (`u_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -760,13 +760,13 @@ CREATE TABLE `usuario` (
   `rl_id` int NOT NULL,
   `fecha` timestamp NOT NULL,
   `p_id` int NOT NULL,
-  `activo` tinyint(1) NOT NULL,
+  `activo` tinyint NOT NULL,
   PRIMARY KEY (`u_id`),
   KEY `fk_usuario_rol_rl_id_idx` (`rl_id`),
   KEY `fk_usuario_personal_p_id_idx` (`p_id`),
   CONSTRAINT `fk_usuario_personal_p_id` FOREIGN KEY (`p_id`) REFERENCES `personal` (`p_id`),
   CONSTRAINT `fk_usuario_rol_rl_id` FOREIGN KEY (`rl_id`) REFERENCES `rol` (`rl_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -783,7 +783,7 @@ UNLOCK TABLES;
 -- Current Database: `nodo`
 --
 
-CREATE DATABASE /*!32312 IF NOT EXISTS*/ `nodo` /*!40100 DEFAULT CHARACTER SET utf8mb3 */ /*!80016 DEFAULT ENCRYPTION='N' */;
+CREATE DATABASE /*!32312 IF NOT EXISTS*/ `nodo` /*!40100 DEFAULT CHARACTER SET utf8mb4 */ /*!80016 DEFAULT ENCRYPTION='N' */;
 
 USE `nodo`;
 
@@ -799,7 +799,7 @@ CREATE TABLE `actividadpersonal` (
   `nombre` varchar(30) NOT NULL,
   `apellido` varchar(30) NOT NULL,
   `telefono` varchar(20) NOT NULL,
-  `dni` varchar(12) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL,
+  `dni` varchar(12) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `c_id` int NOT NULL,
   `co_id` int NOT NULL,
   `rt_id` int NOT NULL,
@@ -811,7 +811,7 @@ CREATE TABLE `actividadpersonal` (
   CONSTRAINT `fk_actividadpersonal_cargo_c_id` FOREIGN KEY (`c_id`) REFERENCES `general`.`cargo` (`c_id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `fk_actividadpersonal_contrata_co_id` FOREIGN KEY (`co_id`) REFERENCES `general`.`contrata` (`co_id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `fk_actividadpersonal_registroticket_rt_id` FOREIGN KEY (`rt_id`) REFERENCES `registroticket` (`rt_id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -841,7 +841,7 @@ CREATE TABLE `archivoticket` (
   PRIMARY KEY (`at_id`),
   KEY `fk_archivoticket_registroticket_rt_id_idx` (`rt_id`),
   CONSTRAINT `fk_archivoticket_registroticket_rt_id` FOREIGN KEY (`rt_id`) REFERENCES `registroticket` (`rt_id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -880,7 +880,7 @@ CREATE TABLE `camara` (
   KEY `fk_camara_marca_m_id_idx` (`m_id`),
   CONSTRAINT `fk_camara_marca_m_id` FOREIGN KEY (`m_id`) REFERENCES `general`.`marca` (`m_id`),
   CONSTRAINT `fk_camara_tipocamara_tc_id` FOREIGN KEY (`tc_id`) REFERENCES `general`.`tipocamara` (`tc_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -903,7 +903,7 @@ CREATE TABLE `lectortarjeta` (
   `lt_id` int NOT NULL AUTO_INCREMENT,
   `descripcion` varchar(100) NOT NULL,
   PRIMARY KEY (`lt_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -928,7 +928,7 @@ CREATE TABLE `medidorenergia` (
   `descripcion` varchar(100) NOT NULL,
   `activo` tinyint NOT NULL,
   PRIMARY KEY (`me_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -989,7 +989,7 @@ CREATE TABLE `pinesentrada` (
   PRIMARY KEY (`pe_id`),
   KEY `fk_pinesentrada_equipoentrada_ee_id_idx` (`ee_id`),
   CONSTRAINT `fk_pinesentrada_equipoentrada_ee_id` FOREIGN KEY (`ee_id`) REFERENCES `general`.`equipoentrada` (`ee_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=47 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1020,7 +1020,7 @@ CREATE TABLE `pinessalida` (
   PRIMARY KEY (`ps_id`),
   KEY `fk_pinessalida_equiposalida_es_id_idx` (`es_id`),
   CONSTRAINT `fk_pinessalida_equiposalida_es_id` FOREIGN KEY (`es_id`) REFERENCES `general`.`equiposalida` (`es_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=57 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1053,7 +1053,7 @@ CREATE TABLE `registroacceso` (
   PRIMARY KEY (`ra_id`),
   KEY `fk_registroacceso_subnodo_sn_id_idx` (`sn_id`),
   CONSTRAINT `fk_registroacceso_subnodo_sn_id` FOREIGN KEY (`sn_id`) REFERENCES `subnodo` (`sn_id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1081,7 +1081,7 @@ CREATE TABLE `registroarchivocamara` (
   PRIMARY KEY (`rac_id`),
   KEY `fk_registroarchivocamara_camara_cmr_id_idx` (`cmr_id`),
   CONSTRAINT `fk_registroarchivocamara_camara_cmr_id` FOREIGN KEY (`cmr_id`) REFERENCES `camara` (`cmr_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1106,12 +1106,12 @@ CREATE TABLE `registroenergia` (
   `voltaje` float NOT NULL,
   `amperaje` float NOT NULL,
   `fdp` float NOT NULL,
-  `frecuencia` float unsigned NOT NULL,
+  `frecuencia` float NOT NULL,
   `potenciaw` float NOT NULL,
-  `potenciakwh` double unsigned NOT NULL,
+  `potenciakwh` double NOT NULL,
   `fecha` datetime NOT NULL,
   PRIMARY KEY (`re_id`,`fecha`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 /*!50100 PARTITION BY HASH (year(`fecha`))
 PARTITIONS 50 */;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -1139,7 +1139,7 @@ CREATE TABLE `registroentrada` (
   `fecha` datetime NOT NULL,
   `ee_id` int NOT NULL,
   PRIMARY KEY (`rentd_id`,`fecha`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 /*!50100 PARTITION BY HASH (year(`fecha`))
 PARTITIONS 50 */;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -1164,11 +1164,11 @@ CREATE TABLE `registroestadocamara` (
   `rec_id` int NOT NULL AUTO_INCREMENT,
   `cmr_id` int NOT NULL,
   `fecha` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `conectado` tinyint(1) NOT NULL,
+  `conectado` tinyint NOT NULL,
   PRIMARY KEY (`rec_id`),
   KEY `fk_registroestadocamara_camara_cmr_id_idx` (`cmr_id`),
   CONSTRAINT `fk_registroestadocamara_camara_cmr_id` FOREIGN KEY (`cmr_id`) REFERENCES `camara` (`cmr_id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1194,7 +1194,7 @@ CREATE TABLE `registromicrosd` (
   PRIMARY KEY (`rmsd_id`),
   KEY `fk_registromicrosd_estado_estd_id_idx` (`estd_id`),
   CONSTRAINT `fk_registromicrosd_estado_estd_id` FOREIGN KEY (`estd_id`) REFERENCES `general`.`estado` (`estd_id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1223,7 +1223,7 @@ CREATE TABLE `registropeticion` (
   PRIMARY KEY (`rp_id`),
   KEY `fk_registropeticion_estado_estd_id_idx` (`estd_id`),
   CONSTRAINT `fk_registropeticion_estado_estd_id` FOREIGN KEY (`estd_id`) REFERENCES `general`.`estado` (`estd_id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1250,7 +1250,7 @@ CREATE TABLE `registrosalida` (
   `es_id` int NOT NULL,
   `alarma` tinyint NOT NULL,
   PRIMARY KEY (`rs_id`,`fecha`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 /*!50100 PARTITION BY HASH (year(`fecha`))
 PARTITIONS 50 */;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -1276,7 +1276,7 @@ CREATE TABLE `registroseguridad` (
   `estado` tinyint NOT NULL,
   `fecha` timestamp NOT NULL,
   PRIMARY KEY (`rsg_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1301,7 +1301,7 @@ CREATE TABLE `registrotemperatura` (
   `valor` float NOT NULL,
   `fecha` datetime NOT NULL,
   PRIMARY KEY (`rtmp_id`,`fecha`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 /*!50100 PARTITION BY HASH (year(`fecha`))
 PARTITIONS 50 */;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -1350,7 +1350,7 @@ CREATE TABLE `registroticket` (
   CONSTRAINT `fk_registroticket_personal_p_id` FOREIGN KEY (`p_id`) REFERENCES `general`.`personal` (`p_id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `fk_registroticket_subnodo_sn_id` FOREIGN KEY (`sn_id`) REFERENCES `subnodo` (`sn_id`) ON DELETE RESTRICT ON UPDATE RESTRICT,
   CONSTRAINT `fk_registroticket_tipotrabajo_tt_id` FOREIGN KEY (`tt_id`) REFERENCES `general`.`tipotrabajo` (`tt_id`) ON DELETE RESTRICT ON UPDATE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1376,7 +1376,7 @@ CREATE TABLE `sensortemperatura` (
   `activo` tinyint NOT NULL,
   `umbral_alarma` float NOT NULL DEFAULT '0',
   PRIMARY KEY (`st_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=17 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1400,7 +1400,7 @@ CREATE TABLE `subnodo` (
   `sn_id` int NOT NULL AUTO_INCREMENT,
   `nombre` varchar(100) NOT NULL,
   PRIMARY KEY (`sn_id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --

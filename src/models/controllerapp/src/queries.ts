@@ -229,8 +229,8 @@ export const selectTicketToAttend = `
 `;
 
 export const insertRequest = `
-				INSERT INTO %s.registropeticion ( pin, orden, fecha, estd_id)
-				VALUE (?, ?, ?, ?);
+				INSERT INTO %s.registropeticion ( pin, orden, fecha, estd_id, acceso_remoto)
+				VALUE (?, ?, ?, ?, ?);
 			`;
 
 export const insertTicket = `

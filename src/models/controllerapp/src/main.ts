@@ -35,8 +35,8 @@ import { FirmwareVersion } from './firmware';
 
 export class Main {
   private static readonly VERSION_MAJOR = 0;
-  private static readonly VERSION_MINOR = 4;
-  private static readonly VERSION_PATCH = 3;
+  private static readonly VERSION_MINOR = 6;
+  private static readonly VERSION_PATCH = 0;
 
   /**
    * Whether the object has already been created and the service has already started running
@@ -829,7 +829,7 @@ export class Main {
   private async registerOrder(order: PinOrder, state: number) {
     // This is the default data that should be saved when an error occurs.
     // pin, orden, fecha, estd_id
-    const params = [order.pin, order.action, useful.getCurrentDate(), state];
+    const params = [order.pin, order.action, useful.getCurrentDate(), state, false];
     this.log(`Inserting request result ${useful.toHex(state)}`);
     await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.insertRequest, order.ctrl_id), params);
   }
