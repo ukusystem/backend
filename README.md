@@ -22,20 +22,15 @@ Backend del proyecto Uku
 
 # New version with sim
 
-- Card readers extension disabled? Can extension pins supply 5V and 12V ? Why does it suplpy both? Biometric only 12V, module works with 4.4, so both can't be enabled.
 - Controller able to switch between ethernet or sim.
-- Technician can set individual controllers to work with sim or ethernet.
-- Server sends controller a request to switch to sim or ethernet, waits response and only then changes mode for that controller only. Similar to changing net config.
-- UART driver is installed, but it's not used if not configured to. Messages are received and discarded. When configured to work with sim, messages are processed.
+- UART driver is installed, but it's not used if module not responding. Messages are received and discarded. When configured to work with sim, messages are processed.
 - Default configuration to work with ethernet. Initial configuration done with technician trough ethernet. Can be set to work with sim, if so, ethernet stops to work and closes session.
-- After initial config, a new site must be created in the server and set to work with ethernet or sim. The sim number is not a net config, the controller does not need to know the sim number.
 - Delete messages, the memory could overflow (DEL ALL only for SIMCOM).
-- Technician will have a version for GSM (it could support both versions in the future)
 
 # GSM from controller
 
 - El controlador inicia ambos metodos: ethernet y GPRS
-- Una sesion inicia con un login correcto. Cuando se inicia una sesion, se escoge cual metodo usar.
+- Una sesion inicia con un login correcto.
 - Ethernet tiene prioridad. Si hay una sesion por ethernet o se inicia una sesion, este metodo se usará siempre hasta que el socket se cierre.
 - El metodo GPRS se usara solo cuando no haya una sesion por ethernet.
 
@@ -96,9 +91,9 @@ Backend del proyecto Uku
 
 ## Procedure of syncing
 
-- The controller has a initial server number configured.
-- Server is constantly emiting HELLO_FROM_SRVR to find out controllers only when its not logged in by ethernet and has a phone registered (send public keye as well).
-- Controller received HELLO_FROM_SRVR through GSM and then sync as usual (send public key as well). At this point the controller is " GSM synced"
+- The controller has a initial server number configured (in future versions the ).
+- Server is constantly emiting SERVER_SIM_ALIVE to find out controllers only when its not logged in by ethernet and has a phone registered (send public keye as well).
+- Controller received SERVER_SIM_ALIVE through GSM and then sync as usual (send public key and server phone as well). At this point the controller is " GSM synced"
 - 'GSM synced' is not saved in NVS, so is false every reset.
 - Once GSM synced, it will n
 
