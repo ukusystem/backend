@@ -1,9 +1,9 @@
-import { GeneralMulterMiddlewareArgs } from '../../middlewares/multer.middleware';
+import { MulterMiddlewareConfig } from '../../middlewares/multer.middleware';
 
-export const multerAccessImportArgs: GeneralMulterMiddlewareArgs = {
-  allowedMimeTypes: ['application/json'],
+export const multerAccessImportArgs: MulterMiddlewareConfig = {
   bodyFields: ['form'],
-  fields: [{ name: 'files', maxCount: 1 }],
+  fieldConfigs: [{ field: { name: 'files', maxCount: 1 }, allowedMimeTypes: ['application/json'], maxFileSize: 5 * 1024 * 1024 }],
+
   limits: {
     files: 1,
     fileSize: 5 * 1024 * 1024, // 5MB
