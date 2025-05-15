@@ -76,7 +76,7 @@ export class MySQLContrataRepository implements ContrataRepository {
     const nombreFilter = filters?.nombre ? ` AND c.contrata LIKE ? ` : '';
 
     const contratas = await MySQL2.executeQuery<ContrataRubroRowData[]>({
-      sql: ` SELECT  c.*,  r.rubro, COUNT(p.co_id) AS total_personal, COUNT(u.u_id) AS total_cuentas_activas, COUNT(a.a_id) AS total_tarjetas FROM  general.contrata c INNER JOIN  general.rubro r ON c.r_id = r.r_id AND c.activo = 1 ${rubroFilter !== undefined ? ` AND ${rubroFilter.query} ` : ''}   ${nombreFilter} LEFT JOIN  general.personal p ON p.co_id = c.co_id AND p.activo = 1 LEFT JOIN general.usuario u ON u.p_id = p.p_id AND u.activo = 1 LEFT JOIN general.acceso a ON a.p_id = p.p_id AND a.activo = 1  
+      sql: ` SELECT  c.*,  r.rubro, COUNT(DISTINCT p.co_id) AS total_personal, COUNT(DISTINCT u.u_id) AS total_cuentas_activas, COUNT(DISTINCT a.a_id) AS total_tarjetas FROM  general.contrata c INNER JOIN  general.rubro r ON c.r_id = r.r_id AND c.activo = 1 ${rubroFilter !== undefined ? ` AND ${rubroFilter.query} ` : ''}   ${nombreFilter} LEFT JOIN  general.personal p ON p.co_id = c.co_id AND p.activo = 1 LEFT JOIN general.usuario u ON u.p_id = p.p_id AND u.activo = 1 LEFT JOIN general.acceso a ON a.p_id = p.p_id AND a.activo = 1  
  GROUP BY  c.co_id, r.r_id ORDER BY  c.co_id DESC LIMIT ? OFFSET ?`,
       values: [...(rubroFilter?.values || []), ...(filters?.nombre ? [`%${filters.nombre}%`] : []), limit, offset],
     });
@@ -105,7 +105,7 @@ export class MySQLContrataRepository implements ContrataRepository {
 
   async findWithRubroById(co_id: number): Promise<ContrataWithRubro | undefined> {
     const contratas = await MySQL2.executeQuery<ContrataRubroRowData[]>({
-      sql: ` SELECT  c.*,  r.rubro, COUNT(p.co_id) AS total_personal, COUNT(u.u_id) AS total_cuentas_activas, COUNT(a.a_id) AS total_tarjetas FROM  general.contrata c INNER JOIN  general.rubro r ON c.r_id = r.r_id AND c.activo = 1 AND c.co_id = ? LEFT JOIN  general.personal p ON p.co_id = c.co_id AND p.activo = 1 LEFT JOIN general.usuario u ON u.p_id = p.p_id AND u.activo = 1 LEFT JOIN general.acceso a ON a.p_id = p.p_id AND a.activo = 1 GROUP BY  c.co_id, r.r_id LIMIT 1`,
+      sql: ` SELECT  c.*,  r.rubro, COUNT(DISTINCT p.co_id) AS total_personal, COUNT(DISTINCT u.u_id) AS total_cuentas_activas, COUNT(DISTINCT a.a_id) AS total_tarjetas FROM  general.contrata c INNER JOIN  general.rubro r ON c.r_id = r.r_id AND c.activo = 1 AND c.co_id = ? LEFT JOIN  general.personal p ON p.co_id = c.co_id AND p.activo = 1 LEFT JOIN general.usuario u ON u.p_id = p.p_id AND u.activo = 1 LEFT JOIN general.acceso a ON a.p_id = p.p_id AND a.activo = 1 GROUP BY  c.co_id, r.r_id LIMIT 1`,
       values: [co_id],
     });
     if (contratas[0]) {
