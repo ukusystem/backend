@@ -30,6 +30,7 @@ import * as net from 'net';
 import * as cp from 'child_process';
 import { Camara } from '../../../types/db';
 import { FirmwareVersion } from './firmware';
+import { isGSMAvailable, startGSMSerial } from './serial';
 // import { printComs } from './serial';
 // import { ControllerStateManager } from '../../../controllers/socket';
 
@@ -170,6 +171,9 @@ export class Main {
       return;
     }
 
+    /* Load serial */
+    startGSMSerial();
+
     /* Load data from database */
 
     if (!(await this.loadNodes())) {
@@ -285,10 +289,17 @@ export class Main {
     this.sendMessagesTimer = setInterval(() => {
       // Send messages to controllers
       for (const node of this.selector.nodeAttachments) {
-        node.tryRequestKeepalive();
-        // node.sendOne(this.selector)
-        if (node.sendOne(this.selector)) {
-          node.setLastMessageTime();
+        // Use same buffer
+
+        if (Selector.isChannelConnected(node._currentSocket) || node.isLogged()) {
+          // Send through websocket
+          node.tryRequestKeepalive();
+          if (node.sendOne(this.selector)) {
+            node.setLastMessageTime();
+          }
+        } else if (!node.isLogged() && isGSMAvailable()) {
+          // Send throught GSM
+          // sendGSM();
         }
       }
 
@@ -829,7 +840,7 @@ export class Main {
   private async registerOrder(order: PinOrder, state: number) {
     // This is the default data that should be saved when an error occurs.
     // pin, orden, fecha, estd_id
-    const params = [order.pin, order.action, useful.getCurrentDate(), state, false];
+    const params = [order.pin, order.action, useful.getCurrentDate(), state, Boolean(order.remoteAccess)];
     this.log(`Inserting request result ${useful.toHex(state)}`);
     await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.insertRequest, order.ctrl_id), params);
   }

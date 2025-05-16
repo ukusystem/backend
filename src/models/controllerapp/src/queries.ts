@@ -57,6 +57,16 @@ export const sdStateParse = [tupleInt, tupleInt, tupleInt, tupleLong];
 export const authParse = [tupleInt, tupleInt, tupleLong];
 export const alarmParse = [tupleInt, tupleFloat, tupleLong];
 
+/* General configuration */
+
+export const selectCelular = `
+				SELECT celular AS entero FROM general.configuracion WHERE conf_id=1;
+`;
+
+export const selectCOM = `
+				SELECT com AS text FROM general.configuracion WHERE conf_id=1;
+`;
+
 /* Manage tables */
 
 export const createDatabase = `
@@ -372,7 +382,7 @@ export const regionParse = [tupleInt, tupleTxt, tupleTxt];
 /* Node */
 
 export const nodeGetForSocket = `
-				SELECT ctrl_id, nodo, ip, puerto, usuario, contraseña
+				SELECT ctrl_id, nodo, ip, puerto, usuario, contraseña, celular
 				FROM general.controlador
 				WHERE activo=1;
 			`;

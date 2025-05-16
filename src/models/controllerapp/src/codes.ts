@@ -592,5 +592,6 @@ export const CMD_TEMP_CHANGED = 0x621;
 
 /**
  * @brief The server sent a SIM keep alive to the controller
+ * Format: `CMD_SERVER_SIM_ALIVE,token;`
  */
 export const CMD_SERVER_SIM_ALIVE = 0x622;

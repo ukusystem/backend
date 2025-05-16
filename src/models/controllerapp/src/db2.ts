@@ -23,6 +23,7 @@ export interface GeneralData extends RowDataPacket {
 
 /**
  * To load nodes from the database
+ *
  */
 export interface Controlador2 extends db.Controlador, RowDataPacket {}
 
@@ -100,4 +101,8 @@ export interface CardForController extends RowDataPacket {
   administrador: number;
   co_id: number;
   activo: boolean;
+}
+
+export interface GeneralString extends RowDataPacket {
+  text: string;
 }

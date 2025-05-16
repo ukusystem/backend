@@ -16,3 +16,11 @@ export class CameraToCheck {
     this.camara = camara;
   }
 }
+
+/**
+ * COM port data read from OS
+ */
+export interface ComData {
+  path: string;
+  name: string;
+}

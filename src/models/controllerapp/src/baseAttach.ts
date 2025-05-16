@@ -36,7 +36,7 @@ import path from 'path';
 import { FirmwareVersion } from './firmware';
 import { MyStringIterator } from './myStringIterator';
 import { createHash } from 'crypto';
-import { getComs } from './serial';
+import { getComs, restartGSMSerial } from './serial';
 
 /**
  * Base attachment for the sockets
@@ -150,7 +150,7 @@ export class BaseAttach extends Mortal {
   }
 
   /**
-   * Send one message from the buffer of messages. Blocks until the message is
+   * Send one message from the buffer of messages throught websocket. Blocks until the message is
    * sent, an error occurs or, if the channel is non-blocking, until the output
    * buffer is full. Send only if the channel is connected because the call to
    * select triggers all keys periodically and a message could be sent when the
@@ -161,7 +161,7 @@ export class BaseAttach extends Mortal {
    * @param selector
    */
   sendOne(selector: Selector): boolean {
-    // Try send
+    // Try send if previous was sent and there is one witing in the buffer
     if (this.previousMessageSent && this.sendBuffer.length > 0 && Selector.isChannelConnected(this._currentSocket)) {
       try {
         const first = this.sendBuffer[0];
@@ -916,6 +916,8 @@ export class NodeAttach extends BaseAttach {
   private ip;
   private user;
   private password;
+  // private syncToken;
+  private celular: number;
 
   private chunkIterator: MyStringIterator | null = null;
 
@@ -946,7 +948,7 @@ export class NodeAttach extends BaseAttach {
    */
   private loggedToController = false;
 
-  constructor(nodeID: number, nodeName: string, nodeIP: string, nodePort: number, nodeUser: string, nodePassword: string, currentLogger: Logger) {
+  constructor(nodeID: number, nodeName: string, nodeIP: string, nodePort: number, nodeUser: string, nodePassword: string, currentLogger: Logger, celular: number) {
     super(currentLogger);
     this.controllerID = nodeID;
     this.setName(nodeName);
@@ -954,6 +956,7 @@ export class NodeAttach extends BaseAttach {
     this.port = nodePort;
     this.user = nodeUser;
     this.password = nodePassword;
+    this.celular = celular;
   }
 
   resetKeepAliveRequest() {
@@ -1010,7 +1013,7 @@ export class NodeAttach extends BaseAttach {
   }
 
   static getInstanceFromPacket(data: db2.Controlador2, logger: Logger): NodeAttach {
-    return new NodeAttach(data.ctrl_id, data.nodo, data.ip, data.puerto, data.usuario, data.contraseña, logger);
+    return new NodeAttach(data.ctrl_id, data.nodo, data.ip, data.puerto, data.usuario, data.contraseña, logger, data.celular);
   }
 
   /**
@@ -2736,22 +2739,6 @@ export class ManagerAttach extends BaseAttach {
       this._log(`Database creation only implemented for Windows.`);
       return false;
     }
-
-    /**
-     * Ensure tables for temperatures AFTER the table for the node exists.
-     */
-    // const year = useful.getYear();
-    // const month = useful.getMonth();
-    // if (!month || !year) {
-    //   this._log(`ERROR: Could not get the month or year for node ${nodeID}.`);
-    //   return false;
-    // }
-    // if (!(await BaseAttach._checkTablesStatic(nodeID, month, year, true))) {
-    //   this._log(`ERROR: Could not create temperature table for node ID ${nodeID}`);
-    //   return false;
-    // }
-    // this._log(`Database created for node ID ${nodeID}.`);
-
     return true;
   }
 
@@ -2817,6 +2804,7 @@ export class ManagerAttach extends BaseAttach {
 
       const newAttach = NodeAttach.getInstanceFromPacket(newData, this._logger);
       newAttach.tryConnectNode(selector, true);
+      restartGSMSerial();
     } else {
       /**
        * The channel was found. IF THE CHANNEL IS LOGGED IN TO THE CONTROLLER, nothing
@@ -2852,6 +2840,7 @@ export class ManagerAttach extends BaseAttach {
 
         // Reset node attachment data and connect with the new data
         BaseAttach.simpleReconnect(selector, currentAttach);
+        restartGSMSerial();
       } else {
         if (!newCompleteData) {
           this._log(`There was no data to edit node ID ${nodeID}`);
@@ -2887,6 +2876,7 @@ export class ManagerAttach extends BaseAttach {
         this._log(`Channel '${currentAttach.toString()}' will reconnect when the controller confirms the changes.`);
       }
     }
+    // Notify
     try {
       if (notify && currentAttach) {
         // this._log('Notifying web about controller');
