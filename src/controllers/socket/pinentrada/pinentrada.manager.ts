@@ -4,6 +4,7 @@ import { PinEntradaNotifyManager } from '../../../models/system/system.pinentrad
 import { genericLogger } from '../../../services/loggers';
 import { filterUndefined } from '../../../utils/filterUndefined';
 import { AlarmManager } from '../alarm';
+import { SidebarNavManager } from '../sidebar';
 import { MapControladorPinEntrada, MapObserverPinEntrada, MapPinEntrada, PinEntradaAddUpdateDTO, PinEntradaDTO, PinEntradaDTORowData, PinEntradaSocketDTO, PinesEntradaObserver, SocketPinEntrada } from './pinentrada.types';
 
 export class PinesSalidaSocketObserver implements PinesEntradaObserver {
@@ -67,7 +68,7 @@ export class PinEntradaManager {
     }
   }
 
-  static add(ctrl_id: number, data: PinEntradaDTO) {
+  static #add(ctrl_id: number, data: PinEntradaDTO) {
     const currController = PinEntradaManager.#pines.get(ctrl_id);
     if (currController === undefined) {
       const newPinEntradaMap: MapPinEntrada = new Map();
@@ -81,6 +82,7 @@ export class PinEntradaManager {
     PinEntradaManager.notifyListPinesEntrada(ctrl_id, data);
     AlarmManager.notifyPinEntrada(ctrl_id, data.pe_id, 'add');
     PinEntradaNotifyManager.add(ctrl_id, data);
+    SidebarNavManager.notifyUpdateInputPin(ctrl_id, data.pe_id, data, 'add');
   }
 
   static #update(ctrl_id: number, pe_id_update: number, fieldsToUpdate: Partial<PinEntradaDTO>) {
@@ -105,26 +107,27 @@ export class PinEntradaManager {
         PinEntradaManager.notifyItemPinEntrada(ctrl_id, pinEntrada);
         AlarmManager.notifyPinEntrada(ctrl_id, pe_id_update, 'update');
         PinEntradaNotifyManager.update(ctrl_id, curPinEntrada, fieldsFiltered);
+        SidebarNavManager.notifyUpdateInputPin(ctrl_id, pinEntrada.pe_id, pinEntrada, 'update');
       }
     }
   }
 
   static add_update(ctrl_id: number, data: PinEntradaAddUpdateDTO) {
     const currController = PinEntradaManager.#pines.get(ctrl_id);
-    const { pe_id, activo, descripcion, ee_id, estado, pin } = data;
+    const { pe_id, activo, descripcion, ee_id, estado, pin, latitud, longitud } = data;
 
     if (currController === undefined) {
       //  only add
-      if (activo !== undefined && descripcion !== undefined && ee_id !== undefined && estado !== undefined) {
-        PinEntradaManager.add(ctrl_id, { pe_id, activo, descripcion, ee_id, estado, pin });
+      if (activo !== undefined && descripcion !== undefined && ee_id !== undefined && estado !== undefined && latitud !== undefined && longitud !== undefined) {
+        PinEntradaManager.#add(ctrl_id, { pe_id, activo, descripcion, ee_id, estado, pin, latitud, longitud });
       }
     } else {
       const hasPinEntrada = currController.has(pe_id);
       if (hasPinEntrada) {
         PinEntradaManager.#update(ctrl_id, pe_id, data);
       } else {
-        if (activo !== undefined && descripcion !== undefined && ee_id !== undefined && estado !== undefined) {
-          PinEntradaManager.add(ctrl_id, { pe_id, activo, descripcion, ee_id, estado, pin });
+        if (activo !== undefined && descripcion !== undefined && ee_id !== undefined && estado !== undefined && latitud !== undefined && longitud !== undefined) {
+          PinEntradaManager.#add(ctrl_id, { pe_id, activo, descripcion, ee_id, estado, pin, latitud, longitud });
         }
       }
     }
@@ -141,6 +144,7 @@ export class PinEntradaManager {
         // notifications:
         PinEntradaManager.notifyListPinesEntrada(ctrl_id, currPinEntrada);
         AlarmManager.notifyPinEntrada(ctrl_id, pe_id, 'delete');
+        SidebarNavManager.notifyUpdateInputPin(ctrl_id, pe_id, currPinEntrada, 'delete');
       }
     }
   }
@@ -166,6 +170,21 @@ export class PinEntradaManager {
     return [];
   }
 
+  static getAllBuzon() {
+    const result: Record<number, Record<number, PinEntradaDTO>> = {};
+
+    for (const [ctrlId, pinCtrlMap] of PinEntradaManager.#pines.entries()) {
+      result[ctrlId] = {};
+      for (const [pinId, pinDTO] of pinCtrlMap.entries()) {
+        if (pinDTO.latitud !== undefined && pinDTO.longitud !== undefined && pinDTO.ee_id === SidebarNavManager.equiEntBuzonId) {
+          result[ctrlId][pinId] = pinDTO;
+        }
+      }
+    }
+
+    return result;
+  }
+
   static async init() {
     try {
       const regionNodos = await Init.getRegionNodos();
@@ -176,7 +195,7 @@ export class PinEntradaManager {
           });
 
           for (const pinEnt of pinesEntrada) {
-            PinEntradaManager.add(ctrl_id, pinEnt);
+            PinEntradaManager.#add(ctrl_id, pinEnt);
           }
         } catch (error) {
           genericLogger.error(`PinEntradaManager | Error al inicializar pines de entrada | ctrl_id : ${ctrl_id}`, error);
@@ -188,14 +207,3 @@ export class PinEntradaManager {
     }
   }
 }
-
-// (() => {
-//   const getBinary = () => {
-//     return Math.random() < 0.5 ? 0 : 1;
-//   };
-//   setInterval(() => {
-//     const updated: PinEntradaAddUpdateDTO = { pe_id: 1, pin: 1, activo: 1, descripcion: undefined, ee_id: undefined, estado: getBinary() };
-//     console.log('Actualizar pin entrada', updated);
-//     PinEntradaManager.add_update(1, updated);
-//   }, 10000);
-// })();

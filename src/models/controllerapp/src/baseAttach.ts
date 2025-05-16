@@ -714,6 +714,8 @@ export class BaseAttach extends Mortal {
       descripcion: desc ?? undefined,
       estado: state ?? undefined,
       activo: active ?? undefined,
+      latitud: undefined, // new
+      longitud: undefined, // new
     };
     // To disable the pin
     if (active === 0) {

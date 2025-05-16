@@ -1,11 +1,15 @@
 import { Server } from 'socket.io';
 import { SocketSidebarNav } from './sidebar.nav.types';
 import { SidebarNavManager, SidebarNavSocketObserver } from './sidebar.nav.manager';
+import { PinEntradaManager } from '../pinentrada';
 
 export const navbarNavSocket = async (io: Server, socket: SocketSidebarNav) => {
   // Namespace : /sidebar_nav
   const controllers = SidebarNavManager.getAllControllers();
   socket.emit('controllers', controllers);
+
+  const inputPins = PinEntradaManager.getAllBuzon();
+  socket.emit('initial_inputpins', inputPins);
 
   const observer = new SidebarNavSocketObserver(socket);
   SidebarNavManager.registerObserver(observer);

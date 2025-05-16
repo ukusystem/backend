@@ -103,8 +103,8 @@ export class AlarmManager {
       // pines entrada
       const pinesEnt = PinEntradaManager.getListPinesEntrada(ctrl_id);
       const pinsEntData: PinesEntrada[] = pinesEnt.map((pinEnt) => {
-        const { activo, descripcion, ee_id, estado, pe_id, pin } = pinEnt;
-        return { activo, descripcion, ee_id, estado, pe_id, pin };
+        const { activo, descripcion, ee_id, estado, pe_id, pin, latitud, longitud } = pinEnt;
+        return { activo, descripcion, ee_id, estado, pe_id, pin, latitud, longitud };
       });
 
       if (!initialData[ctrl_id]) {

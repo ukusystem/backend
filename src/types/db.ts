@@ -267,6 +267,8 @@ export interface PinesEntrada {
   descripcion: string;
   estado: number;
   activo: number;
+  latitud: string | null;
+  longitud: string | null;
 }
 
 export interface PinesSalida {

@@ -1,6 +1,7 @@
 import { Namespace, Socket } from 'socket.io';
 import { RowDataPacket } from 'mysql2';
 
+export type PinEntActionType = 'add' | 'update' | 'delete';
 export type PinEntradaDTO = {
   pe_id: number;
   pin: number;
@@ -8,6 +9,8 @@ export type PinEntradaDTO = {
   descripcion: string;
   estado: number;
   activo: number;
+  latitud: string | null;
+  longitud: string | null;
 };
 // export type PinEntradaSocketDTO = PinesEntrada & Pick<Controlador, 'ctrl_id'>;
 export type PinEntradaSocketDTO = PinEntradaDTO;
@@ -18,6 +21,8 @@ export type PinEntradaAddUpdateDTO = {
   descripcion: string | undefined;
   estado: number | undefined;
   activo: number | undefined;
+  latitud: string | null | undefined;
+  longitud: string | null | undefined;
 };
 
 export type MapPinEntrada = Map<number, PinEntradaDTO>; // key : pe_id;
