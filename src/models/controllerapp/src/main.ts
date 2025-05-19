@@ -172,7 +172,7 @@ export class Main {
     }
 
     /* Load serial */
-    startGSMSerial();
+    startGSMSerial(this.logger);
 
     /* Load data from database */
 
@@ -1175,7 +1175,6 @@ export class Main {
    * Log a message with the tag of this object.
    *
    * @param format    Format of the message.
-   * @param arguments Arguments to format with.
    */
   private log(format: string) {
     if (this.logger) {

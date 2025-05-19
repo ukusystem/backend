@@ -59,12 +59,25 @@ export const alarmParse = [tupleInt, tupleFloat, tupleLong];
 
 /* General configuration */
 
+export const generalSelect = `
+				SELECT nombreempresa, celular, com FROM general.configuracion WHERE conf_id=1 LIMIT 1;
+`;
+
+export const generalUpdate = `
+				UPDATE general.configuracion
+				SET nombreempresa=?, celular=?, com=? WHERE conf_id=1;
+`;
+
+// export const generalSelectConfigForGSM = `
+// 				SELECT celular, com FROM general.configuracion WHERE conf_id=1 LIMIT 1;
+// `;
+
 export const selectCelular = `
-				SELECT celular AS entero FROM general.configuracion WHERE conf_id=1;
+				SELECT celular AS entero FROM general.configuracion WHERE conf_id=1 LIMIT 1;
 `;
 
 export const selectCOM = `
-				SELECT com AS text FROM general.configuracion WHERE conf_id=1;
+				SELECT com AS text FROM general.configuracion WHERE conf_id=1 LIMIT 1;
 `;
 
 /* Manage tables */
@@ -791,19 +804,6 @@ export const tableTuples = [
   new TableTuple(Codes.VALUE_CAMERA_BRAND, Codes.VALUE_CAMERA_BRAND_END, queries.camBrandSelect, 'marca', false),
   new TableTuple(Codes.VALUE_RESOLUTION, Codes.VALUE_RESOLUTION_END, queries.selectResolutions, 'resolucion', false),
 ];
-
-/**
- * General configuration
- */
-
-export const generalSelect = `
-				SELECT nombreempresa, celular, com FROM general.configuracion LIMIT 1;
-`;
-
-export const generalUpdate = `
-				UPDATE general.configuracion
-				SET nombreempresa=?, celular=?, com=? WHERE conf_id >0;
-`;
 
 /**
  * nombre, celular, com
