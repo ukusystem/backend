@@ -66,6 +66,8 @@ generalRoutes.get('/notifications/:nu_id', authenticate, rolChecker([UserRol.Adm
 generalRoutes.post('/notifications', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor, UserRol.Invitado]), requestValidator({ body: createUserNotificationSchema }), userNoficationController.create);
 // PATCH /notifications/:nu_id Actualizar un notificacion como leido.
 generalRoutes.patch('/notifications/:nu_id/read', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor, UserRol.Invitado]), requestValidator({ params: userNotificationParamIdSchema }), userNoficationController.setNotificationRead);
+// PATCH /notifications/read_all Marcar como leido todas las notificaciones
+generalRoutes.patch('/notifications/read_all', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor, UserRol.Invitado]), userNoficationController.readAllNotification);
 
 // ========== Acceso ==========
 // GET	/accesos?limit=number&offset=number Listar todos los accesos por paginacion

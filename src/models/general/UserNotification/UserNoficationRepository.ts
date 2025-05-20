@@ -14,4 +14,5 @@ export interface UserNotificationRepository {
   findByUuId(u_id: number, n_uuid: string): Promise<Nullable<UserNofication>>;
   findByOffsetPagination(u_id: number, limit: number, offset: number, unread?: boolean): Promise<UserNoficationData[]>;
   countTotal(u_id: number): Promise<number>;
+  readAll(u_id: number): Promise<void>;
 }

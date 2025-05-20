@@ -203,10 +203,10 @@ export class Dashboard {
   }, 'Dashboard.getTotalIngresoContrata');
 
   static getTotalAccesoTarjetaRemoto = handleErrorWithArgument<{ data: TotalAccesoTarjetaRemoto; start_date: string; end_date: string }, IPropMethod>(async ({ ctrl_id, isMonthly, date }) => {
-    const { endDate, startDate, year } = Dashboard.getStartEndDate(date, isMonthly);
-    const partitioning = `PARTITION (p${year % Dashboard.#NUM_PARTITION})`;
+    const { endDate, startDate } = Dashboard.getStartEndDate(date, isMonthly);
+    // const partitioning = `PARTITION (p${year % Dashboard.#NUM_PARTITION})`;
     const queryAccesoTarjeta = `SELECT CASE WHEN (p_id = 0 AND autorizacion = 0) THEN 'no_registrado_denegado' WHEN (p_id >= 1 AND autorizacion = 0) THEN 'registrado_denegado' WHEN (p_id >= 1 AND autorizacion = 1) THEN 'registrado_aceptado' ELSE 'otros' END AS acceso_tarjeta, COUNT(*) AS total FROM  ${'nodo' + ctrl_id}.registroacceso WHERE tipo = 1 AND fecha BETWEEN '${startDate}' AND '${endDate}' GROUP BY acceso_tarjeta`;
-    const queryAccesoRemoto = `SELECT COUNT(*) AS total_acceso_remoto FROM ${'nodo' + ctrl_id}.registrosalida ${partitioning} WHERE es_id = 22 AND estado = 1 AND fecha BETWEEN '${startDate}' AND '${endDate}'`;
+    const queryAccesoRemoto = `SELECT COUNT(*) AS total_acceso_remoto FROM nodo${ctrl_id}.registropeticion WHERE orden = 1 AND estd_id = 11 AND acceso_remoto = 1 AND fecha BETWEEN '${startDate}' AND '${endDate}'`;
 
     const resultAccesos: TotalAccesoTarjetaRemoto = { tarjeta: { total_noregistrado_denegado: 0, total_registrado_aceptado: 0, total_registrado_denegado: 0 }, remoto: { total_remoto: 0 } };
 

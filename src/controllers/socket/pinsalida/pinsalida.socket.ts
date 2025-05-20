@@ -46,20 +46,27 @@ export const pinSalidaSocket = async (io: Server, socket: SocketPinSalida) => {
   socket.on('orden_pin_salida', async ({ action, ctrl_id, pin, es_id, ps_id }) => {
     genericLogger.info(`Socket Pines Salida | Orden | ctrl_id : ${ctrl_id} | action : ${action} | pin : ${pin}`, { action, pin, es_id });
     try {
-      const ordenResult = await onOrder({ action, ctrl_id, pin });
-      if (ordenResult !== undefined) {
-        genericLogger.info(`Socket Pines Salida | Resultado Orden |  ${ordenResult.resultado ? 'Correcto' : 'Incorrecto'} | ${ordenResult.mensaje}`, ordenResult);
-        if (ordenResult.resultado) {
-          // orden correcto
-          const currPinSal = PinSalidaManager.getItemPinSalida(ctrl_id, ps_id);
-          if (currPinSal !== undefined) {
-            PinSalidaManager.add_update(ctrl_id, { ...currPinSal, orden: action });
-            socket.emit('response_orden_pin_salida', { success: ordenResult.resultado, message: ordenResult.mensaje, ordenSend: { action, ctrl_id, pin, es_id, ps_id } });
-          }
-        } else {
-          socket.emit('response_orden_pin_salida', { success: ordenResult.resultado, message: ordenResult.mensaje, ordenSend: { action, ctrl_id, pin, es_id, ps_id } });
-        }
+      const isRemoteAccess = es_id === 22 && action === 1; // es_id(22: Acceso (Apertura de puerta) ) , action(1: ON)
+      const ordenResult = await onOrder({ action, ctrl_id, pin, remoteAccess: isRemoteAccess });
+
+      if (ordenResult === undefined) {
+        return;
       }
+      genericLogger.info(`Socket Pines Salida | Resultado Orden |  ${ordenResult.resultado ? 'Correcto' : 'Incorrecto'} | ${ordenResult.mensaje}`, ordenResult);
+
+      if (!ordenResult.resultado) {
+        socket.emit('response_orden_pin_salida', { success: ordenResult.resultado, message: ordenResult.mensaje, ordenSend: { action, ctrl_id, pin, es_id, ps_id } });
+        return;
+      }
+
+      // orden correcto
+      const currPinSal = PinSalidaManager.getItemPinSalida(ctrl_id, ps_id);
+      if (currPinSal === undefined) {
+        return;
+      }
+
+      PinSalidaManager.add_update(ctrl_id, { ...currPinSal, orden: action });
+      socket.emit('response_orden_pin_salida', { success: ordenResult.resultado, message: ordenResult.mensaje, ordenSend: { action, ctrl_id, pin, es_id, ps_id } });
     } catch (error) {
       genericLogger.error(`Socket Pines Salida | Error Orden | ctrl_id = ${ctrl_id}`, error);
     }

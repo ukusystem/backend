@@ -69,7 +69,7 @@ export class Encryption {
       const decipher = crypto.createDecipheriv('aes-256-cbc', this.getKey(), iv);
       // decipher.setAutoPadding(false)
       // Get decrypted
-      let decrypted = Buffer.allocUnsafe(1);
+      let decrypted; // Buffer.allocUnsafe(1)
       if (withRandom) {
         const cipherText = Buffer.allocUnsafe(ori.length - 16);
         // Copy the rest of the text

@@ -1,20 +1,11 @@
 import { MySQL2 } from '../../../database/mysql';
 import { Init } from '../../../models/init';
 import { EquipoSalidaMapManager } from '../../../models/maps';
+import { PinSalidaNotifyManager } from '../../../models/system/system.pinsalida.notify';
 import { genericLogger } from '../../../services/loggers';
 import { EquipoSalida } from '../../../types/db';
 import { filterUndefined } from '../../../utils/filterUndefined';
-import {
-  MapControladorPinSalida,
-  MapObserverPinSalida,
-  MapPinSalida,
-  PinSalidaAddUpdateDTO,
-  PinSalidaDTO,
-  PinSalidaObserver,
-  PinSalidaRowData,
-  PinSalidaSocketDTO,
-  SocketPinSalida,
-} from './pinsalida.types';
+import { MapControladorPinSalida, MapObserverPinSalida, MapPinSalida, PinSalidaAddUpdateDTO, PinSalidaDTO, PinSalidaObserver, PinSalidaRowData, PinSalidaSocketDTO, SocketPinSalida } from './pinsalida.types';
 
 export class PinSalidaSocketObserver implements PinSalidaObserver {
   #socket: SocketPinSalida;
@@ -73,7 +64,7 @@ export class PinSalidaManager {
     }
   }
 
-  static #add(ctrl_id: number, data: PinSalidaDTO) {
+  static #add(ctrl_id: number, data: PinSalidaDTO, shouldNotify?: boolean) {
     const currController = PinSalidaManager.#pines.get(ctrl_id);
     if (currController === undefined) {
       const newPinSalidaMap: MapPinSalida = new Map();
@@ -85,13 +76,15 @@ export class PinSalidaManager {
     }
     // notifications:
     PinSalidaManager.notifyListPinesSalida(ctrl_id, data);
+    PinSalidaNotifyManager.add(ctrl_id, data, shouldNotify);
   }
 
-  static #update(ctrl_id: number, ps_id_update: number, fieldsToUpdate: Partial<PinSalidaDTO>) {
+  static #update(ctrl_id: number, ps_id_update: number, fieldsToUpdate: Partial<PinSalidaDTO>, shouldNotify?: boolean) {
     const currController = PinSalidaManager.#pines.get(ctrl_id);
     if (currController !== undefined) {
       const pinSalida = currController.get(ps_id_update);
       if (pinSalida !== undefined) {
+        const curPinSalida = { ...pinSalida };
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { ps_id, ...fieldsFiltered } = filterUndefined<PinSalidaDTO>(fieldsToUpdate);
 
@@ -111,26 +104,27 @@ export class PinSalidaManager {
           PinSalidaManager.notifyListPinesSalida(ctrl_id, pinSalida);
         }
         PinSalidaManager.notifyItemPinSalida(ctrl_id, pinSalida);
+        PinSalidaNotifyManager.update(ctrl_id, curPinSalida, fieldsFiltered, shouldNotify);
       }
     }
   }
 
   static add_update(ctrl_id: number, data: PinSalidaAddUpdateDTO) {
     const currController = PinSalidaManager.#pines.get(ctrl_id);
-    const { activo, descripcion, estado, pin, automatico, es_id, orden, ps_id } = data;
+    const { activo, descripcion, estado, pin, automatico, es_id, orden, ps_id, shouldNotify } = data;
 
     if (currController === undefined) {
       //  only add
       if (es_id !== undefined && descripcion !== undefined && estado !== undefined && activo !== undefined && orden !== undefined) {
-        PinSalidaManager.#add(ctrl_id, { activo, descripcion, estado, pin, automatico, es_id, orden, ps_id });
+        PinSalidaManager.#add(ctrl_id, { activo, descripcion, estado, pin, automatico, es_id, orden, ps_id }, shouldNotify);
       }
     } else {
       const hasPinSalida = currController.has(ps_id);
       if (hasPinSalida) {
-        PinSalidaManager.#update(ctrl_id, ps_id, data);
+        PinSalidaManager.#update(ctrl_id, ps_id, data, shouldNotify);
       } else {
         if (es_id !== undefined && descripcion !== undefined && estado !== undefined && activo !== undefined && orden !== undefined) {
-          PinSalidaManager.#add(ctrl_id, { activo, descripcion, estado, pin, automatico, es_id, orden, ps_id });
+          PinSalidaManager.#add(ctrl_id, { activo, descripcion, estado, pin, automatico, es_id, orden, ps_id }, shouldNotify);
         }
       }
     }

@@ -41,6 +41,7 @@ export type PinSalidaAddUpdateDTO = {
 
   automatico: boolean;
   orden: ActionPinSal | undefined;
+  shouldNotify?: boolean;
 };
 
 export interface PinSalidaRowData extends RowDataPacket, PinesSalida {}
