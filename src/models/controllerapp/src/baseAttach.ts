@@ -36,7 +36,7 @@ import path from 'path';
 import { FirmwareVersion } from './firmware';
 import { MyStringIterator } from './myStringIterator';
 import { createHash } from 'crypto';
-import { getComs, restartGSMSerial } from './serial';
+import { checkPath, getComs } from './serial';
 
 /**
  * Base attachment for the sockets
@@ -1470,7 +1470,7 @@ export class NodeAttach extends BaseAttach {
           case codes.CMD_OUTPUT_CHANGED:
             await this.insertInputOutput(this.controllerID, pinData, false);
             // Notify output changed
-            // Not used since in the web app the real time output state is not shown
+
             this._notifyOutput(pin, true, this.controllerID, null, null, state, null, null);
 
             break;
@@ -3139,7 +3139,7 @@ export class ManagerAttach extends BaseAttach {
         // Send to controllers
       }
       // Restart GSM with new com from database
-      restartGSMSerial();
+      checkPath();
       // Notify web about general data
       this._log(`Notifying general data.`);
       SystemManager.updateGeneral({

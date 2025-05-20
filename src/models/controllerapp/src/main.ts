@@ -2,37 +2,27 @@ import { NodeAttach, ManagerAttach, Selector, BaseAttach } from './baseAttach';
 import { States, getState } from './enums';
 import { PartialTicket } from './partialTicket';
 import { RequestResult } from './requestResult';
-// import { AtomicNumber } from './atomicNumber';
 import { FinishTicket } from './finishTicket';
 import { NodeTickets } from './nodeTickets';
 import { executeQuery } from './dbManager';
 import { ResultCode } from './resultCode';
 import { ResultSetHeader } from 'mysql2';
-// import { CameraMotionManager } from "@models/camera";
-// import { CameraMotionManager } from "../../../models/camera";
-// import { NodoCameraMapManager } from "@maps/nodo.camera";
 import { NodoCameraMapManager } from '../../maps/nodo.camera';
-// import { appConfig } from "@configs/index";
 import { appConfig } from '../../../configs';
 import { Ticket, type Personal, type Solicitante } from './ticket';
 import { Logger } from './logger';
-// import { Camera } from "./camera";
 import { Bundle } from './bundle';
-// import { Mortal } from "./mortal";
 import { CameraToCheck, PinOrder } from './types';
+import { Camara } from '../../../types/db';
+import { FirmwareVersion } from './firmware';
+import { endGSM, initGSM, isGSMAvailable } from './serial';
 import fs from 'fs';
 import * as queries from './queries';
 import * as useful from './useful';
 import * as codes from './codes';
 import * as db2 from './db2';
-// import * as util from "util";
 import * as net from 'net';
 import * as cp from 'child_process';
-import { Camara } from '../../../types/db';
-import { FirmwareVersion } from './firmware';
-import { isGSMAvailable, startGSMSerial } from './serial';
-// import { printComs } from './serial';
-// import { ControllerStateManager } from '../../../controllers/socket';
 
 export class Main {
   private static readonly VERSION_MAJOR = 0;
@@ -172,7 +162,7 @@ export class Main {
     }
 
     /* Load serial */
-    startGSMSerial(this.logger);
+    await initGSM(this.logger);
 
     /* Load data from database */
 
@@ -1122,6 +1112,8 @@ export class Main {
    */
   private end(signal: NodeJS.Signals) {
     this.log(`Ending with signal ${signal}`);
+    // End GSM
+    endGSM();
 
     // End processing messages
     this.processMessages = false;
