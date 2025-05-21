@@ -16,11 +16,16 @@ let lastDataReceived: number = -1;
 const DATA_TIMEOUT_MS = 1 * 1000;
 const TIMEOUT_CHECK_PERIOD_MS = 100;
 const ALWAYS_OPEN_INTERVAL_MS = 3 * 1000;
+const TRY_CONFIGURE_PERIOD_MS = 5 * 1000;
 let dataInterval: NodeJS.Timeout;
 let alwaysOpenInterval: NodeJS.Timeout;
-const br = 9600;
+let configureTimeout: NodeJS.Timeout | undefined = undefined;
+const br = 115200; // 9600
 let gsmConfigured = false;
 let currentConfigIndex = -1;
+
+// Known codes
+const unplugedSIM = /\r\n\+CPIN: NOT READY\r\n/;
 
 class MyEmitter extends EventEmitter {}
 
@@ -36,12 +41,13 @@ interface MyEventData {
   index: number;
 }
 
-// await sendUART('AT\n'); // Ask if the module is active
-// await sendUART('ATE1\n');
-// await sendUART('AT+CMGF=1\n');
-// await sendUART('AT+CNMI=1,2,0,0,0\n'); // Important to configure the format of the new message notification
 // await sendUART('AT+COPS?\n');
 
+/**
+ * Configurations to perform to the module before using it. All must be successful for the logic to work as expected.
+ * The `regex` field contains a string that must match in the response to consider that configuration successful.
+ * These `regex` fields should contain special not printable characters like `\r` or `\n` so other type of messages cannot match.
+ */
 const configs: Config[] = [
   { command: 'AT\n', regex: /\r\nOK\r\n/ },
   { command: 'ATE1\n', regex: /\r\nOK\r\n/ },
@@ -90,6 +96,7 @@ function closeGSMSerial(logResult: boolean = false) {
     return;
   }
   clearInterval(dataInterval);
+  clearTimeout(configureTimeout);
   currentPort?.close(async () => {
     currentPort?.destroy();
     log('Serial port closed and destroyed');
@@ -115,6 +122,7 @@ export async function initGSM(logger: Logger | null = currentLogger) {
 export function endGSM() {
   closeGSMSerial();
   clearInterval(alwaysOpenInterval);
+  clearTimeout(configureTimeout);
 }
 
 /**
@@ -142,14 +150,27 @@ export async function checkPath() {
  */
 function checkDataTimeout() {
   if (lastDataReceived >= 0 && Date.now() > lastDataReceived + DATA_TIMEOUT_MS) {
-    log(`Received data: '${bufferData.toString()}'`);
+    log(`Received data (${bufferData.length}): '${bufferData.toString()}'`);
+    if (bufferData.length === 1) {
+      log(`Hex: ${bufferData.toString('hex')}`);
+    }
     lastDataReceived = -1;
-    // Process data IF CONFIGURED
-    // TODO
-    if (!gsmConfigured) {
+
+    // Unsolicited codes
+    if (unplugedSIM.test(bufferData.toString('utf8'))) {
+      log('SIM unplugged!');
+      configureGSM();
+    }
+
+    if (gsmConfigured) {
+      // Process data IF CONFIGURED
+      // TODO
+    } else {
+      // If not configured, data can still be messages from server, but only responses to configs are processed.
       const eventData: MyEventData = { response: bufferData, index: currentConfigIndex };
       myEmitter.emit('config_response', eventData);
     }
+
     // Empty buffer and save remaining
     bufferData = emptyBuffer;
   }
@@ -212,59 +233,87 @@ function keepPortOpenTask() {
   });
 }
 
-async function configureGSM() {
+/**
+ * Reconfigure the SIM module (SIM800L). If it is already configured, do it again, if it fails, it will be considered as not configured.
+ * An interval is set to keep trying configure the module.
+ * @returns
+ */
+function configureGSM() {
+  if (configureTimeout) {
+    log('Already configuring module');
+    return;
+  }
   gsmConfigured = false;
-
-  // Send config 1
-  currentConfigIndex = 0;
-  await sendUART(configs[0].command);
-  const res1 = await new Promise<boolean>(executor);
-  if (!res1) {
-    log('GSM config failed');
-    return;
-  }
-
-  // Send config 2
-  currentConfigIndex = 1;
-  await sendUART(configs[1].command);
-  const res2 = await new Promise<boolean>(executor);
-  if (!res2) {
-    log('GSM config failed');
-    return;
-  }
-
-  // Send config 3
-  currentConfigIndex = 2;
-  await sendUART(configs[2].command);
-  const res3 = await new Promise<boolean>(executor);
-  if (!res3) {
-    log('GSM config failed');
-    return;
-  }
-
-  // Send config 4
-  currentConfigIndex = 3;
-  await sendUART(configs[3].command);
-  const res4 = await new Promise<boolean>(executor);
-  if (!res4) {
-    log('GSM config failed');
-    return;
-  }
-
-  gsmConfigured = true;
-  log('GSM Configured!');
+  configureTimeout = setTimeout(configCallback, TRY_CONFIGURE_PERIOD_MS);
 }
 
-const executor = (resolve: (arg: boolean) => void) => {
+const configCallback = async () => {
+  let res = false;
+  log('Attempt to configure');
+  // Send every configuration in the list waiting for each to get a response before sending the next
+  for (let i = 0; i < configs.length; i++) {
+    currentConfigIndex = i;
+    await sendUART(configs[i].command);
+    res = await new Promise<boolean>(configExecutor);
+    if (!res) {
+      log(`GSM config index ${i} failed`);
+      break;
+    }
+  }
+  gsmConfigured = res;
+  if (gsmConfigured) {
+    log('GSM Configured!');
+    clearInterval(configureTimeout);
+    configureTimeout = undefined;
+  } else {
+    log('ERROR Configuring module');
+    configureTimeout = setTimeout(configCallback, TRY_CONFIGURE_PERIOD_MS);
+  }
+};
+
+const configExecutor = (resolve: (arg: boolean) => void) => {
   myEmitter.once<MyEventData>('config_response', (data: MyEventData) => {
     const res = configs[data.index].regex.test(data.response.toString('utf8'));
-    log(`Config index ${data.index}: ${res ? 'OK' : 'FAILED'}`);
+    // log(`Config index ${data.index}: ${res ? 'OK' : 'FAILED'}`);
     resolve(res);
   });
 };
 
 export function isGSMAvailable(): boolean {
   return false;
+}
+
+export async function sendSMS(message: string, phone: number) {
+  if (!gsmConfigured) {
+    log('ERROR GSM not configured yet');
+  }
+  if (phone >= 900000000 && phone <= 999999999) {
+    log('ERROR Number out of range');
+    return;
+  }
+  const res = await sendUART(getFormattedDestiny(phone));
+  if (res) {
+    await sendUART(message);
+  }
+}
+
+async function sendUART(message: string): Promise<boolean> {
+  const messagePromise: Promise<boolean> = new Promise<boolean>((resolve, reject) => {
+    currentPort?.write(message, (e) => {
+      if (e) {
+        log(`ERROR Sending message:\n${e}`);
+        reject(false);
+      } else {
+        log(`Sent: '${message}'`);
+        resolve(true);
+      }
+    });
+  });
+  return messagePromise;
+}
+
+function getFormattedDestiny(phone: number): string {
+  return `AT+CMGS=\\"+51${phone}\\"\n`;
 }
 
 /**
@@ -278,19 +327,4 @@ function log(format: string) {
   } else {
     console.log(format);
   }
-}
-
-export async function sendUART(message: string): Promise<boolean> {
-  const messagePromise: Promise<boolean> = new Promise<boolean>((resolve, reject) => {
-    currentPort?.write(message, (e) => {
-      if (e) {
-        log(`ERROR Sending message:\n${e}`);
-        reject(false);
-      } else {
-        log(`Sent: '${message}'`);
-        resolve(true);
-      }
-    });
-  });
-  return messagePromise;
 }
