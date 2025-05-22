@@ -36,7 +36,7 @@ import path from 'path';
 import { FirmwareVersion } from './firmware';
 import { MyStringIterator } from './myStringIterator';
 import { createHash } from 'crypto';
-import { getComs, restartGSMSerial } from './serial';
+import { checkPath, getComs } from './serial';
 
 /**
  * Base attachment for the sockets
@@ -1470,7 +1470,7 @@ export class NodeAttach extends BaseAttach {
           case codes.CMD_OUTPUT_CHANGED:
             await this.insertInputOutput(this.controllerID, pinData, false);
             // Notify output changed
-            // Not used since in the web app the real time output state is not shown
+
             this._notifyOutput(pin, true, this.controllerID, null, null, state, null, null);
 
             break;
@@ -2804,7 +2804,6 @@ export class ManagerAttach extends BaseAttach {
 
       const newAttach = NodeAttach.getInstanceFromPacket(newData, this._logger);
       newAttach.tryConnectNode(selector, true);
-      restartGSMSerial();
     } else {
       /**
        * The channel was found. IF THE CHANNEL IS LOGGED IN TO THE CONTROLLER, nothing
@@ -2840,7 +2839,6 @@ export class ManagerAttach extends BaseAttach {
 
         // Reset node attachment data and connect with the new data
         BaseAttach.simpleReconnect(selector, currentAttach);
-        restartGSMSerial();
       } else {
         if (!newCompleteData) {
           this._log(`There was no data to edit node ID ${nodeID}`);
@@ -3135,6 +3133,13 @@ export class ManagerAttach extends BaseAttach {
     // console.log(data);
     const res = await executeQuery<ResultSetHeader>(queries.generalUpdate, data);
     if (res) {
+      // Update 'celular' in controllers
+      const celularRes = await executeQuery<db2.GeneralNumber[]>(queries.selectCelular);
+      if (celularRes && celularRes.length === 1) {
+        // Send to controllers
+      }
+      // Restart GSM with new com from database
+      checkPath();
       // Notify web about general data
       this._log(`Notifying general data.`);
       SystemManager.updateGeneral({
