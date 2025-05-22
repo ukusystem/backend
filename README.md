@@ -101,3 +101,8 @@ Backend del proyecto Uku
 
 - +CPIN: NOT READY when sim unplugged
 - +COPS: 0,0,"TIM PERU" when sim connected to a network
+
+## Backend configure GSM
+
+- When por is open, call configure method
+- Method sets configured to false
