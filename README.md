@@ -29,17 +29,17 @@ Backend del proyecto Uku
 
 # GSM from controller
 
-- El controlador inicia ambos metodos: ethernet y GPRS
+- El controlador inicia ambos metodos: ethernet y GSM
 - Una sesion inicia con un login correcto.
 - Ethernet tiene prioridad. Si hay una sesion por ethernet o se inicia una sesion, este metodo se usará siempre hasta que el socket se cierre.
-- El metodo GPRS se usara solo cuando no haya una sesion por ethernet.
+- El metodo GSM se usara solo cuando no haya una sesion por ethernet.
 
 - Hay una tarea que solo ejecuta 'txrx_loop'
 - 'txrx_loop' al inicio obtiene con que metodo toca leer y escribir esa iteracion. Tiene que ser durante toda esa iteracion para responder
   por el mismo metodo.
-- Si hay sesion ethernet, siempre se escoge ethernet. Si hay sesion GPRS, se alterna el metodo entre GPRS y ethernet. Es decir, siempre
+- Si hay sesion ethernet, siempre se escoge ethernet. Si hay sesion GSM, se alterna el metodo entre GSM y ethernet. Es decir, siempre
   se trata de leer datos de ethernet regularmente (siempre que haya un socket valido conectado).
-- Establecer un socket valido hace que ethernet se escoga por lo menos alternadamente con GPRS, y cuando se establece la sesion por ethernet,
+- Establecer un socket valido hace que ethernet se escoga por lo menos alternadamente con GSM, y cuando se establece la sesion por ethernet,
   se escoge ethernet siempre, por su prioridad.
 - Para que ethernet sea elegible los requisitos son que haya un socket valido.
 - El controlador necesita saber que el servidor puede recibir mensajes GSM para que estos eventos no se pierdan.

@@ -10,6 +10,7 @@ export const SEP_MTY = '~'; // Identifier of empty content (to be filled by rece
 export const SEP_LST = '_'; // Separator of items in a list. ASCII 95
 export const SEP_EOL_2 = '|'; // Alternate separator
 export const SEP_SIM = '^'; // Identifier of sim commands. ASCII 94
+export const GSM_EMPTY_TOKEN = 5479318378631486739n; // No token stablished
 
 export const AIO_OK = 0x000; // Successfully executed
 export const ERR = 0x001; // General error
@@ -261,8 +262,9 @@ export const VALUE_ALARM_THRESHOLD_CHANGED = 0x2aa; // Alarm Threshold changed
 export const VALUE_ALL_THRESHOLDS = 0x2ab; // Send all temperature sensors alarm thresholds
 export const VALUE_ALL_ORDER_STATES = 0x2ac; // Send all order states to the server
 export const VALUE_SERVER_PHONE = 0x2ad; // Set the server phone number
-export const VALUE_COM = 0x2ae; // Get the COMs available
+export const VALUE_COM = 0x2ae0; // Get the COMs available
 export const VALUE_COMS_END = 0x2af; // End COMs
+export const VALUE_END_SYNC = 0x2b0; // Add the end of sync.
 
 export const VALUE_SOCKET_CLOSED = 0x400; // Socket was closed
 export const VALUE_AUTHORIZED = 0x401; // Card authorized

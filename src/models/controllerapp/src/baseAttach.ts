@@ -36,7 +36,7 @@ import path from 'path';
 import { FirmwareVersion } from './firmware';
 import { MyStringIterator } from './myStringIterator';
 import { createHash } from 'crypto';
-import { checkPath, getComs } from './serial';
+import { checkPath, getComs, isGSMAvailable, sendSMS } from './serial';
 
 /**
  * Base attachment for the sockets
@@ -188,6 +188,30 @@ export class BaseAttach extends Mortal {
         selector.cancelChannel(this);
         this._log('Channel was programmed to close on next send. Closed.');
       }
+    }
+    return false;
+  }
+
+  /**
+   * Try to send one mesasge through GSM
+   */
+  async sendOneGSM(number: number): Promise<boolean> {
+    if (this.sendBuffer.length > 0 && isGSMAvailable()) {
+      const first = this.sendBuffer[0];
+      if (!first) {
+        return false;
+      }
+      const res = await sendSMS(first.message, number);
+      if (!res) {
+        this._log('ERROR Sending SMS');
+        return false;
+      }
+      if (first.logOnSend) {
+        this._log(`Sent SMS: '${useful.trimString(first.message)}'`);
+      }
+      this.addPendingMessage(first);
+      this.sendBuffer.shift();
+      return true;
     }
     return false;
   }
@@ -889,6 +913,8 @@ export class NodeAttach extends BaseAttach {
    */
   lastTimeMessageSent = useful.timeInt();
 
+  lastTimeSIMAliveSent = useful.timeInt();
+
   static ticketsMap = new Map<number, NodeTickets>();
 
   /**
@@ -902,6 +928,9 @@ export class NodeAttach extends BaseAttach {
 
   private static readonly POWER_SAVE_INTERVAL_S = 5 * 60;
   private lastPowerStamp = 0;
+
+  private static readonly TRY_SIM_ALIVE_INTERVAL_S = 30 * 1;
+  private gsmToken = codes.GSM_EMPTY_TOKEN;
 
   private unreached = false;
 
@@ -917,7 +946,7 @@ export class NodeAttach extends BaseAttach {
   private user;
   private password;
   // private syncToken;
-  private celular: number;
+  celular: number;
 
   private chunkIterator: MyStringIterator | null = null;
 
@@ -957,6 +986,10 @@ export class NodeAttach extends BaseAttach {
     this.user = nodeUser;
     this.password = nodePassword;
     this.celular = celular;
+  }
+
+  canUseGSM(): boolean {
+    return useful.isValidCellphone(this.celular);
   }
 
   resetKeepAliveRequest() {
@@ -1042,6 +1075,21 @@ export class NodeAttach extends BaseAttach {
     if (!this._keepAliveRequestSent && this.isBufferEmpty() && useful.timeInt() >= this.lastTimeMessageSent + Main.ALIVE_REQUEST_INTERVAL) {
       this._keepAliveRequestSent = true;
       this._addOne(new Message(codes.CMD_KEEP_ALIVE_REQUEST, 0));
+      // this._log("Keep alive request added")
+    }
+  }
+
+  /**
+   * Check if a CMD_SERVER_SIM_ALIVE can be sent to this controller, and if so, send it. Send the curren token to validate this operation.
+   */
+  trySendSIMAlive() {
+    if (!isGSMAvailable()) {
+      // this._log("GSM Not ready!")
+      return;
+    }
+    if (useful.timeInt() >= this.lastTimeSIMAliveSent + NodeAttach.TRY_SIM_ALIVE_INTERVAL_S) {
+      this._addOne(new Message(codes.CMD_SERVER_SIM_ALIVE, 0, [this.gsmToken.toString()]));
+      this.lastTimeSIMAliveSent = useful.timeInt();
       // this._log("Keep alive request added")
     }
   }

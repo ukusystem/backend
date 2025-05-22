@@ -276,7 +276,7 @@ export class Main {
   };
 
   private startSendingMessages() {
-    this.sendMessagesTimer = setInterval(() => {
+    this.sendMessagesTimer = setInterval(async () => {
       // Send messages to controllers
       for (const node of this.selector.nodeAttachments) {
         // Use same buffer
@@ -287,9 +287,10 @@ export class Main {
           if (node.sendOne(this.selector)) {
             node.setLastMessageTime();
           }
-        } else if (!node.isLogged() && isGSMAvailable()) {
+        } else if (!node.isLogged() && isGSMAvailable() && node.canUseGSM()) {
           // Send throught GSM
-          // sendGSM();
+          node.trySendSIMAlive();
+          await node.sendOneGSM(node.celular);
         }
       }
 

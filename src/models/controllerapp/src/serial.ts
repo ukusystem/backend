@@ -5,6 +5,7 @@ import * as queries from './queries';
 import { GeneralString } from './db2';
 import { Logger } from './logger';
 import { EventEmitter } from 'stream';
+import { isValidCellphone } from './useful';
 
 let currentPort: SerialPort | null = null;
 // let lastMessageSent = true;
@@ -280,21 +281,29 @@ const configExecutor = (resolve: (arg: boolean) => void) => {
 };
 
 export function isGSMAvailable(): boolean {
-  return false;
+  return gsmConfigured && isPortOpen();
 }
 
-export async function sendSMS(message: string, phone: number) {
+export async function sendSMS(message: string, phone: number): Promise<boolean> {
   if (!gsmConfigured) {
     log('ERROR GSM not configured yet');
+    return false;
   }
-  if (phone >= 900000000 && phone <= 999999999) {
-    log('ERROR Number out of range');
-    return;
+  if (isValidCellphone(phone)) {
+    log('ERROR Number out of range to send message');
+    return false;
   }
   const res = await sendUART(getFormattedDestiny(phone));
   if (res) {
-    await sendUART(message);
+    const smsRes = await sendUART(message);
+    if (smsRes) {
+      log(`Sent to (${phone}): '${message}'`);
+    } else {
+      log(`ERROR Sending SMS`);
+    }
+    return smsRes;
   }
+  return false;
 }
 
 async function sendUART(message: string): Promise<boolean> {

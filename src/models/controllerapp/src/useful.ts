@@ -54,6 +54,10 @@ export function isLinux(): boolean {
   return osName === 'linux';
 }
 
+export function isValidCellphone(phone: number): boolean {
+  return phone >= 900000000 && phone <= 999999999;
+}
+
 /**
  * @param buffer Buffer to get the file content from.
  * @return The version object, or null if the data could not be found in the predefined position.
