@@ -69,6 +69,8 @@ generalRoutes.patch('/notifications/:nu_id/read', authenticate, rolChecker([User
 // PATCH /notifications/read_all Marcar como leido todas las notificaciones
 generalRoutes.patch('/notifications/read_all', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor, UserRol.Invitado]), userNoficationController.readAllNotification);
 
+generalRoutes.post('/notifications/suscribe_divice', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor, UserRol.Invitado]), userNoficationController.suscribeToFcmTopic);
+
 // ========== Acceso ==========
 // GET	/accesos?limit=number&offset=number Listar todos los accesos por paginacion
 generalRoutes.get('/accesos', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ query: paginationAccesoSchema }), accesoController.listAccesosWithPersonalOffset);

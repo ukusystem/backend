@@ -1,7 +1,7 @@
 import { AlarmManager, CamStreamQuality, CamStreamSocketManager, ControllerStateManager, PinEntradaManager, SidebarNavManager } from '../../controllers/socket';
 import { EnergyManager } from '../../controllers/socket/energy.region/energy.manager';
 import { TemperatureManager } from '../../controllers/socket/temperature.region/temperature.manager';
-import { mqttService } from '../../services/mqtt/MqttService';
+import { fcmService } from '../../services/firebase/FcmNotificationService';
 import { Controlador } from '../../types/db';
 import { filterUndefined } from '../../utils/filterUndefined';
 
@@ -109,7 +109,7 @@ export class ControllerNotifyManager {
     if (curController.activo === 1) {
       const canNotify = (activo === undefined || activo === 1) && conectado !== undefined && (curController.conectado !== conectado || isAdd) && conectado === 0;
       if (canNotify) {
-        mqttService.publisAdminNotification({ evento: 'alarm.controller.disconnected', titulo: 'Controlador desconectado', mensaje: `El controlador "${curController.nodo}" se ha desconectado. Verifica su estado y conexión de red.` });
+        fcmService.publisAdminNotification({ evento: 'alarm.controller.disconnected', titulo: 'Controlador desconectado', mensaje: `El controlador "${curController.nodo}" se ha desconectado. Verifica su estado y conexión de red.` });
       }
     }
   }

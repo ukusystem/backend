@@ -7,8 +7,9 @@ import { PoolOptions } from 'mysql2';
 import { encryptEnv } from './encrypt.configs';
 import { cookieEnv } from './cookie.config';
 import { mqttEnv } from './mqtt.config';
+import { fcmEnv } from './fcm.config';
 
-const zodEnv = jwtEnv.merge(dbEnv).merge(emailEnv).merge(serverEnv).merge(encryptEnv).merge(cookieEnv).merge(mqttEnv);
+const zodEnv = jwtEnv.merge(dbEnv).merge(emailEnv).merge(serverEnv).merge(encryptEnv).merge(cookieEnv).merge(mqttEnv).merge(fcmEnv);
 
 const result = zodEnv.safeParse(process.env);
 
@@ -90,6 +91,11 @@ interface IAppConfig {
       };
     };
   };
+  fcm: {
+    project_id: string;
+    client_email: string;
+    private_key: string;
+  };
 }
 
 const appConfig: IAppConfig = {
@@ -168,6 +174,11 @@ const appConfig: IAppConfig = {
         password: validatedEnv.MQTT_INVITED_PASSWORD,
       },
     },
+  },
+  fcm: {
+    project_id: validatedEnv.FCM_PROJECT_ID,
+    client_email: validatedEnv.FCM_CLIENT_EMAIL,
+    private_key: validatedEnv.FCM_PRIVATE_KEY,
   },
 };
 

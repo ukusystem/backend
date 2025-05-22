@@ -142,6 +142,6 @@ export class MqttService {
   }
 }
 
-const mqttService = new MqttService({ host: appConfig.mqtt.host, port: appConfig.mqtt.port, username: appConfig.mqtt.users.admin.user, password: appConfig.mqtt.users.admin.password });
+// const mqttService = new MqttService({ host: appConfig.mqtt.host, port: appConfig.mqtt.port, username: appConfig.mqtt.users.admin.user, password: appConfig.mqtt.users.admin.password });
 
-export { mqttService };
+// export { mqttService };

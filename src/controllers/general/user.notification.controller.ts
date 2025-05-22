@@ -8,6 +8,7 @@ import { UserNofication } from '../../models/general/UserNotification/UserNofica
 import { CreateUserNotificationBody } from '../../models/general/UserNotification/schemas/CreateUserNotificationSchema';
 import { NotificationRepository } from '../../models/general/Notification/NotificationRepository';
 import dayjs from 'dayjs';
+import { fcmService } from '../../services/firebase/FcmNotificationService';
 
 export class UserNoficationController {
   constructor(
@@ -111,6 +112,28 @@ export class UserNoficationController {
       };
 
       return res.json(response);
+    });
+  }
+
+  get suscribeToFcmTopic() {
+    return asyncErrorHandler(async (req: RequestWithUser, res: Response, _next: NextFunction) => {
+      const user = req.user;
+      if (user === undefined) {
+        return res.status(401).json({ message: 'No autorizado' });
+      }
+
+      const { fcmToken } = req.body as { fcmToken: string };
+
+      const isValidTOken = await fcmService.verifyFcmToken(fcmToken);
+
+      if (!isValidTOken) {
+        res.status(400).json({ message: 'Token FCM invalido.' });
+        return;
+      }
+
+      await fcmService.subscribeToTopic(fcmToken, { rl_id: user.rl_id, co_id: user.co_id });
+
+      res.json({ message: 'Dispositivo suscrito' });
     });
   }
 

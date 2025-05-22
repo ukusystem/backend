@@ -8,8 +8,8 @@ import { genericLogger } from '../../services/loggers';
 import { TicketScheduleManager } from '../socket/ticket.schedule/ticket.schedule.manager';
 import { TicketState } from '../../types/ticket.state';
 import { UserRol } from '../../types/rol';
-import { mqttService } from '../../services/mqtt/MqttService';
 import { ControllerMapManager } from '../../models/maps';
+import { fcmService } from '../../services/firebase/FcmNotificationService';
 
 interface TicketUpdateBody {
   action: number;
@@ -84,7 +84,7 @@ export const upadateTicket = asyncErrorHandler(async (req: RequestWithUser, res:
                   // success
                   TicketScheduleManager.update(ctrl_id, rt_id, { estd_id: action });
                   const controller = ControllerMapManager.getController(ctrl_id, true);
-                  mqttService.publisContrataNotification({ evento: 'ticket.cancelled', titulo: 'Ticket cancelado', mensaje: `Ticket #{${ticket.rt_id}} del sitio "${controller?.nodo ?? ctrl_id}" ha sido cancelado por ${user.nombre + ' ' + user.apellido}.` }, ticket.co_id);
+                  fcmService.publisContrataNotification({ evento: 'ticket.cancelled', titulo: 'Ticket cancelado', mensaje: `Ticket #{${ticket.rt_id}} del sitio "${controller?.nodo ?? ctrl_id}" ha sido cancelado por ${user.nombre + ' ' + user.apellido}.` }, ticket.co_id);
                   return res.json({ success: true, message: 'Accion realizada con éxito' });
                 } else {
                   return res.json({ success: false, message: response.mensaje });
