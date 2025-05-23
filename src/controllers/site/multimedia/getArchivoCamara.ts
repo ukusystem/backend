@@ -20,6 +20,7 @@ export const getArchivoCamara = asyncErrorHandler(async (req: Request, res: Resp
       tipo: 1,
       ruta: `api/v1/vms/${ctrl_id}/${cmr_id}/${date}/index.m3u8`,
       fecha: lastModified.toISOString(),
+      thumbnail: null,
       isM3u8: true,
     };
     if (Number(tipo) === 1) {

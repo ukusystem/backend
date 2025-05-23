@@ -73,8 +73,11 @@ interface IAppConfig {
   mqtt: {
     host: string;
     port: number;
-    port_ws: number;
     publish_timeout: number;
+    public_host: string;
+    public_ws_port: number;
+    public_ws_protocol: string;
+
     users: {
       admin: {
         user: string;
@@ -152,8 +155,10 @@ const appConfig: IAppConfig = {
   mqtt: {
     host: validatedEnv.MQTT_HOST,
     port: validatedEnv.MQTT_PORT,
-    port_ws: validatedEnv.MQTT_PORT_WS,
     publish_timeout: validatedEnv.MQTT_PUBLISH_TIMEOUT,
+    public_host: validatedEnv.MQTT_PUBLIC_HOST,
+    public_ws_port: validatedEnv.MQTT_PUBLIC_WS_PORT,
+    public_ws_protocol: validatedEnv.MQTT_PUBLIC_WS_PROTOCOL,
     users: {
       admin: {
         user: validatedEnv.MQTT_ADMIN_USER,

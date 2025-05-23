@@ -301,6 +301,7 @@ export interface RegistroArchivoCamara {
   cmr_id: number;
   tipo: number;
   ruta: string;
+  thumbnail: string | null;
   fecha: string;
 }
 
