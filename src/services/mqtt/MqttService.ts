@@ -34,13 +34,14 @@ export class MqttService {
   constructor(config: MqttConfig) {
     this.client = mqtt.connect(`mqtt://${config.host}`, { port: config.port, username: config.username, password: config.password });
     this.client.on('connect', () => {
-      genericLogger.info('✅ Conectado al broker MQTT');
+      genericLogger.info('MqttService | Conectado al broker MQTT');
     });
     this.client.on('error', (error) => {
-      genericLogger.error(`❌ MqttService Error : ${error.message} `, error);
+      genericLogger.error(`MqttService Error : ${error.message} `, error);
     });
 
     setTimeout(() => {
+      genericLogger.info('MqttService | Disponible para emitir notificaciones.');
       this.canPublish = true;
       this.#publisPendingNotifications();
     }, appConfig.mqtt.publish_timeout * 1000);
@@ -71,14 +72,13 @@ export class MqttService {
     }
     try {
       if (this.client.connected) {
-        // guardar notificacion
         await this.#saveNotification(notification);
         topics.forEach((topic) => {
           this.client.publish(topic, JSON.stringify(notification), { qos: 1, retain: true }, async (error) => {
             if (error) {
-              genericLogger.error(`MqttService | ❌ Error al enviar notificación : ${error.message} `, error);
+              genericLogger.error(`MqttService | Error al enviar notificación : ${error.message} `, error);
             } else {
-              genericLogger.debug(`MqttService | 🔔 Notificación enviada | Topic "${topic}" | ${JSON.stringify(notification)} `);
+              genericLogger.debug(`MqttService | Notificación enviada | Topic "${topic}" | ${JSON.stringify(notification)} `);
             }
           });
         });

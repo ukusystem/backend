@@ -21,8 +21,10 @@ interface IData {
   mqtt: {
     user?: string;
     password?: string;
-    host?: string;
-    port?: number;
+    host: string;
+    port: number;
+    protocol: string;
+    url: string;
   };
 }
 
@@ -99,8 +101,10 @@ export const login = asyncErrorHandler(async (req: Request, res: Response, next:
       mqtt: {
         user: credentialsMqtt?.user,
         password: credentialsMqtt?.password,
-        host: appConfig.mqtt.host,
-        port: appConfig.mqtt.port_ws,
+        host: appConfig.mqtt.public_host,
+        port: appConfig.mqtt.public_ws_port,
+        protocol: appConfig.mqtt.public_ws_protocol,
+        url: `${appConfig.mqtt.public_ws_protocol}://${appConfig.mqtt.public_host}:${appConfig.mqtt.public_ws_port}`,
       },
     },
   };
