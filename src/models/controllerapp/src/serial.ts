@@ -14,10 +14,10 @@ const TAG = '(GSM) ';
 const emptyBuffer = Buffer.alloc(0);
 let bufferData: Buffer = emptyBuffer;
 let lastDataReceived: number = -1;
-const DATA_TIMEOUT_MS = 1 * 1000;
+const DATA_TIMEOUT_MS = 3 * 1000;
 const TIMEOUT_CHECK_PERIOD_MS = 100;
 const ALWAYS_OPEN_INTERVAL_MS = 3 * 1000;
-const TRY_CONFIGURE_PERIOD_MS = 5 * 1000;
+const TRY_CONFIGURE_PERIOD_MS = 10 * 1000;
 let dataInterval: NodeJS.Timeout;
 let alwaysOpenInterval: NodeJS.Timeout;
 let configureTimeout: NodeJS.Timeout | undefined = undefined;
@@ -254,7 +254,7 @@ const configCallback = async () => {
   // Send every configuration in the list waiting for each to get a response before sending the next
   for (let i = 0; i < configs.length; i++) {
     currentConfigIndex = i;
-    await sendUART(configs[i].command);
+    await sendUART(Buffer.from(configs[i].command, 'utf8'));
     res = await new Promise<boolean>(configExecutor);
     if (!res) {
       log(`GSM config index ${i} failed`);
@@ -266,6 +266,7 @@ const configCallback = async () => {
     log('GSM Configured!');
     clearInterval(configureTimeout);
     configureTimeout = undefined;
+    sendSMS('Listo', 974283546);
   } else {
     log('ERROR Configuring module');
     configureTimeout = setTimeout(configCallback, TRY_CONFIGURE_PERIOD_MS);
@@ -289,13 +290,13 @@ export async function sendSMS(message: string, phone: number): Promise<boolean> 
     log('ERROR GSM not configured yet');
     return false;
   }
-  if (isValidCellphone(phone)) {
-    log('ERROR Number out of range to send message');
+  if (!isValidCellphone(phone)) {
+    log(`ERROR Number out of range to send message ${phone}`);
     return false;
   }
-  const res = await sendUART(getFormattedDestiny(phone));
+  const res = await sendUART(Buffer.from(getFormattedDestiny(phone), 'utf8'));
   if (res) {
-    const smsRes = await sendUART(message);
+    const smsRes = (await sendUART(Buffer.from(message, 'utf8'), false)) && (await sendUART(Buffer.from([0x1a, 0]), true));
     if (smsRes) {
       log(`Sent to (${phone}): '${message}'`);
     } else {
@@ -306,14 +307,16 @@ export async function sendSMS(message: string, phone: number): Promise<boolean> 
   return false;
 }
 
-async function sendUART(message: string): Promise<boolean> {
+async function sendUART(message: Buffer, logOK: boolean = true): Promise<boolean> {
   const messagePromise: Promise<boolean> = new Promise<boolean>((resolve, reject) => {
     currentPort?.write(message, (e) => {
       if (e) {
         log(`ERROR Sending message:\n${e}`);
         reject(false);
       } else {
-        log(`Sent: '${message}'`);
+        if (logOK) {
+          log(`Sent: '${message}'`);
+        }
         resolve(true);
       }
     });
@@ -322,7 +325,7 @@ async function sendUART(message: string): Promise<boolean> {
 }
 
 function getFormattedDestiny(phone: number): string {
-  return `AT+CMGS=\\"+51${phone}\\"\n`;
+  return `AT+CMGS="+51${phone}"\n`;
 }
 
 /**

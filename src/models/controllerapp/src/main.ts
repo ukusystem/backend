@@ -276,6 +276,7 @@ export class Main {
   };
 
   private startSendingMessages() {
+    let sendingGSM = false;
     this.sendMessagesTimer = setInterval(async () => {
       // Send messages to controllers
       for (const node of this.selector.nodeAttachments) {
@@ -287,10 +288,13 @@ export class Main {
           if (node.sendOne(this.selector)) {
             node.setLastMessageTime();
           }
-        } else if (!node.isLogged() && isGSMAvailable() && node.canUseGSM()) {
+        } else if (!node.isLogged() && isGSMAvailable() && node.canUseGSM() && !sendingGSM) {
           // Send throught GSM
-          node.trySendSIMAlive();
-          await node.sendOneGSM(node.celular);
+          node.tryAddSIMAlive();
+
+          sendingGSM = true;
+          // await node.sendOneGSM(node.celular);
+          sendingGSM = false;
         }
       }
 
@@ -382,7 +386,7 @@ export class Main {
   private async startNodes() {
     for (const node of this.selector.nodeAttachments) {
       // Save initial state. Disconnected by default.
-      await node.insertNet(false);
+      await node.insertNet(false, false);
       node.tryConnectNode(this.selector, true, false);
     }
     this.log('Nodes started.');

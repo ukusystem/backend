@@ -102,6 +102,8 @@ export class BaseAttach extends Mortal {
   _tag = ']unknown[';
   _buffer = '';
 
+  // sendingGSM = false;
+
   private previousMessageSent = true;
 
   constructor(logger: Logger) {
@@ -197,6 +199,7 @@ export class BaseAttach extends Mortal {
    */
   async sendOneGSM(number: number): Promise<boolean> {
     if (this.sendBuffer.length > 0 && isGSMAvailable()) {
+      const l = this.sendBuffer.length;
       const first = this.sendBuffer[0];
       if (!first) {
         return false;
@@ -206,6 +209,7 @@ export class BaseAttach extends Mortal {
         this._log('ERROR Sending SMS');
         return false;
       }
+      console.log(`Sending one SMS from ${l}`);
       if (first.logOnSend) {
         this._log(`Sent SMS: '${useful.trimString(first.message)}'`);
       }
@@ -988,6 +992,15 @@ export class NodeAttach extends BaseAttach {
     this.celular = celular;
   }
 
+  setPhone(newPhone: number): boolean {
+    if (useful.isValidCellphone(newPhone)) {
+      this.celular = newPhone;
+      this._log(`New phone number: '${this.celular}'`);
+      return true;
+    }
+    return false;
+  }
+
   canUseGSM(): boolean {
     return useful.isValidCellphone(this.celular);
   }
@@ -1082,7 +1095,7 @@ export class NodeAttach extends BaseAttach {
   /**
    * Check if a CMD_SERVER_SIM_ALIVE can be sent to this controller, and if so, send it. Send the curren token to validate this operation.
    */
-  trySendSIMAlive() {
+  tryAddSIMAlive() {
     if (!isGSMAvailable()) {
       // this._log("GSM Not ready!")
       return;
@@ -1090,7 +1103,7 @@ export class NodeAttach extends BaseAttach {
     if (useful.timeInt() >= this.lastTimeSIMAliveSent + NodeAttach.TRY_SIM_ALIVE_INTERVAL_S) {
       this._addOne(new Message(codes.CMD_SERVER_SIM_ALIVE, 0, [this.gsmToken.toString()]));
       this.lastTimeSIMAliveSent = useful.timeInt();
-      // this._log("Keep alive request added")
+      this._log('SIM alive added');
     }
   }
 
@@ -1928,11 +1941,13 @@ export class NodeAttach extends BaseAttach {
     return this._tag;
   }
 
-  async insertNet(state: boolean) {
+  async insertNet(state: boolean, log: boolean = true) {
     await executeQuery(queries.insertNet, [this.controllerID, useful.getCurrentDate(), state]);
     await executeQuery(queries.insertCtrlState, [state, this.controllerID]);
     ControllerMapManager.update(this.controllerID, { conectado: state ? 1 : 0 });
-    this._log(`Inserting: Net state ${state ? 'conectado' : 'desconectado'}`);
+    if (log) {
+      this._log(`Inserting: Net state ${state ? 'conectado' : 'desconectado'}`);
+    }
   }
 
   /**
@@ -2333,7 +2348,7 @@ export class ManagerAttach extends BaseAttach {
                     this.getDBNameExecuteSend(parts, id, queries.energySelect, codes.VALUE_ENERGY, codes.VALUE_ENERGY_END, false);
                     break;
                   default:
-                    this._log(`Unknown get value. Received '${command}' Value ${useful.toHex(valueToGet)}}`);
+                    this._log(`Unknown get value. Received '${command}' Value ${useful.toHex(valueToGet)}`);
                     this._addUnknownValue(id);
                 }
               }
@@ -2922,11 +2937,20 @@ export class ManagerAttach extends BaseAttach {
         this._log(`Channel '${currentAttach.toString()}' will reconnect when the controller confirms the changes.`);
       }
     }
-    // Notify
+
     try {
       if (notify && currentAttach) {
-        // this._log('Notifying web about controller');
         const cd = currentAttach.completeData;
+
+        // Update node phone only when it was saved in database
+        if (notify) {
+          console.log(cd);
+          const newPhone = cd[27].getInt();
+          currentAttach.setPhone(newPhone);
+        }
+
+        // Notify only when it was saved in database
+        // this._log('Notifying web about controller');
         ControllerMapManager.update(currentAttach.controllerID, {
           nodo: cd[1].getString(),
           rgn_id: cd[2].getInt(),
@@ -2953,7 +2977,7 @@ export class ManagerAttach extends BaseAttach {
         });
       }
     } catch (e) {
-      console.log(`ERROR Notifying web about controller\n${e}`);
+      console.log(`ERROR Notifying web about controller or updating phone\n${e}`);
     }
     if (resetData && currentAttach) {
       currentAttach.completeData = [];
