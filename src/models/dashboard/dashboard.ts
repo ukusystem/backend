@@ -41,6 +41,7 @@ interface MaxTemperaturaRowData extends RowDataPacket {
   fecha: string;
   serie: string;
   ubicacion: string;
+  umbral_alarma: number;
 }
 
 interface TotalRowData extends RowDataPacket {
@@ -203,10 +204,10 @@ export class Dashboard {
   }, 'Dashboard.getTotalIngresoContrata');
 
   static getTotalAccesoTarjetaRemoto = handleErrorWithArgument<{ data: TotalAccesoTarjetaRemoto; start_date: string; end_date: string }, IPropMethod>(async ({ ctrl_id, isMonthly, date }) => {
-    const { endDate, startDate, year } = Dashboard.getStartEndDate(date, isMonthly);
-    const partitioning = `PARTITION (p${year % Dashboard.#NUM_PARTITION})`;
+    const { endDate, startDate } = Dashboard.getStartEndDate(date, isMonthly);
+    // const partitioning = `PARTITION (p${year % Dashboard.#NUM_PARTITION})`;
     const queryAccesoTarjeta = `SELECT CASE WHEN (p_id = 0 AND autorizacion = 0) THEN 'no_registrado_denegado' WHEN (p_id >= 1 AND autorizacion = 0) THEN 'registrado_denegado' WHEN (p_id >= 1 AND autorizacion = 1) THEN 'registrado_aceptado' ELSE 'otros' END AS acceso_tarjeta, COUNT(*) AS total FROM  ${'nodo' + ctrl_id}.registroacceso WHERE tipo = 1 AND fecha BETWEEN '${startDate}' AND '${endDate}' GROUP BY acceso_tarjeta`;
-    const queryAccesoRemoto = `SELECT COUNT(*) AS total_acceso_remoto FROM ${'nodo' + ctrl_id}.registrosalida ${partitioning} WHERE es_id = 22 AND estado = 1 AND fecha BETWEEN '${startDate}' AND '${endDate}'`;
+    const queryAccesoRemoto = `SELECT COUNT(*) AS total_acceso_remoto FROM nodo${ctrl_id}.registropeticion WHERE orden = 1 AND estd_id = 11 AND acceso_remoto = 1 AND fecha BETWEEN '${startDate}' AND '${endDate}'`;
 
     const resultAccesos: TotalAccesoTarjetaRemoto = { tarjeta: { total_noregistrado_denegado: 0, total_registrado_aceptado: 0, total_registrado_denegado: 0 }, remoto: { total_remoto: 0 } };
 
@@ -262,7 +263,7 @@ export class Dashboard {
     // subQuery1 quitar 'AND valor > 0'
     const subQuery1 = `SELECT rt.st_id, MAX(rt.valor) AS max_valor  FROM ${'nodo' + ctrl_id}.registrotemperatura ${partitioning} rt WHERE rt.fecha BETWEEN '${startDate}' AND '${endDate}' GROUP BY rt.st_id`; //  AND valor > 0 GROUP BY rt.st_id
     const subQuery2 = `SELECT max_temp.* , rt.rtmp_id , rt.fecha FROM ${'nodo' + ctrl_id}.registrotemperatura ${partitioning} rt INNER JOIN ( ${subQuery1} ) max_temp ON rt.st_id = max_temp.st_id AND rt.valor = max_temp.max_valor WHERE rt.fecha BETWEEN '${startDate}' AND '${endDate}'`;
-    const finalQuery2 = `SELECT maxtemperatura.* , st.serie , st.ubicacion FROM ( ${subQuery2} ) AS maxtemperatura INNER JOIN nodo1.sensortemperatura st ON maxtemperatura.st_id = st.st_id WHERE st.activo = 1 ORDER BY maxtemperatura.st_id ASC`;
+    const finalQuery2 = `SELECT maxtemperatura.* , st.serie , st.ubicacion, st.umbral_alarma FROM ( ${subQuery2} ) AS maxtemperatura INNER JOIN nodo1.sensortemperatura st ON maxtemperatura.st_id = st.st_id WHERE st.activo = 1 ORDER BY maxtemperatura.st_id ASC`;
 
     const maxTempSensor = await MySQL2.executeQuery<MaxTemperaturaRowData[]>({ sql: finalQuery2 });
 

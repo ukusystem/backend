@@ -68,6 +68,22 @@ export class UserNoficationController {
       return res.status(200).json(response);
     });
   }
+  get readAllNotification() {
+    return asyncErrorHandler(async (req: RequestWithUser, res: Response, _next: NextFunction) => {
+      const user = req.user;
+      if (user === undefined) {
+        return res.status(401).json({ message: 'No autorizado' });
+      }
+
+      await this.user_notification_repository.readAll(user.u_id);
+
+      const response: UpdateResponse<UserNofication> = {
+        message: 'Todas las notificaciónes han sido marcadas como leída.',
+      };
+
+      return res.status(200).json(response);
+    });
+  }
 
   get listOffsetPagination() {
     return asyncErrorHandler(async (req: RequestWithUser, res: Response, _next: NextFunction) => {

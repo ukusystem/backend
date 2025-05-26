@@ -14,9 +14,11 @@ import { ControllerMapManager } from '../../maps';
 import { cameraLogger } from '../../../services/loggers';
 import { CameraMotionManager } from './camera.motion.manager';
 import { NodoCameraMapManager } from '../../maps/nodo.camera';
-// import { notifyCamDisconnect } from '../../controllerapp/controller';
 import { CameraReconnect } from '../cam.reconnect';
 import { appConfig } from '../../../configs';
+import { ensureDirExists, toPosixPath } from '../../../utils/file';
+import { getExtesionFile } from '../../../utils/getExtensionFile';
+import { generateThumbs } from '../../controllerapp/src/frontTools';
 
 const TIMEOUT_DISCONNECT = 5;
 export class CameraMotionProcess implements CameraMotionProps, CameraMotionMethods {
@@ -110,7 +112,7 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
 
                     const snapshotSubDirectory = path.relative('./deteccionmovimiento', snapshotFilePath);
 
-                    insertPathToDB(snapshotSubDirectory, this.ctrl_id, this.cmr_id, 0);
+                    insertPathToDB(snapshotSubDirectory, this.ctrl_id, this.cmr_id, 0, snapshotFilePath);
                   }
                 });
               }
@@ -136,7 +138,7 @@ export class CameraMotionProcess implements CameraMotionProps, CameraMotionMetho
             if (appConfig.system.start_record_motion) {
               const recordSubDirectory = path.relative('./deteccionmovimiento', recordFilePath);
 
-              insertPathToDB(recordSubDirectory, this.ctrl_id, this.cmr_id, 1);
+              insertPathToDB(recordSubDirectory, this.ctrl_id, this.cmr_id, 1, recordFilePath);
             }
           }
           // else {
@@ -522,15 +524,39 @@ export function createMotionDetectionFolders(motionDetectionPath: string) {
   return folderPath;
 }
 
-export const insertPathToDB = (newPath: string, ctrl_id: number, cmr_id: number, tipo: 0 | 1) => {
+export const insertPathToDB = (relativePath: string, ctrl_id: number, cmr_id: number, tipo: 0 | 1, filePath?: string) => {
   (async () => {
     try {
-      const finalPath = newPath.split(path.sep).join(path.posix.sep);
+      const rutaRelativa = toPosixPath(relativePath);
       const fecha = dayjs().format('YYYY-MM-DD HH:mm:ss');
 
-      await MySQL2.executeQuery({ sql: `INSERT INTO ${'nodo' + ctrl_id}.registroarchivocamara (cmr_id,tipo,ruta,fecha) VALUES ( ? , ?, ?, ?)`, values: [cmr_id, tipo, finalPath, fecha] });
+      let thumbnailPathResult: string | null = null;
+      if (filePath) {
+        try {
+          const filePathResolve = path.resolve(filePath);
+          const thumbnailPath = path.resolve(getThumbPath(filePath));
+          const extensionFile = getExtesionFile(filePath);
+
+          ensureDirExists(path.dirname(thumbnailPath));
+          const { result, thumbBase64 } = await generateThumbs({ filepath: filePathResolve, type: extensionFile === 'jpg' ? 'image/jpg' : 'video/mp4' });
+
+          if (result) {
+            const imageBuffer = Buffer.from(thumbBase64, 'base64');
+            fs.writeFileSync(thumbnailPath, imageBuffer);
+            thumbnailPathResult = toPosixPath(path.relative('./deteccionmovimiento', thumbnailPath));
+          }
+        } catch (error) {
+          cameraLogger.debug(`Error al generar y guardar el thumbnail ctrl_id: ${ctrl_id} , cmr_id: ${cmr_id} , tipo: ${tipo} `, error);
+        }
+      }
+
+      await MySQL2.executeQuery({ sql: `INSERT INTO ${'nodo' + ctrl_id}.registroarchivocamara (cmr_id , tipo, ruta, thumbnail, fecha) VALUES ( ? , ?, ?, ?)`, values: [cmr_id, tipo, rutaRelativa, thumbnailPathResult, fecha] });
     } catch (error) {
       cameraLogger.error(`CameraMotionProcess | insertPathToDB | Error al insertar path a la db:\n`, error);
     }
   })();
 };
+
+function getThumbPath(originalPath: string): string {
+  return originalPath.replace(/\.\w+$/, '_thumb.jpg');
+}

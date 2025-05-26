@@ -301,6 +301,7 @@ export interface RegistroArchivoCamara {
   cmr_id: number;
   tipo: number;
   ruta: string;
+  thumbnail: string | null;
   fecha: string;
 }
 
@@ -376,6 +377,7 @@ export interface SensorTemperatura {
   ubicacion: string;
   actual: number;
   activo: number;
+  umbral_alarma: number;
 }
 
 export interface RegistroSeguridad {

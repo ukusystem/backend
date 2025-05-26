@@ -1,6 +1,5 @@
 import { MySQL2 } from '../../../database/mysql';
 import { Init } from '../../../models/init';
-import { PinEntradaNotifyManager } from '../../../models/system/system.pinentrada.notify';
 import { genericLogger } from '../../../services/loggers';
 import { filterUndefined } from '../../../utils/filterUndefined';
 import { AlarmManager } from '../alarm';
@@ -67,7 +66,7 @@ export class PinEntradaManager {
     }
   }
 
-  static add(ctrl_id: number, data: PinEntradaDTO) {
+  static #add(ctrl_id: number, data: PinEntradaDTO) {
     const currController = PinEntradaManager.#pines.get(ctrl_id);
     if (currController === undefined) {
       const newPinEntradaMap: MapPinEntrada = new Map();
@@ -80,7 +79,6 @@ export class PinEntradaManager {
     // notifications:
     PinEntradaManager.notifyListPinesEntrada(ctrl_id, data);
     AlarmManager.notifyPinEntrada(ctrl_id, data.pe_id, 'add');
-    PinEntradaNotifyManager.add(ctrl_id, data);
   }
 
   static #update(ctrl_id: number, pe_id_update: number, fieldsToUpdate: Partial<PinEntradaDTO>) {
@@ -88,7 +86,6 @@ export class PinEntradaManager {
     if (currController !== undefined) {
       const pinEntrada = currController.get(pe_id_update);
       if (pinEntrada !== undefined) {
-        const curPinEntrada = { ...pinEntrada };
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { pe_id, ...fieldsFiltered } = filterUndefined<PinEntradaDTO>(fieldsToUpdate);
 
@@ -104,7 +101,6 @@ export class PinEntradaManager {
 
         PinEntradaManager.notifyItemPinEntrada(ctrl_id, pinEntrada);
         AlarmManager.notifyPinEntrada(ctrl_id, pe_id_update, 'update');
-        PinEntradaNotifyManager.update(ctrl_id, curPinEntrada, fieldsFiltered);
       }
     }
   }
@@ -116,7 +112,7 @@ export class PinEntradaManager {
     if (currController === undefined) {
       //  only add
       if (activo !== undefined && descripcion !== undefined && ee_id !== undefined && estado !== undefined) {
-        PinEntradaManager.add(ctrl_id, { pe_id, activo, descripcion, ee_id, estado, pin });
+        PinEntradaManager.#add(ctrl_id, { pe_id, activo, descripcion, ee_id, estado, pin });
       }
     } else {
       const hasPinEntrada = currController.has(pe_id);
@@ -124,7 +120,7 @@ export class PinEntradaManager {
         PinEntradaManager.#update(ctrl_id, pe_id, data);
       } else {
         if (activo !== undefined && descripcion !== undefined && ee_id !== undefined && estado !== undefined) {
-          PinEntradaManager.add(ctrl_id, { pe_id, activo, descripcion, ee_id, estado, pin });
+          PinEntradaManager.#add(ctrl_id, { pe_id, activo, descripcion, ee_id, estado, pin });
         }
       }
     }
@@ -176,7 +172,7 @@ export class PinEntradaManager {
           });
 
           for (const pinEnt of pinesEntrada) {
-            PinEntradaManager.add(ctrl_id, pinEnt);
+            PinEntradaManager.#add(ctrl_id, pinEnt);
           }
         } catch (error) {
           genericLogger.error(`PinEntradaManager | Error al inicializar pines de entrada | ctrl_id : ${ctrl_id}`, error);

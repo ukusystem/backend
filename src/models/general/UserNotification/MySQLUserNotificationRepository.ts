@@ -15,6 +15,9 @@ interface TotalUserNotificationRowData extends RowDataPacket {
 }
 
 export class MySQLUserNotificationRepository implements UserNotificationRepository {
+  async readAll(u_id: number): Promise<void> {
+    await MySQL2.executeQuery<ResultSetHeader>({ sql: `UPDATE general.notificacion_usuario SET fecha_lectura = ? , leido = 1 WHERE u_id = ? AND leido = 0`, values: [dayjs().format('YYYY-MM-DD HH:mm:ss'), u_id] });
+  }
   async findByUuId(u_id: number, n_uuid: string): Promise<Nullable<UserNofication>> {
     const userNotifications = await MySQL2.executeQuery<UserNotificationRowData[]>({ sql: `SELECT * FROM general.notificacion_usuario WHERE u_id = ? AND  n_uuid = ? LIMIT 1`, values: [u_id, n_uuid] });
     return userNotifications[0];
