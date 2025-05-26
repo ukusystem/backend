@@ -27,6 +27,7 @@ import { RubroController } from '../controllers/general/rubro.controller';
 import { RolController } from '../controllers/general/rol.controller';
 import { CargoController } from '../controllers/general/cargo.controller';
 import { EquipoAccesoController } from '../controllers/general/equipo.acceso.controller';
+import { suscribeDeviceSchema } from '../models/general/UserNotification/schemas/suscribeDeviceSchema';
 
 const mysqlControladorRepository = new MySQLContraldorRepository();
 const mysqlUserNotificationRepository = new MySQLUserNotificationRepository();
@@ -69,7 +70,7 @@ generalRoutes.patch('/notifications/:nu_id/read', authenticate, rolChecker([User
 // PATCH /notifications/read_all Marcar como leido todas las notificaciones
 generalRoutes.patch('/notifications/read_all', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor, UserRol.Invitado]), userNoficationController.readAllNotification);
 
-generalRoutes.post('/notifications/suscribe_divice', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor, UserRol.Invitado]), userNoficationController.suscribeToFcmTopic);
+generalRoutes.post('/notifications/suscribe_divice', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor, UserRol.Invitado]), requestValidator({ body: suscribeDeviceSchema }), userNoficationController.suscribeToFcmTopic);
 
 // ========== Acceso ==========
 // GET	/accesos?limit=number&offset=number Listar todos los accesos por paginacion
