@@ -41,6 +41,7 @@ interface MaxTemperaturaRowData extends RowDataPacket {
   fecha: string;
   serie: string;
   ubicacion: string;
+  umbral_alarma: number;
 }
 
 interface TotalRowData extends RowDataPacket {
@@ -262,7 +263,7 @@ export class Dashboard {
     // subQuery1 quitar 'AND valor > 0'
     const subQuery1 = `SELECT rt.st_id, MAX(rt.valor) AS max_valor  FROM ${'nodo' + ctrl_id}.registrotemperatura ${partitioning} rt WHERE rt.fecha BETWEEN '${startDate}' AND '${endDate}' GROUP BY rt.st_id`; //  AND valor > 0 GROUP BY rt.st_id
     const subQuery2 = `SELECT max_temp.* , rt.rtmp_id , rt.fecha FROM ${'nodo' + ctrl_id}.registrotemperatura ${partitioning} rt INNER JOIN ( ${subQuery1} ) max_temp ON rt.st_id = max_temp.st_id AND rt.valor = max_temp.max_valor WHERE rt.fecha BETWEEN '${startDate}' AND '${endDate}'`;
-    const finalQuery2 = `SELECT maxtemperatura.* , st.serie , st.ubicacion FROM ( ${subQuery2} ) AS maxtemperatura INNER JOIN nodo1.sensortemperatura st ON maxtemperatura.st_id = st.st_id WHERE st.activo = 1 ORDER BY maxtemperatura.st_id ASC`;
+    const finalQuery2 = `SELECT maxtemperatura.* , st.serie , st.ubicacion, st.umbral_alarma FROM ( ${subQuery2} ) AS maxtemperatura INNER JOIN nodo1.sensortemperatura st ON maxtemperatura.st_id = st.st_id WHERE st.activo = 1 ORDER BY maxtemperatura.st_id ASC`;
 
     const maxTempSensor = await MySQL2.executeQuery<MaxTemperaturaRowData[]>({ sql: finalQuery2 });
 

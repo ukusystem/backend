@@ -686,6 +686,7 @@ export class BaseAttach extends Mortal {
       // ctrl_id: nodeID,
       serie: serie ?? undefined,
       ubicacion: desc ?? undefined,
+      umbral_alarma: undefined, // new
     };
     // this._log(`Notifying web about tempertaure node:${nodeID} id:${stID} active:${newTemp.activo}.`);
     if (active === 0) {

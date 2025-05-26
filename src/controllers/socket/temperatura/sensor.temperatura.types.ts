@@ -18,6 +18,14 @@ export interface SenTemperaturaAddUpdateDTO {
   ubicacion: string | undefined;
   actual: number | undefined;
   activo: number | undefined;
+  umbral_alarma: number | undefined;
+}
+
+export interface NotifyMaxTemperatureDTO {
+  ctrl_id: number;
+  st_id: number;
+  value: number;
+  datetime: string;
 }
 
 export interface SensorTemperaturaRowData extends RowDataPacket, SensorTemperatura {}
