@@ -377,6 +377,7 @@ export interface SensorTemperatura {
   ubicacion: string;
   actual: number;
   activo: number;
+  umbral_alarma: number;
 }
 
 export interface RegistroSeguridad {

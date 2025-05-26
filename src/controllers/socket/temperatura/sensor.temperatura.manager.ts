@@ -1,9 +1,24 @@
 import { MySQL2 } from '../../../database/mysql';
 import { Init } from '../../../models/init';
+import { ControllerMapManager } from '../../../models/maps';
 import { genericLogger } from '../../../services/loggers';
+import { mqttService } from '../../../services/mqtt/MqttService';
 import { filterUndefined } from '../../../utils/filterUndefined';
 import { TemperatureManager } from '../temperature.region/temperature.manager';
-import { ControllerSenTempMap, SensorTemperaturaObserver, SenTempAction, SenTempState, SocketSenTemperatura, ObserverSenTempMap, SenTemperarturaObj, SenTemperaturaMap, SensorTemperaturaRowData, SenTemperaturaAddUpdateDTO, SenTemperaturaSocketDTO } from './sensor.temperatura.types';
+import {
+  ControllerSenTempMap,
+  SensorTemperaturaObserver,
+  SenTempAction,
+  SenTempState,
+  SocketSenTemperatura,
+  ObserverSenTempMap,
+  SenTemperarturaObj,
+  SenTemperaturaMap,
+  SensorTemperaturaRowData,
+  SenTemperaturaAddUpdateDTO,
+  SenTemperaturaSocketDTO,
+  NotifyMaxTemperatureDTO,
+} from './sensor.temperatura.types';
 
 export class SenTempSocketObserver implements SensorTemperaturaObserver {
   #socket: SocketSenTemperatura;
@@ -134,20 +149,20 @@ export class SensorTemperaturaManager {
 
   static add_update(ctrl_id: number, sensor: SenTemperaturaAddUpdateDTO) {
     const currController = SensorTemperaturaManager.#sensores.get(ctrl_id);
-    const { st_id, activo, actual, serie, ubicacion } = sensor;
+    const { st_id, activo, actual, serie, ubicacion, umbral_alarma } = sensor;
 
     if (currController === undefined) {
       //  only add
-      if (activo !== undefined && actual !== undefined && serie !== undefined && ubicacion !== undefined) {
-        SensorTemperaturaManager.#add(ctrl_id, { st_id, activo, actual, serie, ubicacion });
+      if (activo !== undefined && actual !== undefined && serie !== undefined && ubicacion !== undefined && umbral_alarma !== undefined) {
+        SensorTemperaturaManager.#add(ctrl_id, { st_id, activo, actual, serie, ubicacion, umbral_alarma });
       }
     } else {
       const hasMedEnergia = currController.has(st_id);
       if (hasMedEnergia) {
         SensorTemperaturaManager.#update(ctrl_id, st_id, sensor);
       } else {
-        if (activo !== undefined && actual !== undefined && serie !== undefined && ubicacion !== undefined) {
-          SensorTemperaturaManager.#add(ctrl_id, { st_id, activo, actual, serie, ubicacion });
+        if (activo !== undefined && actual !== undefined && serie !== undefined && ubicacion !== undefined && umbral_alarma !== undefined) {
+          SensorTemperaturaManager.#add(ctrl_id, { st_id, activo, actual, serie, ubicacion, umbral_alarma });
         }
       }
     }
@@ -174,39 +189,22 @@ export class SensorTemperaturaManager {
     }
     return undefined;
   }
-}
 
-// (async () => {
-//   setInterval(() => {
-//     const getRandomNumber = (min: number, max: number) => {
-//       return Math.floor(Math.random() * (max - min + 1)) + min;
-//     };
-//     const randomTemperature = getRandomNumber(0, 50);
-//     const newDTO: SenTemperaturaAddUpdateDTO = {
-//       st_id: 1,
-//       serie: 'FDSJFDSIHFASD',
-//       ubicacion: `Ubicación 1 ${randomTemperature}`,
-//       actual: randomTemperature,
-//       activo: 1,
-//     };
-//     const ctrl_id = 1;
-//     console.log('actulizando: ', ctrl_id, newDTO);
-//     SensorTemperaturaManager.add_update(ctrl_id, newDTO);
-//   }, 10000);
-//   setTimeout(() => {
-//     console.log('Eliminando', 1, 2);
-//     SensorTemperaturaManager.delete(1, 2);
-//   }, 40000);
-//   setTimeout(() => {
-//     const newDTO: SenTemperaturaAddUpdateDTO = {
-//       st_id: 30,
-//       serie: 'fds3289sdf',
-//       ubicacion: `Ubicación Nuevo `,
-//       actual: 30,
-//       activo: 1,
-//     };
-//     const ctrl_id = 1;
-//     console.log('Agregando ====', ctrl_id, newDTO);
-//     SensorTemperaturaManager.add_update(ctrl_id, newDTO);
-//   }, 20000);
-// })();
+  static notifyMaxTemperature(data: NotifyMaxTemperatureDTO) {
+    const { ctrl_id, st_id, value, datetime } = data;
+    const controller = ControllerMapManager.getController(ctrl_id, true);
+
+    const senTemp = SensorTemperaturaManager.getSenTempItem(ctrl_id, st_id);
+
+    if (controller === undefined || senTemp === undefined || senTemp.activo === SenTempState.Desactivado) {
+      return;
+    }
+
+    mqttService.publisAdminNotification({
+      evento: 'max.temperature.exceeded',
+      titulo: 'Temperatura máxima excedida',
+      mensaje: `El sensor ( Ubicación: ${senTemp.ubicacion} , Nodo: ${controller.nodo}) ha superado el umbral máximo configurado de ${senTemp.umbral_alarma}. Valor registrado: ${value}. Se requiere verificación inmediata.`,
+      fecha: datetime,
+    });
+  }
+}

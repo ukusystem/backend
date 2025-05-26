@@ -36,22 +36,12 @@ export class TemperatureManager {
 
   static notifyTemperature(ctrl_id: number, data: TemperatureSocketDTO, action: TemperatureActionType): void {
     if (TemperatureManager.#observer !== null) {
-      // const temperatureFound = SensorTemperaturaManager.getSenTempItem(ctrl_id, st_id);
-      // if (temperatureFound !== undefined) {
-      //   TemperatureManager.#observer.emitTemperature(ctrl_id, temperatureFound, action);
-      // }
       TemperatureManager.#observer.emitTemperature(ctrl_id, data, action);
     }
   }
 
   static notifyController(ctrl_id: number, data: ControllerDataTemperature, action: TemperatureActionType): void {
     if (TemperatureManager.#observer !== null) {
-      // const controller = ControllerMapManager.getController(ctrl_id);
-      // if (controller !== undefined) {
-      //   const { rgn_id, ctrl_id, nodo, activo, conectado, seguridad, modo, descripcion, direccion } = controller;
-      //   const controllerAlarm: ControllerDataTemperature = { rgn_id, ctrl_id, nodo, activo, conectado, seguridad, modo, descripcion, direccion };
-      //   TemperatureManager.#observer.emitController(ctrl_id, controllerAlarm, action);
-      // }
       TemperatureManager.#observer.emitController(ctrl_id, data, action);
     }
   }
