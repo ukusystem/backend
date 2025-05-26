@@ -1218,10 +1218,11 @@ export class NodeAttach extends BaseAttach {
           // this._log(`Received temperature alarm '${command}'`);
           break;
         }
-        // const tempID = alarmData[0].getInt();
-        // const tempValue = alarmData[1].getInt();
-        // const tempTime = alarmData[2].getInt();
+        const tempID = alarmData[0].getInt();
+        const tempValue = alarmData[1].getInt();
+        const tempTime = alarmData[2].getInt();
         // this._log(`Received temperature alarm id=${tempID} value=${tempValue} time=${tempTime}`);
+        sm.SensorTemperaturaManager.notifyMaxTemperature({ ctrl_id: this.controllerID, st_id: tempID, value: tempValue, datetime: useful.formatTimestamp(tempTime) });
         break;
       case codes.VALUE_ALL_ENABLES:
         // this._log(`Received all enables '${command}'`);
@@ -1351,9 +1352,17 @@ export class NodeAttach extends BaseAttach {
           if (!addrData || addrData.length < 2) continue;
           const sensorID = addrData[0].getInt();
           const sensorThres = addrData[1].toString();
+          const sensorThresNumber = addrData[1].getInt();
           thresParamForUpdate.push([sensorThres, sensorID]);
           // this._log(`thres: ${sensorThres} id: ${sensorID}`);
-          // Don't notify since this value is not shown in real time
+          sm.SensorTemperaturaManager.add_update(this.controllerID, {
+            activo: undefined,
+            actual: undefined,
+            serie: undefined,
+            st_id: sensorID,
+            ubicacion: undefined,
+            umbral_alarma: sensorThresNumber,
+          });
         }
         // this._log(`Parts remaining ${parts.length}: '${parts}'`)
         // this._log(`Received ${thresParamForUpdate.length} temperature addresses.`)
@@ -1412,6 +1421,7 @@ export class NodeAttach extends BaseAttach {
           break;
         }
         const sensorIDThres = thresChangeData[0].getInt();
+        const sensorThresNumber = thresChangeData[1].getInt();
         const sensorThres = thresChangeData[1].toString();
         const changeThresRes = executeQuery(BaseAttach.formatQueryWithNode(queries.updateAlarmThreshold, this.controllerID), [sensorThres, sensorIDThres]);
         if (!changeThresRes) {
@@ -1419,7 +1429,14 @@ export class NodeAttach extends BaseAttach {
           break;
         }
         this._log(`Temperature sensor ID = ${sensorIDThres} alarm threshold changed to '${sensorThres}'`);
-        // Don't notify since this value is not shown in real time
+        sm.SensorTemperaturaManager.add_update(this.controllerID, {
+          activo: undefined,
+          actual: undefined,
+          serie: undefined,
+          st_id: sensorIDThres,
+          ubicacion: undefined,
+          umbral_alarma: sensorThresNumber,
+        });
         break;
       case codes.VALUE_INPUT_CTRL:
       case codes.VALUE_OUTPUT_CTRL:
