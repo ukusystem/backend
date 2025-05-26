@@ -204,7 +204,7 @@ export class BaseAttach extends Mortal {
       if (!first) {
         return false;
       }
-      const res = await sendSMS(first.message, number);
+      const res = await sendSMS(codes.SEP_SIM + first.message, number);
       if (!res) {
         this._log('ERROR Sending SMS');
         return false;
@@ -992,6 +992,16 @@ export class NodeAttach extends BaseAttach {
     this.celular = celular;
   }
 
+  setGSMToken(newToken: number) {
+    const bigToken = BigInt(newToken);
+    if (bigToken !== codes.GSM_EMPTY_TOKEN) {
+      this._log('ERROR Token received was THE empty token');
+    } else {
+      this.gsmToken = bigToken;
+      this._log(`New GSM token for controller ID=${this.gsmToken} set!`);
+    }
+  }
+
   setPhone(newPhone: number): boolean {
     if (useful.isValidCellphone(newPhone)) {
       this.celular = newPhone;
@@ -1096,8 +1106,8 @@ export class NodeAttach extends BaseAttach {
    * Check if a CMD_SERVER_SIM_ALIVE can be sent to this controller, and if so, send it. Send the curren token to validate this operation.
    */
   tryAddSIMAlive() {
-    if (!isGSMAvailable()) {
-      // this._log("GSM Not ready!")
+    if (!isGSMAvailable() || this.gsmToken !== codes.GSM_EMPTY_TOKEN) {
+      // this._log("GSM Not ready or token is already set!")
       return;
     }
     if (useful.timeInt() >= this.lastTimeSIMAliveSent + NodeAttach.TRY_SIM_ALIVE_INTERVAL_S) {
@@ -1431,6 +1441,15 @@ export class NodeAttach extends BaseAttach {
       case codes.VALUE_CTRL_STATE:
         this.mirrorMessage(command, true);
         break;
+      case codes.VALUE_END_SYNC:
+        this._log('Received end of sync');
+        const syncData = this._parseMessage(parts, queries.bigParse, id, false);
+        if (syncData) {
+          const newToken = syncData[0].getInt();
+          this._log(`New token: ${newToken}`);
+          this.setGSMToken(newToken);
+        }
+        break;
 
       // Should be mirrored with the node ID appended. These are event for the technician.
       case codes.VALUE_SD:
@@ -1700,7 +1719,7 @@ export class NodeAttach extends BaseAttach {
         this._notifyOutput(orderData[0].getInt(), false, this.controllerID, null, null, null, null, newOrder);
         break;
       case codes.VALUE_SECURITY_STATE:
-        // this._log(`Received security status from controller '${command}'`)
+        this._log(`Received security status from controller '${command}'`);
         const securityData = this._parseMessage(parts, queries.securityStateParse, id, false);
         if (securityData) {
           const security = securityData[0].getInt() === codes.VALUE_ARM;

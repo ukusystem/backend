@@ -293,7 +293,7 @@ export class Main {
           node.tryAddSIMAlive();
 
           sendingGSM = true;
-          // await node.sendOneGSM(node.celular);
+          await node.sendOneGSM(node.celular);
           sendingGSM = false;
         }
       }

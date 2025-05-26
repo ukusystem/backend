@@ -51,7 +51,7 @@ interface MyEventData {
  */
 const configs: Config[] = [
   { command: 'AT\n', regex: /\r\nOK\r\n/ },
-  { command: 'ATE1\n', regex: /\r\nOK\r\n/ },
+  { command: 'ATE0\n', regex: /\r\nOK\r\n/ },
   { command: 'AT+CMGF=1\n', regex: /\r\nOK\r\n/ },
   { command: 'AT+CNMI=1,2,0,0,0\n', regex: /\r\nOK\r\n/ },
 ];
@@ -266,7 +266,8 @@ const configCallback = async () => {
     log('GSM Configured!');
     clearInterval(configureTimeout);
     configureTimeout = undefined;
-    sendSMS('Listo', 974283546);
+    // Test message. Comment for production
+    // sendSMS('Listo', 974283546);
   } else {
     log('ERROR Configuring module');
     configureTimeout = setTimeout(configCallback, TRY_CONFIGURE_PERIOD_MS);
