@@ -199,7 +199,7 @@ export class BaseAttach extends Mortal {
    */
   async sendOneGSM(number: number): Promise<boolean> {
     if (this.sendBuffer.length > 0 && isGSMAvailable()) {
-      const l = this.sendBuffer.length;
+      // const l = this.sendBuffer.length;
       const first = this.sendBuffer[0];
       if (!first) {
         return false;
@@ -209,7 +209,7 @@ export class BaseAttach extends Mortal {
         this._log('ERROR Sending SMS');
         return false;
       }
-      console.log(`Sending one SMS from ${l}`);
+      // console.log(`Sending one SMS from ${l}`);
       if (first.logOnSend) {
         this._log(`Sent SMS: '${useful.trimString(first.message)}'`);
       }
@@ -1001,6 +1001,10 @@ export class NodeAttach extends BaseAttach {
       this.gsmToken = bigToken;
       this._log(`New GSM token for controller ID=${this.gsmToken} set!`);
     }
+  }
+
+  phoneMatch(phone: number): boolean {
+    return this.celular === phone;
   }
 
   setPhone(newPhone: number): boolean {
@@ -3346,6 +3350,15 @@ export class Selector {
       }
       node.askSendFirmware(firmwareChunks, version);
     }
+  }
+
+  getNodeByNumber(phone: number): NodeAttach | null {
+    for (const nodeAttach of this.nodeAttachments) {
+      if (nodeAttach.phoneMatch(phone)) {
+        return nodeAttach;
+      }
+    }
+    return null;
   }
 
   /**

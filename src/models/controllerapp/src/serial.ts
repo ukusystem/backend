@@ -6,15 +6,16 @@ import { GeneralString } from './db2';
 import { Logger } from './logger';
 import { EventEmitter } from 'stream';
 import { isValidCellphone } from './useful';
+import { Selector } from './baseAttach';
 
 let currentPort: SerialPort | null = null;
 // let lastMessageSent = true;
 let currentLogger: Logger | null = null;
 const TAG = '(GSM) ';
-const emptyBuffer = Buffer.alloc(0);
-let bufferData: Buffer = emptyBuffer;
-let lastDataReceived: number = -1;
-const DATA_TIMEOUT_MS = 3 * 1000;
+// const emptyBuffer = Buffer.alloc(0);
+// let bufferData: Buffer = emptyBuffer;
+// let lastDataReceived: number = -1;
+// const DATA_TIMEOUT_MS = 3 * 1000;
 const TIMEOUT_CHECK_PERIOD_MS = 100;
 const ALWAYS_OPEN_INTERVAL_MS = 3 * 1000;
 const TRY_CONFIGURE_PERIOD_MS = 10 * 1000;
@@ -24,9 +25,19 @@ let configureTimeout: NodeJS.Timeout | undefined = undefined;
 const br = 115200; // 9600
 let gsmConfigured = false;
 let currentConfigIndex = -1;
+let currentSelector: Selector | null = null;
+
+const generalBuffer = Buffer.alloc(1 * 1024);
+let bufferIndex = 0;
+const LF = Buffer.from([10]);
+const CRLF = Buffer.from([13, 10]);
+const smsStart = Buffer.from('+CMT: "+51');
+let waitingSMSbody = false;
+let senderNumber = 0;
 
 // Known codes
 const unplugedSIM = /\r\n\+CPIN: NOT READY\r\n/;
+const possibleResponses = /OK|ERROR/;
 
 class MyEmitter extends EventEmitter {}
 
@@ -34,11 +45,11 @@ const myEmitter = new MyEmitter();
 
 interface Config {
   command: string;
-  regex: RegExp;
+  regex: string;
 }
 
 interface MyEventData {
-  response: Buffer;
+  response: boolean;
   index: number;
 }
 
@@ -50,13 +61,19 @@ interface MyEventData {
  * These `regex` fields should contain special not printable characters like `\r` or `\n` so other type of messages cannot match.
  */
 const configs: Config[] = [
-  { command: 'AT\n', regex: /\r\nOK\r\n/ },
-  { command: 'ATE0\n', regex: /\r\nOK\r\n/ },
-  { command: 'AT+CMGF=1\n', regex: /\r\nOK\r\n/ },
-  { command: 'AT+CNMI=1,2,0,0,0\n', regex: /\r\nOK\r\n/ },
+  { command: 'AT\n', regex: 'OK' },
+  { command: 'ATE0\n', regex: 'OK' },
+  { command: 'AT+CMGF=1\n', regex: 'OK' },
+  { command: 'AT+CNMI=2,2,0,0,0\n', regex: 'OK' },
 ];
 
 let currentPath = '';
+
+export function setGSMSelector(selector: Selector | null) {
+  if (selector !== null) {
+    currentSelector = selector;
+  }
+}
 
 /**
  * Get the current list of COM ports available in the OS
@@ -150,31 +167,28 @@ export async function checkPath() {
  * Check if data has been inactive for a period of time and if so, consider it a complete message ans process it.
  */
 function checkDataTimeout() {
-  if (lastDataReceived >= 0 && Date.now() > lastDataReceived + DATA_TIMEOUT_MS) {
-    log(`Received data (${bufferData.length}): '${bufferData.toString()}'`);
-    if (bufferData.length === 1) {
-      log(`Hex: ${bufferData.toString('hex')}`);
-    }
-    lastDataReceived = -1;
-
-    // Unsolicited codes
-    if (unplugedSIM.test(bufferData.toString('utf8'))) {
-      log('SIM unplugged!');
-      configureGSM();
-    }
-
-    if (gsmConfigured) {
-      // Process data IF CONFIGURED
-      // TODO
-    } else {
-      // If not configured, data can still be messages from server, but only responses to configs are processed.
-      const eventData: MyEventData = { response: bufferData, index: currentConfigIndex };
-      myEmitter.emit('config_response', eventData);
-    }
-
-    // Empty buffer and save remaining
-    bufferData = emptyBuffer;
-  }
+  // if (lastDataReceived >= 0 && Date.now() > lastDataReceived + DATA_TIMEOUT_MS) {
+  //   log(`Received data (${bufferData.length}): '${bufferData.toString()}'`);
+  //   if (bufferData.length === 1) {
+  //     log(`Hex: ${bufferData.toString('hex')}`);
+  //   }
+  //   lastDataReceived = -1;
+  //   // Unsolicited codes
+  //   if (unplugedSIM.test(bufferData.toString('utf8'))) {
+  //     log('SIM unplugged!');
+  //     configureGSM();
+  //   }
+  //   if (gsmConfigured) {
+  //     // Process data IF CONFIGURED
+  //     // TODO
+  //   } else {
+  //     // If not configured, data can still be messages from server, but only responses to configs are processed.
+  //     const eventData: MyEventData = { response: bufferData, index: currentConfigIndex };
+  //     myEmitter.emit('config_response', eventData);
+  //   }
+  //   // Empty buffer and save remaining
+  //   bufferData = emptyBuffer;
+  // }
 }
 
 /**
@@ -208,13 +222,84 @@ function keepPortOpenTask() {
     dataInterval = setInterval(checkDataTimeout, TIMEOUT_CHECK_PERIOD_MS);
 
     // Register events
-    currentPort?.on('data', (data) => {
+    currentPort?.on('data', (data: Buffer) => {
       if (data.length < 1) {
         return;
       }
+      // log(`Chunk ${data.length}`);
       // log(`Received chunk: '${data}'`);
-      bufferData = Buffer.concat([bufferData, data]);
-      lastDataReceived = Date.now();
+      // bufferData = Buffer.concat([bufferData, data]);
+      // lastDataReceived = Date.now();
+
+      // Save the data received
+      data.copy(generalBuffer, bufferIndex, 0);
+      bufferIndex += data.length;
+      // log(`Buffered (+${data.length}): '${generalBuffer.toString('utf8')}'`);
+      // console.log(generalBuffer);
+
+      // Parse data as lines of data
+
+      // If new data includes new line
+      if (data.includes(LF)) {
+        // log(`Includes LF`);
+
+        let lineStart = 0;
+        let crlfIndex = generalBuffer.indexOf(CRLF, 0);
+        while (crlfIndex >= 0) {
+          // If CRLF is found, then buffered data is one or more complete line.
+          // Parse each line
+          const rawLine = generalBuffer.subarray(lineStart, crlfIndex).toString('utf8');
+          log(`CRLF found. Raw line: '${rawLine}'`);
+
+          // If configured, SMS can be proccessed
+          if (gsmConfigured) {
+            // If it is a sms header
+            if (generalBuffer.indexOf(smsStart) === 0) {
+              waitingSMSbody = true;
+              // Assuming the line starts with '+CMT: "+51xxxxxxxxx"'
+              senderNumber = parseInt(generalBuffer.subarray(10, 19).toString('utf8'));
+              senderNumber = Number.isNaN(senderNumber) ? 0 : senderNumber;
+            } else if (waitingSMSbody) {
+              // Then this line is the body
+              // const line = generalBuffer.subarray(lineStart, crlfIndex).toString('utf8');
+              waitingSMSbody = false;
+              log(`Received SMS line from (${senderNumber}): '${rawLine}'`);
+              // Process line as command. Add line to the received buffer
+              // TODO
+              const nodeAttach = currentSelector?.getNodeByNumber(senderNumber);
+              nodeAttach?.addData(Buffer.from(rawLine));
+            } else if (unplugedSIM.test(rawLine)) {
+              log('SIM unplugged!');
+              configureGSM();
+            }
+          } else {
+            const isResponse = possibleResponses.test(rawLine);
+            if (isResponse) {
+              const eventData: MyEventData = {
+                response: rawLine.includes(configs[currentConfigIndex].regex),
+                index: currentConfigIndex,
+              };
+              myEmitter.emit('config_response', eventData);
+            }
+          }
+
+          // Find next line
+          lineStart = crlfIndex + CRLF.length;
+          crlfIndex = generalBuffer.indexOf(CRLF, lineStart);
+        }
+
+        // If at least one complete line was found
+        if (lineStart > 0) {
+          // Displace the subarray that was processed
+          generalBuffer.copy(generalBuffer, 0, lineStart, bufferIndex);
+          generalBuffer.fill(0, bufferIndex - lineStart);
+          bufferIndex = bufferIndex - lineStart;
+          // bufferIndex = 0;
+        } else {
+          // No need to displace buffer, since none of it was processed
+        }
+        // Since it was a complete line, clear buffer
+      }
     });
     currentPort?.on('error', (error) => {
       log(`ERROR Reading serial GSM: '${error}'`);
@@ -276,8 +361,8 @@ const configCallback = async () => {
 
 const configExecutor = (resolve: (arg: boolean) => void) => {
   myEmitter.once<MyEventData>('config_response', (data: MyEventData) => {
-    const res = configs[data.index].regex.test(data.response.toString('utf8'));
-    // log(`Config index ${data.index}: ${res ? 'OK' : 'FAILED'}`);
+    const res = data.response;
+    log(`Config index ${data.index}: ${res ? 'OK' : 'FAILED'}`);
     resolve(res);
   });
 };
@@ -316,7 +401,7 @@ async function sendUART(message: Buffer, logOK: boolean = true): Promise<boolean
         reject(false);
       } else {
         if (logOK) {
-          log(`Sent: '${message}'`);
+          // log(`Sent: '${message}'`);
         }
         resolve(true);
       }
