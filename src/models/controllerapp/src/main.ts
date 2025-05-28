@@ -162,7 +162,7 @@ export class Main {
     }
 
     /* Load serial */
-    await initGSM(this.logger);
+    await initGSM(this.logger, this.selector);
 
     /* Load data from database */
 

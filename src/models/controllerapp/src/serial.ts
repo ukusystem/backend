@@ -19,6 +19,7 @@ const TAG = '(GSM) ';
 const TIMEOUT_CHECK_PERIOD_MS = 100;
 const ALWAYS_OPEN_INTERVAL_MS = 3 * 1000;
 const TRY_CONFIGURE_PERIOD_MS = 10 * 1000;
+const ONE_CONFIG_TIMEOUT = 10 * 1000;
 let dataInterval: NodeJS.Timeout;
 let alwaysOpenInterval: NodeJS.Timeout;
 let configureTimeout: NodeJS.Timeout | undefined = undefined;
@@ -36,7 +37,7 @@ let waitingSMSbody = false;
 let senderNumber = 0;
 
 // Known codes
-const unplugedSIM = /\r\n\+CPIN: NOT READY\r\n/;
+const unplugedSIM = '+CPIN: NOT READY';
 const possibleResponses = /OK|ERROR/;
 
 class MyEmitter extends EventEmitter {}
@@ -69,8 +70,8 @@ const configs: Config[] = [
 
 let currentPath = '';
 
-export function setGSMSelector(selector: Selector | null) {
-  if (selector !== null) {
+function setSelectorForGSM(selector: Selector) {
+  if (selector) {
     currentSelector = selector;
   }
 }
@@ -126,9 +127,11 @@ function closeGSMSerial(logResult: boolean = false) {
 /**
  * Start values and tasks for GSM
  */
-export async function initGSM(logger: Logger | null = currentLogger) {
+export async function initGSM(logger: Logger | null = currentLogger, selector: Selector) {
   // Assign logger
   currentLogger = logger;
+  // Set selector
+  setSelectorForGSM(selector);
   // Update path
   await checkPath();
   alwaysOpenInterval = setInterval(keepPortOpenTask, ALWAYS_OPEN_INTERVAL_MS);
@@ -251,7 +254,7 @@ function keepPortOpenTask() {
           const rawLine = generalBuffer.subarray(lineStart, crlfIndex).toString('utf8');
           log(`CRLF found. Raw line: '${rawLine}'`);
 
-          // If configured, SMS can be proccessed
+          // If configured, SMS can be processed
           if (gsmConfigured) {
             // If it is a sms header
             if (generalBuffer.indexOf(smsStart) === 0) {
@@ -262,13 +265,18 @@ function keepPortOpenTask() {
             } else if (waitingSMSbody) {
               // Then this line is the body
               // const line = generalBuffer.subarray(lineStart, crlfIndex).toString('utf8');
-              waitingSMSbody = false;
               log(`Received SMS line from (${senderNumber}): '${rawLine}'`);
               // Process line as command. Add line to the received buffer
               // TODO
               const nodeAttach = currentSelector?.getNodeByNumber(senderNumber);
-              nodeAttach?.addData(Buffer.from(rawLine));
-            } else if (unplugedSIM.test(rawLine)) {
+              waitingSMSbody = false;
+              senderNumber = 0;
+              if (nodeAttach?.addData(Buffer.from(rawLine))) {
+                log('Added to pending to process');
+              } else {
+                log('ERROR Adding to pending to process. Node attachment not found?');
+              }
+            } else if (rawLine.includes(unplugedSIM)) {
               log('SIM unplugged!');
               configureGSM();
             }
@@ -335,7 +343,7 @@ function configureGSM() {
 
 const configCallback = async () => {
   let res = false;
-  log('Attempt to configure');
+  log('Attempt to configure SIM800L');
   // Send every configuration in the list waiting for each to get a response before sending the next
   for (let i = 0; i < configs.length; i++) {
     currentConfigIndex = i;
@@ -360,9 +368,15 @@ const configCallback = async () => {
 };
 
 const configExecutor = (resolve: (arg: boolean) => void) => {
+  const configTimeout = setTimeout(() => {
+    const eventData: MyEventData = { response: false, index: currentConfigIndex };
+    log(`ERROR Config timeout`);
+    myEmitter.emit('config_response', eventData);
+  }, ONE_CONFIG_TIMEOUT);
   myEmitter.once<MyEventData>('config_response', (data: MyEventData) => {
     const res = data.response;
     log(`Config index ${data.index}: ${res ? 'OK' : 'FAILED'}`);
+    clearTimeout(configTimeout);
     resolve(res);
   });
 };
@@ -384,9 +398,9 @@ export async function sendSMS(message: string, phone: number): Promise<boolean> 
   if (res) {
     const smsRes = (await sendUART(Buffer.from(message, 'utf8'), false)) && (await sendUART(Buffer.from([0x1a, 0]), true));
     if (smsRes) {
-      log(`Sent to (${phone}): '${message}'`);
+      // log(`Sent to (${phone}): '${message}'`);
     } else {
-      log(`ERROR Sending SMS`);
+      // log(`ERROR Sending SMS`);
     }
     return smsRes;
   }

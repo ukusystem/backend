@@ -134,8 +134,9 @@ export class BaseAttach extends Mortal {
     this._addOne(new Message(0).reset(message).setLogOnSend(logOnSend));
   }
 
-  addData(buffer: Buffer) {
+  addData(buffer: Buffer): boolean {
     this.receivedData.push(buffer);
+    return true;
   }
 
   /**
@@ -211,7 +212,7 @@ export class BaseAttach extends Mortal {
       }
       // console.log(`Sending one SMS from ${l}`);
       if (first.logOnSend) {
-        this._log(`Sent SMS: '${useful.trimString(first.message)}'`);
+        this._log(`Sent SMS (${number}): '${useful.trimString(first.message)}'`);
       }
       this.addPendingMessage(first);
       this.sendBuffer.shift();
@@ -285,13 +286,16 @@ export class BaseAttach extends Mortal {
    */
   async readOne(selector: Selector, code: ResultCode, bundle: Bundle) {
     // Socket will close after a message
-    if (this._closeOnNextSend) return;
+    if (this._closeOnNextSend) {
+      // console.log('Close on next send');
+      return;
+    }
     const piece = this.receivedData.shift();
     if (!piece) {
       // this._log(`No data to shift`)
       return;
     }
-    // this._log(`Shifted buffer '${piece}'`)
+    // this._log(`Shifted buffer '${piece}'`);
     const received = piece.toString('utf8');
     if (received.length === 0) {
       this._log('Empty message received.');
@@ -299,12 +303,13 @@ export class BaseAttach extends Mortal {
       // this._log(`Received decoded '${received}'`)
       // It is still alive
       this.setAlive();
-      // console.log(".")
       // Use data
       this._buffer += received;
       // this._log(`Buffer to process: '${this._buffer}'`)
       const commands = this._buffer.split(codes.SEP_EOL);
       // this._log(`Commands ${commands}`)
+      // Process tokens IF AND ONLY IF the buffer was split at least in two. This
+      // ensures that the command being processed ENDED with `codes.SEP_EOL`
       for (let i = 0; i < commands.length - 1; i++) {
         if (commands[i].length > 0) {
           // System.out.println(commands[i])
@@ -995,7 +1000,7 @@ export class NodeAttach extends BaseAttach {
 
   setGSMToken(newToken: number) {
     const bigToken = BigInt(newToken);
-    if (bigToken !== codes.GSM_EMPTY_TOKEN) {
+    if (bigToken === codes.GSM_EMPTY_TOKEN) {
       this._log('ERROR Token received was THE empty token');
     } else {
       this.gsmToken = bigToken;
@@ -1116,7 +1121,7 @@ export class NodeAttach extends BaseAttach {
       return;
     }
     if (useful.timeInt() >= this.lastTimeSIMAliveSent + NodeAttach.TRY_SIM_ALIVE_INTERVAL_S) {
-      this._addOne(new Message(codes.CMD_SERVER_SIM_ALIVE, 0, [this.gsmToken.toString()]));
+      this._addOne(new Message(codes.CMD_SERVER_SIM_ALIVE, 0, [this.gsmToken.toString(), useful.timeInt().toString()]));
       this.lastTimeSIMAliveSent = useful.timeInt();
       this._log('SIM alive added');
     }
