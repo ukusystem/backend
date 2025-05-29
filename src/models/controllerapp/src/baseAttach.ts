@@ -485,21 +485,24 @@ export class BaseAttach extends Mortal {
    *                   parameters must also be the same as the required by the
    *                   query.
    * @param query      Query to format (formatting the query is optional) and execute.
-   * @param id         ID of the message being processed.
+   * @param id         ID of the message being processed. Can be negative to not send a response.
    * @param nodeID     ID of the node in which write the item. This is used to
    *                   build the database name. If negative, the query will not be
    *                   formatted.
    * @returns True if the operation was successful, false otherwise.
    */
-
   async _saveItemGeneral(name: string, parameters: any[], query: string, id: number, nodeID: number): Promise<boolean> {
     // this._log(`Saved: ${name}`);
     if (await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(query, nodeID), parameters)) {
-      this._addResponse(id, codes.AIO_OK);
+      if (id > 0) {
+        this._addResponse(id, codes.AIO_OK);
+      }
       return true;
     } else {
       this._log(`Error saving item: ${name}`);
-      this._addResponse(id, codes.ERR_EXECUTING_QUERY);
+      if (id > 0) {
+        this._addResponse(id, codes.ERR_EXECUTING_QUERY);
+      }
     }
     return false;
   }
@@ -1004,7 +1007,7 @@ export class NodeAttach extends BaseAttach {
       this._log('ERROR Token received was THE empty token');
     } else {
       this.gsmToken = bigToken;
-      this._log(`New GSM token for controller ID=${this.gsmToken} set!`);
+      this._log(`New GSM token for controller ID=${this.controllerID} set! (${this.gsmToken}) `);
     }
   }
 
@@ -1504,7 +1507,7 @@ export class NodeAttach extends BaseAttach {
             const mode = value === codes.VALUE_MODE_SECURITY;
             // this._log(`Received mode: ${useful.toHex(value)}, notifying web.`)
             ControllerMapManager.update(this.controllerID, { modo: mode ? 1 : 0 });
-            await this._saveItemGeneral('mode', [mode, this.controllerID], queries.modeUpdate, id, -1);
+            await this._saveItemGeneral('mode', [mode, this.controllerID], queries.modeUpdate, -1, -1);
             break;
           case codes.VALUE_SECURITY:
             // Save and notify
@@ -1512,7 +1515,7 @@ export class NodeAttach extends BaseAttach {
             this._log(`Received security: ${useful.toHex(value)}`);
             ControllerMapManager.update(this.controllerID, { seguridad: security ? 1 : 0 });
             this.disableArmButton(false);
-            await this.saveSecurity(this.controllerID, security, eventDate, id);
+            await this.saveSecurity(this.controllerID, security, eventDate, -1);
             break;
           case codes.VALUE_SECURITY_TECH:
           case codes.VALUE_SECURITY_TICKET:
@@ -1754,8 +1757,8 @@ export class NodeAttach extends BaseAttach {
           // const origin = securityData[2].getInt()
           const date = securityData[3].getInt();
 
-          // Save in database
-          this.saveSecurity(this.controllerID, security, date, id);
+          // Save in database. Pass a negative ID to not send a response.
+          this.saveSecurity(this.controllerID, security, date, -1);
 
           // Notify technician
           this.mirrorMessage(this._appendPart(command, this.controllerID.toString()), true);

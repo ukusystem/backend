@@ -550,7 +550,7 @@ export const insertPathToDB = (relativePath: string, ctrl_id: number, cmr_id: nu
         }
       }
 
-      await MySQL2.executeQuery({ sql: `INSERT INTO ${'nodo' + ctrl_id}.registroarchivocamara (cmr_id , tipo, ruta, thumbnail, fecha) VALUES ( ? , ?, ?, ?)`, values: [cmr_id, tipo, rutaRelativa, thumbnailPathResult, fecha] });
+      await MySQL2.executeQuery({ sql: `INSERT INTO ${'nodo' + ctrl_id}.registroarchivocamara (cmr_id , tipo, ruta, thumbnail, fecha) VALUES ( ? , ?, ?, ?, ?)`, values: [cmr_id, tipo, rutaRelativa, thumbnailPathResult, fecha] });
     } catch (error) {
       cameraLogger.error(`CameraMotionProcess | insertPathToDB | Error al insertar path a la db:\n`, error);
     }

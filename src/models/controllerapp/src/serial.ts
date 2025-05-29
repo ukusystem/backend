@@ -272,13 +272,15 @@ function keepPortOpenTask() {
               waitingSMSbody = false;
               senderNumber = 0;
               if (nodeAttach?.addData(Buffer.from(rawLine))) {
-                log('Added to pending to process');
+                // log('Added to pending to process');
               } else {
                 log('ERROR Adding to pending to process. Node attachment not found?');
               }
             } else if (rawLine.includes(unplugedSIM)) {
               log('SIM unplugged!');
               configureGSM();
+            } else {
+              log('Line was not processed!');
             }
           } else {
             const isResponse = possibleResponses.test(rawLine);
