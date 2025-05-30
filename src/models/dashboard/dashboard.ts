@@ -185,7 +185,7 @@ export class Dashboard {
   static getTotalTicketContrata = handleErrorWithArgument<{ data: Record<any, any>[]; start_date: string; end_date: string }, IPropMethod>(async ({ ctrl_id, isMonthly, date }) => {
     const { endDate, startDate } = Dashboard.getStartEndDate(date, isMonthly);
 
-    const subQuery = `SELECT rt.co_id, COUNT(*) AS total_ticket  FROM ${'nodo' + ctrl_id}.registroticket rt WHERE rt.fechacomienzo BETWEEN '${startDate}' AND '${endDate}' AND ( rt.estd_id = 2 OR rt.estd_id = 16 ) GROUP BY rt.co_id`;
+    const subQuery = `SELECT rt.co_id, COUNT(*) AS total_ticket  FROM ${'nodo' + ctrl_id}.registroticket rt WHERE rt.fechacomienzo BETWEEN '${startDate}' AND '${endDate}' AND ( rt.estd_id = 2 OR rt.estd_id = 21 ) GROUP BY rt.co_id`;
     const finalQuery = `SELECT totalticket.* , co.contrata , co.descripcion FROM ( ${subQuery} ) AS totalticket INNER JOIN general.contrata co ON totalticket.co_id = co.co_id ORDER BY totalticket.co_id ASC `;
 
     const totalTicketContrata = await MySQL2.executeQuery<RowDataPacket[]>({ sql: finalQuery });
