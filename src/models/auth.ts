@@ -113,6 +113,15 @@ export class Auth {
     return user_tokens[0];
   }
 
+  static async getRevokedOrExpiredSessions(): Promise<UserToken[]> {
+    const curDate = dayjs().format('YYYY-MM-DD HH:mm:ss');
+    const user_tokens = await MySQL2.executeQuery<UserTokenRowData[]>({
+      sql: `SELECT * FROM general.user_token WHERE revoked = 1 OR expires_at < '${curDate}'`,
+    });
+
+    return user_tokens;
+  }
+
   static async getAdminSessions(): Promise<UserToken[]> {
     const curDate = dayjs().format('YYYY-MM-DD HH:mm:ss');
     const user_tokens = await MySQL2.executeQuery<UserTokenRowData[]>({

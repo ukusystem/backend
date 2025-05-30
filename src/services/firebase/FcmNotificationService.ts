@@ -12,8 +12,6 @@ import { UserRol } from '../../types/rol';
 import { Auth } from '../../models/auth';
 
 interface UserInfoFcm {
-  rl_id: number;
-  co_id: number;
   u_id: number;
 }
 interface NotificationPayload {
@@ -225,7 +223,6 @@ class FcmNotificationServiceFinal {
       genericLogger.debug(`Dispositivos desuscritos del topic ${topicInfo.topic_name}: ${response.successCount} éxitos, ${response.failureCount} fallos`);
     } catch (error) {
       genericLogger.debug(`Error al desuscribir del topic: ${topicInfo.topic_name}`, error);
-      throw new Error('Error al desuscribir del topic');
     }
   }
 

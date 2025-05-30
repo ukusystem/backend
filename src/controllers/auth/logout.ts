@@ -3,6 +3,8 @@ import { asyncErrorHandler } from '../../utils/asynErrorHandler';
 import { appConfig } from '../../configs';
 import { RequestWithUser } from '../../types/requests';
 import { Auth } from '../../models/auth';
+import { fcmService } from '../../services/firebase/FcmNotificationService';
+import { genericLogger } from '../../services/loggers';
 
 export const logout = asyncErrorHandler(async (req: RequestWithUser, res: Response, _next: NextFunction) => {
   const refreshTokenCookie: string | undefined = req.cookies[appConfig.cookie.refresh_token.name];
@@ -29,6 +31,14 @@ export const logout = asyncErrorHandler(async (req: RequestWithUser, res: Respon
   if (refreshTokenStored !== undefined) {
     // revocar token
     await Auth.revokeTokenById(refreshTokenStored.ut_id);
+    // desuscribir dispositivo
+    if (refreshTokenStored.fcm_token) {
+      try {
+        await fcmService.unsubscribeFromTopic(refreshTokenStored.fcm_token, { u_id: userFound.u_id });
+      } catch {
+        genericLogger.debug('Error al desuscribir dispositivo. ');
+      }
+    }
   }
 
   // Invalidar token

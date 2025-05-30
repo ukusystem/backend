@@ -132,7 +132,7 @@ export class UserNoficationController {
       //   return;
       // }
 
-      await fcmService.subscribeToTopic(fcmToken, { rl_id: user.rl_id, co_id: user.co_id, u_id: user.u_id });
+      await fcmService.subscribeToTopic(fcmToken, { u_id: user.u_id });
 
       res.json({ message: 'Dispositivo suscrito' });
     });
@@ -159,14 +159,14 @@ export class UserNoficationController {
         await Auth.updateFcmToken(ut_uuid, fcmToken);
         if (curTokenStored.fcm_token) {
           try {
-            await fcmService.unsubscribeFromTopic(curTokenStored.fcm_token, { co_id: user.co_id, rl_id: user.rl_id, u_id: user.u_id });
+            await fcmService.unsubscribeFromTopic(curTokenStored.fcm_token, { u_id: user.u_id });
           } catch {
             genericLogger.debug('Error al desuscribir dispositivo. ');
           }
         }
       }
 
-      await fcmService.subscribeToTopic(fcmToken, { rl_id: user.rl_id, co_id: user.co_id, u_id: user.u_id });
+      await fcmService.subscribeToTopic(fcmToken, { u_id: user.u_id });
 
       res.json({ message: 'Suscripcion actualizado.' });
     });
@@ -181,7 +181,7 @@ export class UserNoficationController {
 
       const { fcmToken } = req.body as { fcmToken: string };
 
-      await fcmService.unsubscribeFromTopic(fcmToken, { rl_id: user.rl_id, co_id: user.co_id, u_id: user.u_id });
+      await fcmService.unsubscribeFromTopic(fcmToken, { u_id: user.u_id });
 
       res.json({ message: 'Dispositivo suscrito' });
     });
