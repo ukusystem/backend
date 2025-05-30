@@ -323,6 +323,7 @@ export class BaseAttach extends Mortal {
               //this._log('Message was a response.')
             } else if (await this._processMessage(selector, partsArray, cmdOrValue, id, commands[i], code, bundle)) {
               //this._log('Message was not a response, but was processed by a subclass.')
+              this._log(`Processed command ${cmdOrValue} ${useful.toHex(cmdOrValue)}`);
             } else {
               this._log(`Unknown command '${commands[i]}'. Command = ${useful.toHex(cmdOrValue)} ID = ${id}`);
               this.addUnknownCmd(id);

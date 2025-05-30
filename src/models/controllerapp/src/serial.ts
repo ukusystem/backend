@@ -274,13 +274,13 @@ function keepPortOpenTask() {
               if (nodeAttach?.addData(Buffer.from(rawLine))) {
                 // log('Added to pending to process');
               } else {
-                log('ERROR Adding to pending to process. Node attachment not found?');
+                log(`ERROR Adding to pending to process. ${nodeAttach ? '' : 'Node attachment not found?'}`);
               }
             } else if (rawLine.includes(unplugedSIM)) {
               log('SIM unplugged!');
               configureGSM();
             } else {
-              log('Line was not processed!');
+              log(`Line was not processed! '${rawLine}'`);
             }
           } else {
             const isResponse = possibleResponses.test(rawLine);
