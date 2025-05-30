@@ -1,11 +1,12 @@
 import bcrypt from 'bcrypt';
+import { v4 as uuid } from 'uuid';
+
 import { Request, Response, NextFunction } from 'express';
 import { asyncErrorHandler } from '../../utils/asynErrorHandler';
 import { Usuario } from '../../types/usuario';
 import { Auth } from '../../models/auth';
 import { CustomError } from '../../utils/CustomError';
 import { appConfig } from '../../configs';
-import { MqttService } from '../../services/mqtt/MqttService';
 
 interface IResponseLogin {
   status: number;
@@ -18,13 +19,32 @@ interface IData {
   access_token: string;
   refresh_token: string;
   user: IUserLoginData;
-  mqtt: {
-    user?: string;
-    password?: string;
-    host: string;
-    port: number;
-    protocol: string;
-    url: string;
+
+  fcm?: {
+    web: {
+      apiKey: string;
+      appId: string;
+      messagingSenderId: string;
+      projectId: string;
+      authDomain: string;
+      storageBucket: string;
+      vapId: string;
+    };
+    android: {
+      apiKey: string;
+      appId: string;
+      messagingSenderId: string;
+      projectId: string;
+      storageBucket: string;
+    };
+    ios: {
+      apiKey: string;
+      appId: string;
+      messagingSenderId: string;
+      projectId: string;
+      storageBucket: string;
+      iosBundleId: string;
+    };
   };
 }
 
@@ -66,11 +86,13 @@ export const login = asyncErrorHandler(async (req: Request, res: Response, next:
     return next(errPasswordNotMatch);
   }
 
-  //Crear token de acceso
-  const accessToken = await Auth.generateAccessToken({ id: userFound.u_id, rol: userFound.rol });
-  const refreshToken = await Auth.generateRefreshToken({ id: userFound.u_id, rol: userFound.rol });
+  const newUtUuid = uuid();
 
-  await Auth.createUserToken(userFound.u_id, refreshToken, req.ip, req.get('user-agent'));
+  //Crear token de acceso
+  const accessToken = await Auth.generateAccessToken({ id: userFound.u_id, rol: userFound.rol, ut_uuid: newUtUuid });
+  const refreshToken = await Auth.generateRefreshToken({ id: userFound.u_id, rol: userFound.rol, ut_uuid: newUtUuid });
+
+  await Auth.createUserToken(newUtUuid, userFound.u_id, refreshToken, req.ip, req.get('user-agent'));
 
   res.cookie(appConfig.cookie.access_token.name, accessToken, {
     httpOnly: true, // acceso solo del servidor
@@ -88,7 +110,6 @@ export const login = asyncErrorHandler(async (req: Request, res: Response, next:
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { contraseña: contraseñaFound, ...userWithoutPassword } = userFound;
-  const credentialsMqtt = MqttService.getUserCredentials(userFound.rl_id);
 
   const response: IResponseLogin = {
     status: 200,
@@ -98,13 +119,31 @@ export const login = asyncErrorHandler(async (req: Request, res: Response, next:
       access_token: accessToken,
       refresh_token: refreshToken,
       user: userWithoutPassword,
-      mqtt: {
-        user: credentialsMqtt?.user,
-        password: credentialsMqtt?.password,
-        host: appConfig.mqtt.public_host,
-        port: appConfig.mqtt.public_ws_port,
-        protocol: appConfig.mqtt.public_ws_protocol,
-        url: `${appConfig.mqtt.public_ws_protocol}://${appConfig.mqtt.public_host}:${appConfig.mqtt.public_ws_port}`,
+      fcm: {
+        web: {
+          apiKey: appConfig.fcm.web.api_key,
+          appId: appConfig.fcm.web.app_id,
+          messagingSenderId: appConfig.fcm.messaging_sende_id,
+          projectId: appConfig.fcm.project_id,
+          authDomain: appConfig.fcm.auth_domain,
+          storageBucket: appConfig.fcm.storage_bucket,
+          vapId: appConfig.fcm.web.vap_id,
+        },
+        android: {
+          apiKey: appConfig.fcm.android.api_key,
+          appId: appConfig.fcm.android.app_id,
+          messagingSenderId: appConfig.fcm.messaging_sende_id,
+          projectId: appConfig.fcm.project_id,
+          storageBucket: appConfig.fcm.storage_bucket,
+        },
+        ios: {
+          apiKey: appConfig.fcm.ios.api_key,
+          appId: appConfig.fcm.ios.app_id,
+          messagingSenderId: appConfig.fcm.messaging_sende_id,
+          projectId: appConfig.fcm.project_id,
+          storageBucket: appConfig.fcm.storage_bucket,
+          iosBundleId: appConfig.fcm.ios.bundle_id,
+        },
       },
     },
   };

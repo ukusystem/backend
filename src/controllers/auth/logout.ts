@@ -24,7 +24,7 @@ export const logout = asyncErrorHandler(async (req: RequestWithUser, res: Respon
     return res.status(404).json({ message: 'Usuario no disponible' });
   }
 
-  const refreshTokenStored = await Auth.getTokenStored(userFound.u_id, refreshToken);
+  const refreshTokenStored = await Auth.getTokenStoredByUtUuid(tokenPayload.ut_uuid);
 
   if (refreshTokenStored !== undefined) {
     // revocar token

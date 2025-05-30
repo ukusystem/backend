@@ -6,6 +6,9 @@ nvr
 archivos
 package-lock.json
 .env
+public/firebase-messaging-sw.js
+
+
 git-extras
 
 firmware/*

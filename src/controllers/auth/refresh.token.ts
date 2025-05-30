@@ -24,7 +24,7 @@ export const refreshToken = asyncErrorHandler(async (req: Request, res: Response
     return res.status(404).json({ message: 'Usuario no disponible' });
   }
 
-  const refreshTokenStored = await Auth.getTokenStored(userFound.u_id, refreshToken);
+  const refreshTokenStored = await Auth.getTokenStoredByUtUuid(tokenPayload.ut_uuid);
 
   if (refreshTokenStored === undefined) {
     return res.status(401).json({
@@ -32,13 +32,7 @@ export const refreshToken = asyncErrorHandler(async (req: Request, res: Response
     });
   }
 
-  const newAccessToken = await Auth.generateAccessToken({ id: userFound.u_id, rol: userFound.rol });
-  // const newRefreshToken = await Auth.generateRefreshToken({ id: userFound.u_id, rol: userFound.rol });
-
-  // revocar token anterior
-  // await Auth.revokeTokenById(refreshTokenStored.ut_id);
-  // registror token
-  // await Auth.createUserToken(userFound.u_id, newRefreshToken, req.ip, req.get('user-agent'));
+  const newAccessToken = await Auth.generateAccessToken({ id: userFound.u_id, rol: userFound.rol, ut_uuid: tokenPayload.ut_uuid });
 
   res.cookie(appConfig.cookie.access_token.name, newAccessToken, {
     httpOnly: true, // acceso solo del servidor
@@ -47,20 +41,12 @@ export const refreshToken = asyncErrorHandler(async (req: Request, res: Response
     maxAge: appConfig.jwt.access_token.expire,
   });
 
-  // res.cookie(appConfig.cookie.refresh_token.name, newRefreshToken, {
-  //   httpOnly: true, // acceso solo del servidor
-  //   // secure: process.env.NODE_ENV === "production", // acceso solo con https
-  //   sameSite: 'strict', // acceso del mismo dominio
-  //   maxAge: appConfig.cookie.refresh_token.max_age, // expiracion 1d
-  // });
-
   const response = {
     status: 200,
     message: 'Refresh token successful',
     data: {
       token_type: 'Bearer',
       access_token: newAccessToken,
-      // refresh_token: newRefreshToken,
     },
   };
 

@@ -98,6 +98,23 @@ interface IAppConfig {
     project_id: string;
     client_email: string;
     private_key: string;
+    messaging_sende_id: string;
+    auth_domain: string;
+    storage_bucket: string;
+    web: {
+      api_key: string;
+      app_id: string;
+      vap_id: string;
+    };
+    android: {
+      api_key: string;
+      app_id: string;
+    };
+    ios: {
+      api_key: string;
+      app_id: string;
+      bundle_id: string;
+    };
   };
 }
 
@@ -184,6 +201,23 @@ const appConfig: IAppConfig = {
     project_id: validatedEnv.FCM_PROJECT_ID,
     client_email: validatedEnv.FCM_CLIENT_EMAIL,
     private_key: validatedEnv.FCM_PRIVATE_KEY,
+    messaging_sende_id: validatedEnv.FCM_MESSAGING_SENDER_ID,
+    auth_domain: validatedEnv.FCM_AUTH_DOMAIN,
+    storage_bucket: validatedEnv.FCM_STORAGE_BUCKET,
+    web: {
+      api_key: validatedEnv.FCM_WEB_API_KEY,
+      app_id: validatedEnv.FCM_WEB_APP_ID,
+      vap_id: validatedEnv.FCM_WEB_VAPID,
+    },
+    android: {
+      api_key: validatedEnv.FCM_ANDROID_API_KEY,
+      app_id: validatedEnv.FCM_ANDROID_APP_ID,
+    },
+    ios: {
+      api_key: validatedEnv.FCM_IOS_API_KEY,
+      app_id: validatedEnv.FCM_IOS_APP_ID,
+      bundle_id: validatedEnv.FCM_IOS_BUNDLE_ID,
+    },
   },
 };
 

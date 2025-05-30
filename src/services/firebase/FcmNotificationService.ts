@@ -3,16 +3,18 @@ import { initializeApp, cert } from 'firebase-admin/app';
 import { getMessaging, Message, Messaging } from 'firebase-admin/messaging';
 import { v4 as uuid } from 'uuid';
 import { appConfig } from '../../configs';
-import { UserRol } from '../../types/rol';
 import dayjs from 'dayjs';
 import { genericLogger } from '../loggers';
 import { Notification } from '../../types/db';
 import { MySQL2 } from '../../database/mysql';
-import { ResultSetHeader } from 'mysql2';
+import { ResultSetHeader, RowDataPacket } from 'mysql2';
+import { UserRol } from '../../types/rol';
+import { Auth } from '../../models/auth';
 
 interface UserInfoFcm {
   rl_id: number;
   co_id: number;
+  u_id: number;
 }
 interface NotificationPayload {
   n_uuid?: string;
@@ -49,16 +51,26 @@ interface FCMConfig {
   privateKey: string;
 }
 
-interface PendingNotification {
+interface PendingTopicNotification {
   condition: string;
   payload: FcmNotificationPayload;
   data: FcmNotificationData;
+  assigments: UserNotificationAssigment[];
 }
 
-class FcmNotificationService {
+interface UserNotificationAssigment {
+  u_id: number;
+  n_uuid: string;
+}
+interface UserRowData extends RowDataPacket {
+  u_id: number;
+  rl_id: number;
+}
+
+class FcmNotificationServiceFinal {
   private readonly BASE_TOPIC: string = '/topics';
   private canPublish = false;
-  private pendingNotifications: Map<string, PendingNotification> = new Map();
+  private pendingTopicNotifications: Map<string, PendingTopicNotification> = new Map();
   private messaging: Messaging | null = null;
 
   constructor(config: FCMConfig) {
@@ -89,7 +101,7 @@ class FcmNotificationService {
         this.canPublish = true;
         genericLogger.info(`Notificacion FCM inicializado.`);
 
-        this.publishPendingNotifications();
+        this.publishPendingTopicNotifications();
       }, appConfig.mqtt.publish_timeout * 1000);
     } catch (error) {
       genericLogger.error(`Error al inicializar FCM`, error);
@@ -110,39 +122,38 @@ class FcmNotificationService {
   }
 
   /**
-   * Publicar y eliminar notificaciones pendientes conservados durante el tiempo de espera
+   * Publicar y eliminar notificaciones a topics pendientes conservados durante el tiempo de espera
    */
-  private async publishPendingNotifications(): Promise<void> {
+  private async publishPendingTopicNotifications(): Promise<void> {
     if (!this.canPublish) return;
 
-    const notifications = Array.from(this.pendingNotifications.values());
-    notifications.forEach(({ condition, payload, data }) => {
-      this.sendToCondition(condition, payload, data);
+    const notifications = Array.from(this.pendingTopicNotifications.values());
+    notifications.forEach(({ condition, payload, data, assigments }) => {
+      this.sendToCondition(condition, payload, data, assigments);
     });
-    this.pendingNotifications.clear();
+    this.pendingTopicNotifications.clear();
   }
 
   /**
-   * Genera el topic FCM según el rol del usuario.
+   * Genera el topic FCM para un usuario.
    * @param userInfo - Objeto con información del usuario
    * @returns Objeto con información del topic
    */
   private getTopic(userInfo: UserInfoFcm): TopicInfo {
-    const { co_id, rl_id } = userInfo;
-    if (rl_id === UserRol.Administrador || rl_id === UserRol.Gestor) {
-      return this.getAdminTopic();
-    }
+    const { u_id } = userInfo;
 
-    return this.getContrataTopic(co_id);
+    const userTopicName = this.getUserTopicName(u_id);
+    return { topic: `${this.BASE_TOPIC}/${userTopicName}`, topic_name: userTopicName };
   }
 
   /**
-   * Genera el topic para usuarios administradores.
-   * @returns Objeto con información del topic
+   * Genera el nombre de un topic FCM para un usuario.
+   * @param u_id Identificador del usuario
+   * @returns Nombre del topic
    */
-  private getAdminTopic(): TopicInfo {
-    const adminTopicName = 'admin';
-    return { topic: `${this.BASE_TOPIC}/${adminTopicName}`, topic_name: adminTopicName };
+  private getUserTopicName(u_id: number): string {
+    const userTopicName = `user_${u_id}`;
+    return userTopicName;
   }
 
   /**
@@ -160,16 +171,6 @@ class FcmNotificationService {
     } catch {
       throw new Error('Error al persistir notificación.');
     }
-  }
-
-  /**
-   * Genera el topic para una contrata específica.
-   * @param co_id ID de la contrata
-   * @returns Objeto con información del topic
-   */
-  private getContrataTopic(co_id: number): TopicInfo {
-    const contrataTopicName = `contrata_${co_id}`;
-    return { topic: `${this.BASE_TOPIC}/${contrataTopicName}`, topic_name: contrataTopicName };
   }
 
   /**
@@ -265,12 +266,13 @@ class FcmNotificationService {
    * @param condition Condición FCM para los topics
    * @param payload Contenido de la notificación
    * @param data Datos adicionales (opcional)
+   * @param assigments Lista de notificaciones asignadas a cada usuario
    * @param confirm Conservar notificacion producida antes del tiempo de espera de publicacion (opcional)
    */
-  private async sendToCondition(condition: string, payload: FcmNotificationPayload, data: FcmNotificationData, confirm?: boolean): Promise<void> {
+  private async sendToCondition(condition: string, payload: FcmNotificationPayload, data: FcmNotificationData, assigments: UserNotificationAssigment[], confirm?: boolean): Promise<void> {
     if (!this.canPublish) {
       if (confirm) {
-        this.pendingNotifications.set(data.n_uuid, { condition: condition, payload: payload, data: data });
+        this.pendingTopicNotifications.set(data.n_uuid, { condition: condition, payload: payload, data: data, assigments });
       }
       return;
     }
@@ -292,10 +294,13 @@ class FcmNotificationService {
 
     try {
       await this.saveNotification({ ...data, data: undefined });
-      await this.fcmMessaging.send(message);
-      genericLogger.info(`Notificación enviada con condición: ${condition} => Contenido: ${payload.body}`);
+      await this.createUserNotifications(assigments);
+      if (condition.length > 0) {
+        await this.fcmMessaging.send(message);
+        genericLogger.info(`Notificación enviada : ${payload.body}`);
+      }
     } catch (error) {
-      genericLogger.error(`Error al enviar notificación con condición: ${condition} => Contenido: ${payload.body}`, error);
+      genericLogger.error(`Error al enviar notificación`, error);
     }
   }
 
@@ -304,11 +309,7 @@ class FcmNotificationService {
    * @param payload Contenido de la notificación
    * @param confirm Conservar notificacion producida antes del tiempo de espera de publicacion (opcional)
    */
-  public publisAdminNotification(payload: NotificationPayload, confirm?: boolean) {
-    const topicInfo = this.getAdminTopic();
-
-    const condition: string = `'${topicInfo.topic_name}' in topics`;
-
+  public async publisAdminNotification(payload: NotificationPayload, confirm?: boolean) {
     const fcmPayload: FcmNotificationPayload = {
       title: payload.titulo,
       body: payload.mensaje,
@@ -323,7 +324,20 @@ class FcmNotificationService {
       fecha: payload.fecha ?? dayjs().format('YYYY-MM-DD HH:mm:ss'),
     };
 
-    this.sendToCondition(condition, fcmPayload, fcmData, confirm);
+    const adminSessions = await Auth.getAdminSessions();
+    const userTopics = adminSessions.reduce<string[]>((prev, cur) => {
+      const result = prev;
+      const { user_id } = cur;
+      const userTopic = this.getUserTopicName(user_id);
+      result.push(userTopic);
+      return result;
+    }, []);
+    const condition = userTopics.map((topic) => `'${topic}' in topics`).join(' || ');
+
+    const adminUsers = await this.getAdminUsers();
+    const notificacionAssigments = adminUsers.map<UserNotificationAssigment>(({ u_id }) => ({ u_id, n_uuid: fcmData.n_uuid }));
+
+    this.sendToCondition(condition, fcmPayload, fcmData, notificacionAssigments, confirm);
   }
 
   /**
@@ -332,12 +346,7 @@ class FcmNotificationService {
    * @param co_id ID de la contrata
    * @param confirm Conservar notificacion producida antes del tiempo de espera de publicacion (opcional)
    */
-  public publisContrataNotification(payload: NotificationPayload, co_id: number, confirm?: boolean) {
-    const adminTopicInfo = this.getAdminTopic();
-    const contrataTopicInfo = this.getContrataTopic(co_id);
-
-    const condition: string = `'${adminTopicInfo.topic_name}' in topics || '${contrataTopicInfo.topic_name}' in topics`;
-
+  public async publisContrataNotification(payload: NotificationPayload, co_id: number, confirm?: boolean) {
     const fcmPayload: FcmNotificationPayload = {
       title: payload.titulo,
       body: payload.mensaje,
@@ -352,11 +361,72 @@ class FcmNotificationService {
       fecha: payload.fecha ?? dayjs().format('YYYY-MM-DD HH:mm:ss'),
     };
 
-    this.sendToCondition(condition, fcmPayload, fcmData, confirm);
+    const userSessions = await Auth.getAdminAndGuestContrataSessions(co_id);
+    const userTopics = userSessions.reduce<string[]>((prev, cur) => {
+      const result = prev;
+      const { user_id } = cur;
+      const userTopic = this.getUserTopicName(user_id);
+      result.push(userTopic);
+      return result;
+    }, []);
+    const condition = userTopics.map((topic) => `'${topic}' in topics`).join(' || ');
+
+    const users = await this.getAdminAndGuestContrataUsers(co_id);
+    const notificacionAssigments = users.map<UserNotificationAssigment>(({ u_id }) => ({ u_id, n_uuid: fcmData.n_uuid }));
+
+    this.sendToCondition(condition, fcmPayload, fcmData, notificacionAssigments, confirm);
+  }
+
+  /**
+   * Obtener lista de usuarios con rol administrador y gestor
+   */
+  async getAdminUsers(): Promise<UserRowData[]> {
+    const adminUsers = await MySQL2.executeQuery<UserRowData[]>({
+      sql: `SELECT u_id, rl_id FROM  general.usuario WHERE ( rl_id = ${UserRol.Administrador} OR rl_id = ${UserRol.Gestor} ) AND activo = 1`,
+    });
+
+    return adminUsers;
+  }
+  /**
+   * Obtener lista de usuarios con rol administrador , gestor e invitados que pertenecen a una contrata
+   * @param co_id ID de la contrata
+   */
+  async getAdminAndGuestContrataUsers(co_id: number) {
+    const users = await MySQL2.executeQuery<UserRowData[]>({
+      sql: `SELECT u_id, rl_id FROM  general.usuario u INNER JOIN general.personal p ON u.p_id = p.p_id WHERE ( ( u.rl_id = ${UserRol.Administrador} OR u.rl_id = ${UserRol.Gestor} ) OR ( u.rl_id = ${UserRol.Invitado} AND p.co_id = ? ) ) AND u.activo = 1`,
+      values: [co_id],
+    });
+
+    return users;
+  }
+
+  /**
+   * Crear notificaciones de usuario
+   * @param assigments Lista de notificaciones asignadas a cada usuario
+   */
+  async createUserNotifications(assigments: UserNotificationAssigment[]): Promise<void> {
+    if (assigments.length === 0) return;
+
+    const fecha_creacion = dayjs().format('YYYY-MM-DD HH:mm:ss');
+    const fecha_lectura = null;
+    const fecha_entrega = null;
+    const leido = 0;
+
+    const placeholders = assigments.map(() => '(?, ?, ?, ?, ?, ?, ?)').join(', ');
+
+    const query = `
+    INSERT INTO general.notificacion_usuario
+    (nu_id, u_id, n_uuid, fecha_creacion, fecha_entrega, fecha_lectura, leido)
+    VALUES ${placeholders}
+  `;
+
+    const values = assigments.flatMap((n) => [uuid(), n.u_id, n.n_uuid, fecha_creacion, fecha_entrega, fecha_lectura, leido]);
+
+    await MySQL2.executeQuery<ResultSetHeader>({ sql: query, values: values });
   }
 }
 
-const fcmService = new FcmNotificationService({
+const fcmService = new FcmNotificationServiceFinal({
   projectId: appConfig.fcm.project_id,
   clientEmail: appConfig.fcm.client_email,
   privateKey: appConfig.fcm.private_key,

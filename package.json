@@ -7,8 +7,10 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon ./src/app.ts",
     "start": "node ./build/app.js",
-    "build": "npx tsc -b",
-    "prepare": "husky"
+    "build": "npm run generate:sw && npm run build:tsc",
+    "build:tsc": "npx tsc -b",
+    "prepare": "husky",
+    "generate:sw": "npx ts-node src/scripts/generateFcmSw.ts"
   },
   "keywords": [],
   "author": "",

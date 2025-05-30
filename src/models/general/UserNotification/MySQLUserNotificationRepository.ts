@@ -18,9 +18,32 @@ export class MySQLUserNotificationRepository implements UserNotificationReposito
   async readAll(u_id: number): Promise<void> {
     await MySQL2.executeQuery<ResultSetHeader>({ sql: `UPDATE general.notificacion_usuario SET fecha_lectura = ? , leido = 1 WHERE u_id = ? AND leido = 0`, values: [dayjs().format('YYYY-MM-DD HH:mm:ss'), u_id] });
   }
-  async findByUuId(u_id: number, n_uuid: string): Promise<Nullable<UserNofication>> {
-    const userNotifications = await MySQL2.executeQuery<UserNotificationRowData[]>({ sql: `SELECT * FROM general.notificacion_usuario WHERE u_id = ? AND  n_uuid = ? LIMIT 1`, values: [u_id, n_uuid] });
-    return userNotifications[0];
+  async findByUuId(u_id: number, n_uuid: string): Promise<Nullable<UserNoficationData>> {
+    const userNotifications = await MySQL2.executeQuery<UserNotificationFullRowData[]>({
+      sql: `SELECT nu.* ,n_id ,evento, titulo, mensaje, data, fecha FROM general.notificacion_usuario nu INNER JOIN general.notificacion n ON nu.n_uuid = n.n_uuid WHERE nu.u_id = ? AND  nu.n_uuid = ? LIMIT 1`,
+      values: [u_id, n_uuid],
+    });
+    if (!userNotifications[0]) {
+      return null;
+    }
+    return {
+      nu_id: userNotifications[0].nu_id,
+      u_id: userNotifications[0].u_id,
+      n_uuid: userNotifications[0].n_uuid,
+      fecha_creacion: userNotifications[0].fecha_creacion,
+      fecha_entrega: userNotifications[0].fecha_entrega,
+      fecha_lectura: userNotifications[0].fecha_lectura,
+      leido: userNotifications[0].leido,
+      notificacion: {
+        n_id: userNotifications[0].n_id,
+        evento: userNotifications[0].evento,
+        titulo: userNotifications[0].titulo,
+        mensaje: userNotifications[0].mensaje,
+        data: userNotifications[0].data,
+        fecha: userNotifications[0].fecha,
+        n_uuid: userNotifications[0].n_uuid,
+      },
+    };
   }
   async countTotal(u_id: number): Promise<number> {
     const totals = await MySQL2.executeQuery<TotalUserNotificationRowData[]>({ sql: `SELECT COUNT(*) AS total FROM general.notificacion_usuario WHERE u_id = ? `, values: [u_id] });
