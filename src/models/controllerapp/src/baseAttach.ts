@@ -1381,6 +1381,7 @@ export class NodeAttach extends BaseAttach {
         // this._log(`Received ${thresParamForUpdate.length} temperature addresses.`)
         await executeBatchForNode(queries.updateAlarmThreshold, this.controllerID, thresParamForUpdate);
         break;
+
       case codes.VALUE_ALL_ORDER_STATES:
         // this._log(`Received order states '${command}'`);
         // Also update the technician
@@ -1394,6 +1395,7 @@ export class NodeAttach extends BaseAttach {
           // this._log(`id: ${outputID} order: ${outputOrder}`);
           this._notifyOutput(outputID, false, this.controllerID, null, null, null, null, this.getOrderToNotify(outputOrder));
         }
+
         break;
       case codes.VALUE_SERIAL:
         // this._log(`Received controller info '${command}'`);
