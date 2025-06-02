@@ -15,4 +15,5 @@ export const fcmEnv = z.object({
   FCM_IOS_API_KEY: z.string(),
   FCM_IOS_APP_ID: z.string(),
   FCM_IOS_BUNDLE_ID: z.string(),
+  FCM_PUBLISH_TIMEOUT: z.coerce.number().int().positive().default(60),
 });

@@ -100,7 +100,7 @@ class FcmNotificationServiceFinal {
         genericLogger.info(`Notificacion FCM inicializado.`);
 
         this.publishPendingTopicNotifications();
-      }, appConfig.mqtt.publish_timeout * 1000);
+      }, appConfig.fcm.publish_timeout * 1000);
     } catch (error) {
       genericLogger.error(`Error al inicializar FCM`, error);
     }

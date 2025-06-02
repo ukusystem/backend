@@ -6,10 +6,9 @@ import { serverEnv } from './server.configs';
 import { PoolOptions } from 'mysql2';
 import { encryptEnv } from './encrypt.configs';
 import { cookieEnv } from './cookie.config';
-import { mqttEnv } from './mqtt.config';
 import { fcmEnv } from './fcm.config';
 
-const zodEnv = jwtEnv.merge(dbEnv).merge(emailEnv).merge(serverEnv).merge(encryptEnv).merge(cookieEnv).merge(mqttEnv).merge(fcmEnv);
+const zodEnv = jwtEnv.merge(dbEnv).merge(emailEnv).merge(serverEnv).merge(encryptEnv).merge(cookieEnv).merge(fcmEnv);
 
 const result = zodEnv.safeParse(process.env);
 
@@ -71,30 +70,8 @@ interface IAppConfig {
     start_record_motion: boolean;
   };
 
-  mqtt: {
-    host: string;
-    port: number;
-    publish_timeout: number;
-    public_host: string;
-    public_ws_port: number;
-    public_ws_protocol: string;
-
-    users: {
-      admin: {
-        user: string;
-        password: string;
-      };
-      manager: {
-        user: string;
-        password: string;
-      };
-      invited: {
-        user: string;
-        password: string;
-      };
-    };
-  };
   fcm: {
+    publish_timeout: number;
     project_id: string;
     client_email: string;
     private_key: string;
@@ -175,29 +152,8 @@ const appConfig: IAppConfig = {
     start_record_motion: validatedEnv.START_RECORD_MOTION,
     start_snapshot_motion: validatedEnv.START_SNAPSHOT_MOTION,
   },
-  mqtt: {
-    host: validatedEnv.MQTT_HOST,
-    port: validatedEnv.MQTT_PORT,
-    publish_timeout: validatedEnv.MQTT_PUBLISH_TIMEOUT,
-    public_host: validatedEnv.MQTT_PUBLIC_HOST,
-    public_ws_port: validatedEnv.MQTT_PUBLIC_WS_PORT,
-    public_ws_protocol: validatedEnv.MQTT_PUBLIC_WS_PROTOCOL,
-    users: {
-      admin: {
-        user: validatedEnv.MQTT_ADMIN_USER,
-        password: validatedEnv.MQTT_ADMIN_PASSWORD,
-      },
-      manager: {
-        user: validatedEnv.MQTT_MANAGER_USER,
-        password: validatedEnv.MQTT_MANAGER_PASSWORD,
-      },
-      invited: {
-        user: validatedEnv.MQTT_INVITED_USER,
-        password: validatedEnv.MQTT_INVITED_PASSWORD,
-      },
-    },
-  },
   fcm: {
+    publish_timeout: validatedEnv.FCM_PUBLISH_TIMEOUT,
     project_id: validatedEnv.FCM_PROJECT_ID,
     client_email: validatedEnv.FCM_CLIENT_EMAIL,
     private_key: validatedEnv.FCM_PRIVATE_KEY,
