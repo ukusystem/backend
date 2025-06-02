@@ -11,7 +11,7 @@ export const registerRoutes = Router();
 registerRoutes.get('/register', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ query: getRegistersSchema }), registerController.getRegistersFinal);
 
 // DownloadExcel GET /register/download/excel
-registerRoutes.get('/register/download/excel', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), registerController.excelDownload);
+registerRoutes.get('/register/download/excel', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ query: downloadRegistersSchema }), registerController.excelDownload);
 
 // DownloadCSV GET /register/download/csv
 registerRoutes.get('/register/download/csv', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor]), requestValidator({ query: downloadRegistersSchema }), registerController.csvDownload);
