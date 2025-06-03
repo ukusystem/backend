@@ -205,14 +205,15 @@ export class BaseAttach extends Mortal {
       if (!first) {
         return false;
       }
-      const res = await sendSMS(codes.SEP_SIM + first.message, number);
+      const finalMsg = codes.SEP_SIM + first.message;
+      const res = await sendSMS(finalMsg, number);
       if (!res) {
         this._log('ERROR Sending SMS');
         return false;
       }
       // console.log(`Sending one SMS from ${l}`);
       if (first.logOnSend) {
-        this._log(`Sent SMS (${number}): '${useful.trimString(first.message)}'`);
+        this._log(`Sent SMS (${number}): '${useful.trimString(finalMsg)}'`);
       }
       this.addPendingMessage(first);
       this.sendBuffer.shift();
@@ -959,7 +960,6 @@ export class NodeAttach extends BaseAttach {
   private ip;
   private user;
   private password;
-  // private syncToken;
   celular: number;
 
   private chunkIterator: MyStringIterator | null = null;
@@ -1010,6 +1010,10 @@ export class NodeAttach extends BaseAttach {
       this.gsmToken = bigToken;
       this._log(`New GSM token for controller ID=${this.controllerID} set! (${this.gsmToken}) `);
     }
+  }
+
+  public isSyncedThroughGSM(): boolean {
+    return this.gsmToken !== codes.GSM_EMPTY_TOKEN;
   }
 
   phoneMatch(phone: number): boolean {
@@ -1751,6 +1755,7 @@ export class NodeAttach extends BaseAttach {
         const newOrder = this.getOrderToNotify(originalOrder);
         this._notifyOutput(orderData[0].getInt(), false, this.controllerID, null, null, null, null, newOrder);
         break;
+
       case codes.VALUE_SECURITY_STATE:
         this._log(`Received security status from controller '${command}'`);
         const securityData = this._parseMessage(parts, queries.securityStateParse, id, false);

@@ -508,7 +508,7 @@ export class Main {
     // Asynchronous task
     const myPromise: Promise<RequestResult> = new Promise((resolve, _reject) => {
       let ignoreTimeout = false;
-      if (Selector.isChannelConnected(node._currentSocket)) {
+      if (Selector.isChannelConnected(node._currentSocket) || node.isSyncedThroughGSM()) {
         node.disableArmButton(true);
         // Timeout for this operation
         const securityHandle = setTimeout(() => {
@@ -790,7 +790,7 @@ export class Main {
     const myPromise: Promise<RequestResult> = new Promise(async (resolve, _reject) => {
       let monitor = States.ERROR;
       let ignoreTimeout = false;
-      if (Selector.isChannelConnected(nodeKey._currentSocket)) {
+      if (Selector.isChannelConnected(nodeKey._currentSocket) || nodeKey.isSyncedThroughGSM()) {
         // Timeout for this operation
         const reqHandle = setTimeout(async () => {
           if (ignoreTimeout) {
