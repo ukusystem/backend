@@ -784,6 +784,10 @@ export class Main {
       this.log(`Controller ${newOrder.ctrl_id} doesn't exist.`);
       return new RequestResult(false, `El nodo ID = ${newOrder.ctrl_id} no existe`);
     }
+    if (nodeKey.pendingOrder) {
+      this.log(`Controller ${newOrder.ctrl_id} already waiting for order.`);
+      return new RequestResult(false, `El nodo ID = ${newOrder.ctrl_id} tiene una orden pendiente.`);
+    }
 
     // Asynchronous task
     // eslint-disable-next-line no-async-promise-executor
@@ -799,18 +803,19 @@ export class Main {
           this.log(`Remove message ID = ${msgID} by timeout.`);
           // Message has to be removed anyways
           nodeKey.removePendingMessageByID(msgID, codes.J_ERR_TIMEOUT, true, false);
+          nodeKey.pendingOrder = false;
           monitor = States.TIMEOUT;
           await this.registerOrder(newOrder, monitor);
-          // resolve(monitor)
           resolve(new RequestResult(false, `El controlador ID = ${newOrder.ctrl_id} no ha respondido a tiempo.`));
         }, Main.REQUEST_TIMEOUT);
         // Send order to controller
+        nodeKey.pendingOrder = true;
         const msgID = nodeKey.addCommandForControllerBody(codes.CMD_PIN_CONFIG_SET, -1, [newOrder.pin.toString(), newState.toString()], true, true, async (code) => {
           ignoreTimeout = true;
+          nodeKey.pendingOrder = false;
           clearTimeout(reqHandle);
           monitor = States.EXECUTED;
           await this.registerOrder(newOrder, monitor);
-          // resolve(monitor)
           const res = code === codes.AIO_OK;
           resolve(new RequestResult(res, `Orden para pines ejecutada ${res ? 'correctamente' : `con errores ${useful.toHex(code)}`}.`));
           this.log(`Response from controller ${useful.toHex(code)}`);
@@ -820,7 +825,6 @@ export class Main {
         this.log(`Controller ${newOrder.ctrl_id} disconnected.`);
         monitor = States.DISCONNECTED;
         await this.registerOrder(newOrder, monitor);
-        // resolve(monitor)
         resolve(new RequestResult(false, `El controlador ID = ${newOrder.ctrl_id} no está conectado.`));
       }
     });

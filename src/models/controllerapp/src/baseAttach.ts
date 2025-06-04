@@ -261,7 +261,7 @@ export class BaseAttach extends Mortal {
     } else {
       const nodeAttach = <NodeAttach>key;
       if (key instanceof NodeAttach) {
-        nodeAttach.disableArmButton(true, false);
+        nodeAttach.disableArmButton(!nodeAttach.isSyncedThroughGSM(), false);
         // Delay connection if was unreachable
         setTimeout(
           () => {
@@ -946,6 +946,7 @@ export class NodeAttach extends BaseAttach {
 
   private static readonly TRY_SIM_ALIVE_INTERVAL_S = 30 * 1;
   private gsmToken = codes.GSM_EMPTY_TOKEN;
+  public pendingOrder = false;
 
   private unreached = false;
 
@@ -1008,6 +1009,8 @@ export class NodeAttach extends BaseAttach {
       this._log('ERROR Token received was THE empty token');
     } else {
       this.gsmToken = bigToken;
+      this.disableArmButton(false, true);
+      this.notifyNet(true);
       this._log(`New GSM token for controller ID=${this.controllerID} set! (${this.gsmToken}) `);
     }
   }
@@ -1897,7 +1900,7 @@ export class NodeAttach extends BaseAttach {
 
   disableArmButton(state: boolean, log: boolean = true) {
     if (log) {
-      // this._log(`Setting button disable to '${state}'`);
+      this._log(`Setting button disable to '${state}'`);
     }
     sm.ControllerStateManager.addUpdateNewStates(this.controllerID, { disableSecurityButton: state });
   }
@@ -1998,10 +2001,14 @@ export class NodeAttach extends BaseAttach {
     return this._tag;
   }
 
+  notifyNet(state: boolean) {
+    ControllerMapManager.update(this.controllerID, { conectado: state ? 1 : 0 });
+  }
+
   async insertNet(state: boolean, log: boolean = true) {
     await executeQuery(queries.insertNet, [this.controllerID, useful.getCurrentDate(), state]);
     await executeQuery(queries.insertCtrlState, [state, this.controllerID]);
-    ControllerMapManager.update(this.controllerID, { conectado: state ? 1 : 0 });
+    this.notifyNet(state);
     if (log) {
       this._log(`Inserting: Net state ${state ? 'conectado' : 'desconectado'}`);
     }
