@@ -944,7 +944,7 @@ export class NodeAttach extends BaseAttach {
   private static readonly POWER_SAVE_INTERVAL_S = 5 * 60;
   private lastPowerStamp = 0;
 
-  private static readonly TRY_SIM_ALIVE_INTERVAL_S = 30 * 1;
+  private static readonly TRY_SIM_ALIVE_INTERVAL_S = 30 * 4;
   private gsmToken = codes.GSM_EMPTY_TOKEN;
   public pendingOrder = false;
 
@@ -1015,6 +1015,11 @@ export class NodeAttach extends BaseAttach {
     }
   }
 
+  clearGSMToken() {
+    this.gsmToken = codes.GSM_EMPTY_TOKEN;
+    this.markTiketsAsNotSent();
+  }
+
   public isSyncedThroughGSM(): boolean {
     return this.gsmToken !== codes.GSM_EMPTY_TOKEN;
   }
@@ -1045,21 +1050,30 @@ export class NodeAttach extends BaseAttach {
     this.lastTimeMessageSent = useful.timeInt();
   }
 
+  /**
+   * Set tikets as not sent for this node
+   */
+  markTiketsAsNotSent() {
+    const partialNode = NodeAttach.ticketsMap.get(this.controllerID);
+    if (partialNode) {
+      for (const ticket of partialNode.tickets) {
+        ticket.sent = false;
+      }
+      // this._log(`Tickets for node marked as not sent`)
+    } else {
+      this._log(`No tickets for node ID ${this.controllerID} to clear`);
+    }
+  }
+
   setLogged(state: boolean) {
     if (this.loggedToController === state) {
       return;
     }
+
     if (!state) {
-      const partialNode = NodeAttach.ticketsMap.get(this.controllerID);
-      if (partialNode) {
-        for (const ticket of partialNode.tickets) {
-          ticket.sent = false;
-        }
-        // this._log(`Tickets for node marked as not sent`)
-      } else {
-        this._log(`No tickets for node ID ${this.controllerID}`);
-      }
+      this.markTiketsAsNotSent();
     }
+
     this.loggedToController = state;
   }
 
@@ -1127,12 +1141,16 @@ export class NodeAttach extends BaseAttach {
    * Check if a CMD_SERVER_SIM_ALIVE can be sent to this controller, and if so, send it. Send the curren token to validate this operation.
    */
   tryAddSIMAlive() {
-    if (!isGSMAvailable() || this.gsmToken !== codes.GSM_EMPTY_TOKEN) {
+    // Always send discovery message in order to track connectivity
+    if (!isGSMAvailable()) {
+      // if (!isGSMAvailable() || this.gsmToken !== codes.GSM_EMPTY_TOKEN) {
       // this._log("GSM Not ready or token is already set!")
       return;
     }
     if (useful.timeInt() >= this.lastTimeSIMAliveSent + NodeAttach.TRY_SIM_ALIVE_INTERVAL_S) {
-      this._addOne(new Message(codes.CMD_SERVER_SIM_ALIVE, 0, [this.gsmToken.toString(), useful.timeInt().toString()]));
+      // Send current token
+      // this._addOne(new Message(codes.CMD_SERVER_SIM_ALIVE, 0, [this.gsmToken.toString(), useful.timeInt().toString()]));
+      this._addOne(new Message(codes.CMD_SERVER_SIM_ALIVE, 0, [useful.timeInt().toString()]));
       this.lastTimeSIMAliveSent = useful.timeInt();
       this._log('SIM alive added');
     }
@@ -1146,6 +1164,10 @@ export class NodeAttach extends BaseAttach {
         // this.removePendingMessageByID(id,cmdOrValue,false)
         this._keepAliveRequestSent = false;
         // this._log("Keep alive response received")
+        break;
+      case codes.VALUE_WRONG_TOKEN:
+        this._log('Controller notified wrong token');
+        this.clearGSMToken();
         break;
       case codes.CMD_POWER:
         // this._log(`Received power measure '${command}'`);
@@ -1685,6 +1707,10 @@ export class NodeAttach extends BaseAttach {
         break;
 
       // This message means that the login was successful
+      case codes.VALUE_XD:
+        this._log('Received XD');
+        this.addSyncRequest();
+        break;
       case codes.CMD_HELLO_FROM_CTRL:
         this._log('Received hello from controller. Logged in.');
         this.setLogged(true);
@@ -1705,45 +1731,47 @@ export class NodeAttach extends BaseAttach {
           break;
         }
 
-        let validFile: string | null = null;
-        let validVersion: FirmwareVersion | null = null;
-        for (const firm of storedVersionsData) {
-          const fileBuffer = await useful.readFileAsBuffer(firm.archivo);
-          if (!fileBuffer) {
-            this._log(`Could not read file ${firm.archivo}`);
-            continue;
-          }
-          const fileBase64 = fileBuffer.toString('base64');
+        if (this.isLogged()) {
+          let validFile: string | null = null;
+          let validVersion: FirmwareVersion | null = null;
+          for (const firm of storedVersionsData) {
+            const fileBuffer = await useful.readFileAsBuffer(firm.archivo);
+            if (!fileBuffer) {
+              this._log(`Could not read file ${firm.archivo}`);
+              continue;
+            }
+            const fileBase64 = fileBuffer.toString('base64');
 
-          const shaRes = Selector.checkFirmwareShaFromBase64(fileBase64);
-          if (!shaRes) {
-            this._log(`File sha256 check failed`);
-            continue;
+            const shaRes = Selector.checkFirmwareShaFromBase64(fileBase64);
+            if (!shaRes) {
+              this._log(`File sha256 check failed`);
+              continue;
+            }
+
+            const fileVer = useful.getVersionFromBase64(fileBase64);
+            if (!fileVer) {
+              this._log(`File has no version`);
+              continue;
+            }
+
+            const matchVersion = Main.compareVersions(fileVer, { major: firm.mayor, minor: firm.minor, patch: firm.patch });
+            if (!matchVersion) {
+              this._log(`File version and database' doesn't match`);
+              continue;
+            }
+
+            validFile = fileBase64;
+            validVersion = fileVer;
+            break;
           }
 
-          const fileVer = useful.getVersionFromBase64(fileBase64);
-          if (!fileVer) {
-            this._log(`File has no version`);
-            continue;
+          if (!validFile || !validVersion) {
+            this._log(`There was no valid firmware`);
+            break;
           }
-
-          const matchVersion = Main.compareVersions(fileVer, { major: firm.mayor, minor: firm.minor, patch: firm.patch });
-          if (!matchVersion) {
-            this._log(`File version and database' doesn't match`);
-            continue;
-          }
-
-          validFile = fileBase64;
-          validVersion = fileVer;
-          break;
+          const chunks = _selector.splitFirmware(validFile);
+          this.askSendFirmware(chunks, validVersion);
         }
-
-        if (!validFile || !validVersion) {
-          this._log(`There was no valid firmware`);
-          break;
-        }
-        const chunks = _selector.splitFirmware(validFile);
-        this.askSendFirmware(chunks, validVersion);
 
         break;
 
@@ -2060,6 +2088,13 @@ export class NodeAttach extends BaseAttach {
   addCommandForControllerBody(header: number, id: number, body: string[], logOnSend: boolean = true, logOnResponse: boolean = true, action: IntConsumer | null = null): number {
     const msg = new Message(header, id, body).setLogOnSend(logOnSend).setLogOnResponse(logOnResponse).attachAction(action);
     return this._addOne(msg);
+  }
+
+  addSyncRequest() {
+    const pwd = Encryption.decrypt(this.password, true);
+    if (pwd) {
+      this._addOne(new Message(codes.SYNC_REQUEST, 0, [pwd]).setLogOnSend(true));
+    }
   }
 
   /**

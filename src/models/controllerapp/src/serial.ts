@@ -252,7 +252,7 @@ function keepPortOpenTask() {
           // If CRLF is found, then buffered data is one or more complete line.
           // Parse each line
           const rawLine = generalBuffer.subarray(lineStart, crlfIndex).toString('utf8');
-          log(`CRLF found. Raw line: '${rawLine}'`);
+          // log(`CRLF found. Raw line: '${rawLine}'`);
 
           // If configured, SMS can be processed
           if (gsmConfigured) {
@@ -280,7 +280,7 @@ function keepPortOpenTask() {
               log('SIM unplugged!');
               configureGSM();
             } else {
-              log(`Line was not processed! '${rawLine}'`);
+              // log(`Line was not processed! '${rawLine}'`);
             }
           } else {
             const isResponse = possibleResponses.test(rawLine);

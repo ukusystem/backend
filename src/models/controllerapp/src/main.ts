@@ -425,7 +425,7 @@ export class Main {
       if (!nodeOptional) {
         this.log(`No node attach ID = ${nodeID}`);
       } else {
-        if (nodeOptional.isLogged()) {
+        if (nodeOptional.isLogged() || nodeOptional.isSyncedThroughGSM()) {
           nodeOptional.addCommandForControllerBody(codes.CMD_TICKET_REMOVE, -1, [ticketID.toString()]);
           this.log('Added command for controller.');
         } else {
@@ -845,44 +845,6 @@ export class Main {
   }
 
   /**
-   * Process the field {@linkcode foto}. If the worker is new, {@linkcode foto} may
-   * contain the worker's photo in base 64 format. If not new, {@linkcode foto} must
-   * contain the photo file name and that file should already exist.
-   *
-   * @param byteSize If the photo file is written, the amount of bytes written is
-   *                 stored here. If an error occurred, ``-1`` is stored, is no file
-   *                 was written, ``0`` is stored.
-   * @param nodeID The ID of the node for which the ticket was created for.
-   * @returns The proper filename to save in the database, or an error message if an error occurs.
-   */
-  // private async processPhotoField(worker: Personal, byteSize: AtomicNumber, nodeID: number): Promise<string | null> {
-  //   const millis = Date.now();
-  //   const fotoOptional = worker.foto;
-  //   // Initial state. the case where (isNew && fotoOptional.isPresent()) can still
-  //   // change, depending on the success of the file written and that value is set
-  //   // inside the writing function.
-  //   byteSize.inner = !worker.isNew !== !fotoOptional ? 0 : -1;
-  //   // Photo can be optional
-  //   if (worker.isNew) {
-  //     if (fotoOptional) {
-  //       // The final byte size is defined here, if this case occurs
-  //       if (await useful.writeNewTicketPhotoFromBase64(fotoOptional, millis, nodeID, byteSize)) {
-  //         return useful.getReplacedPath(useful.getPathForNewWorkerPhoto(nodeID, millis));
-  //       } else {
-  //         return 'error-WritingFile';
-  //       }
-  //     } else {
-  //       //				return "error-PhotoWasOptional";
-  //       return null;
-  //     }
-  //   }
-  //   // Photo file name is mandatory
-  //   else {
-  //     return fotoOptional ?? 'error-NoFotoOfExistingWorker';
-  //   }
-  // }
-
-  /**
    * Load accepted tickets from the database. This is called once on every start
    * of the program to load a buffer of pending tickets to send.
    */
@@ -968,8 +930,8 @@ export class Main {
           continue;
         }
         // If node is logged in
-        if (!attach.isLogged()) {
-          // log("Attachment ID = %d not logged", nodeID);
+        if (!attach.isLogged() && !attach.isSyncedThroughGSM()) {
+          // log("Attachment ID = %d not logged nor synced throught GSM", nodeID);
           continue;
         }
         attach.addCommandForControllerBody(codes.CMD_CONFIG_GET, -1, [codes.VALUE_CAN_ACCEPT_TICKET.toString()], true, true, (available: number) => {

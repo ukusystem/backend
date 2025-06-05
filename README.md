@@ -104,5 +104,16 @@ Backend del proyecto Uku
 
 ## Backend configure GSM
 
-- When por is open, call configure method
+- When port is open, call configure method
 - Method sets configured to false
+
+## Server sync and keep alive
+
+- Servidor envia HOLI (server_sim_alive) a controlador (a intervalos de 60s)
+- Controlador responde XD (puede servir como señal de vida)
+- Servidor envía SYNC_REQUEST como respuesta a cada XD con contraseña (no usuario) si y solo si no esá sincronizdo en el servidor
+- Controlador valida contraseña y envía sincronización. Controlador siempre hace caso a SYNC_REQUEST cuando la contraseña es correcta.
+- Controlador envía END_SYNC junto con sincronizacion
+- Servidor recive END_SYNC y deja de enviar SYNC_REQUEST
+
+- Servidor se basa en XD para considerar conectado o no el controlador
