@@ -213,7 +213,7 @@ export class BaseAttach extends Mortal {
       }
       // console.log(`Sending one SMS from ${l}`);
       if (first.logOnSend) {
-        this._log(`Sent SMS (${number}): '${useful.trimString(finalMsg)}'`);
+        // this._log(`Sent SMS (${number}): '${useful.trimString(finalMsg)}'`);
       }
       this.addPendingMessage(first);
       this.sendBuffer.shift();
@@ -928,7 +928,7 @@ export class NodeAttach extends BaseAttach {
    */
   lastTimeMessageSent = useful.timeInt();
 
-  lastTimeSIMAliveSent = useful.timeInt();
+  lastTimeSIMAliveSent = 0;
 
   static ticketsMap = new Map<number, NodeTickets>();
 
@@ -945,7 +945,7 @@ export class NodeAttach extends BaseAttach {
   private lastPowerStamp = 0;
 
   private static readonly TRY_SIM_ALIVE_INTERVAL_S = 30 * 4;
-  private gsmToken = codes.GSM_EMPTY_TOKEN;
+  private isGSMSynced = false;
   public pendingOrder = false;
 
   private unreached = false;
@@ -1003,25 +1003,29 @@ export class NodeAttach extends BaseAttach {
     this.celular = celular;
   }
 
-  setGSMToken(newToken: number) {
-    const bigToken = BigInt(newToken);
-    if (bigToken === codes.GSM_EMPTY_TOKEN) {
-      this._log('ERROR Token received was THE empty token');
-    } else {
-      this.gsmToken = bigToken;
-      this.disableArmButton(false, true);
-      this.notifyNet(true);
-      this._log(`New GSM token for controller ID=${this.controllerID} set! (${this.gsmToken}) `);
-    }
+  setGSMSync() {
+    // const bigToken = BigInt(newToken);
+    // if (bigToken === codes.GSM_EMPTY_TOKEN) {
+    //   this._log('ERROR Token received was THE empty token');
+    // } else {
+    this.isGSMSynced = true;
+    this.disableArmButton(false, true);
+    this.insertNet(true);
+    this.syncCards();
+    // this.notifyNet(true);
+    // this._log(`New GSM token for controller ID=${this.controllerID} set! (${this.isGSMSynced}) `);
+    this._log('Controller synced through GSM!');
+    // }
   }
 
-  clearGSMToken() {
-    this.gsmToken = codes.GSM_EMPTY_TOKEN;
+  setGSMUnsynced() {
+    this.isGSMSynced = false;
+    this._log('GSM unsynced!');
     this.markTiketsAsNotSent();
   }
 
   public isSyncedThroughGSM(): boolean {
-    return this.gsmToken !== codes.GSM_EMPTY_TOKEN;
+    return this.isGSMSynced;
   }
 
   phoneMatch(phone: number): boolean {
@@ -1093,15 +1097,15 @@ export class NodeAttach extends BaseAttach {
     return this.port;
   }
 
-  setIncrements(input: number, output: number, temp: number, energy: number) {
-    if (this.inputAI === 0 && this.outputAI === 0 && this.tempAI === 0 && this.energyAI === 0) {
-      this.inputAI = input;
-      this.outputAI = output;
-      this.tempAI = temp;
-      this.energyAI = energy;
-    }
-    this._log(`${this.inputAI} ${this.outputAI} ${this.tempAI} ${this.energyAI}`);
-  }
+  // setIncrements(input: number, output: number, temp: number, energy: number) {
+  //   if (this.inputAI === 0 && this.outputAI === 0 && this.tempAI === 0 && this.energyAI === 0) {
+  //     this.inputAI = input;
+  //     this.outputAI = output;
+  //     this.tempAI = temp;
+  //     this.energyAI = energy;
+  //   }
+  //   this._log(`${this.inputAI} ${this.outputAI} ${this.tempAI} ${this.energyAI}`);
+  // }
 
   static getInstanceFromPacket(data: db2.Controlador2, logger: Logger): NodeAttach {
     return new NodeAttach(data.ctrl_id, data.nodo, data.ip, data.puerto, data.usuario, data.contraseña, logger, data.celular);
@@ -1145,13 +1149,13 @@ export class NodeAttach extends BaseAttach {
     if (!isGSMAvailable()) {
       // if (!isGSMAvailable() || this.gsmToken !== codes.GSM_EMPTY_TOKEN) {
       // this._log("GSM Not ready or token is already set!")
+      this.lastTimeSIMAliveSent = 0;
       return;
     }
-    if (useful.timeInt() >= this.lastTimeSIMAliveSent + NodeAttach.TRY_SIM_ALIVE_INTERVAL_S) {
-      // Send current token
-      // this._addOne(new Message(codes.CMD_SERVER_SIM_ALIVE, 0, [this.gsmToken.toString(), useful.timeInt().toString()]));
-      this._addOne(new Message(codes.CMD_SERVER_SIM_ALIVE, 0, [useful.timeInt().toString()]));
-      this.lastTimeSIMAliveSent = useful.timeInt();
+    const currentTime = useful.timeInt();
+    if (currentTime >= this.lastTimeSIMAliveSent + NodeAttach.TRY_SIM_ALIVE_INTERVAL_S) {
+      this._addOne(new Message(codes.CMD_SERVER_SIM_ALIVE, 0, [currentTime.toString()]));
+      this.lastTimeSIMAliveSent = currentTime;
       this._log('SIM alive added');
     }
   }
@@ -1167,7 +1171,7 @@ export class NodeAttach extends BaseAttach {
         break;
       case codes.VALUE_WRONG_TOKEN:
         this._log('Controller notified wrong token');
-        this.clearGSMToken();
+        this.setGSMUnsynced();
         break;
       case codes.CMD_POWER:
         // this._log(`Received power measure '${command}'`);
@@ -1505,12 +1509,13 @@ export class NodeAttach extends BaseAttach {
         break;
       case codes.VALUE_END_SYNC:
         this._log('Received end of sync');
-        const syncData = this._parseMessage(parts, queries.bigParse, id, false);
-        if (syncData) {
-          const newToken = syncData[0].getInt();
-          this._log(`New token: ${newToken}`);
-          this.setGSMToken(newToken);
-        }
+        // const syncData = this._parseMessage(parts, queries.bigParse, id, false);
+        // if (syncData) {
+        // const newToken = syncData[0].getInt();
+        // this._log(`New token: ${newToken}`);
+        this._log('End sync');
+        this.setGSMSync();
+        // }
         break;
 
       // Should be mirrored with the node ID appended. These are event for the technician.
@@ -1709,11 +1714,21 @@ export class NodeAttach extends BaseAttach {
       // This message means that the login was successful
       case codes.VALUE_XD:
         this._log('Received XD');
-        this.addSyncRequest();
+        const xdData = this._parseMessage(parts, [queries.tupleInt], id, false);
+        if (!xdData) {
+          break;
+        }
+        this.setGSMAlive();
+        if (xdData[0].getInt() === codes.VALUE_FALSE) {
+          this.setGSMUnsynced();
+        }
+        this.tryAddSyncRequest();
         break;
       case codes.CMD_HELLO_FROM_CTRL:
         this._log('Received hello from controller. Logged in.');
         this.setLogged(true);
+        this.setGSMUnsynced();
+        this.pendingOrder = false;
 
         ManagerAttach.connectedManager?.addNodeState(codes.VALUE_CONNECTED, this.controllerID);
 
@@ -2001,7 +2016,6 @@ export class NodeAttach extends BaseAttach {
    * @param id
    * @param nodeID
    */
-
   private async insertSilent(name: string, parameters: any[], query: string, nodeID: number, logSuccess: boolean) {
     if (!parameters) return;
     const fullQuery = BaseAttach.formatQueryWithNode(query, nodeID);
@@ -2090,9 +2104,13 @@ export class NodeAttach extends BaseAttach {
     return this._addOne(msg);
   }
 
-  addSyncRequest() {
+  tryAddSyncRequest() {
+    if (this.isSyncedThroughGSM()) {
+      return;
+    }
     const pwd = Encryption.decrypt(this.password, true);
     if (pwd) {
+      this._log('Added sync request');
       this._addOne(new Message(codes.SYNC_REQUEST, 0, [pwd]).setLogOnSend(true));
     }
   }
@@ -2106,6 +2124,18 @@ export class NodeAttach extends BaseAttach {
     if (pwd) {
       this._addOne(new Message(codes.CMD_LOGIN, -1, [this.user, pwd]).setLogOnSend(false));
       this._log(`Added login`);
+    }
+  }
+
+  async syncCards() {
+    // this._log("Sending cards");
+    const cards = await executeQuery<db2.CardForController[]>(queries.cardSelectForController);
+    if (cards) {
+      for (const card of cards) {
+        this.addCommandForControllerBody(codes.CMD_CONFIG_SET, -1, card.activo ? [codes.VALUE_CARD_SYNC.toString(), card.a_id.toString(), card.co_id.toString(), card.serie.toString(), card.administrador.toString()] : [codes.VALUE_CARD_EMPTY_SYNC.toString(), card.a_id.toString()], false, false);
+      }
+    } else {
+      this._log('ERROR Reading cards to sync');
     }
   }
 
@@ -2132,15 +2162,8 @@ export class NodeAttach extends BaseAttach {
         }
         // Set this after the controller proves that can receive/respond to messages
         this.resetKeepAliveRequest();
-        // Send all cards. Inactive cards will be send with an order to erase it in the
-        // controller.
-        // this._log("Sending cards");
-        const cards = await executeQuery<db2.CardForController[]>(queries.cardSelectForController);
-        if (cards) {
-          for (const card of cards) {
-            this.addCommandForControllerBody(codes.CMD_CONFIG_SET, -1, card.activo ? [codes.VALUE_CARD_SYNC.toString(), card.a_id.toString(), card.co_id.toString(), card.serie.toString(), card.administrador.toString()] : [codes.VALUE_CARD_EMPTY_SYNC.toString(), card.a_id.toString()], false, false);
-          }
-        }
+        // Send all cards. Inactive cards will be send with an order to erase it in the controller.
+        this.syncCards();
       });
     });
 
@@ -3101,7 +3124,7 @@ export class ManagerAttach extends BaseAttach {
   }
 
   /**
-   * Erases a card fomr all controllers.
+   * Erases a card from all controllers. USE THIS FOR WEB
    *
    * @param selector
    * @param cardID
@@ -3114,7 +3137,7 @@ export class ManagerAttach extends BaseAttach {
   /**
    * Update one card in all the controllers that are connected. The disconnected
    * controller will get the whole list of admin cards when they connect and the
-   * back end logs in successfully.
+   * back end logs in successfully. USE THIS FOR WEB
    *
    * @param selector  The selector containing the controllers data.
    * @param cardID    The ID of the card to update.
@@ -3135,7 +3158,7 @@ export class ManagerAttach extends BaseAttach {
       companyID = workerData[0].entero;
     }
     for (const nodeAttach of selector.nodeAttachments) {
-      if (nodeAttach.isLogged()) {
+      if (nodeAttach.isLogged() || nodeAttach.isSyncedThroughGSM()) {
         nodeAttach.addCommandForControllerBody(codes.CMD_CONFIG_SET, -1, remove ? [codes.VALUE_CARD_EMPTY.toString(), cardID.toString()] : [codes.VALUE_CARD.toString(), cardID.toString(), companyID.toString(), serial.toString(), isAdmin ? '1' : '0']);
       }
     }

@@ -43,6 +43,7 @@ export class Main {
   private static readonly ALIVE_CHECK_INTERVAL_MS = 2 * 1000;
   public static readonly ALIVE_REQUEST_INTERVAL = 3;
   private static readonly ALIVE_CONTROLLER_TIMEOUT = parseInt(process.env.CONTROLLER_TIMEOUT ?? '5');
+  private static readonly ALIVE_CONTROLLER_GSM_TIMEOUT = parseInt(process.env.CONTROLLER_GSM_TIMEOUT ?? '60');
   private static readonly ALIVE_MANAGER_TIMEOUT = parseInt(process.env.MANAGER_TIMEOUT ?? '5');
 
   private static readonly TICKET_CHECK_PERIOD = 1 * 1000;
@@ -1059,6 +1060,17 @@ export class Main {
       }
     }
 
+    for (const node of nodeCopy) {
+      if (node.hasBeenGSMInactiveFor(Main.ALIVE_CONTROLLER_GSM_TIMEOUT)) {
+        if (node.isSyncedThroughGSM()) {
+          this.log('Controller not responding through GSM. Considered disconnected.');
+          node.setGSMUnsynced();
+          await node.insertNet(false);
+          ManagerAttach.connectedManager?.addNodeState(codes.VALUE_DISCONNECTED, node.controllerID);
+        }
+      }
+    }
+
     let deleted = false;
     const mngrCopy = this.selector.managerConnections.slice();
     for (const manager of mngrCopy) {
@@ -1072,6 +1084,7 @@ export class Main {
         }
       }
     }
+
     if (deleted) {
       this.log(`Managers left: ${this.selector.managerConnections.length}`);
     }

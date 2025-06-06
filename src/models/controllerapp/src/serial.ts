@@ -161,6 +161,7 @@ export async function checkPath() {
   const tempPath = comData[0].text;
   if (tempPath.length <= 0) {
     log('WARNING No com port configured');
+    closeGSMSerial();
     return;
   }
   currentPath = tempPath;
@@ -265,7 +266,7 @@ function keepPortOpenTask() {
             } else if (waitingSMSbody) {
               // Then this line is the body
               // const line = generalBuffer.subarray(lineStart, crlfIndex).toString('utf8');
-              log(`Received SMS line from (${senderNumber}): '${rawLine}'`);
+              // log(`Received SMS line from (${senderNumber}): '${rawLine}'`);
               // Process line as command. Add line to the received buffer
               // TODO
               const nodeAttach = currentSelector?.getNodeByNumber(senderNumber);

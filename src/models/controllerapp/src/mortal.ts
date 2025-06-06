@@ -1,4 +1,4 @@
-import * as Useful from './useful'
+import * as Useful from './useful';
 
 /**
  * Represent an object that can be 'alive', meaning that some task will make
@@ -12,6 +12,7 @@ export class Mortal {
   private lastTimeAlive = 0;
   // private previousState = Mortal.DEFAULT_INITIAL_STATE;
   // private currentState = Mortal.DEFAULT_INITIAL_STATE;
+  private lastTimeGSMAlive = 0;
 
   /**
    * Save the current time as the last time that this object was 'alive'.
@@ -20,18 +21,26 @@ export class Mortal {
     this.lastTimeAlive = Useful.timeInt();
   }
 
+  setGSMAlive() {
+    this.lastTimeGSMAlive = Useful.timeInt();
+  }
+
   /**
-     * Get if this object wasn't set as alive for a period of time, similar to a timeout.
-     * This does not update the current state of this object.
-     * @param maxDelay Maximum seconds without an update as alive that can pass to still consider this object as alive.
-     * @return True if this object hasn't been set as active for `maxDelay` time.
-     */
+   * Get if this object wasn't set as alive for a period of time, similar to a timeout.
+   * This does not update the current state of this object.
+   * @param maxDelay Maximum seconds without an update as alive that can pass to still consider this object as alive.
+   * @return True if this object hasn't been set as active for `maxDelay` time.
+   */
   hasBeenInactiveFor(maxDelay: number): boolean {
     return Useful.timeInt() >= this.lastTimeAlive + maxDelay;
   }
 
+  hasBeenGSMInactiveFor(maxDelay: number): boolean {
+    return Useful.timeInt() >= this.lastTimeGSMAlive + maxDelay;
+  }
+
   /**
-   * 
+   *
    * @returns The time that the object has been inactive in seconds.
    */
   // getTimeInactive(){
