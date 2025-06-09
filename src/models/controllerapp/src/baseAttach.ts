@@ -261,7 +261,9 @@ export class BaseAttach extends Mortal {
     } else {
       const nodeAttach = <NodeAttach>key;
       if (key instanceof NodeAttach) {
-        nodeAttach.disableArmButton(!nodeAttach.isSyncedThroughGSM(), false);
+        if (!nodeAttach.isSyncedThroughGSM()) {
+          nodeAttach.disableArmButton(false, false);
+        }
         // Delay connection if was unreachable
         setTimeout(
           () => {
@@ -324,7 +326,7 @@ export class BaseAttach extends Mortal {
               //this._log('Message was a response.')
             } else if (await this._processMessage(selector, partsArray, cmdOrValue, id, commands[i], code, bundle)) {
               //this._log('Message was not a response, but was processed by a subclass.')
-              this._log(`Processed command ${cmdOrValue} ${useful.toHex(cmdOrValue)}`);
+              // this._log(`Processed command ${cmdOrValue} ${useful.toHex(cmdOrValue)}`);
             } else {
               this._log(`Unknown command '${commands[i]}'. Command = ${useful.toHex(cmdOrValue)} ID = ${id}`);
               this.addUnknownCmd(id);
@@ -1018,9 +1020,11 @@ export class NodeAttach extends BaseAttach {
     // }
   }
 
-  setGSMUnsynced() {
+  setGSMUnsynced(log: boolean = true) {
     this.isGSMSynced = false;
-    this._log('GSM unsynced!');
+    if (log) {
+      this._log('GSM unsynced!');
+    }
     this.markTiketsAsNotSent();
   }
 
@@ -2952,6 +2956,11 @@ export class ManagerAttach extends BaseAttach {
     const updateQuery = this.updatWithPassword ? queries.nodeUpdatePwd : queries.nodeUpdate;
     let notify = false;
     let resetData = false;
+
+    if (currentAttach) {
+      currentAttach.setGSMUnsynced();
+    }
+
     /**
      * The channel was not found.
      * In both cases, a new channel must be created IF there is data in the database.
@@ -3066,8 +3075,8 @@ export class ManagerAttach extends BaseAttach {
 
         // Update node phone only when it was saved in database
         if (notify) {
-          console.log(cd);
-          const newPhone = cd[27].getInt();
+          // console.log(cd);
+          const newPhone = cd[26].getInt();
           currentAttach.setPhone(newPhone);
         }
 

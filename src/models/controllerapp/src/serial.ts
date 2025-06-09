@@ -16,11 +16,11 @@ const TAG = '(GSM) ';
 // let bufferData: Buffer = emptyBuffer;
 // let lastDataReceived: number = -1;
 // const DATA_TIMEOUT_MS = 3 * 1000;
-const TIMEOUT_CHECK_PERIOD_MS = 100;
+// const TIMEOUT_CHECK_PERIOD_MS = 100;
 const ALWAYS_OPEN_INTERVAL_MS = 3 * 1000;
 const TRY_CONFIGURE_PERIOD_MS = 10 * 1000;
 const ONE_CONFIG_TIMEOUT = 10 * 1000;
-let dataInterval: NodeJS.Timeout;
+// let dataInterval: NodeJS.Timeout;
 let alwaysOpenInterval: NodeJS.Timeout;
 let configureTimeout: NodeJS.Timeout | undefined = undefined;
 const br = 115200; // 9600
@@ -114,7 +114,7 @@ function closeGSMSerial(logResult: boolean = false) {
     }
     return;
   }
-  clearInterval(dataInterval);
+  // clearInterval(dataInterval);
   clearTimeout(configureTimeout);
   currentPort?.close(async () => {
     currentPort?.destroy();
@@ -162,37 +162,11 @@ export async function checkPath() {
   if (tempPath.length <= 0) {
     log('WARNING No com port configured');
     closeGSMSerial();
+    // nodeAttach.setGSMUnsynced(false);
+
     return;
   }
   currentPath = tempPath;
-}
-
-/**
- * Check if data has been inactive for a period of time and if so, consider it a complete message ans process it.
- */
-function checkDataTimeout() {
-  // if (lastDataReceived >= 0 && Date.now() > lastDataReceived + DATA_TIMEOUT_MS) {
-  //   log(`Received data (${bufferData.length}): '${bufferData.toString()}'`);
-  //   if (bufferData.length === 1) {
-  //     log(`Hex: ${bufferData.toString('hex')}`);
-  //   }
-  //   lastDataReceived = -1;
-  //   // Unsolicited codes
-  //   if (unplugedSIM.test(bufferData.toString('utf8'))) {
-  //     log('SIM unplugged!');
-  //     configureGSM();
-  //   }
-  //   if (gsmConfigured) {
-  //     // Process data IF CONFIGURED
-  //     // TODO
-  //   } else {
-  //     // If not configured, data can still be messages from server, but only responses to configs are processed.
-  //     const eventData: MyEventData = { response: bufferData, index: currentConfigIndex };
-  //     myEmitter.emit('config_response', eventData);
-  //   }
-  //   // Empty buffer and save remaining
-  //   bufferData = emptyBuffer;
-  // }
 }
 
 /**
@@ -223,7 +197,7 @@ function keepPortOpenTask() {
     log(`Serial '${currentPort?.path}' open at ${currentPort?.baudRate} bps`);
 
     // Start data buffering
-    dataInterval = setInterval(checkDataTimeout, TIMEOUT_CHECK_PERIOD_MS);
+    // dataInterval = setInterval(checkDataTimeout, TIMEOUT_CHECK_PERIOD_MS);
 
     // Register events
     currentPort?.on('data', (data: Buffer) => {
@@ -275,7 +249,7 @@ function keepPortOpenTask() {
               if (nodeAttach?.addData(Buffer.from(rawLine))) {
                 // log('Added to pending to process');
               } else {
-                log(`ERROR Adding to pending to process. ${nodeAttach ? '' : 'Node attachment not found?'}`);
+                log(`ERROR Adding to pending to process. ${nodeAttach ? '' : 'Node attachment not found for number ' + senderNumber.toString()}`);
               }
             } else if (rawLine.includes(unplugedSIM)) {
               log('SIM unplugged!');

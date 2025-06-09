@@ -810,6 +810,7 @@ export class Main {
           resolve(new RequestResult(false, `El controlador ID = ${newOrder.ctrl_id} no ha respondido a tiempo.`));
         }, Main.REQUEST_TIMEOUT);
         // Send order to controller
+        this.log(`Bussy? ${nodeKey.pendingOrder}`);
         nodeKey.pendingOrder = true;
         const msgID = nodeKey.addCommandForControllerBody(codes.CMD_PIN_CONFIG_SET, -1, [newOrder.pin.toString(), newState.toString()], true, true, async (code) => {
           ignoreTimeout = true;
@@ -821,7 +822,7 @@ export class Main {
           resolve(new RequestResult(res, `Orden para pines ejecutada ${res ? 'correctamente' : `con errores ${useful.toHex(code)}`}.`));
           this.log(`Response from controller ${useful.toHex(code)}`);
         });
-        this.log('Added order for controller. Waiting response...');
+        this.log(`Added order for controller. Waiting response...`);
       } else {
         this.log(`Controller ${newOrder.ctrl_id} disconnected.`);
         monitor = States.DISCONNECTED;
@@ -937,10 +938,10 @@ export class Main {
         }
         attach.addCommandForControllerBody(codes.CMD_CONFIG_GET, -1, [codes.VALUE_CAN_ACCEPT_TICKET.toString()], true, true, (available: number) => {
           if (available <= 0) {
-            // this.log(`No space for ticket in node ID = ${nodeID}`);
+            this.log(`No space for ticket in node ID = ${nodeID}`);
             return;
           }
-          // log("Available %d in controller ID=%d", available, nodeID);
+          this.log(`Available ${available} in controller ID=${nodeID}`);
           let count = 0;
           for (const ticket of ticketList) {
             if (ticket.sent) {
