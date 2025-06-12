@@ -35,3 +35,6 @@ import { SystemManager } from './models/system';
     process.exit(1);
   }
 })();
+
+// import { startServerForManager } from './models/controllerapp/test';
+// startServerForManager();
