@@ -1,6 +1,6 @@
 import { appConfig } from '../../configs';
 import { AlarmManager } from '../../controllers/socket';
-import { mqttService } from '../../services/mqtt/MqttService';
+import { fcmService } from '../../services/firebase/FcmNotificationService';
 import { Camara } from '../../types/db';
 import { CameraMotionManager } from '../camera';
 import { CameraOnvifManager } from '../camera/onvif/camera.onvif.manager';
@@ -75,7 +75,7 @@ export class CameraNotifyManager {
     if (controller !== undefined && curCam.activo === 1) {
       const canNotify = (activo === undefined || activo === 1) && conectado !== undefined && (curCam.conectado !== conectado || isAdd) && conectado === 0;
       if (canNotify) {
-        mqttService.publisAdminNotification({ evento: 'alarm.camera.disconnected', titulo: 'Camara desconectado', mensaje: `La camara "${curCam.descripcion}" del controlador "${controller.nodo}" se ha desconectado. Verifica su estado y conexión de red.` });
+        fcmService.publisAdminNotification({ evento: 'alarm.camera.disconnected', titulo: 'Camara desconectado', mensaje: `La camara "${curCam.descripcion}" del controlador "${controller.nodo}" se ha desconectado. Verifica su estado y conexión de red.` });
       }
     }
   }

@@ -7,12 +7,14 @@ import { Cargo, Contrata, Personal, Rol, Rubro, Usuario } from '../types/db';
 import { appConfig } from '../configs';
 import dayjs from 'dayjs';
 import { JwtEncription } from '../utils/jwt.encription';
+import { UserRol } from '../types/rol';
 
 export interface JwtPayload {
   iat: number;
   exp: number;
   id: number;
   rol: string;
+  ut_uuid: string;
 }
 
 export type UserInfo = Pick<Usuario, 'u_id' | 'usuario' | 'contraseña' | 'rl_id' | 'fecha' | 'p_id'> &
@@ -26,6 +28,7 @@ interface UserFound extends RowDataPacket, UserInfo {}
 
 export interface UserToken {
   ut_id: number;
+  ut_uuid: string;
   user_id: number;
   refresh_token: string;
   issued_at: string;
@@ -35,6 +38,7 @@ export interface UserToken {
   user_agent?: string;
   created_at: string;
   updated_at?: string;
+  fcm_token: string | null;
 }
 
 interface UserTokenRowData extends RowDataPacket, UserToken {}
@@ -70,7 +74,7 @@ export class Auth {
     return result as JwtPayload;
   }
 
-  static async createUserToken(user_id: number, refresh_token: string, ip?: string, user_agent?: string) {
+  static async createUserToken(ut_uuid: string, user_id: number, refresh_token: string, ip?: string, user_agent?: string) {
     const tokenPayload = Auth.decodeToken(refresh_token);
     const refresh_token_encrypt = JwtEncription.encrypt(refresh_token);
     const issued_at = dayjs(tokenPayload.iat * 1000).format('YYYY-MM-DD HH:mm:ss');
@@ -79,8 +83,8 @@ export class Auth {
     const created_at = dayjs().format('YYYY-MM-DD HH:mm:ss');
 
     await MySQL2.executeQuery<ResultSetHeader>({
-      sql: `INSERT INTO general.user_token ( user_id , refresh_token , issued_at , expires_at , revoked , ip_address , user_agent , created_at , updated_at ) VALUES ( ? , ? , ? , ? , ? , ? , ? , ? , ? )`,
-      values: [user_id, refresh_token_encrypt, issued_at, expires_at, 0, ip, user_agent, created_at, undefined],
+      sql: `INSERT INTO general.user_token ( ut_uuid, user_id , refresh_token , issued_at , expires_at , revoked , ip_address , user_agent , created_at , updated_at ) VALUES ( ?, ? , ? , ? , ? , ? , ? , ? , ? , ? )`,
+      values: [ut_uuid, user_id, refresh_token_encrypt, issued_at, expires_at, 0, ip, user_agent, created_at, undefined],
     });
   }
 
@@ -92,22 +96,48 @@ export class Auth {
     });
   }
 
-  static async getTokenStored(user_id: number, refresh_token_input: string): Promise<UserToken | undefined> {
+  static async updateFcmToken(ut_uuid: string, new_fcm_token: string) {
+    await MySQL2.executeQuery<ResultSetHeader>({
+      sql: `UPDATE general.user_token SET fcm_token = ? WHERE ut_uuid = ? LIMIT 1`,
+      values: [new_fcm_token, ut_uuid],
+    });
+  }
+
+  static async getTokenStoredByUtUuid(ut_uuid: string): Promise<UserToken | undefined> {
     const curDate = dayjs().format('YYYY-MM-DD HH:mm:ss');
     const user_tokens = await MySQL2.executeQuery<UserTokenRowData[]>({
-      sql: `SELECT * FROM general.user_token WHERE user_id = ? AND revoked = 0 AND expires_at > '${curDate}'`,
-      values: [user_id],
+      sql: `SELECT * FROM general.user_token WHERE ut_uuid = ? AND revoked = 0 AND expires_at > '${curDate}'`,
+      values: [ut_uuid],
     });
-    for (const token of user_tokens) {
-      const refresh_token_decrypted = JwtEncription.decrypt(token.refresh_token);
 
-      const isMatch = refresh_token_input === refresh_token_decrypted;
-      if (isMatch) {
-        return token;
-      }
-    }
+    return user_tokens[0];
+  }
 
-    return undefined;
+  static async getRevokedOrExpiredSessions(): Promise<UserToken[]> {
+    const curDate = dayjs().format('YYYY-MM-DD HH:mm:ss');
+    const user_tokens = await MySQL2.executeQuery<UserTokenRowData[]>({
+      sql: `SELECT * FROM general.user_token WHERE revoked = 1 OR expires_at < '${curDate}'`,
+    });
+
+    return user_tokens;
+  }
+
+  static async getAdminSessions(): Promise<UserToken[]> {
+    const curDate = dayjs().format('YYYY-MM-DD HH:mm:ss');
+    const user_tokens = await MySQL2.executeQuery<UserTokenRowData[]>({
+      sql: `SELECT ut.* FROM general.user_token ut INNER JOIN general.usuario u ON ut.user_id = u.u_id WHERE ( u.rl_id = ${UserRol.Administrador} OR u.rl_id = ${UserRol.Gestor} ) AND u.activo = 1 AND ut.revoked = 0 AND ut.expires_at > '${curDate}'`,
+    });
+
+    return user_tokens;
+  }
+  static async getAdminAndGuestContrataSessions(co_id: number): Promise<UserToken[]> {
+    const curDate = dayjs().format('YYYY-MM-DD HH:mm:ss');
+    const user_tokens = await MySQL2.executeQuery<UserTokenRowData[]>({
+      sql: `SELECT ut.* FROM general.user_token ut INNER JOIN general.usuario u ON ut.user_id = u.u_id INNER JOIN general.personal p ON u.p_id = p.p_id WHERE ( ( u.rl_id = ${UserRol.Administrador} OR u.rl_id = ${UserRol.Gestor} ) OR ( u.rl_id = ${UserRol.Invitado} AND p.co_id = ? ) ) AND u.activo = 1 AND ut.revoked = 0 AND ut.expires_at > '${curDate}'`,
+      values: [co_id],
+    });
+
+    return user_tokens;
   }
 
   static findUserById = simpleErrorHandler<UserInfo | null, Pick<Usuario, 'u_id'>>(async ({ u_id }) => {

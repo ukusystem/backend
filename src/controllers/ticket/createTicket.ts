@@ -17,12 +17,12 @@ import { RegistroTicketObj } from '../socket/ticket.schedule/ticket.schedule.typ
 import { TicketState } from '../../types/ticket.state';
 import { UserRol } from '../../types/rol';
 import { FinishTicket } from '../../models/controllerapp/src/finishTicket';
-import { mqttService } from '../../services/mqtt/MqttService';
 
 import { ensureDirExists, moveFile, toPosixPath } from '../../utils/file';
 import { deleteTemporalFilesMulter, MulterMiddlewareConfig } from '../../middlewares/multer.middleware';
 import { generateThumbs } from '../../models/controllerapp/src/frontTools';
 import { ControllerMapManager } from '../../models/maps';
+import { fcmService } from '../../services/firebase/FcmNotificationService';
 
 enum TicketFormKeys {
   Formulario = 'formulario',
@@ -209,7 +209,7 @@ export const createTicketController = asyncErrorHandler(async (req: RequestWithU
     TicketScheduleManager.add(ctrl_id, newTicketObj);
     if (user.rl_id === UserRol.Invitado) {
       const controllerSite = ControllerMapManager.getController(ctrl_id);
-      mqttService.publisAdminNotification({
+      fcmService.publisAdminNotification({
         evento: 'ticket.requested',
         titulo: 'Nueva Solicitud de Ticket',
         mensaje: `Se ha solicitado un nuevo ticket (#${response.id}) por la contrata "${user.contrata}", para el nodo '${controllerSite?.nodo ?? ctrl_id}'.`,

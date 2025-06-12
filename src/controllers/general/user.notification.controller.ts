@@ -8,6 +8,9 @@ import { UserNofication } from '../../models/general/UserNotification/UserNofica
 import { CreateUserNotificationBody } from '../../models/general/UserNotification/schemas/CreateUserNotificationSchema';
 import { NotificationRepository } from '../../models/general/Notification/NotificationRepository';
 import dayjs from 'dayjs';
+import { fcmService } from '../../services/firebase/FcmNotificationService';
+import { Auth } from '../../models/auth';
+import { genericLogger } from '../../services/loggers';
 
 export class UserNoficationController {
   constructor(
@@ -52,9 +55,9 @@ export class UserNoficationController {
         return res.status(401).json({ message: 'No autorizado' });
       }
 
-      const { nu_id } = req.params as { nu_id: string };
+      const { n_uuid } = req.params as { n_uuid: string };
 
-      const userNotificationFound = await this.user_notification_repository.findById(user.u_id, nu_id);
+      const userNotificationFound = await this.user_notification_repository.findByUuId(user.u_id, n_uuid);
       if (!userNotificationFound) {
         return res.status(404).json({ success: false, message: `Notificacion de usuario no diponible.` });
       }
@@ -114,18 +117,88 @@ export class UserNoficationController {
     });
   }
 
+  get suscribeToFcmTopic() {
+    return asyncErrorHandler(async (req: RequestWithUser, res: Response, _next: NextFunction) => {
+      const user = req.user;
+      if (user === undefined) {
+        return res.status(401).json({ message: 'No autorizado' });
+      }
+
+      const { fcmToken } = req.body as { fcmToken: string };
+      // const isValidTOken = await fcmService.verifyFcmToken(fcmToken);
+
+      // if (!isValidTOken) {
+      //   res.status(400).json({ message: 'Token FCM invalido.' });
+      //   return;
+      // }
+
+      await fcmService.subscribeToTopic(fcmToken, { u_id: user.u_id });
+
+      res.json({ message: 'Dispositivo suscrito' });
+    });
+  }
+
+  get updateSuscribeFcmTopic() {
+    return asyncErrorHandler(async (req: RequestWithUser, res: Response, _next: NextFunction) => {
+      const user = req.user;
+      const ut_uuid = req.ut_uuid;
+
+      if (user === undefined || ut_uuid === undefined) {
+        return res.status(401).json({ message: 'No autorizado' });
+      }
+
+      const { fcmToken } = req.body as { fcmToken: string };
+
+      const curTokenStored = await Auth.getTokenStoredByUtUuid(ut_uuid);
+
+      if (curTokenStored === undefined) {
+        return res.status(401).json({ message: 'No autorizado' });
+      }
+
+      if (curTokenStored.fcm_token !== fcmToken) {
+        await Auth.updateFcmToken(ut_uuid, fcmToken);
+        if (curTokenStored.fcm_token) {
+          try {
+            await fcmService.unsubscribeFromTopic(curTokenStored.fcm_token, { u_id: user.u_id });
+          } catch {
+            genericLogger.debug('Error al desuscribir dispositivo. ');
+          }
+        }
+      }
+
+      await fcmService.subscribeToTopic(fcmToken, { u_id: user.u_id });
+
+      res.json({ message: 'Suscripcion actualizado.' });
+    });
+  }
+
+  get unsuscribeFromFcmTopic() {
+    return asyncErrorHandler(async (req: RequestWithUser, res: Response, _next: NextFunction) => {
+      const user = req.user;
+      if (user === undefined) {
+        return res.status(401).json({ message: 'No autorizado' });
+      }
+
+      const { fcmToken } = req.body as { fcmToken: string };
+
+      await fcmService.unsubscribeFromTopic(fcmToken, { u_id: user.u_id });
+
+      res.json({ message: 'Dispositivo suscrito' });
+    });
+  }
+
   get item() {
     return asyncErrorHandler(async (req: RequestWithUser, res: Response, _next: NextFunction) => {
       const user = req.user;
       if (user === undefined) {
         return res.status(401).json({ message: 'No autorizado' });
       }
-      const { nu_id } = req.params as { nu_id: string };
-      const userNotification = await this.user_notification_repository.findById(user.u_id, nu_id);
+      const { n_uuid } = req.params as { n_uuid: string };
+      const userNotification = await this.user_notification_repository.findByUuId(user.u_id, n_uuid);
       if (!userNotification) {
         return res.status(400).json({ success: false, message: 'Notificacion de usuario no disponible' });
       }
-      const response: EntityResponse<UserNofication> = userNotification;
+      const response: EntityResponse<UserNoficationData> = userNotification;
       res.status(200).json(response);
     });
   }

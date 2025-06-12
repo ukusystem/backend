@@ -1,4 +1,4 @@
-import { mqttService } from '../../services/mqtt/MqttService';
+import { fcmService } from '../../services/firebase/FcmNotificationService';
 import { PinesSalida } from '../../types/db';
 import { ControllerMapManager, EquipoSalidaMapManager } from '../maps';
 
@@ -19,7 +19,7 @@ export class PinSalidaNotifyManager {
       return;
     }
 
-    mqttService.publisAdminNotification({ evento: 'alarm.pinsalida.activated', titulo: 'Actuador Activado', mensaje: `El actuador "${equipoSalida.actuador}" asignado al pin "${finalPin}" del controlador "${controller.nodo}" ha sido activado.` });
+    fcmService.publisAdminNotification({ evento: 'alarm.pinsalida.activated', titulo: 'Actuador Activado', mensaje: `El actuador "${equipoSalida.actuador}" asignado al pin "${finalPin}" del controlador "${controller.nodo}" ha sido activado.` });
   }
 
   static update(ctrl_id: number, curPinSal: PinesSalida, fieldsUpdate: Partial<PinesSalida>, shouldNotify?: boolean) {

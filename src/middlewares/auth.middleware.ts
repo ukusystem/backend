@@ -11,6 +11,7 @@ import { socketHandShakeSchema } from '../schemas/auth/socket.handshake';
 
 export interface CustomRequest extends Request {
   user?: UserInfo;
+  ut_uuid?: string;
 }
 
 const getCookies = (cookie: string | undefined, keys: string[]): Record<string, string> => {
@@ -108,7 +109,7 @@ export const authenticate = asyncErrorHandler(async (req: CustomRequest, res: Re
   }
 
   req.user = userFound;
-
+  req.ut_uuid = tokenPayload.ut_uuid;
   next();
 });
 

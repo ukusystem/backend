@@ -27,6 +27,7 @@ import { RubroController } from '../controllers/general/rubro.controller';
 import { RolController } from '../controllers/general/rol.controller';
 import { CargoController } from '../controllers/general/cargo.controller';
 import { EquipoAccesoController } from '../controllers/general/equipo.acceso.controller';
+import { suscribeDeviceSchema } from '../models/general/UserNotification/schemas/suscribeDeviceSchema';
 
 const mysqlControladorRepository = new MySQLContraldorRepository();
 const mysqlUserNotificationRepository = new MySQLUserNotificationRepository();
@@ -60,14 +61,16 @@ generalRoutes.get('/general/controlador/:ctrl_id', authenticate, requestValidato
 
 // GET	/notifications?limit=number&offset=number Listar todos las notificaciones del usuario por paginacion
 generalRoutes.get('/notifications', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor, UserRol.Invitado]), requestValidator({ query: paginationUserNotificationSchema }), userNoficationController.listOffsetPagination);
-// GET	/notifications/:nu_id Obtener notificacion por id
-generalRoutes.get('/notifications/:nu_id', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor, UserRol.Invitado]), requestValidator({ params: userNotificationParamIdSchema }), userNoficationController.item);
+// GET	/notifications/:n_uuid Obtener notificacion por id
+generalRoutes.get('/notifications/:n_uuid', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor, UserRol.Invitado]), requestValidator({ params: userNotificationParamIdSchema }), userNoficationController.item);
 // POST	/notifications Crear una nueva notificacion.
 generalRoutes.post('/notifications', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor, UserRol.Invitado]), requestValidator({ body: createUserNotificationSchema }), userNoficationController.create);
-// PATCH /notifications/:nu_id Actualizar un notificacion como leido.
-generalRoutes.patch('/notifications/:nu_id/read', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor, UserRol.Invitado]), requestValidator({ params: userNotificationParamIdSchema }), userNoficationController.setNotificationRead);
+// PATCH /notifications/:n_uuid Actualizar un notificacion como leido.
+generalRoutes.patch('/notifications/:n_uuid/read', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor, UserRol.Invitado]), requestValidator({ params: userNotificationParamIdSchema }), userNoficationController.setNotificationRead);
 // PATCH /notifications/read_all Marcar como leido todas las notificaciones
 generalRoutes.patch('/notifications/read_all', authenticate, rolChecker([UserRol.Administrador, UserRol.Gestor, UserRol.Invitado]), userNoficationController.readAllNotification);
+
+generalRoutes.post('/notifications/suscribe_divice', authenticate, requestValidator({ body: suscribeDeviceSchema }), userNoficationController.updateSuscribeFcmTopic);
 
 // ========== Acceso ==========
 // GET	/accesos?limit=number&offset=number Listar todos los accesos por paginacion

@@ -1,7 +1,7 @@
-import { createPool, Pool ,PoolConnection,QueryOptions, ResultSetHeader, RowDataPacket} from "mysql2/promise";
-import * as queries from '../models/controllerapp/src/queries'
-import { appConfig } from "../configs";
-import { genericLogger } from "../services/loggers";
+import { createPool, Pool, PoolConnection, QueryOptions, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
+import * as queries from '../models/controllerapp/src/queries';
+import { appConfig } from '../configs';
+import { genericLogger } from '../services/loggers';
 
 export class MySQL2 {
   private static instance: MySQL2;
@@ -12,7 +12,7 @@ export class MySQL2 {
   static async create() {
     try {
       if (!MySQL2.instance) {
-        genericLogger.info("Creando instacia MySQL2");
+        genericLogger.info('Creando instacia MySQL2');
         MySQL2.instance = new MySQL2();
       }
 
@@ -33,7 +33,7 @@ export class MySQL2 {
 
   static get getInstance(): MySQL2 {
     if (!MySQL2.instance) {
-      genericLogger.info("Creando instacia MySQL2");
+      genericLogger.info('Creando instacia MySQL2');
       MySQL2.instance = new MySQL2();
     }
     return MySQL2.instance;
@@ -48,9 +48,9 @@ export class MySQL2 {
     connection.release(); // Liberar la conexión
   }
 
-  static async executeQuery<T extends RowDataPacket[] | ResultSetHeader>(queryOptions: QueryOptions, config:boolean = false) {
+  static async executeQuery<T extends RowDataPacket[] | ResultSetHeader>(queryOptions: QueryOptions, config: boolean = false) {
     const connection = await MySQL2.getConnection();
-    if(config){
+    if (config) {
       await connection.query<ResultSetHeader>(queries.setStatExpiry);
     }
     try {
@@ -59,7 +59,7 @@ export class MySQL2 {
       return result;
     } catch (error) {
       connection.release();
-      throw error
+      throw error;
     }
   }
 }
