@@ -1,8 +1,8 @@
 import { MySQL2 } from '../../../database/mysql';
 import { Init } from '../../../models/init';
 import { ControllerMapManager } from '../../../models/maps';
+import { fcmService } from '../../../services/firebase/FcmNotificationService';
 import { genericLogger } from '../../../services/loggers';
-import { mqttService } from '../../../services/mqtt/MqttService';
 import { filterUndefined } from '../../../utils/filterUndefined';
 import { TemperatureManager } from '../temperature.region/temperature.manager';
 import {
@@ -200,7 +200,7 @@ export class SensorTemperaturaManager {
       return;
     }
 
-    mqttService.publisAdminNotification({
+    fcmService.publisAdminNotification({
       evento: 'max.temperature.exceeded',
       titulo: 'Temperatura máxima excedida',
       mensaje: `El sensor ( Ubicación: ${senTemp.ubicacion} , Nodo: ${controller.nodo}) ha superado el umbral máximo configurado de ${senTemp.umbral_alarma}. Valor registrado: ${value}. Se requiere verificación inmediata.`,

@@ -6,9 +6,9 @@ import { serverEnv } from './server.configs';
 import { PoolOptions } from 'mysql2';
 import { encryptEnv } from './encrypt.configs';
 import { cookieEnv } from './cookie.config';
-import { mqttEnv } from './mqtt.config';
+import { fcmEnv } from './fcm.config';
 
-const zodEnv = jwtEnv.merge(dbEnv).merge(emailEnv).merge(serverEnv).merge(encryptEnv).merge(cookieEnv).merge(mqttEnv);
+const zodEnv = jwtEnv.merge(dbEnv).merge(emailEnv).merge(serverEnv).merge(encryptEnv).merge(cookieEnv).merge(fcmEnv);
 
 const result = zodEnv.safeParse(process.env);
 
@@ -70,27 +70,27 @@ interface IAppConfig {
     start_record_motion: boolean;
   };
 
-  mqtt: {
-    host: string;
-    port: number;
+  fcm: {
     publish_timeout: number;
-    public_host: string;
-    public_ws_port: number;
-    public_ws_protocol: string;
-
-    users: {
-      admin: {
-        user: string;
-        password: string;
-      };
-      manager: {
-        user: string;
-        password: string;
-      };
-      invited: {
-        user: string;
-        password: string;
-      };
+    project_id: string;
+    client_email: string;
+    private_key: string;
+    messaging_sende_id: string;
+    auth_domain: string;
+    storage_bucket: string;
+    web: {
+      api_key: string;
+      app_id: string;
+      vap_id: string;
+    };
+    android: {
+      api_key: string;
+      app_id: string;
+    };
+    ios: {
+      api_key: string;
+      app_id: string;
+      bundle_id: string;
     };
   };
 }
@@ -152,26 +152,27 @@ const appConfig: IAppConfig = {
     start_record_motion: validatedEnv.START_RECORD_MOTION,
     start_snapshot_motion: validatedEnv.START_SNAPSHOT_MOTION,
   },
-  mqtt: {
-    host: validatedEnv.MQTT_HOST,
-    port: validatedEnv.MQTT_PORT,
-    publish_timeout: validatedEnv.MQTT_PUBLISH_TIMEOUT,
-    public_host: validatedEnv.MQTT_PUBLIC_HOST,
-    public_ws_port: validatedEnv.MQTT_PUBLIC_WS_PORT,
-    public_ws_protocol: validatedEnv.MQTT_PUBLIC_WS_PROTOCOL,
-    users: {
-      admin: {
-        user: validatedEnv.MQTT_ADMIN_USER,
-        password: validatedEnv.MQTT_ADMIN_PASSWORD,
-      },
-      manager: {
-        user: validatedEnv.MQTT_MANAGER_USER,
-        password: validatedEnv.MQTT_MANAGER_PASSWORD,
-      },
-      invited: {
-        user: validatedEnv.MQTT_INVITED_USER,
-        password: validatedEnv.MQTT_INVITED_PASSWORD,
-      },
+  fcm: {
+    publish_timeout: validatedEnv.FCM_PUBLISH_TIMEOUT,
+    project_id: validatedEnv.FCM_PROJECT_ID,
+    client_email: validatedEnv.FCM_CLIENT_EMAIL,
+    private_key: validatedEnv.FCM_PRIVATE_KEY,
+    messaging_sende_id: validatedEnv.FCM_MESSAGING_SENDER_ID,
+    auth_domain: validatedEnv.FCM_AUTH_DOMAIN,
+    storage_bucket: validatedEnv.FCM_STORAGE_BUCKET,
+    web: {
+      api_key: validatedEnv.FCM_WEB_API_KEY,
+      app_id: validatedEnv.FCM_WEB_APP_ID,
+      vap_id: validatedEnv.FCM_WEB_VAPID,
+    },
+    android: {
+      api_key: validatedEnv.FCM_ANDROID_API_KEY,
+      app_id: validatedEnv.FCM_ANDROID_APP_ID,
+    },
+    ios: {
+      api_key: validatedEnv.FCM_IOS_API_KEY,
+      app_id: validatedEnv.FCM_IOS_APP_ID,
+      bundle_id: validatedEnv.FCM_IOS_BUNDLE_ID,
     },
   },
 };

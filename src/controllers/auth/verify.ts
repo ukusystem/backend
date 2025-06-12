@@ -3,7 +3,6 @@ import { Auth } from '../../models/auth';
 import { asyncErrorHandler } from '../../utils/asynErrorHandler';
 
 import { appConfig } from '../../configs';
-import { MqttService } from '../../services/mqtt/MqttService';
 
 export const verify = asyncErrorHandler(async (req: Request, res: Response, _next: NextFunction) => {
   const refreshTokenCookie: string | undefined = req.cookies[appConfig.cookie.refresh_token.name];
@@ -26,7 +25,7 @@ export const verify = asyncErrorHandler(async (req: Request, res: Response, _nex
     return res.status(404).json({ message: 'Usuario no disponible' });
   }
 
-  const refreshTokenStored = await Auth.getTokenStored(userFound.u_id, refreshToken);
+  const refreshTokenStored = await Auth.getTokenStoredByUtUuid(tokenPayload.ut_uuid);
 
   if (refreshTokenStored === undefined) {
     return res.status(401).json({
@@ -37,7 +36,7 @@ export const verify = asyncErrorHandler(async (req: Request, res: Response, _nex
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { contraseña: contraseñaFound, ...userWithoutPassword } = userFound;
 
-  const newAccessToken = await Auth.generateAccessToken({ id: userFound.u_id, rol: userFound.rol });
+  const newAccessToken = await Auth.generateAccessToken({ id: userFound.u_id, rol: userFound.rol, ut_uuid: tokenPayload.ut_uuid });
   // const newRefreshToken = await Auth.generateRefreshToken({ id: userFound.u_id, rol: userFound.rol });
 
   res.cookie(appConfig.cookie.access_token.name, newAccessToken, {
@@ -55,8 +54,6 @@ export const verify = asyncErrorHandler(async (req: Request, res: Response, _nex
   //   maxAge: appConfig.cookie.refresh_token.max_age, // expiracion 1d
   // });
 
-  const credentialsMqtt = MqttService.getUserCredentials(userFound.rl_id);
-
   const response = {
     status: 200,
     message: 'Refresh token successful',
@@ -65,13 +62,31 @@ export const verify = asyncErrorHandler(async (req: Request, res: Response, _nex
       access_token: newAccessToken,
       // refresh_token: newRefreshToken,
       user: userWithoutPassword,
-      mqtt: {
-        user: credentialsMqtt?.user,
-        password: credentialsMqtt?.password,
-        host: appConfig.mqtt.public_host,
-        port: appConfig.mqtt.public_ws_port,
-        protocol: appConfig.mqtt.public_ws_protocol,
-        url: `${appConfig.mqtt.public_ws_protocol}://${appConfig.mqtt.public_host}:${appConfig.mqtt.public_ws_port}`,
+      fcm: {
+        web: {
+          apiKey: appConfig.fcm.web.api_key,
+          appId: appConfig.fcm.web.app_id,
+          messagingSenderId: appConfig.fcm.messaging_sende_id,
+          projectId: appConfig.fcm.project_id,
+          authDomain: appConfig.fcm.auth_domain,
+          storageBucket: appConfig.fcm.storage_bucket,
+          vapId: appConfig.fcm.web.vap_id,
+        },
+        android: {
+          apiKey: appConfig.fcm.android.api_key,
+          appId: appConfig.fcm.android.app_id,
+          messagingSenderId: appConfig.fcm.messaging_sende_id,
+          projectId: appConfig.fcm.project_id,
+          storageBucket: appConfig.fcm.storage_bucket,
+        },
+        ios: {
+          apiKey: appConfig.fcm.ios.api_key,
+          appId: appConfig.fcm.ios.app_id,
+          messagingSenderId: appConfig.fcm.messaging_sende_id,
+          projectId: appConfig.fcm.project_id,
+          storageBucket: appConfig.fcm.storage_bucket,
+          iosBundleId: appConfig.fcm.ios.bundle_id,
+        },
       },
     },
   };
