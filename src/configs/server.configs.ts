@@ -5,6 +5,7 @@ export const serverEnv = z.object({
   SERVER_IP: z.string().ip(),
   SERVER_PORT: z.coerce.number().int().positive().max(65535).default(9001),
   MANAGER_PORT: z.coerce.number().int().positive().max(65535).default(54321),
+  GPRS_SERVER_PORT: z.coerce.number().int().positive().max(65535).default(10000),
   START_SNAPSHOT_MOTION: z
     .enum(['true', 'false'])
     .default('false')

@@ -395,7 +395,7 @@ export const regionParse = [tupleInt, tupleTxt, tupleTxt];
 /* Node */
 
 export const nodeGetForSocket = `
-				SELECT ctrl_id, nodo, ip, puerto, usuario, contraseña, celular
+				SELECT ctrl_id, nodo, ip, puerto, usuario, contraseña, imei
 				FROM general.controlador
 				WHERE activo=1;
 			`;

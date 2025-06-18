@@ -54,8 +54,8 @@ export function isLinux(): boolean {
   return osName === 'linux';
 }
 
-export function isValidCellphone(phone: number): boolean {
-  return phone >= 900000000 && phone <= 999999999;
+export function isValidIMEI(imei: number): boolean {
+  return imei > 0 && imei < 1e15;
 }
 
 /**

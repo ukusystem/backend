@@ -31,6 +31,7 @@ interface IAppConfig {
     ip: string;
     port: number;
     manager_port: number;
+    gprs_server_port: number;
   };
   jwt: {
     access_token: {
@@ -101,6 +102,7 @@ const appConfig: IAppConfig = {
     ip: validatedEnv.SERVER_IP,
     port: validatedEnv.SERVER_PORT,
     manager_port: validatedEnv.MANAGER_PORT,
+    gprs_server_port: validatedEnv.GPRS_SERVER_PORT,
   },
   jwt: {
     access_token: {

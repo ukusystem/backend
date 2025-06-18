@@ -15,7 +15,7 @@ import { Bundle } from './bundle';
 import { CameraToCheck, PinOrder } from './types';
 import { Camara } from '../../../types/db';
 import { FirmwareVersion } from './firmware';
-import { endGSM, initGSM, isGSMAvailable } from './serial';
+// import { endGSM, initGSM, isGSMAvailable } from './serial';
 import fs from 'fs';
 import * as queries from './queries';
 import * as useful from './useful';
@@ -61,6 +61,7 @@ export class Main {
   private readonly selector = new Selector();
 
   private managerServer: net.Server | null = null;
+  private gprsServer: net.Server | null = null;
 
   /* Flags to keep timeouts active */
 
@@ -163,7 +164,7 @@ export class Main {
     }
 
     /* Load serial */
-    await initGSM(this.logger, this.selector);
+    // await initGSM(this.logger, this.selector);
 
     /* Load data from database */
 
@@ -175,6 +176,10 @@ export class Main {
     /* Server for manager */
 
     this.startServerForManager();
+
+    /* Serevr for GPRS */
+
+    this.startServerForGPRS();
 
     /* Try to connect to controllers */
 
@@ -277,7 +282,7 @@ export class Main {
   };
 
   private startSendingMessages() {
-    let sendingGSM = false;
+    // let sendingGSM = false;
     this.sendMessagesTimer = setInterval(async () => {
       // Send messages to controllers
       for (const node of this.selector.nodeAttachments) {
@@ -289,13 +294,6 @@ export class Main {
           if (node.sendOne(this.selector)) {
             node.setLastMessageTime();
           }
-        } else if (!node.isLogged() && isGSMAvailable() && node.canUseGSM() && !sendingGSM) {
-          // Send throught GSM
-          node.tryAddSIMAlive();
-
-          sendingGSM = true;
-          await node.sendOneGSM(node.celular);
-          sendingGSM = false;
         }
       }
 
@@ -355,6 +353,40 @@ export class Main {
 
     this.managerServer.listen(appConfig.server.manager_port, appConfig.server.ip, 16, () => {
       this.log(`Server for managers listening on ${appConfig.server.manager_port}`);
+    });
+  }
+
+  /**
+   * Start the server for the GPRS sockets.
+   */
+  private startServerForGPRS() {
+    this.gprsServer = net.createServer((connection) => {
+      const dummy = new NodeAttach(1, 'Dummy', '0.0.0.0', 0, '', '', this.logger, NodeAttach.DEFAULT_IMEI);
+
+      connection.on('data', (data: Buffer) => {
+        this.log(`Received GPRS data: '${data}'`);
+        dummy.addData(data);
+        const res = new ResultCode();
+        const bundle = new Bundle();
+        dummy.readOne(this.selector, res, bundle);
+        if (dummy.isValidReceivedIMEI()) {
+          const node = this.selector.getNodeByIMEI(dummy.getReceivedIMEI());
+          if (node) {
+            this.log(`Node matched with IMEI ${dummy.getReceivedIMEI()}`);
+            node.configureSocketCreated(connection, this.selector);
+            node.connectCallback(true);
+            node.xdEnabled = false;
+          }
+        }
+      });
+    });
+
+    this.gprsServer.on('error', (e: any) => {
+      this.log(`ERROR listening for GPRS sockets. Code ${e.code}`);
+    });
+
+    this.gprsServer.listen(appConfig.server.gprs_server_port, appConfig.server.ip, 65535, () => {
+      this.log(`Server for GPRS listening on ${appConfig.server.gprs_server_port}`);
     });
   }
 
@@ -1098,7 +1130,7 @@ export class Main {
   private end(signal: NodeJS.Signals) {
     this.log(`Ending with signal ${signal}`);
     // End GSM
-    endGSM();
+    // endGSM();
 
     // End processing messages
     this.processMessages = false;
@@ -1134,6 +1166,15 @@ export class Main {
         this.log(`Server for manager was not started.`);
       } else {
         this.log('Server for manager closed.');
+      }
+    });
+
+    // Close server for GPRS
+    this.gprsServer?.close((err) => {
+      if (err) {
+        this.log(`Server for GPRS was not started.`);
+      } else {
+        this.log('Server for GPRS closed.');
       }
     });
 

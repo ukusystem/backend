@@ -30,6 +30,10 @@ export function startServerForManager() {
   });
 
   managerServer = net.createServer((connection) => {
+    // const rsp = connection.write(Buffer.from('+CMT: "+51948770239"\r\n^692&0&admin|\r\n'), () => {
+    //   console.log('All written');
+    // });
+    // console.log(`Result: ${rsp}`);
     try {
       connection.setTimeout(30, () => {
         console.log('Manager idle timeout');
