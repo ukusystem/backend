@@ -369,15 +369,7 @@ export class Main {
         const res = new ResultCode();
         const bundle = new Bundle();
         dummy.readOne(this.selector, res, bundle);
-        if (dummy.isValidReceivedIMEI()) {
-          const node = this.selector.getNodeByIMEI(dummy.getReceivedIMEI());
-          if (node) {
-            this.log(`Node matched with IMEI ${dummy.getReceivedIMEI()}`);
-            node.configureSocketCreated(connection, this.selector);
-            node.connectCallback(true);
-            node.xdEnabled = false;
-          }
-        }
+        dummy.trySetSocketByIMEI(this.selector, connection);
       });
     });
 
@@ -385,7 +377,7 @@ export class Main {
       this.log(`ERROR listening for GPRS sockets. Code ${e.code}`);
     });
 
-    this.gprsServer.listen(appConfig.server.gprs_server_port, appConfig.server.ip, 65535, () => {
+    this.gprsServer.listen(appConfig.server.gprs_server_port, appConfig.server.ip, 1000, () => {
       this.log(`Server for GPRS listening on ${appConfig.server.gprs_server_port}`);
     });
   }
@@ -458,7 +450,8 @@ export class Main {
       if (!nodeOptional) {
         this.log(`No node attach ID = ${nodeID}`);
       } else {
-        if (nodeOptional.isLogged() || nodeOptional.isSyncedThroughGSM()) {
+        // if (nodeOptional.isLogged() || nodeOptional.isSyncedThroughGSM()) {
+        if (nodeOptional.isLogged()) {
           nodeOptional.addCommandForControllerBody(codes.CMD_TICKET_REMOVE, -1, [ticketID.toString()]);
           this.log('Added command for controller.');
         } else {
@@ -541,7 +534,8 @@ export class Main {
     // Asynchronous task
     const myPromise: Promise<RequestResult> = new Promise((resolve, _reject) => {
       let ignoreTimeout = false;
-      if (Selector.isChannelConnected(node._currentSocket) || node.isSyncedThroughGSM()) {
+      // if (Selector.isChannelConnected(node._currentSocket) || node.isSyncedThroughGSM()) {
+      if (Selector.isChannelConnected(node._currentSocket)) {
         node.disableArmButton(true);
         // Timeout for this operation
         const securityHandle = setTimeout(() => {
@@ -817,17 +811,18 @@ export class Main {
       this.log(`Controller ${newOrder.ctrl_id} doesn't exist.`);
       return new RequestResult(false, `El nodo ID = ${newOrder.ctrl_id} no existe`);
     }
-    if (nodeKey.pendingOrder) {
-      this.log(`Controller ${newOrder.ctrl_id} already waiting for order.`);
-      return new RequestResult(false, `El nodo ID = ${newOrder.ctrl_id} tiene una orden pendiente.`);
-    }
+    // if (nodeKey.pendingOrder) {
+    //   this.log(`Controller ${newOrder.ctrl_id} already waiting for order.`);
+    //   return new RequestResult(false, `El nodo ID = ${newOrder.ctrl_id} tiene una orden pendiente.`);
+    // }
 
     // Asynchronous task
     // eslint-disable-next-line no-async-promise-executor
     const myPromise: Promise<RequestResult> = new Promise(async (resolve, _reject) => {
       let monitor = States.ERROR;
       let ignoreTimeout = false;
-      if (Selector.isChannelConnected(nodeKey._currentSocket) || nodeKey.isSyncedThroughGSM()) {
+      // if (Selector.isChannelConnected(nodeKey._currentSocket) || nodeKey.isSyncedThroughGSM()) {
+      if (Selector.isChannelConnected(nodeKey._currentSocket)) {
         // Timeout for this operation
         const reqHandle = setTimeout(async () => {
           if (ignoreTimeout) {
@@ -836,17 +831,17 @@ export class Main {
           this.log(`Remove message ID = ${msgID} by timeout.`);
           // Message has to be removed anyways
           nodeKey.removePendingMessageByID(msgID, codes.J_ERR_TIMEOUT, true, false);
-          nodeKey.pendingOrder = false;
+          // nodeKey.pendingOrder = false;
           monitor = States.TIMEOUT;
           await this.registerOrder(newOrder, monitor);
           resolve(new RequestResult(false, `El controlador ID = ${newOrder.ctrl_id} no ha respondido a tiempo.`));
         }, Main.REQUEST_TIMEOUT);
         // Send order to controller
-        this.log(`Bussy? ${nodeKey.pendingOrder}`);
-        nodeKey.pendingOrder = true;
+        // this.log(`Bussy? ${nodeKey.pendingOrder}`);
+        // nodeKey.pendingOrder = true;
         const msgID = nodeKey.addCommandForControllerBody(codes.CMD_PIN_CONFIG_SET, -1, [newOrder.pin.toString(), newState.toString()], true, true, async (code) => {
           ignoreTimeout = true;
-          nodeKey.pendingOrder = false;
+          // nodeKey.pendingOrder = false;
           clearTimeout(reqHandle);
           monitor = States.EXECUTED;
           await this.registerOrder(newOrder, monitor);
@@ -964,7 +959,8 @@ export class Main {
           continue;
         }
         // If node is logged in
-        if (!attach.isLogged() && !attach.isSyncedThroughGSM()) {
+        // if (!attach.isLogged() && !attach.isSyncedThroughGSM()) {
+        if (!attach.isLogged()) {
           // log("Attachment ID = %d not logged nor synced throught GSM", nodeID);
           continue;
         }
@@ -1093,16 +1089,16 @@ export class Main {
       }
     }
 
-    for (const node of nodeCopy) {
-      if (node.hasBeenGSMInactiveFor(Main.ALIVE_CONTROLLER_GSM_TIMEOUT)) {
-        if (node.isSyncedThroughGSM()) {
-          this.log('Controller not responding through GSM. Considered disconnected.');
-          node.setGSMUnsynced();
-          await node.insertNet(false);
-          ManagerAttach.connectedManager?.addNodeState(codes.VALUE_DISCONNECTED, node.controllerID);
-        }
-      }
-    }
+    // for (const node of nodeCopy) {
+    //   if (node.hasBeenGSMInactiveFor(Main.ALIVE_CONTROLLER_GSM_TIMEOUT)) {
+    //     if (node.isSyncedThroughGSM()) {
+    //       this.log('Controller not responding through GSM. Considered disconnected.');
+    //       node.setGSMUnsynced();
+    //       await node.insertNet(false);
+    //       ManagerAttach.connectedManager?.addNodeState(codes.VALUE_DISCONNECTED, node.controllerID);
+    //     }
+    //   }
+    // }
 
     let deleted = false;
     const mngrCopy = this.selector.managerConnections.slice();

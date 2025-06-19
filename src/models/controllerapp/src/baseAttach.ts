@@ -234,9 +234,9 @@ export class BaseAttach extends Mortal {
     } else {
       const nodeAttach = <NodeAttach>key;
       if (key instanceof NodeAttach) {
-        if (!nodeAttach.isSyncedThroughGSM()) {
-          nodeAttach.disableArmButton(false, false);
-        }
+        // if (!nodeAttach.isSyncedThroughGSM()) {
+        nodeAttach.disableArmButton(false, false);
+        // }
         // Delay connection if was unreachable
         setTimeout(
           () => {
@@ -606,7 +606,7 @@ export class BaseAttach extends Mortal {
 
   /**
    * Add a {@link codes.CMD_HELLO_FROM_SRVR} message with the current server
-   * timestamp.
+   * timestamp. Include user ID for the manager
    *
    * @param id ID of the message that this method is responding to.
    */
@@ -921,8 +921,8 @@ export class NodeAttach extends BaseAttach {
   private lastPowerStamp = 0;
 
   private static readonly TRY_SIM_ALIVE_INTERVAL_S = 30 * 4;
-  private isGSMSynced = false;
-  public pendingOrder = false;
+  // private isGSMSynced = false;
+  // public pendingOrder = false;
 
   private unreached = false;
 
@@ -976,40 +976,48 @@ export class NodeAttach extends BaseAttach {
     return this.imei;
   }
 
-  public getReceivedIMEI() {
-    return this.receivedIMEI;
-  }
-
   public isValidReceivedIMEI() {
     return useful.isValidIMEI(this.receivedIMEI);
   }
 
-  setGSMSync() {
-    // const bigToken = BigInt(newToken);
-    // if (bigToken === codes.GSM_EMPTY_TOKEN) {
-    //   this._log('ERROR Token received was THE empty token');
-    // } else {
-    this.isGSMSynced = true;
-    this.disableArmButton(false, true);
-    this.insertNet(true);
-    this.syncCards();
-    // this.notifyNet(true);
-    // this._log(`New GSM token for controller ID=${this.controllerID} set! (${this.isGSMSynced}) `);
-    this._log('Controller synced through GSM!');
-    // }
-  }
-
-  setGSMUnsynced(log: boolean = true) {
-    this.isGSMSynced = false;
-    if (log) {
-      this._log('GSM unsynced!');
+  public trySetSocketByIMEI(selector: Selector, connection: net.Socket) {
+    if (this.isValidReceivedIMEI() && this.xdEnabled) {
+      const node = selector.getNodeByIMEI(this.receivedIMEI);
+      if (node) {
+        this._log(`Node matched with IMEI ${this.receivedIMEI}`);
+        node.configureSocketCreated(connection, selector);
+        node.connectCallback(true);
+        node.xdEnabled = false;
+      }
     }
-    this.markTiketsAsNotSent();
   }
 
-  public isSyncedThroughGSM(): boolean {
-    return this.isGSMSynced;
-  }
+  // setGSMSync() {
+  //   // const bigToken = BigInt(newToken);
+  //   // if (bigToken === codes.GSM_EMPTY_TOKEN) {
+  //   //   this._log('ERROR Token received was THE empty token');
+  //   // } else {
+  //   this.isGSMSynced = true;
+  //   this.disableArmButton(false, true);
+  //   this.insertNet(true);
+  //   this.syncCards();
+  //   // this.notifyNet(true);
+  //   // this._log(`New GSM token for controller ID=${this.controllerID} set! (${this.isGSMSynced}) `);
+  //   this._log('Controller synced through GSM!');
+  //   // }
+  // }
+
+  // setGSMUnsynced(log: boolean = true) {
+  //   this.isGSMSynced = false;
+  //   if (log) {
+  //     this._log('GSM unsynced!');
+  //   }
+  //   this.markTiketsAsNotSent();
+  // }
+
+  // public isSyncedThroughGSM(): boolean {
+  //   return this.isGSMSynced;
+  // }
 
   imeiMatch(imei: number): boolean {
     return this.imei === imei;
@@ -1152,10 +1160,10 @@ export class NodeAttach extends BaseAttach {
         this._keepAliveRequestSent = false;
         // this._log("Keep alive response received")
         break;
-      case codes.VALUE_WRONG_TOKEN:
-        this._log('Controller notified wrong token');
-        this.setGSMUnsynced();
-        break;
+      // case codes.VALUE_WRONG_TOKEN:
+      //   this._log('Controller notified wrong token');
+      //   this.setGSMUnsynced();
+      //   break;
       case codes.CMD_POWER:
         // this._log(`Received power measure '${command}'`);
         const onePower = this._parseMessage(parts, queries.powerParse);
@@ -1490,16 +1498,16 @@ export class NodeAttach extends BaseAttach {
       case codes.VALUE_CTRL_STATE:
         this.mirrorMessage(command, true);
         break;
-      case codes.VALUE_END_SYNC:
-        this._log('Received end of sync');
-        // const syncData = this._parseMessage(parts, queries.bigParse, id, false);
-        // if (syncData) {
-        // const newToken = syncData[0].getInt();
-        // this._log(`New token: ${newToken}`);
-        this._log('End sync');
-        this.setGSMSync();
-        // }
-        break;
+      // case codes.VALUE_END_SYNC:
+      //   this._log('Received end of sync');
+      //   // const syncData = this._parseMessage(parts, queries.bigParse, id, false);
+      //   // if (syncData) {
+      //   // const newToken = syncData[0].getInt();
+      //   // this._log(`New token: ${newToken}`);
+      //   this._log('End sync');
+      //   this.setGSMSync();
+      //   // }
+      //   break;
 
       // Should be mirrored with the node ID appended. These are event for the technician.
       case codes.VALUE_SD:
@@ -1714,8 +1722,8 @@ export class NodeAttach extends BaseAttach {
       case codes.CMD_HELLO_FROM_CTRL:
         this._log('Received hello from controller. Logged in.');
         this.setLogged(true);
-        this.setGSMUnsynced();
-        this.pendingOrder = false;
+        // this.setGSMUnsynced();
+        // this.pendingOrder = false;
 
         ManagerAttach.connectedManager?.addNodeState(codes.VALUE_CONNECTED, this.controllerID);
 
@@ -2091,16 +2099,16 @@ export class NodeAttach extends BaseAttach {
     return this._addOne(msg);
   }
 
-  tryAddSyncRequest() {
-    if (this.isSyncedThroughGSM()) {
-      return;
-    }
-    const pwd = Encryption.decrypt(this.password, true);
-    if (pwd) {
-      this._log('Added sync request');
-      this._addOne(new Message(codes.SYNC_REQUEST, 0, [pwd]).setLogOnSend(true));
-    }
-  }
+  // tryAddSyncRequest() {
+  //   if (this.isSyncedThroughGSM()) {
+  //     return;
+  //   }
+  //   const pwd = Encryption.decrypt(this.password, true);
+  //   if (pwd) {
+  //     this._log('Added sync request');
+  //     this._addOne(new Message(codes.SYNC_REQUEST, 0, [pwd]).setLogOnSend(true));
+  //   }
+  // }
 
   /**
    * Add a {@linkcode codes.CMD_LOGIN} message with the current user and password in
@@ -2126,6 +2134,10 @@ export class NodeAttach extends BaseAttach {
     }
   }
 
+  /**
+   * Log in and sync some data with the controller. Should be used when the connection could be stablished successfully.
+   * @param log
+   */
   public connectCallback(log: boolean) {
     // console.log(this._currentSocket?.writableLength);
     this.lastChannelConnected = true;
@@ -2148,6 +2160,7 @@ export class NodeAttach extends BaseAttach {
   }
 
   configureSocketCreated(controllerSocket: net.Socket, selector: Selector) {
+    controllerSocket.removeAllListeners();
     controllerSocket.on('data', (data: Buffer) => {
       // const a = [...data]
       // this._log(`Received buffer '${a.map((s)=>s.toString(16)).join(" ")}' from controller ID ${this.controllerID}`)
@@ -2949,9 +2962,9 @@ export class ManagerAttach extends BaseAttach {
     let notify = false;
     let resetData = false;
 
-    if (currentAttach) {
-      currentAttach.setGSMUnsynced();
-    }
+    // if (currentAttach) {
+    //   currentAttach.setGSMUnsynced();
+    // }
 
     /**
      * The channel was not found.
@@ -3159,7 +3172,7 @@ export class ManagerAttach extends BaseAttach {
       companyID = workerData[0].entero;
     }
     for (const nodeAttach of selector.nodeAttachments) {
-      if (nodeAttach.isLogged() || nodeAttach.isSyncedThroughGSM()) {
+      if (nodeAttach.isLogged()) {
         nodeAttach.addCommandForControllerBody(codes.CMD_CONFIG_SET, -1, remove ? [codes.VALUE_CARD_EMPTY.toString(), cardID.toString()] : [codes.VALUE_CARD.toString(), cardID.toString(), companyID.toString(), serial.toString(), isAdmin ? '1' : '0']);
       }
     }
