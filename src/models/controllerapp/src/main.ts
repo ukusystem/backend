@@ -361,10 +361,11 @@ export class Main {
    */
   private startServerForGPRS() {
     this.gprsServer = net.createServer((connection) => {
-      const dummy = new NodeAttach(1, 'Dummy', '0.0.0.0', 0, '', '', this.logger, NodeAttach.DEFAULT_IMEI);
+      const time = useful.timeInt();
+      const dummy = new NodeAttach(1, `Dummy ${time}`, '0.0.0.0', 0, '', '', this.logger, NodeAttach.DEFAULT_IMEI);
 
       connection.on('data', (data: Buffer) => {
-        this.log(`Received GPRS data: '${data}'`);
+        dummy._log(`Received GPRS data: '${data}'`);
         dummy.addData(data);
         const res = new ResultCode();
         const bundle = new Bundle();
@@ -1081,6 +1082,7 @@ export class Main {
         if (node.isLogged()) {
           this.log(`Channel '${node}' ID = ${node.controllerID} is dead. Reconnecting...`);
           BaseAttach.simpleReconnect(this.selector, node);
+
           node.resetKeepAliveRequest();
           await node.insertNet(false);
           node.printKeyCount(selector);
@@ -1088,17 +1090,6 @@ export class Main {
         }
       }
     }
-
-    // for (const node of nodeCopy) {
-    //   if (node.hasBeenGSMInactiveFor(Main.ALIVE_CONTROLLER_GSM_TIMEOUT)) {
-    //     if (node.isSyncedThroughGSM()) {
-    //       this.log('Controller not responding through GSM. Considered disconnected.');
-    //       node.setGSMUnsynced();
-    //       await node.insertNet(false);
-    //       ManagerAttach.connectedManager?.addNodeState(codes.VALUE_DISCONNECTED, node.controllerID);
-    //     }
-    //   }
-    // }
 
     let deleted = false;
     const mngrCopy = this.selector.managerConnections.slice();

@@ -985,7 +985,7 @@ export class NodeAttach extends BaseAttach {
       const node = selector.getNodeByIMEI(this.receivedIMEI);
       if (node) {
         this._log(`Node matched with IMEI ${this.receivedIMEI}`);
-        node.configureSocketCreated(connection, selector);
+        node.configureSocketCreated(connection, selector, false);
         node.connectCallback(true);
         node.xdEnabled = false;
       }
@@ -1125,10 +1125,14 @@ export class NodeAttach extends BaseAttach {
     if (!Selector.isChannelConnected(this._currentSocket)) {
       return;
     }
-    if (!this._keepAliveRequestSent && this.isBufferEmpty() && useful.timeInt() >= this.lastTimeMessageSent + Main.ALIVE_REQUEST_INTERVAL) {
-      this._keepAliveRequestSent = true;
-      this._addOne(new Message(codes.CMD_KEEP_ALIVE_REQUEST, 0));
-      // this._log("Keep alive request added")
+    if (useful.timeInt() >= this.lastTimeMessageSent + Main.ALIVE_REQUEST_INTERVAL) {
+      if (!this._keepAliveRequestSent && this.isBufferEmpty()) {
+        this._keepAliveRequestSent = true;
+        this._addOne(new Message(codes.CMD_KEEP_ALIVE_REQUEST, 0));
+        this._log('Keep alive request added');
+      } else {
+        // this._log(`Not met. sent: ${this._keepAliveRequestSent} empty: ${this.isBufferEmpty()}`);
+      }
     }
   }
 
@@ -2159,7 +2163,7 @@ export class NodeAttach extends BaseAttach {
     });
   }
 
-  configureSocketCreated(controllerSocket: net.Socket, selector: Selector) {
+  configureSocketCreated(controllerSocket: net.Socket, selector: Selector, reconnectOnClose: boolean = true) {
     controllerSocket.removeAllListeners();
     controllerSocket.on('data', (data: Buffer) => {
       // const a = [...data]
@@ -2217,7 +2221,7 @@ export class NodeAttach extends BaseAttach {
 
       // console.log("Try connect node, close event")
       if (this.isLogged()) {
-        this._log(`The node ID = ${this.controllerID} (${this.node}) closed its socket. Reconnecting ...`);
+        this._log(`The node ID = ${this.controllerID} (${this.node}) closed its socket. ${reconnectOnClose ? 'Reconnecting ...' : ''}`);
         await this.insertNet(false);
         this.printKeyCount(selector);
         ManagerAttach.connectedManager?.addNodeState(codes.VALUE_DISCONNECTED, this.controllerID);
@@ -2228,8 +2232,9 @@ export class NodeAttach extends BaseAttach {
         }
       }
       this.lastChannelConnected = false;
-
-      BaseAttach.simpleReconnect(selector, this, this.unreached);
+      if (reconnectOnClose) {
+        // BaseAttach.simpleReconnect(selector, this, this.unreached);
+      }
     });
 
     this._currentSocket = controllerSocket;
