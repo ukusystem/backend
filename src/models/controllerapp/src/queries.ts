@@ -60,21 +60,21 @@ export const alarmParse = [tupleInt, tupleFloat, tupleLong];
 /* General configuration */
 
 export const generalSelect = `
-				SELECT nombreempresa, celular, com FROM general.configuracion WHERE conf_id=1 LIMIT 1;
+				SELECT nombreempresa FROM general.configuracion WHERE conf_id=1 LIMIT 1;
 `;
 
 export const generalUpdate = `
 				UPDATE general.configuracion
-				SET nombreempresa=?, celular=?, com=? WHERE conf_id=1;
+				SET nombreempresa=? WHERE conf_id=1;
 `;
 
 // export const generalSelectConfigForGSM = `
 // 				SELECT celular, com FROM general.configuracion WHERE conf_id=1 LIMIT 1;
 // `;
 
-export const selectCelular = `
-				SELECT celular AS entero FROM general.configuracion WHERE conf_id=1 LIMIT 1;
-`;
+// export const selectCelular = `
+// 				SELECT celular AS entero FROM general.configuracion WHERE conf_id=1 LIMIT 1;
+// `;
 
 export const selectCOM = `
 				SELECT com AS text FROM general.configuracion WHERE conf_id=1 LIMIT 1;
@@ -431,7 +431,7 @@ export const nodeSelect = `
 					res_id_streamprimary, streamprimaryfps, 
 					res_id_streamsecondary, streamsecondaryfps, 
 					res_id_streamauxiliary, streamauxiliaryfps,
-					modo, celular
+					modo, imei
 
 				FROM general.controlador
 				WHERE activo=1;
@@ -508,7 +508,7 @@ export const nodeInsert = `
 					motionsnapshotseconds, res_id_motionsnapshot, motionsnapshotinterval, 
 					res_id_streamprimary, streamprimaryfps, 
 					res_id_streamsecondary, streamsecondaryfps, 
-					res_id_streamauxiliary, streamauxiliaryfps, celular,
+					res_id_streamauxiliary, streamauxiliaryfps, imei,
 
 					contraseña, modo, seguridad, conectado, activo, serie)
 				VALUE (
@@ -808,7 +808,7 @@ export const tableTuples = [
 /**
  * nombre, celular, com
  */
-export const generalParse = [tupleTxt, tupleInt, tupleTxt];
+export const generalParse = [tupleTxt];
 
 /* Firmwares */
 
