@@ -451,7 +451,7 @@ export const nodeUpdate = `
 					motionsnapshotseconds=?, res_id_motionsnapshot=?, motionsnapshotinterval=?, 
 					res_id_streamprimary=?, streamprimaryfps=?, 
 					res_id_streamsecondary=?, streamsecondaryfps=?, 
-					res_id_streamauxiliary=?, streamauxiliaryfps=?, celular=?
+					res_id_streamauxiliary=?, streamauxiliaryfps=?, imei=?
 					
 				WHERE ctrl_id=?;
 			`;
@@ -471,7 +471,7 @@ export const nodeUpdatePwd = `
 					motionsnapshotseconds=?, res_id_motionsnapshot=?, motionsnapshotinterval=?, 
 					res_id_streamprimary=?, streamprimaryfps=?, 
 					res_id_streamsecondary=?, streamsecondaryfps=?, 
-					res_id_streamauxiliary=?, streamauxiliaryfps=?, celular=?,
+					res_id_streamauxiliary=?, streamauxiliaryfps=?, imei=?,
 
 					contraseña=?
 				WHERE ctrl_id=?;
@@ -488,7 +488,7 @@ export const nodeUpdateTrivial = `
 				motionsnapshotseconds=?, res_id_motionsnapshot=?, motionsnapshotinterval=?, 
 				res_id_streamprimary=?, streamprimaryfps=?, 
 				res_id_streamsecondary=?, streamsecondaryfps=?, 
-				res_id_streamauxiliary=?, streamauxiliaryfps=?, celular=?
+				res_id_streamauxiliary=?, streamauxiliaryfps=?, imei=?
 			WHERE ctrl_id=?;
 		`;
 
@@ -543,7 +543,7 @@ SnapDuration, SnapResolution, SnapInterval,
 PrimaryResolution, PrimaryFPS,
 SecondaryResolution, SecondaryFPS,
 AuxiliaryResolution, AuxiliaryFPS,
-Cellphone
+imei
  */
 export const indexForTrivial = [0, 1, 2, 3, 4, 5, 6, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26];
 

@@ -288,7 +288,7 @@ export class Main {
       for (const node of this.selector.nodeAttachments) {
         // Use same buffer
 
-        if (Selector.isChannelConnected(node._currentSocket) || node.isLogged()) {
+        if (Selector.isSocketConnected(node._currentSocket) || node.isLogged()) {
           // Send through websocket
           node.tryRequestKeepalive();
           if (node.sendOne(this.selector)) {
@@ -317,7 +317,6 @@ export class Main {
         connection.setTimeout(Main.ALIVE_MANAGER_TIMEOUT, () => {
           this.log('Manager idle timeout');
           // Activate when the manager sends keep alives to the server. Managers should not reconnect automaticaly
-          // newManagerSocket.reconnect(this.selector)
         });
 
         connection.on('data', (data: Buffer) => {
@@ -333,7 +332,6 @@ export class Main {
         // Triggers 'end' and 'close' events
         connection.on('error', () => {
           this.log('Manager error');
-          // newManagerSocket.reconnect(this.selector);
         });
 
         connection.on('close', (hadError) => {
@@ -362,15 +360,12 @@ export class Main {
   private startServerForGPRS() {
     this.gprsServer = net.createServer((connection) => {
       const time = useful.timeInt();
-      const dummy = new NodeAttach(1, `Dummy ${time}`, '0.0.0.0', 0, '', '', this.logger, NodeAttach.DEFAULT_IMEI);
+      let dummy: NodeAttach | null = new NodeAttach(1, `Dummy ${time}`, '0.0.0.0', 0, '', '', this.logger, NodeAttach.DEFAULT_IMEI);
 
       connection.on('data', (data: Buffer) => {
-        dummy._log(`Received GPRS data: '${data}'`);
-        dummy.addData(data);
-        const res = new ResultCode();
-        const bundle = new Bundle();
-        dummy.readOne(this.selector, res, bundle);
-        dummy.trySetSocketByIMEI(this.selector, connection);
+        dummy?.testForGPRSNodeClient(data, this.selector, connection);
+        // Delete the dummy after using it. This object is only useful when the first message is received .
+        dummy = null;
       });
     });
 
@@ -536,7 +531,7 @@ export class Main {
     const myPromise: Promise<RequestResult> = new Promise((resolve, _reject) => {
       let ignoreTimeout = false;
       // if (Selector.isChannelConnected(node._currentSocket) || node.isSyncedThroughGSM()) {
-      if (Selector.isChannelConnected(node._currentSocket)) {
+      if (Selector.isSocketConnected(node._currentSocket)) {
         node.disableArmButton(true);
         // Timeout for this operation
         const securityHandle = setTimeout(() => {
@@ -823,7 +818,7 @@ export class Main {
       let monitor = States.ERROR;
       let ignoreTimeout = false;
       // if (Selector.isChannelConnected(nodeKey._currentSocket) || nodeKey.isSyncedThroughGSM()) {
-      if (Selector.isChannelConnected(nodeKey._currentSocket)) {
+      if (Selector.isSocketConnected(nodeKey._currentSocket)) {
         // Timeout for this operation
         const reqHandle = setTimeout(async () => {
           if (ignoreTimeout) {
@@ -1081,7 +1076,7 @@ export class Main {
       if (node.hasBeenInactiveFor(Main.ALIVE_CONTROLLER_TIMEOUT)) {
         if (node.isLogged()) {
           this.log(`Channel '${node}' ID = ${node.controllerID} is dead. Reconnecting...`);
-          BaseAttach.simpleReconnect(this.selector, node);
+          BaseAttach.simpleReconnect(this.selector, node, node.currentSocketMethod);
 
           node.resetKeepAliveRequest();
           await node.insertNet(false);

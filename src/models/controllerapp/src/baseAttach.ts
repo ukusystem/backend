@@ -165,7 +165,7 @@ export class BaseAttach extends Mortal {
    */
   sendOne(selector: Selector): boolean {
     // Try send if previous was sent and there is one witing in the buffer
-    if (this.previousMessageSent && this.sendBuffer.length > 0 && Selector.isChannelConnected(this._currentSocket)) {
+    if (this.previousMessageSent && this.sendBuffer.length > 0 && Selector.isSocketConnected(this._currentSocket)) {
       try {
         const first = this.sendBuffer[0];
         if (first) {
@@ -208,7 +208,7 @@ export class BaseAttach extends Mortal {
       return;
     }
     // console.log("Reconnect function")
-    if (BaseAttach.simpleReconnect(selector, this)) {
+    if (BaseAttach.simpleReconnect(selector, this, NodeAttach.CON_ETHERNET)) {
       this._log('Manager can now be accepted.');
     }
     this.printKeyCount(selector);
@@ -228,7 +228,7 @@ export class BaseAttach extends Mortal {
    * @param unreachable Whether to delay the connection for {@linkcode UNREACHABLE_INTERVAL_MS} ms.
    * @returns True if the attachment was a {@linkcode ManagerAttach}, false otherwise.
    */
-  static simpleReconnect(selector: Selector, key: BaseAttach, unreachable: boolean = false): boolean {
+  static simpleReconnect(selector: Selector, key: BaseAttach, method: number, unreachable: boolean = false): boolean {
     if (selector.cancelChannel(key)) {
       return true;
     } else {
@@ -238,13 +238,15 @@ export class BaseAttach extends Mortal {
         nodeAttach.disableArmButton(false, false);
         // }
         // Delay connection if was unreachable
-        setTimeout(
-          () => {
-            // console.log("Simple reconnect")
-            nodeAttach.tryConnectNode(selector, true);
-          },
-          unreachable ? this.UNREACHABLE_INTERVAL_MS : 1,
-        );
+        if (method === NodeAttach.CON_ETHERNET) {
+          setTimeout(
+            () => {
+              // console.log("Simple reconnect")
+              nodeAttach.tryConnectNode(selector, true);
+            },
+            unreachable ? this.UNREACHABLE_INTERVAL_MS : 1,
+          );
+        }
       }
     }
     return false;
@@ -894,7 +896,7 @@ export class BaseAttach extends Mortal {
  */
 export class NodeAttach extends BaseAttach {
   public ethernetSocket: net.Socket | null = null;
-  public gprsSocket: net.Socket | null = null;
+  // public gprsSocket: net.Socket | null = null;
 
   /**
    * Used to forbid sending more requests after one has been send but its response has not been received yet.
@@ -948,15 +950,15 @@ export class NodeAttach extends BaseAttach {
    * Read from the database
    */
   private imei: number;
-  public connectionMethod = NodeAttach.CON_NONE;
-  private loginMethod = NodeAttach.CON_NONE;
+  public currentSocketMethod = NodeAttach.CON_NONE;
+  // private sentLoginMethod = NodeAttach.CON_NONE;
 
   public static readonly DEFAULT_IMEI = 0;
   /**
    * Recevied with `VALUE_XD`
    */
   private receivedIMEI = NodeAttach.DEFAULT_IMEI;
-  public xdEnabled = true;
+  public imeiReceivedAndMatched = false;
 
   private chunkIterator: MyStringIterator | null = null;
 
@@ -981,32 +983,58 @@ export class NodeAttach extends BaseAttach {
     this.imei = imei;
   }
 
+  /**
+   * Get the method used to log in to the controller, if logged.
+   * @returns `NodeAttach.CON_ETHERNET` if ethernet was used, `NodeAttach.CON_GPRS` if GPRS was used, or `NodeAttach.CON_NONE`
+   * if the attachment is not logged in.
+   */
   public getLoggedMethod(): number {
-    return this.isLogged() ? this.connectionMethod : NodeAttach.CON_NONE;
+    return this.isLogged() ? this.currentSocketMethod : NodeAttach.CON_NONE;
   }
 
-  public getDatabaseIMEI() {
-    return this.imei;
-  }
+  // public getDatabaseIMEI() {
+  //   return this.imei;
+  // }
 
-  public isValidReceivedIMEI() {
-    return useful.isValidIMEI(this.receivedIMEI);
-  }
+  /**
+   * Called by a "dummy" atachment to try to assign the connection to the correct attachment. Free the socket if it was not used
+   * @param data Data received throught the dummy
+   * @param selector Current selector
+   * @param connection New client socket created
+   */
+  public testForGPRSNodeClient(data: Buffer, selector: Selector, connection: net.Socket) {
+    this._log(`Received GPRS data: '${data}'`);
 
-  public trySetSocketByIMEI(selector: Selector, connection: net.Socket) {
-    if (this.isValidReceivedIMEI() && this.xdEnabled) {
+    // Process data received
+    this.addData(data);
+    const res = new ResultCode();
+    const bundle = new Bundle();
+    this.readOne(selector, res, bundle);
+
+    // Try to match node only if IMEI was valid and
+    let freeSocket = true;
+    if (useful.isValidIMEI(this.receivedIMEI) && !this.imeiReceivedAndMatched) {
       const node = selector.getNodeByIMEI(this.receivedIMEI);
       if (node) {
-        if (node?.getLoggedMethod() === NodeAttach.CON_ETHERNET) {
+        // If attachment already logged, ignore connection
+        if (node.getLoggedMethod() !== NodeAttach.CON_NONE) {
+          this._log('Already logged. Aborting');
           return;
         }
-        this._log(`Node matched with IMEI ${this.receivedIMEI}`);
-        node.configureSocketCreated(connection, selector, false);
-        node.connectCallback(true, NodeAttach.CON_GPRS);
-        node.xdEnabled = false;
+        this._log(`Node ${this.controllerID} matched with IMEI ${this.receivedIMEI}`);
+        node.configureSocketCreated(connection, selector, NodeAttach.CON_GPRS);
+        this.imeiReceivedAndMatched = true;
+        node.currentSocketMethod = NodeAttach.CON_GPRS;
+        node.connectCallback(true);
+        freeSocket = false;
       } else {
         this._log('Node not found for IMEI');
       }
+    }
+
+    // Free connection if it was not used
+    if (freeSocket) {
+      Selector.freeSocket(connection);
     }
   }
 
@@ -1140,7 +1168,7 @@ export class NodeAttach extends BaseAttach {
    * a period of time. Sending this request does not mean that the controller is alive, so {@linkcode Mortal.setAlive} should not be called here.
    */
   tryRequestKeepalive() {
-    if (!Selector.isChannelConnected(this._currentSocket)) {
+    if (!Selector.isSocketConnected(this._currentSocket)) {
       return;
     }
     if (useful.timeInt() >= this.lastTimeMessageSent + Main.ALIVE_REQUEST_INTERVAL) {
@@ -1725,8 +1753,8 @@ export class NodeAttach extends BaseAttach {
         break;
 
       case codes.VALUE_XD:
-        if (!this.xdEnabled) {
-          this._log('XD disabled');
+        if (this.imeiReceivedAndMatched) {
+          this._log('Cannot received IMEI, VALUE_XD disabled');
           break;
         }
         this._log('Received XD');
@@ -1746,6 +1774,7 @@ export class NodeAttach extends BaseAttach {
       case codes.CMD_HELLO_FROM_CTRL:
         this._log('Received hello from controller. Logged in.');
         this.setLogged(true);
+
         // this.setGSMUnsynced();
         // this.pendingOrder = false;
 
@@ -2138,10 +2167,9 @@ export class NodeAttach extends BaseAttach {
    * Add a {@linkcode codes.CMD_LOGIN} message with the current user and password in
    * this object. This message expects a response.
    */
-  addLogin(method: number) {
+  addLogin() {
     const pwd = Encryption.decrypt(this.password, true);
     if (pwd) {
-      this.loginMethod = method;
       const msgID = this._addOne(new Message(codes.CMD_LOGIN, -1, [this.user, pwd]).setLogOnSend(false));
       this._log(`Added login (${msgID})`);
     }
@@ -2164,7 +2192,7 @@ export class NodeAttach extends BaseAttach {
    * Log in and sync some data with the controller. Should be used when the connection could be stablished successfully.
    * @param log
    */
-  public connectCallback(log: boolean, method: number) {
+  public connectCallback(log: boolean) {
     // console.log(this._currentSocket?.writableLength);
     this.lastChannelConnected = true;
     if (log) {
@@ -2172,7 +2200,7 @@ export class NodeAttach extends BaseAttach {
     }
     this.unreached = false;
     ManagerAttach.connectedManager?.addNodeState(codes.VALUE_DENIED, this.controllerID);
-    this.addLogin(method);
+    this.addLogin();
     this.addHello(-1, 0, async (code: number) => {
       if (code !== codes.AIO_OK) {
         this._log(`ERROR Sending hello to controller ${useful.toHex(code)}`);
@@ -2185,7 +2213,7 @@ export class NodeAttach extends BaseAttach {
     });
   }
 
-  configureSocketCreated(controllerSocket: net.Socket, selector: Selector, reconnectOnClose: boolean = true): net.Socket {
+  configureSocketCreated(controllerSocket: net.Socket, selector: Selector, method: number): net.Socket {
     controllerSocket.removeAllListeners();
     controllerSocket.on('data', (data: Buffer) => {
       // const a = [...data]
@@ -2243,7 +2271,7 @@ export class NodeAttach extends BaseAttach {
 
       // console.log("Try connect node, close event")
       if (this.isLogged()) {
-        this._log(`The node ID = ${this.controllerID} (${this.node}) closed its socket. ${reconnectOnClose ? 'Reconnecting ...' : ''}`);
+        this._log(`The node ID = ${this.controllerID} (${this.node}) closed its socket. ${method === NodeAttach.CON_ETHERNET ? 'Reconnecting ...' : ''}`);
         await this.insertNet(false);
         this.printKeyCount(selector);
         ManagerAttach.connectedManager?.addNodeState(codes.VALUE_DISCONNECTED, this.controllerID);
@@ -2254,9 +2282,7 @@ export class NodeAttach extends BaseAttach {
         }
       }
       this.lastChannelConnected = false;
-      if (reconnectOnClose) {
-        BaseAttach.simpleReconnect(selector, this, this.unreached);
-      }
+      BaseAttach.simpleReconnect(selector, this, method, this.unreached);
     });
 
     // this._currentSocket = controllerSocket;
@@ -2270,13 +2296,18 @@ export class NodeAttach extends BaseAttach {
    * @param push Whether to add the new attachment to the list.
    */
   tryConnectNode(selector: Selector, log: boolean, push: boolean = true) {
+    if (this.controllerID === 1) {
+      this._log(`Trying`);
+    }
     const newControllerSocket = net.createConnection(this.port, this.ip, () => {
-      this.ethernetSocket = newControllerSocket;
+      // this.ethernetSocket = newControllerSocket;
+      // Clear any previous connection (created by other method)
+      Selector.freeSocket(this._currentSocket);
       this._currentSocket = this.ethernetSocket;
-      this.connectCallback(log, NodeAttach.CON_ETHERNET);
+      this.connectCallback(log);
     });
 
-    this.configureSocketCreated(newControllerSocket, selector);
+    this.ethernetSocket = this.configureSocketCreated(newControllerSocket, selector, NodeAttach.CON_ETHERNET);
 
     if (push) {
       selector.nodeAttachments.push(this);
@@ -2290,6 +2321,7 @@ export class NodeAttach extends BaseAttach {
     this.port = rowWithData.puerto;
     this.user = rowWithData.usuario;
     this.password = rowWithData.contraseña;
+    this.imei = rowWithData.imei;
     this._closeOnNextSend = false;
     // this._selectable = true;
     this.setLogged(false);
@@ -3029,10 +3061,7 @@ export class ManagerAttach extends BaseAttach {
       // Create attachment and connect the socket
 
       const newAttach = NodeAttach.getInstanceFromPacket(newData, this._logger);
-
-      if (newAttach.connectionMethod === NodeAttach.CON_ETHERNET) {
-        newAttach.tryConnectNode(selector, true);
-      }
+      newAttach.tryConnectNode(selector, true);
     } else {
       /**
        * The channel was found. IF THE CHANNEL IS LOGGED IN TO THE CONTROLLER, nothing
@@ -3067,7 +3096,7 @@ export class ManagerAttach extends BaseAttach {
         currentAttach.resetOnlyData(newData);
 
         // Reset node attachment data and connect with the new data
-        BaseAttach.simpleReconnect(selector, currentAttach);
+        BaseAttach.simpleReconnect(selector, currentAttach, currentAttach.currentSocketMethod);
       } else {
         if (!newCompleteData) {
           this._log(`There was no data to edit node ID ${nodeID}`);
@@ -3100,6 +3129,7 @@ export class ManagerAttach extends BaseAttach {
           return;
         }
         currentAttach.setName(newData.nodo);
+        currentAttach.setIMEI(newData.imei);
         this._log(`Channel '${currentAttach.toString()}' will reconnect when the controller confirms the changes.`);
       }
     }
@@ -3111,10 +3141,10 @@ export class ManagerAttach extends BaseAttach {
         // Update node phone only when it was saved in database
         if (notify) {
           // console.log(cd);
-          const newPhone = cd[26].getInt();
-          currentAttach.setIMEI(newPhone);
+          const newIMEI = cd[26].getInt();
+          currentAttach.setIMEI(newIMEI);
         }
-
+        // this._log(`Complete data: \n${cd}`);
         // Notify only when it was saved in database
         // this._log('Notifying web about controller');
         ControllerMapManager.update(currentAttach.controllerID, {
@@ -3124,22 +3154,22 @@ export class ManagerAttach extends BaseAttach {
           descripcion: cd[4].getString(),
           latitud: cd[5].getString(),
           longitud: cd[6].getString(),
-          serie: cd[8].getString(),
-          ip: cd[9].getString(),
-          personalgestion: cd[13].getString(),
-          personalimplementador: cd[14].getString(),
-          motionrecordseconds: cd[15].getInt(),
-          res_id_motionrecord: cd[16].getInt(),
-          motionrecordfps: cd[17].getInt(),
-          motionsnapshotseconds: cd[18].getInt(),
-          res_id_motionsnapshot: cd[19].getInt(),
-          motionsnapshotinterval: cd[20].getInt(),
-          res_id_streamprimary: cd[21].getInt(),
-          streamprimaryfps: cd[22].getInt(),
-          res_id_streamsecondary: cd[23].getInt(),
-          streamsecondaryfps: cd[24].getInt(),
-          res_id_streamauxiliary: cd[25].getInt(),
-          streamauxiliaryfps: cd[26].getInt(),
+          // serie: cd[8].getString(),
+          ip: cd[8].getString(),
+          personalgestion: cd[12].getString(),
+          personalimplementador: cd[13].getString(),
+          motionrecordseconds: cd[14].getInt(),
+          res_id_motionrecord: cd[15].getInt(),
+          motionrecordfps: cd[16].getInt(),
+          motionsnapshotseconds: cd[17].getInt(),
+          res_id_motionsnapshot: cd[18].getInt(),
+          motionsnapshotinterval: cd[19].getInt(),
+          res_id_streamprimary: cd[20].getInt(),
+          streamprimaryfps: cd[21].getInt(),
+          res_id_streamsecondary: cd[22].getInt(),
+          streamsecondaryfps: cd[23].getInt(),
+          res_id_streamauxiliary: cd[24].getInt(),
+          streamauxiliaryfps: cd[25].getInt(),
         });
       }
     } catch (e) {
@@ -3515,7 +3545,7 @@ export class Selector {
   getNodeState(nodeID: number): number {
     const nodeAttach = this.getNodeAttachByID(nodeID);
     if (nodeAttach) {
-      if (Selector.isChannelConnected(nodeAttach._currentSocket)) {
+      if (Selector.isSocketConnected(nodeAttach._currentSocket)) {
         return nodeAttach.isLogged() ? codes.VALUE_CONNECTED : codes.VALUE_DENIED;
       }
     }
@@ -3524,12 +3554,12 @@ export class Selector {
 
   /**
    *
-   * @param key The socket being tested.
+   * @param socket The socket being tested.
    * @returns True if the socket is connected.
    */
-  static isChannelConnected(key: net.Socket | null): boolean {
-    if (key) {
-      return !key.closed && !key.destroyed && !key.connecting;
+  static isSocketConnected(socket: net.Socket | null): boolean {
+    if (socket) {
+      return !socket.closed && !socket.destroyed && !socket.connecting;
     }
     return false;
   }
@@ -3538,11 +3568,72 @@ export class Selector {
    * End and destroy the inner socket of the attachment, if not null.
    * @param attach The attachment containig the socket.
    */
-  private simpleCancel(attach: BaseAttach) {
-    attach._currentSocket?.removeAllListeners();
-    attach._currentSocket?.end();
-    attach._currentSocket?.destroy();
-    attach._currentSocket = null;
+  // private simpleCancel(attach: BaseAttach) {
+  //   attach._currentSocket?.removeAllListeners();
+  //   attach._currentSocket?.end();
+  //   attach._currentSocket?.destroy();
+  //   attach._currentSocket = null;
+  //   if (attach instanceof NodeAttach) {
+  //     // Remove node attachment
+  //     const idx = this.nodeAttachments.indexOf(attach);
+  //     if (idx >= 0) {
+  //       this.nodeAttachments.splice(idx, 1);
+  //     }
+  //     // console.log('Was a NodeAttach.')
+  //   } else if (attach instanceof ManagerAttach) {
+  //     // Remove manager attachment
+  //     const index = this.managerConnections.indexOf(attach);
+  //     if (index >= 0) {
+  //       this.managerConnections.splice(index, 1);
+  //     }
+  //     // console.log("Was a ManagerAttach.");
+  //   } else {
+  //     console.log('Unknown instance.');
+  //   }
+  // }
+
+  /**
+   * Free resources from a socket
+   * @param socket
+   */
+  public static freeSocket(socket: net.Socket | null) {
+    socket?.removeAllListeners();
+    socket?.end();
+    socket?.destroy();
+    socket = null;
+  }
+
+  /**
+   * Clear the attachment, close the channel and cancel the key. This should be
+   * used after an attempt to close the socket properly has been made, the channel
+   * was closed from the other end or in general when the socket is no longer
+   * needed. If the attachment is a {@linkcode BaseAttach}, mark it as not selectable.
+   *
+   * @param key Key to perform on.
+   * @returns True if the attachment was an instance of {@linkcode ManagerAttach},
+   *         false otherwise.
+   */
+  cancelChannel(attach: BaseAttach): boolean {
+    const isManager = attach instanceof ManagerAttach;
+    // If a manager attach, allow other managers to connect
+    if (isManager) {
+      const mngrAttach = <ManagerAttach>attach;
+      if (mngrAttach.isLoggedIn()) {
+        ManagerAttach.isAnotherLoggedIn = false;
+        Selector.freeSocket(attach._currentSocket);
+      }
+    }
+    // If a node attach, log out from controller
+    else if (attach instanceof NodeAttach) {
+      const nodeAttach = <NodeAttach>attach;
+      nodeAttach.setLogged(false);
+      Selector.freeSocket(nodeAttach.ethernetSocket);
+    }
+
+    // attach._currentSocket?.removeAllListeners();
+    // attach._currentSocket?.end();
+    // attach._currentSocket?.destroy();
+    // attach._currentSocket = null;
     if (attach instanceof NodeAttach) {
       // Remove node attachment
       const idx = this.nodeAttachments.indexOf(attach);
@@ -3560,31 +3651,7 @@ export class Selector {
     } else {
       console.log('Unknown instance.');
     }
-  }
-
-  /**
-   * Clear the attachment, close the channel and cancel the key. This should be
-   * used after an attempt to close the socket properly has been made, the channel
-   * was closed from the other end or in general when the socket is no longer
-   * needed. If the attachment is a {@linkcode BaseAttach}, mark it as not selectable.
-   *
-   * @param key Key to perform on.
-   * @returns True if the attachment was an instance of {@linkcode ManagerAttach},
-   *         false otherwise.
-   */
-  cancelChannel(attach: BaseAttach): boolean {
-    const isManager = attach instanceof ManagerAttach;
-    if (isManager) {
-      const mngrAttach = <ManagerAttach>attach;
-      if (mngrAttach.isLoggedIn()) {
-        ManagerAttach.isAnotherLoggedIn = false;
-      }
-    } else if (attach instanceof NodeAttach) {
-      const nodeAttach = <NodeAttach>attach;
-      // nodeAttach._selectable = false;
-      nodeAttach.setLogged(false);
-    }
-    this.simpleCancel(attach);
+    // this.simpleCancel(attach);
     return isManager;
   }
 }

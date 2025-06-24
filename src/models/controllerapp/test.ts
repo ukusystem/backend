@@ -38,28 +38,23 @@ export function startServerForManager() {
       connection.setTimeout(30, () => {
         console.log('Manager idle timeout');
         // Activate when the manager sends keep alives to the server. Managers should not reconnect automaticaly
-        // newManagerSocket.reconnect(this.selector)
       });
 
       connection.on('data', (data: Buffer) => {
         console.log(`Received '${data}'`);
-        // newManagerSocket.addData(data);
       });
 
       connection.on('end', () => {
         console.log('Manager disconnected');
-        // newManagerSocket.reconnect(this.selector);
       });
 
       // Triggers 'end' and 'close' events
       connection.on('error', () => {
         console.log('Manager error');
-        // newManagerSocket.reconnect(this.selector);
       });
 
       connection.on('close', (hadError) => {
         console.log(`Manager closed. ${hadError ? 'With' : 'No'} error.`);
-        // newManagerSocket.reconnect(this.selector);
       });
 
       console.log('Manager accepted and events set.');
