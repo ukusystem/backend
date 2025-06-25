@@ -962,7 +962,7 @@ export class NodeAttach extends BaseAttach {
 
   private chunkIterator: MyStringIterator | null = null;
 
-  private lastChannelConnected = false;
+  private lastEthernetConnected = false;
 
   /**
    * Used to get the connection state of the socket for the manager. This is true
@@ -1025,10 +1025,10 @@ export class NodeAttach extends BaseAttach {
         node.configureSocketCreated(connection, selector, NodeAttach.CON_GPRS);
         this.imeiReceivedAndMatched = true;
         node.currentSocketMethod = NodeAttach.CON_GPRS;
-        node.connectCallback(true);
+        node.connectCallback(true, NodeAttach.CON_GPRS);
         freeSocket = false;
       } else {
-        this._log('Node not found for IMEI');
+        this._log(`Node not found for IMEI ${this.receivedIMEI}`);
       }
     }
 
@@ -1472,7 +1472,7 @@ export class NodeAttach extends BaseAttach {
 
         break;
       case codes.VALUE_SERIAL:
-        // this._log(`Received controller info '${command}'`);
+        this._log(`Received controller info '${command}'`);
         this.mirrorMessage(this._appendPart(command, this.controllerID.toString()), true);
         const serialData = this._parseMessage(parts, [queries.tupleTxt, queries.tupleTxt], id, false);
         if (!serialData) {
@@ -2192,9 +2192,9 @@ export class NodeAttach extends BaseAttach {
    * Log in and sync some data with the controller. Should be used when the connection could be stablished successfully.
    * @param log
    */
-  public connectCallback(log: boolean) {
+  public connectCallback(log: boolean, method: number) {
     // console.log(this._currentSocket?.writableLength);
-    this.lastChannelConnected = true;
+    this.lastEthernetConnected = method === NodeAttach.CON_ETHERNET ? true : this.lastEthernetConnected;
     if (log) {
       this._log('Socket connect callback');
     }
@@ -2211,6 +2211,10 @@ export class NodeAttach extends BaseAttach {
       // Send all cards. Inactive cards will be send with an order to erase it in the controller.
       this.syncCards();
     });
+  }
+
+  public static getMethodString(method: number): string {
+    return method === NodeAttach.CON_ETHERNET ? 'Ethernet' : method === NodeAttach.CON_GPRS ? 'GPRS' : 'None';
   }
 
   configureSocketCreated(controllerSocket: net.Socket, selector: Selector, method: number): net.Socket {
@@ -2276,12 +2280,12 @@ export class NodeAttach extends BaseAttach {
         this.printKeyCount(selector);
         ManagerAttach.connectedManager?.addNodeState(codes.VALUE_DISCONNECTED, this.controllerID);
       } else {
-        if (this.lastChannelConnected) {
-          this._log('Channel disconnected (falling edge)');
+        if (this.lastEthernetConnected && method === NodeAttach.CON_ETHERNET) {
+          this._log(`Channel disconnected (falling edge) (${NodeAttach.getMethodString(method)})`);
           ManagerAttach.connectedManager?.addNodeState(codes.VALUE_DISCONNECTED, this.controllerID);
         }
       }
-      this.lastChannelConnected = false;
+      this.lastEthernetConnected = method === NodeAttach.CON_ETHERNET ? false : this.lastEthernetConnected;
       BaseAttach.simpleReconnect(selector, this, method, this.unreached);
     });
 
@@ -2304,7 +2308,7 @@ export class NodeAttach extends BaseAttach {
       // Clear any previous connection (created by other method)
       Selector.freeSocket(this._currentSocket);
       this._currentSocket = this.ethernetSocket;
-      this.connectCallback(log);
+      this.connectCallback(log, NodeAttach.CON_ETHERNET);
     });
 
     this.ethernetSocket = this.configureSocketCreated(newControllerSocket, selector, NodeAttach.CON_ETHERNET);
