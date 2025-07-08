@@ -239,6 +239,9 @@ export class BaseAttach extends Mortal {
         // }
         // Delay connection if was unreachable
         if (method === NodeAttach.CON_ETHERNET) {
+          if (unreachable) {
+            console.log(`Unreachable, so waiting ${this.UNREACHABLE_INTERVAL_MS}s before reconnecting`);
+          }
           setTimeout(
             () => {
               // console.log("Simple reconnect")
@@ -2176,7 +2179,7 @@ export class NodeAttach extends BaseAttach {
   }
 
   async syncCards() {
-    // this._log("Sending cards");
+    this._log('Sending cards');
     const cards = await executeQuery<db2.CardForController[]>(queries.cardSelectForController);
     if (cards) {
       for (const card of cards) {
@@ -2550,7 +2553,6 @@ export class ManagerAttach extends BaseAttach {
                 }
               }
               break;
-
             case codes.CMD_CONFIG_SET:
               const valueData = this._parseMessage(parts, queries.valueParse, id);
               if (!valueData) break;
@@ -2626,7 +2628,7 @@ export class ManagerAttach extends BaseAttach {
                     }
                     nodePassword.setString(encrytedNodePassword);
                   }
-                  // console.log(nodeData)
+                  console.log(nodeData);
                   await this.completeReconnect(selector, nodeID, false, id, nodeData);
                   // After a node related order has been processed
                   this.printKeyCount(selector);
@@ -3046,7 +3048,7 @@ export class ManagerAttach extends BaseAttach {
       if (await this._insertItem('node', newCompleteData, queries.nodeInsert, id)) {
         notify = true;
       } else {
-        this._log('Could not insert, updating node instead.');
+        this._log('Could not insert (entry already exists?), updating node instead.');
         if (await this._updateItem('node', newCompleteData, updateQuery, id)) {
           notify = true;
           this._log('Node updated');
@@ -3100,6 +3102,8 @@ export class ManagerAttach extends BaseAttach {
         currentAttach.resetOnlyData(newData);
 
         // Reset node attachment data and connect with the new data
+        this._log(`Reconnecting socket by ${NodeAttach.getMethodString(currentAttach.currentSocketMethod)}`);
+
         BaseAttach.simpleReconnect(selector, currentAttach, currentAttach.currentSocketMethod);
       } else {
         if (!newCompleteData) {
