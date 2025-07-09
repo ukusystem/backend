@@ -3102,9 +3102,8 @@ export class ManagerAttach extends BaseAttach {
         currentAttach.resetOnlyData(newData);
 
         // Reset node attachment data and connect with the new data
-        this._log(`Reconnecting socket by ${NodeAttach.getMethodString(currentAttach.currentSocketMethod)}`);
-
-        BaseAttach.simpleReconnect(selector, currentAttach, currentAttach.currentSocketMethod);
+        this._log(`Reconnecting socket by Ethernet`);
+        BaseAttach.simpleReconnect(selector, currentAttach, NodeAttach.CON_ETHERNET);
       } else {
         if (!newCompleteData) {
           this._log(`There was no data to edit node ID ${nodeID}`);
