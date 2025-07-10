@@ -26,7 +26,7 @@ import * as cp from 'child_process';
 
 export class Main {
   private static readonly VERSION_MAJOR = 0;
-  private static readonly VERSION_MINOR = 6;
+  private static readonly VERSION_MINOR = 7;
   private static readonly VERSION_PATCH = 0;
 
   /**
