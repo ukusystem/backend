@@ -1,6 +1,6 @@
 export const RECONNECT_DELAY = 10; // Delay to reconnect socket. Used by the server.
-export const MAX_MSG_LENGTH = 511; // The maximum message length without the null character, i.e. the
-// buffer must be MAX_MSG_LENGTH+1 long.
+export const MAX_MSG_LENGTH = 511; // The maximum message length without the null character, i.e. the buffer must be MAX_MSG_LENGTH+1 long.
+export const MAX_CRYPTED_LENGTH = 685; // Message without separator: 510 -> Encrypted (AES 256 CBC): 512 -> Base64: 684 -> Plus separator: 685
 
 // Separators
 

@@ -1,4 +1,5 @@
-import * as Codes from './codes'
+import * as codes from './codes';
+import { Encryption } from './encryption';
 import { IntConsumer } from './types';
 
 /**
@@ -7,7 +8,7 @@ import { IntConsumer } from './types';
 export class Message {
   static nextID = 1;
 
-  message = "";
+  message = '';
   messageID = 0;
   responseExpected = false;
   forceAddToPending = false;
@@ -29,22 +30,16 @@ export class Message {
    * @param action    Action to perform after the response to this message has been received, if a response was expected.
    * @param forceAdd
    */
-  constructor(
-    header: number,
-    id: number = 0,
-    body: string[] = [],
-    action: IntConsumer = null,
-    forceAdd: boolean = false
-  ) {
+  constructor(header: number, id: number = 0, body: string[] = [], action: IntConsumer = null, forceAdd: boolean = false) {
     this.action = action;
     this.forceAddToPending = forceAdd;
     this.responseExpected = id < 0;
     this.messageID = this.responseExpected ? Message.nextID : id;
-    this.message = Message.#joinMessage(header, this.messageID, body);
+    this.message = Message.joinMessage(header, this.messageID, body);
     Message.nextID += this.responseExpected ? 1 : 0;
   }
 
-  attachAction(action: IntConsumer|null = null): Message {
+  attachAction(action: IntConsumer | null = null): Message {
     this.action = action;
     return this;
   }
@@ -65,7 +60,7 @@ export class Message {
    * @returns The same object with the parameters changed.
    */
   reset(newMessage: string): Message {
-    this.message = newMessage + Codes.SEP_EOL;
+    this.message = newMessage + codes.SEP_EOL;
     this.messageID = 0;
     this.responseExpected = false;
     return this;
@@ -82,12 +77,25 @@ export class Message {
    *               without a body.
    * @returns The String with all the values joined
    */
-  static #joinMessage(header: number, id: number, body: string[]): string {
-    let tempMessage = `${header}${Codes.SEP_CMD}${id}`;
+  private static joinMessage(header: number, id: number, body: string[]): string {
+    let tempMessage = `${header}${codes.SEP_CMD}${id}`;
     for (let i = 0; i < body.length; i++) {
-      tempMessage = `${tempMessage}${Codes.SEP_CMD}${body[i]}`;
+      tempMessage = `${tempMessage}${codes.SEP_CMD}${body[i]}`;
     }
-    return tempMessage + Codes.SEP_EOL;
+
+    const encryptedMsg = Encryption.encrypt(tempMessage, false);
+    if (encryptedMsg) {
+      if (encryptedMsg.length + codes.SEP_MTY.length > codes.MAX_CRYPTED_LENGTH) {
+        console.log(`ERROR Encrypted message too long ${encryptedMsg?.length}`);
+        return codes.SEP_MTY + codes.SEP_EOL;
+      }
+    } else {
+      console.log(`ERROR Encrypting message`);
+      return codes.SEP_MTY + codes.SEP_EOL;
+    }
+
+    return encryptedMsg + codes.SEP_EOL;
+    // return tempMessage + codes.SEP_EOL;
   }
 
   /**

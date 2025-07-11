@@ -34,7 +34,13 @@ export class Encryption {
         crypted = Buffer.concat([iv, crypted]);
       }
       //   console.log(`Encrypted hex '${crypted.toString('hex')}'`)
-      return crypted.toString('base64'); // +fHL53d9GKUS842X7U+hlA==
+      // return crypted.toString('base64'); // +fHL53d9GKUS842X7U+hlA==
+
+      // To test encryption length
+      const finalEncrypted = crypted.toString('base64');
+      console.log(`Message: ${strToEncrypt.length} Encrypted: ${crypted.length} Encrypted 64: ${finalEncrypted.length}`);
+
+      return finalEncrypted; //  Example: +fHL53d9==
     } catch (e) {
       console.log(`Error encrypting. ${e}`);
     }
