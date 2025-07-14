@@ -420,7 +420,7 @@ export class Main {
         this.log(`No node attach ID = ${nodeID}`);
       } else {
         if (nodeOptional.isLogged()) {
-          nodeOptional.addCommandForControllerBody(codes.CMD_TICKET_REMOVE, -1, [ticketID.toString()]);
+          nodeOptional.addCommandForControllerBody(codes.CMD_TICKET_REMOVE, -1, [ticketID.toString()], false, false, null, true);
           this.log('Added command for controller.');
         } else {
           this.log(`Node ID = ${nodeID} was not connected.`);
@@ -517,20 +517,28 @@ export class Main {
         }, Main.REQUEST_TIMEOUT);
         // Send order to controller
         const codeToSend = security ? codes.VALUE_ARM : codes.VALUE_DISARM;
-        const msgID = node.addCommandForControllerBody(codes.CMD_CONFIG_SET, -1, [codes.VALUE_SECURITY_WEB.toString(), codeToSend.toString()], true, true, (receivedCode) => {
-          ignoreTimeout = true;
-          clearTimeout(securityHandle);
-          // Valid responses
-          const definite = receivedCode === codes.VALUE_ARM || receivedCode === codes.VALUE_DISARM;
-          if (definite || receivedCode === codes.VALUE_ARMING || receivedCode === codes.VALUE_DISARMING) {
-            node.disableArmButton(!definite);
-            resolve(new RequestResult(true, `Orden de seguridad recibida.`, receivedCode));
-          } else {
-            node.disableArmButton(false);
-            resolve(new RequestResult(false, `La order no se pudo confirmar.`, receivedCode));
-          }
-          this.log(`Response from controller ${useful.toHex(receivedCode)}`);
-        });
+        const msgID = node.addCommandForControllerBody(
+          codes.CMD_CONFIG_SET,
+          -1,
+          [codes.VALUE_SECURITY_WEB.toString(), codeToSend.toString()],
+          true,
+          true,
+          (receivedCode) => {
+            ignoreTimeout = true;
+            clearTimeout(securityHandle);
+            // Valid responses
+            const definite = receivedCode === codes.VALUE_ARM || receivedCode === codes.VALUE_DISARM;
+            if (definite || receivedCode === codes.VALUE_ARMING || receivedCode === codes.VALUE_DISARMING) {
+              node.disableArmButton(!definite);
+              resolve(new RequestResult(true, `Orden de seguridad recibida.`, receivedCode));
+            } else {
+              node.disableArmButton(false);
+              resolve(new RequestResult(false, `La order no se pudo confirmar.`, receivedCode));
+            }
+            this.log(`Response from controller ${useful.toHex(receivedCode)}`);
+          },
+          true,
+        );
         this.log('Added order for controller. Waiting response...');
       } else {
         this.log(`Controller ${controllerID} disconnected.`);
@@ -799,16 +807,24 @@ export class Main {
           resolve(new RequestResult(false, `El controlador ID = ${newOrder.ctrl_id} no ha respondido a tiempo.`));
         }, Main.REQUEST_TIMEOUT);
         // Send order to controller
-        const msgID = nodeKey.addCommandForControllerBody(codes.CMD_PIN_CONFIG_SET, -1, [newOrder.pin.toString(), newState.toString()], true, true, async (code) => {
-          ignoreTimeout = true;
-          clearTimeout(reqHandle);
-          monitor = States.EXECUTED;
-          await this.registerOrder(newOrder, monitor);
-          // resolve(monitor)
-          const res = code === codes.AIO_OK;
-          resolve(new RequestResult(res, `Orden para pines ejecutada ${res ? 'correctamente' : `con errores ${useful.toHex(code)}`}.`));
-          this.log(`Response from controller ${useful.toHex(code)}`);
-        });
+        const msgID = nodeKey.addCommandForControllerBody(
+          codes.CMD_PIN_CONFIG_SET,
+          -1,
+          [newOrder.pin.toString(), newState.toString()],
+          true,
+          true,
+          async (code) => {
+            ignoreTimeout = true;
+            clearTimeout(reqHandle);
+            monitor = States.EXECUTED;
+            await this.registerOrder(newOrder, monitor);
+            // resolve(monitor)
+            const res = code === codes.AIO_OK;
+            resolve(new RequestResult(res, `Orden para pines ejecutada ${res ? 'correctamente' : `con errores ${useful.toHex(code)}`}.`));
+            this.log(`Response from controller ${useful.toHex(code)}`);
+          },
+          true,
+        );
         this.log('Added order for controller. Waiting response...');
       } else {
         this.log(`Controller ${newOrder.ctrl_id} disconnected.`);
@@ -962,32 +978,48 @@ export class Main {
           // log("Attachment ID = %d not logged", nodeID);
           continue;
         }
-        attach.addCommandForControllerBody(codes.CMD_CONFIG_GET, -1, [codes.VALUE_CAN_ACCEPT_TICKET.toString()], true, true, (available: number) => {
-          if (available <= 0) {
-            // this.log(`No space for ticket in node ID = ${nodeID}`);
-            return;
-          }
-          // log("Available %d in controller ID=%d", available, nodeID);
-          let count = 0;
-          for (const ticket of ticketList) {
-            if (ticket.sent) {
-              continue;
+        attach.addCommandForControllerBody(
+          codes.CMD_CONFIG_GET,
+          -1,
+          [codes.VALUE_CAN_ACCEPT_TICKET.toString()],
+          true,
+          true,
+          (available: number) => {
+            if (available <= 0) {
+              // this.log(`No space for ticket in node ID = ${nodeID}`);
+              return;
             }
-            ticket.sent = true;
-            attach.addCommandForControllerBody(codes.CMD_TICKET_ADD, -1, ticket.getBody(), true, true, async (rsp: number) => {
-              if (rsp === codes.AIO_OK || rsp === codes.ERR_NO_CHANGE) {
-                await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.ticketSetSent, nodeID), [ticket.ticketID]);
-                this.log(`Ticket ID = ${ticket.ticketID} ${rsp === codes.AIO_OK ? 'added to' : 'was already in the'} controller.`);
-              } else {
-                this.log(`Couldn't add ticket ID = ${ticket.ticketID}. Error ${useful.toHex(rsp)}. Not removed.`);
+            // log("Available %d in controller ID=%d", available, nodeID);
+            let count = 0;
+            for (const ticket of ticketList) {
+              if (ticket.sent) {
+                continue;
               }
-            });
-            count++;
-            if (count >= available) {
-              break;
+              ticket.sent = true;
+              attach.addCommandForControllerBody(
+                codes.CMD_TICKET_ADD,
+                -1,
+                ticket.getBody(),
+                true,
+                true,
+                async (rsp: number) => {
+                  if (rsp === codes.AIO_OK || rsp === codes.ERR_NO_CHANGE) {
+                    await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(queries.ticketSetSent, nodeID), [ticket.ticketID]);
+                    this.log(`Ticket ID = ${ticket.ticketID} ${rsp === codes.AIO_OK ? 'added to' : 'was already in the'} controller.`);
+                  } else {
+                    this.log(`Couldn't add ticket ID = ${ticket.ticketID}. Error ${useful.toHex(rsp)}. Not removed.`);
+                  }
+                },
+                true,
+              );
+              count++;
+              if (count >= available) {
+                break;
+              }
             }
-          }
-        });
+          },
+          true,
+        );
       }
     }, Main.TICKET_CHECK_PERIOD);
   }

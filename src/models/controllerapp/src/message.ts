@@ -8,12 +8,17 @@ import { IntConsumer } from './types';
 export class Message {
   static nextID = 1;
 
-  message = '';
+  /**
+   * Message (can be encrypted) without the separator character.
+   * The separator will be appended on every call to `getMessage()`
+   */
+  private message = '';
   messageID = 0;
   responseExpected = false;
   forceAddToPending = false;
   logOnSend = true;
   logOnResponse = true;
+  isEncrypted = false;
   action: IntConsumer = null;
 
   /**
@@ -39,6 +44,43 @@ export class Message {
     Message.nextID += this.responseExpected ? 1 : 0;
   }
 
+  /**
+   *
+   * @returns The inner message with {@linkcode codes.SEP_EOL} appended
+   */
+  getMessage() {
+    return this.message + codes.SEP_EOL;
+  }
+
+  /**
+   * Encrypt the inner message if this instance has not been encrypted yet.
+   * Calling {@linkcode Message.reset} makes the instance not encrypted.
+   * @returns The same instance
+   */
+  encrypt(): Message {
+    if (this.isEncrypted) {
+      return this;
+    }
+
+    const encryptedMsg = Encryption.encrypt(this.message, false);
+    if (encryptedMsg) {
+      if (encryptedMsg.length + codes.SEP_MTY.length > codes.MAX_CRYPTED_LENGTH) {
+        console.log(`ERROR Encrypted message too long ${encryptedMsg?.length}`);
+        this.message = codes.SEP_MTY;
+      } else {
+        this.message = encryptedMsg;
+      }
+    } else {
+      console.log(`ERROR Encrypting message`);
+      // return codes.SEP_MTY + codes.SEP_EOL;
+      this.message = codes.SEP_MTY;
+    }
+
+    this.isEncrypted = true;
+
+    return this;
+  }
+
   attachAction(action: IntConsumer | null = null): Message {
     this.action = action;
     return this;
@@ -56,11 +98,13 @@ export class Message {
 
   /**
    * Edit the object with a different message and an id = 0.
+   * Assume the new message is not encrypted ({@linkcode Message.encrypt} can be called)
    * @param newMessage The new inner text. The ending character <code>SEP_EOL</code> will be appended at the end.
    * @returns The same object with the parameters changed.
    */
   reset(newMessage: string): Message {
-    this.message = newMessage + codes.SEP_EOL;
+    this.message = newMessage;
+    this.isEncrypted = false;
     this.messageID = 0;
     this.responseExpected = false;
     return this;
@@ -82,20 +126,8 @@ export class Message {
     for (let i = 0; i < body.length; i++) {
       tempMessage = `${tempMessage}${codes.SEP_CMD}${body[i]}`;
     }
-
-    const encryptedMsg = Encryption.encrypt(tempMessage, false);
-    if (encryptedMsg) {
-      if (encryptedMsg.length + codes.SEP_MTY.length > codes.MAX_CRYPTED_LENGTH) {
-        console.log(`ERROR Encrypted message too long ${encryptedMsg?.length}`);
-        return codes.SEP_MTY + codes.SEP_EOL;
-      }
-    } else {
-      console.log(`ERROR Encrypting message`);
-      return codes.SEP_MTY + codes.SEP_EOL;
-    }
-
-    return encryptedMsg + codes.SEP_EOL;
-    // return tempMessage + codes.SEP_EOL;
+    // return encryptedMsg + codes.SEP_EOL;
+    return tempMessage;
   }
 
   /**

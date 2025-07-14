@@ -103,6 +103,7 @@ export class BaseAttach extends Mortal {
   _buffer = '';
 
   private previousMessageSent = true;
+  encryptMessages = false;
 
   constructor(logger: Logger) {
     super();
@@ -166,7 +167,7 @@ export class BaseAttach extends Mortal {
       try {
         const first = this.sendBuffer[0];
         if (first) {
-          const bb = Buffer.from(first.message);
+          const bb = Buffer.from(first.getMessage());
           this.previousMessageSent = false;
           this._currentSocket?.write(bb, () => {
             this.previousMessageSent = true;
@@ -401,7 +402,7 @@ export class BaseAttach extends Mortal {
    * @returns True if the operation was successful, false otherwise or if
    *         ``items`` is empty.
    */
-  async _updateItem(name: string, items: DataStruct[] | null, updateQuery: string, id: number, nodeID: number = -1): Promise<boolean> {
+  async _updateItem(name: string, items: DataStruct[] | null, updateQuery: string, id: number, nodeID: number = -1, encrypt: boolean = false): Promise<boolean> {
     if (!items) return false;
     // Copy the array of items displaced one item to the left and the first one
     // copied in the last position.
@@ -411,7 +412,7 @@ export class BaseAttach extends Mortal {
     }
     params.push(items[0].selected);
     // console.log(params)
-    return await this._saveItemGeneral(name, params, updateQuery, id, nodeID);
+    return await this._saveItemGeneral(name, params, updateQuery, id, nodeID, encrypt);
   }
 
   /**
@@ -430,7 +431,7 @@ export class BaseAttach extends Mortal {
    * @returns True if the operation was successful, false otherwise or if
    *         ``items`` is empty.
    */
-  async _insertItem(name: string, items: DataStruct[] | null, insertQuery: string, id: number, nodeID: number = -1): Promise<boolean> {
+  async _insertItem(name: string, items: DataStruct[] | null, insertQuery: string, id: number, nodeID: number = -1, encrypt: boolean = false): Promise<boolean> {
     if (!items) return false;
     // Extract the selected field in each item.
 
@@ -438,7 +439,7 @@ export class BaseAttach extends Mortal {
     for (let i = 0; i < items.length; i++) {
       params[i] = items[i].selected;
     }
-    return await this._saveItemGeneral(name, params, insertQuery, id, nodeID);
+    return await this._saveItemGeneral(name, params, insertQuery, id, nodeID, encrypt);
   }
 
   /**
@@ -459,14 +460,14 @@ export class BaseAttach extends Mortal {
    * @returns True if the operation was successful, false otherwise.
    */
 
-  async _saveItemGeneral(name: string, parameters: any[], query: string, id: number, nodeID: number): Promise<boolean> {
+  async _saveItemGeneral(name: string, parameters: any[], query: string, id: number, nodeID: number, encrypt: boolean): Promise<boolean> {
     // this._log(`Saved: ${name}`);
     if (await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(query, nodeID), parameters)) {
-      this._addResponse(id, codes.AIO_OK);
+      this._addResponse(id, codes.AIO_OK, encrypt);
       return true;
     } else {
       this._log(`Error saving item: ${name}`);
-      this._addResponse(id, codes.ERR_EXECUTING_QUERY);
+      this._addResponse(id, codes.ERR_EXECUTING_QUERY, encrypt);
     }
     return false;
   }
@@ -597,8 +598,8 @@ export class BaseAttach extends Mortal {
    *
    * @param id ID of the message that this method is responding to.
    */
-  addHello(id: number, userID: number, action: IntConsumer = null) {
-    this._addOne(new Message(codes.CMD_HELLO_FROM_SRVR, id, [useful.timeInt().toString(), userID.toString()], action));
+  addHello(id: number, userID: number, encrypt: boolean, action: IntConsumer = null) {
+    this._addOne(new Message(codes.CMD_HELLO_FROM_SRVR, id, [useful.timeInt().toString(), userID.toString()], action), encrypt);
   }
 
   /**
@@ -826,7 +827,10 @@ export class BaseAttach extends Mortal {
    * @param message Message object to queue
    * @returns The ID of the message just added.
    */
-  _addOne(message: Message): number {
+  _addOne(message: Message, encrypt: boolean = false): number {
+    if (encrypt) {
+      message.encrypt();
+    }
     this.sendBuffer.push(message);
     // this._log(message.toString())
     return message.messageID;
@@ -838,8 +842,8 @@ export class BaseAttach extends Mortal {
    * @param id        ID of the message that this method is responding to.
    * @param okOrError Response code.
    */
-  _addResponse(id: number, okOrError: number) {
-    this._addOne(new Message(codes.CMD_RESPONSE, id, [okOrError.toString()]));
+  _addResponse(id: number, okOrError: number, encrypt: boolean) {
+    this._addOne(new Message(codes.CMD_RESPONSE, id, [okOrError.toString()]), encrypt);
   }
 
   /**
@@ -954,6 +958,8 @@ export class NodeAttach extends BaseAttach {
     this.port = nodePort;
     this.user = nodeUser;
     this.password = nodePassword;
+
+    this.encryptMessages = true;
   }
 
   resetKeepAliveRequest() {
@@ -1038,7 +1044,7 @@ export class NodeAttach extends BaseAttach {
     }
     if (!this._keepAliveRequestSent && this.isBufferEmpty() && useful.timeInt() >= this.lastTimeMessageSent + Main.ALIVE_REQUEST_INTERVAL) {
       this._keepAliveRequestSent = true;
-      this._addOne(new Message(codes.CMD_KEEP_ALIVE_REQUEST, 0));
+      this._addOne(new Message(codes.CMD_KEEP_ALIVE_REQUEST, 0), true);
       // this._log("Keep alive request added")
     }
   }
@@ -1394,7 +1400,7 @@ export class NodeAttach extends BaseAttach {
             const mode = value === codes.VALUE_MODE_SECURITY;
             // this._log(`Received mode: ${useful.toHex(value)}, notifying web.`)
             ControllerMapManager.update(this.controllerID, { modo: mode ? 1 : 0 });
-            await this._saveItemGeneral('mode', [mode, this.controllerID], queries.modeUpdate, id, -1);
+            await this._saveItemGeneral('mode', [mode, this.controllerID], queries.modeUpdate, id, -1, true);
             break;
           case codes.VALUE_SECURITY:
             // Save and notify
@@ -1741,37 +1747,45 @@ export class NodeAttach extends BaseAttach {
   askSendFirmware(chunks: string[], version: FirmwareVersion) {
     // Ask controller if this update is needed
     // this._log(`Consulting controller for update to version ${version.major}.${version.minor}.${version.patch}`);
-    this.addCommandForController(codes.CMD_UPDATE, -1, null, [chunks.length.toString(), version.major.toString(), version.minor.toString(), version.patch.toString()], (code, tokenData) => {
-      if (code !== codes.AIO_OK) {
-        this._log('Update not nedded by controller');
-        return;
-      }
+    this.addCommandForController(
+      codes.CMD_UPDATE,
+      -1,
+      null,
+      [chunks.length.toString(), version.major.toString(), version.minor.toString(), version.patch.toString()],
+      (code, tokenData) => {
+        if (code !== codes.AIO_OK) {
+          this._log('Update not nedded by controller');
+          return;
+        }
 
-      if (!tokenData) {
-        this._log('No token received');
-        return;
-      }
-      const token = tokenData.getInt();
+        if (!tokenData) {
+          this._log('No token received');
+          return;
+        }
+        const token = tokenData.getInt();
 
-      // Get the first chunk to send
-      this.initIterator(chunks);
-      if (!this.chunkIterator) {
-        this._log(`Update needed but no firmware chunks found`);
+        // Get the first chunk to send
+        this.initIterator(chunks);
+        if (!this.chunkIterator) {
+          this._log(`Update needed but no firmware chunks found`);
+          this.chunkIterator = null;
+          return;
+        }
+        const count = this.chunkIterator.count();
+        let nextChunk = this.chunkIterator.next();
+
+        // Send all remaining chunks
+        while (nextChunk) {
+          this.addCommandForController(codes.CMD_UPDATE_CONTINUE, 0, null, [token.toString(), nextChunk]);
+          nextChunk = this.chunkIterator.next();
+        }
+        this.addCommandForController(codes.CMD_UPDATE_END, 0, null, [token.toString()], null, false, true);
+        this._log(`Chunks (${count}) added to controller ID ${this.controllerID}`);
         this.chunkIterator = null;
-        return;
-      }
-      const count = this.chunkIterator.count();
-      let nextChunk = this.chunkIterator.next();
-
-      // Send all remaining chunks
-      while (nextChunk) {
-        this.addCommandForController(codes.CMD_UPDATE_CONTINUE, 0, null, [token.toString(), nextChunk]);
-        nextChunk = this.chunkIterator.next();
-      }
-      this.addCommandForController(codes.CMD_UPDATE_END, 0, null, [token.toString()]);
-      this._log(`Chunks (${count}) added to controller ID ${this.controllerID}`);
-      this.chunkIterator = null;
-    });
+      },
+      false,
+      true,
+    );
   }
 
   disableArmButton(state: boolean, log: boolean = true) {
@@ -1782,7 +1796,7 @@ export class NodeAttach extends BaseAttach {
   }
 
   private async saveSecurity(nodeID: number, security: boolean, date: number, msgID: number) {
-    await this._saveItemGeneral('security', [security, nodeID], queries.securityUpdate, msgID, -1);
+    await this._saveItemGeneral('security', [security, nodeID], queries.securityUpdate, msgID, -1, true);
     await executeQuery(BaseAttach.formatQueryWithNode(queries.insertSecurity, nodeID), [security, useful.formatTimestamp(date)]);
   }
 
@@ -1807,6 +1821,11 @@ export class NodeAttach extends BaseAttach {
     }
   }
 
+  /**
+   * Add one message for the technician
+   * @param command
+   * @param logOnSend
+   */
   private mirrorMessage(command: string, logOnSend: boolean) {
     if (ManagerAttach.connectedManager) {
       ManagerAttach.connectedManager._addMirrorMessage(command, logOnSend);
@@ -1904,7 +1923,7 @@ export class NodeAttach extends BaseAttach {
    * @param forcePending  Whether to add this message to the pending messages, not
    *                      matter what the value of the ID is.
    */
-  addCommandForController(header: number, id: number, elementBefore: string | null, bodyParts: string[], onResponse: IntConsumer = null, forcePending: boolean = false) {
+  addCommandForController(header: number, id: number, elementBefore: string | null, bodyParts: string[], onResponse: IntConsumer = null, forcePending: boolean = false, encrypt: boolean = false) {
     const bodyArray: string[] = [];
     if (elementBefore) {
       bodyArray.unshift(elementBefore);
@@ -1912,7 +1931,7 @@ export class NodeAttach extends BaseAttach {
     while (bodyParts.length > 0) {
       bodyArray.push(bodyParts.shift() ?? '');
     }
-    this._addOne(new Message(header, id, bodyArray, onResponse, forcePending));
+    this._addOne(new Message(header, id, bodyArray, onResponse, forcePending), encrypt);
   }
 
   /**
@@ -1927,9 +1946,9 @@ export class NodeAttach extends BaseAttach {
    * @returns
    * @see {@linkcode addCommandForController}
    */
-  addCommandForControllerBody(header: number, id: number, body: string[], logOnSend: boolean = true, logOnResponse: boolean = true, action: IntConsumer | null = null): number {
+  addCommandForControllerBody(header: number, id: number, body: string[], logOnSend: boolean = true, logOnResponse: boolean = true, action: IntConsumer | null = null, encrypt: boolean = false): number {
     const msg = new Message(header, id, body).setLogOnSend(logOnSend).setLogOnResponse(logOnResponse).attachAction(action);
-    return this._addOne(msg);
+    return this._addOne(msg, encrypt);
   }
 
   /**
@@ -1960,7 +1979,7 @@ export class NodeAttach extends BaseAttach {
       this.unreached = false;
       ManagerAttach.connectedManager?.addNodeState(codes.VALUE_DENIED, this.controllerID);
       this.addLogin();
-      this.addHello(-1, 0, async (code: number) => {
+      this.addHello(-1, 0, true, async (code: number) => {
         if (code !== codes.AIO_OK) {
           this._log(`ERROR Sending hello to controller ${useful.toHex(code)}`);
           return;
@@ -1973,7 +1992,15 @@ export class NodeAttach extends BaseAttach {
         const cards = await executeQuery<db2.CardForController[]>(queries.cardSelectForController);
         if (cards) {
           for (const card of cards) {
-            this.addCommandForControllerBody(codes.CMD_CONFIG_SET, -1, card.activo ? [codes.VALUE_CARD_SYNC.toString(), card.a_id.toString(), card.co_id.toString(), card.serie.toString(), card.administrador.toString()] : [codes.VALUE_CARD_EMPTY_SYNC.toString(), card.a_id.toString()], false, false);
+            this.addCommandForControllerBody(
+              codes.CMD_CONFIG_SET,
+              -1,
+              card.activo ? [codes.VALUE_CARD_SYNC.toString(), card.a_id.toString(), card.co_id.toString(), card.serie.toString(), card.administrador.toString()] : [codes.VALUE_CARD_EMPTY_SYNC.toString(), card.a_id.toString()],
+              false,
+              false,
+              null,
+              true,
+            );
           }
         }
       });
@@ -2164,7 +2191,7 @@ export class ManagerAttach extends BaseAttach {
           if (loggedResult > 0) {
             // this._log(`ID = ${loggedResult} Pwd = ${password}`);
             // this._log(`ID = ${loggedResult} Pwd = ***`);
-            this.addHello(id, loggedResult);
+            this.addHello(id, loggedResult, false);
             this.loggedIn = true;
             ManagerAttach.isAnotherLoggedIn = true;
             ManagerAttach.connectedManager = this;
@@ -2201,7 +2228,7 @@ export class ManagerAttach extends BaseAttach {
 
                   // this._log(`Received test connection '${command}'`);
                   const state = selector.getNodeState(testNodeID);
-                  this._addResponse(id, state);
+                  this._addResponse(id, state, false);
                   this._log(`Node ID = ${testNodeID} is ${useful.getStateName(state)}.`);
                   break;
                 case codes.CMD_PIN_CONFIG_SET:
@@ -2209,9 +2236,9 @@ export class ManagerAttach extends BaseAttach {
                   this._log(`Received command for controller ${useful.toHex(cmdOrValue)}. Received '${command}'`);
                   const nodeAttach = selector.getNodeAttachByID(testNodeID);
                   if (nodeAttach) {
-                    nodeAttach.addCommandForController(cmdOrValue, id, null, parts);
+                    nodeAttach.addCommandForController(cmdOrValue, id, null, parts, null, false, true);
                   } else {
-                    this._addResponse(id, codes.ERR_DISCONNECTED);
+                    this._addResponse(id, codes.ERR_DISCONNECTED, false);
                   }
                   break;
                 default:
@@ -2258,9 +2285,9 @@ export class ManagerAttach extends BaseAttach {
                     const targetNodeID = nodeData[0].getInt();
                     const att = selector.getNodeAttachByID(targetNodeID);
                     if (att) {
-                      att.addCommandForControllerBody(cmdOrValue, id, [valueToGet.toString()]);
+                      att.addCommandForControllerBody(cmdOrValue, id, [valueToGet.toString()], false, false, null, true);
                     } else {
-                      this._addResponse(id, codes.ERR_DISCONNECTED);
+                      this._addResponse(id, codes.ERR_DISCONNECTED, false);
                     }
                     break;
                   case codes.VALUE_INPUT:
@@ -2430,6 +2457,7 @@ export class ManagerAttach extends BaseAttach {
                           this._addControllerConfirmation(id);
                         },
                         true,
+                        true,
                       );
                       this._log('Net configuration for controller added.');
                       break;
@@ -2566,9 +2594,9 @@ export class ManagerAttach extends BaseAttach {
                       this._log(`Received config set command for controller 0x${useful.toHex(valueToSet)}. Received '${command}'`);
                       const nodeAttachToSet = selector.getNodeAttachByID(targetNodeID);
                       if (nodeAttachToSet) {
-                        nodeAttachToSet.addCommandForController(cmdOrValue, id, valueToSet.toString(), parts);
+                        nodeAttachToSet.addCommandForController(cmdOrValue, id, valueToSet.toString(), parts, null, false, true);
                       } else {
-                        this._addResponse(id, codes.ERR_DISCONNECTED);
+                        this._addResponse(id, codes.ERR_DISCONNECTED, false);
                       }
                       break;
                     default:
@@ -2579,7 +2607,7 @@ export class ManagerAttach extends BaseAttach {
                   // this._log(`Received firmware`);
                   const firmwareData = this._parseMessage(parts, [queries.tupleTxt], id, true);
                   if (!firmwareData) {
-                    this._addResponse(id, codes.ERR);
+                    this._addResponse(id, codes.ERR, false);
                     this._log(`There is no firmware in the message`);
                     break;
                   }
@@ -2977,7 +3005,7 @@ export class ManagerAttach extends BaseAttach {
     }
     for (const nodeAttach of selector.nodeAttachments) {
       if (nodeAttach.isLogged()) {
-        nodeAttach.addCommandForControllerBody(codes.CMD_CONFIG_SET, -1, remove ? [codes.VALUE_CARD_EMPTY.toString(), cardID.toString()] : [codes.VALUE_CARD.toString(), cardID.toString(), companyID.toString(), serial.toString(), isAdmin ? '1' : '0']);
+        nodeAttach.addCommandForControllerBody(codes.CMD_CONFIG_SET, -1, remove ? [codes.VALUE_CARD_EMPTY.toString(), cardID.toString()] : [codes.VALUE_CARD.toString(), cardID.toString(), companyID.toString(), serial.toString(), isAdmin ? '1' : '0'], false, false, null, true);
       }
     }
   }
