@@ -256,14 +256,14 @@ export class Main {
     for (const node of this.selector.nodeAttachments) {
       const code = new ResultCode();
       const bundle = new Bundle();
-      await node.readOne(this.selector, code, bundle);
+      await node.readOne(this.selector, code, bundle, true);
     }
 
     // Process messages from managers
     for (const manager of this.selector.managerConnections) {
       const code = new ResultCode();
       const bundle = new Bundle();
-      await manager.readOne(this.selector, code, bundle);
+      await manager.readOne(this.selector, code, bundle, false);
       // switch (code.code) {
       //   case Result.CAMERA_ADD:
       //   case Result.CAMERA_UPDATE:

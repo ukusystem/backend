@@ -36,7 +36,7 @@ import path from 'path';
 import { FirmwareVersion } from './firmware';
 import { MyStringIterator } from './myStringIterator';
 import { createHash } from 'crypto';
-import { getComs } from './serial';
+// import { getComs } from './serial';
 
 /**
  * Base attachment for the sockets
@@ -256,7 +256,7 @@ export class BaseAttach extends Mortal {
    *                 return.
    * @param bundle    Data to process after the methos ends.
    */
-  async readOne(selector: Selector, code: ResultCode, bundle: Bundle) {
+  async readOne(selector: Selector, code: ResultCode, bundle: Bundle, encrypt: boolean) {
     // Socket will close after a message
     if (this._closeOnNextSend) return;
     const piece = this.receivedData.shift();
@@ -283,17 +283,17 @@ export class BaseAttach extends Mortal {
           // System.out.println(commands[i])
           const partsArray = commands[i].split(codes.SEP_CMD);
           // Get command or value and id. These are the minimum components of a message.
-          const cmdRes = this._parseMessage(partsArray, queries.cmdAndIDParse);
+          const cmdRes = this._parseMessage(partsArray, queries.cmdAndIDParse, encrypt);
           if (cmdRes && cmdRes.length >= 2) {
             const cmdOrValue = cmdRes[0].getInt();
             const id = cmdRes[1].getInt();
-            if (this.parseResponse(partsArray, cmdOrValue, id, commands[i])) {
+            if (this.parseResponse(partsArray, cmdOrValue, id, commands[i], encrypt)) {
               //this._log('Message was a response.')
             } else if (await this._processMessage(selector, partsArray, cmdOrValue, id, commands[i], code, bundle)) {
               //this._log('Message was not a response, but was processed by a subclass.')
             } else {
               this._log(`Unknown command '${commands[i]}'. Command = ${useful.toHex(cmdOrValue)} ID = ${id}`);
-              this.addUnknownCmd(id);
+              this.addUnknownCmd(id, encrypt);
             }
           } else {
             this._log(`Error parsing command and id, one or both are missing. Received '${commands[i]}'`);
@@ -336,11 +336,11 @@ export class BaseAttach extends Mortal {
    * @param id         ID of the message received.
    * @param command    The complete command received.
    */
-  private parseResponse(parts: string[], cmdOrValue: number, id: number, _command: string): boolean {
+  private parseResponse(parts: string[], cmdOrValue: number, id: number, _command: string, encrypt: boolean): boolean {
     if (cmdOrValue === codes.CMD_RESPONSE) {
       //this._log('Received response '%s'', _command)
       const responseData = new DataStruct();
-      const responseRes = this.getNextOrSendError(parts, queries.tupleInt, responseData, id, false);
+      const responseRes = this.getNextOrSendError(parts, queries.tupleInt, responseData, id, false, { encrypt: encrypt });
       if (responseRes) {
         // this._log(`Response to ${id} ${useful.toHex(responseData.getInt())}`)
         this.removePendingMessageByID(id, responseData.getInt());
@@ -560,8 +560,8 @@ export class BaseAttach extends Mortal {
    *
    * @param id ID of the message that this method is responding to.
    */
-  private addUnknownCmd(id: number) {
-    this._addResponse(id, codes.ERR_UNKNOWN_CMD);
+  private addUnknownCmd(id: number, encrypt: boolean = false) {
+    this._addResponse(id, codes.ERR_UNKNOWN_CMD, encrypt);
   }
 
   /**
@@ -570,12 +570,12 @@ export class BaseAttach extends Mortal {
    *
    * @param id ID of the message that this method is responding to.
    */
-  _addUnknownValue(id: number) {
-    this._addResponse(id, codes.ERR_UNKNOWN_VALUE);
+  _addUnknownValue(id: number, encrypt: boolean) {
+    this._addResponse(id, codes.ERR_UNKNOWN_VALUE, encrypt);
   }
 
-  _addIncompatible(id: number) {
-    this._addResponse(id, codes.ERR_INCOMPATIBLE);
+  _addIncompatible(id: number, encrypt: boolean) {
+    this._addResponse(id, codes.ERR_INCOMPATIBLE, encrypt);
   }
 
   /**
@@ -589,7 +589,7 @@ export class BaseAttach extends Mortal {
   _addAnotherConnected(id: number) {
     this.sendBuffer = [];
     this._closeOnNextSend = true;
-    this._addResponse(id, codes.ERR_ANOTHER_CONNECTED);
+    this._addResponse(id, codes.ERR_ANOTHER_CONNECTED, false);
   }
 
   /**
@@ -619,11 +619,11 @@ export class BaseAttach extends Mortal {
    *         will have the parsed data in the corresponding field according to the
    *         type that was requested to parse to.
    */
-  _parseMessage(parts: string[], typeErrors: IntTuple[], id: number = 0, sendResponse: boolean = true): DataStruct[] | null {
+  _parseMessage(parts: string[], typeErrors: IntTuple[], encrypt: boolean, id: number = 0, sendResponse: boolean = true): DataStruct[] | null {
     const data: DataStruct[] = [];
     for (let i = 0; i < typeErrors.length; i++) {
       data.push(new DataStruct());
-      const res = this.getNextOrSendError(parts, typeErrors[i], data[i], id, sendResponse);
+      const res = this.getNextOrSendError(parts, typeErrors[i], data[i], id, sendResponse, { encrypt: encrypt });
       if (!res) {
         return null;
       }
@@ -772,7 +772,8 @@ export class BaseAttach extends Mortal {
    *                     store the data depends of the type requested.
    * @returns true if the conversion was successful, false otherwise.
    */
-  private getNextOrSendError(parts: string[], typeError: IntTuple, data: DataStruct, id: number, sendResponse: boolean): boolean {
+  private getNextOrSendError(parts: string[], typeError: IntTuple, data: DataStruct, id: number, sendResponse: boolean, options: { encrypt?: boolean } = {}): boolean {
+    const { encrypt = false } = options;
     let success = true;
     if (parts.length > 0) {
       const currentPart = parts[0];
@@ -813,7 +814,7 @@ export class BaseAttach extends Mortal {
     }
     if (!success) {
       if (sendResponse) {
-        this._addResponse(id, typeError.item2);
+        this._addResponse(id, typeError.item2, encrypt);
       }
     }
     return success;
@@ -1060,7 +1061,7 @@ export class NodeAttach extends BaseAttach {
         break;
       case codes.CMD_POWER:
         // this._log(`Received power measure '${command}'`);
-        const onePower = this._parseMessage(parts, queries.powerParse);
+        const onePower = this._parseMessage(parts, queries.powerParse, true);
         if (!onePower) {
           break;
         }
@@ -1096,7 +1097,7 @@ export class NodeAttach extends BaseAttach {
       case codes.CMD_TEMP:
         // this._log(`Received temp: '${command}'`)
         this.mirrorMessage(this._appendPart(command, this.controllerID.toString()), false);
-        let oneTempOptional = this._parseMessage(parts, queries.longParse);
+        let oneTempOptional = this._parseMessage(parts, queries.longParse, true);
         // Print temperatures. Not practical since a lot of controllers will send data.
         if (!oneTempOptional) {
           this._log('Wrong temperature format. No date.');
@@ -1118,7 +1119,7 @@ export class NodeAttach extends BaseAttach {
         // const paramsForCurrent: any[] = [];
         // Parse every sensor reading from the message. They come in pairs, so there must be at least two items.
         while (parts.length >= 2) {
-          oneTempOptional = this._parseMessage(parts, queries.tempParse, 0, false);
+          oneTempOptional = this._parseMessage(parts, queries.tempParse, true, 0);
           if (!oneTempOptional) continue;
           oneTemp = oneTempOptional;
           const sensorID = oneTemp[0].getInt();
@@ -1144,7 +1145,7 @@ export class NodeAttach extends BaseAttach {
         this.mirrorMessage(this._appendPart(command, this.controllerID.toString()), true);
         break;
       case codes.CMD_TEMP_ALARM:
-        const alarmData = this._parseMessage(parts, queries.alarmParse, id);
+        const alarmData = this._parseMessage(parts, queries.alarmParse, true, id);
         if (!alarmData) {
           // this._log(`Received temperature alarm '${command}'`);
           break;
@@ -1156,7 +1157,7 @@ export class NodeAttach extends BaseAttach {
         break;
       case codes.VALUE_ALL_ENABLES:
         // this._log(`Received all enables '${command}'`);
-        const enablesData = this._parseMessage(parts, queries.enablesParse, id);
+        const enablesData = this._parseMessage(parts, queries.enablesParse, true, id);
         if (!enablesData) {
           break;
         }
@@ -1249,7 +1250,7 @@ export class NodeAttach extends BaseAttach {
         }
         break;
       case codes.VALUE_CAN_ACCEPT_TICKET:
-        const availableData = this._parseMessage(parts, queries.valueParse, id);
+        const availableData = this._parseMessage(parts, queries.valueParse, true, id);
         if (!availableData) {
           break;
         }
@@ -1260,7 +1261,7 @@ export class NodeAttach extends BaseAttach {
 
         const addrParamsForUpdate: any[] = [];
         while (parts.length >= 2) {
-          const addrData = this._parseMessage(parts, queries.IDTextParse, id, false);
+          const addrData = this._parseMessage(parts, queries.IDTextParse, true, id, false);
           if (!addrData || addrData.length < 2) continue;
           const sensorID = addrData[0].getInt();
           const sensorAddress = addrData[1].getString();
@@ -1278,7 +1279,7 @@ export class NodeAttach extends BaseAttach {
 
         const thresParamForUpdate: any[] = [];
         while (parts.length >= 2) {
-          const addrData = this._parseMessage(parts, queries.tempParse, id, false);
+          const addrData = this._parseMessage(parts, queries.tempParse, true, id, false);
           if (!addrData || addrData.length < 2) continue;
           const sensorID = addrData[0].getInt();
           const sensorThres = addrData[1].toString();
@@ -1295,7 +1296,7 @@ export class NodeAttach extends BaseAttach {
         // Also update the technician
         this.mirrorMessage(this._appendPart(command, this.controllerID.toString()), true);
         while (parts.length >= 2) {
-          const orderData = this._parseMessage(parts, queries.pinStateParse, id, false);
+          const orderData = this._parseMessage(parts, queries.pinStateParse, true, id, false);
           if (!orderData || orderData.length < 2) continue;
           const outputID = orderData[0].getInt();
           const orderCompact = orderData[1].getInt();
@@ -1307,7 +1308,7 @@ export class NodeAttach extends BaseAttach {
       case codes.VALUE_SERIAL:
         // this._log(`Received controller info '${command}'`);
         this.mirrorMessage(this._appendPart(command, this.controllerID.toString()), true);
-        const serialData = this._parseMessage(parts, [queries.tupleTxt, queries.tupleTxt], id, false);
+        const serialData = this._parseMessage(parts, [queries.tupleTxt, queries.tupleTxt], true, id, false);
         if (!serialData) {
           break;
         }
@@ -1322,7 +1323,7 @@ export class NodeAttach extends BaseAttach {
         break;
       case codes.VALUE_ADDRESS_CHANGED:
         this._log(`Received address changed '${command}'`);
-        const addrChange = this._parseMessage(parts, queries.IDTextParse, id, false);
+        const addrChange = this._parseMessage(parts, queries.IDTextParse, true, id, false);
         if (!addrChange) {
           break;
         }
@@ -1338,7 +1339,7 @@ export class NodeAttach extends BaseAttach {
         break;
       case codes.VALUE_ALARM_THRESHOLD_CHANGED:
         this._log(`Received threshold changed '${command}'`);
-        const thresChangeData = this._parseMessage(parts, queries.tempParse, id, false);
+        const thresChangeData = this._parseMessage(parts, queries.tempParse, true, id, false);
         if (!thresChangeData) {
           break;
         }
@@ -1386,7 +1387,7 @@ export class NodeAttach extends BaseAttach {
         this.mirrorMessage(this._appendPart(command, this.controllerID.toString()), true);
 
         // Parse event data
-        const data = this._parseMessage(parts, queries.valueDateParse, id);
+        const data = this._parseMessage(parts, queries.valueDateParse, true, id);
         if (!data) {
           this._log(`Error parsing event data. Received '${command}'`);
           break;
@@ -1446,7 +1447,7 @@ export class NodeAttach extends BaseAttach {
       case codes.CMD_INPUT_CHANGED:
       case codes.CMD_OUTPUT_CHANGED:
         // this._log(`Received pin changed '${command}'`);
-        const pinDataOptional = this._parseMessage(parts, queries.pinParse, id);
+        const pinDataOptional = this._parseMessage(parts, queries.pinParse, true, id);
         if (!pinDataOptional) break;
         const pinData = pinDataOptional;
         const pin = pinData[0].getInt();
@@ -1486,7 +1487,7 @@ export class NodeAttach extends BaseAttach {
         // serie, administrador, autorizacion, fecha, co_id, ea_id, tipo, sn_id
         // The subnode id is still being designed, so a trivial value us used. This
         // value must exist in the table 'nodo'.'subnodo'
-        const cardData = this._parseMessage(parts, queries.cardReadParse, id);
+        const cardData = this._parseMessage(parts, queries.cardReadParse, true, id);
         if (!cardData) break;
         const companyID = cardData[0].getInt();
         const serial = cardData[1].getInt();
@@ -1538,7 +1539,7 @@ export class NodeAttach extends BaseAttach {
         break;
       case codes.CMD_AUTHORIZATION_CHANGED:
         // this._log(`Received pin changed '${command}'`);
-        const authData = this._parseMessage(parts, queries.authParse, id);
+        const authData = this._parseMessage(parts, queries.authParse, true, id);
         if (!authData) break;
         // const authpin = authData[0].getInt();
         // const auth = authData[1].getInt() === codes.VALUE_TO_ACTIVE ? 1 : 0;
@@ -1549,12 +1550,12 @@ export class NodeAttach extends BaseAttach {
         break;
       case codes.CMD_ERR:
         // this._log(`Received internal error '${command}'`);
-        const errorData = this._parseMessage(parts, queries.valueParse);
+        const errorData = this._parseMessage(parts, queries.valueParse, true);
         if (!errorData) break;
         const internalErrorCode = errorData[0].getInt();
         switch (internalErrorCode) {
           case codes.ERR_READ_TEMP:
-            const addressData = this._parseMessage(parts, queries.bigParse);
+            const addressData = this._parseMessage(parts, queries.bigParse, true);
             if (!addressData) break;
             this._log(`Error reading temperature sensor. Address ${useful.toHex(addressData[0].getInt())}.`);
             break;
@@ -1633,7 +1634,7 @@ export class NodeAttach extends BaseAttach {
       case codes.VALUE_ORDER_RESULT:
         // this._log(`Received order result ${command}`);
         this.mirrorMessage(this._appendPart(command, this.controllerID.toString()), true);
-        const orderData = this._parseMessage(parts, queries.orderParse, id, false);
+        const orderData = this._parseMessage(parts, queries.orderParse, true, id, false);
         if (!orderData) {
           break;
         }
@@ -1643,7 +1644,7 @@ export class NodeAttach extends BaseAttach {
         break;
       case codes.VALUE_SECURITY_STATE:
         // this._log(`Received security status from controller '${command}'`)
-        const securityData = this._parseMessage(parts, queries.securityStateParse, id, false);
+        const securityData = this._parseMessage(parts, queries.securityStateParse, true, id, false);
         if (securityData) {
           const security = securityData[0].getInt() === codes.VALUE_ARM;
           const programming = securityData[1].getInt();
@@ -1667,7 +1668,7 @@ export class NodeAttach extends BaseAttach {
         break;
       case codes.VALUE_SD_STATE:
         // this._log(`Received sd state from controller ${command}`);
-        const sdData = this._parseMessage(parts, queries.sdStateParse, id, false);
+        const sdData = this._parseMessage(parts, queries.sdStateParse, true, id, false);
         if (sdData) {
           const sdProgramming = sdData[1].getInt();
           const sdDate = sdData[3].getInt();
@@ -1698,14 +1699,14 @@ export class NodeAttach extends BaseAttach {
       case codes.CMD_UPDATE:
         // this._log(`Received update response '${command}'`);
         // Parse response
-        const updateRes = this._parseMessage(parts, [queries.tupleInt]);
+        const updateRes = this._parseMessage(parts, [queries.tupleInt], true);
         if (!updateRes || updateRes[0].getInt() !== codes.AIO_OK) {
           // this._log(`No response found or update not needed`);
           break;
         }
 
         // Parse token if update is needed
-        const tokenRes = this._parseMessage(parts, [queries.tupleInt]);
+        const tokenRes = this._parseMessage(parts, [queries.tupleInt], true);
         if (!tokenRes) {
           this._log(`Update needed but no token received`);
           break;
@@ -1835,7 +1836,7 @@ export class NodeAttach extends BaseAttach {
   }
 
   private async updatePeriferalEnable(parts: string[], updateQuery: string) {
-    const inputStateData = this._parseMessage(parts, queries.pinStateParse, this.controllerID);
+    const inputStateData = this._parseMessage(parts, queries.pinStateParse, true, this.controllerID);
     if (!inputStateData) {
       return null;
     }
@@ -1958,7 +1959,7 @@ export class NodeAttach extends BaseAttach {
   addLogin() {
     const pwd = Encryption.decrypt(this.password, true);
     if (pwd) {
-      this._addOne(new Message(codes.CMD_LOGIN, -1, [this.user, pwd]).setLogOnSend(false));
+      this._addOne(new Message(codes.CMD_LOGIN, -1, [this.user, pwd]).setLogOnSend(false), true);
       this._log(`Added login`);
     }
   }
@@ -2164,7 +2165,7 @@ export class ManagerAttach extends BaseAttach {
         break;
       case codes.CMD_LOGIN:
         // Register the user trying to log in
-        const loginData = this._parseMessage(parts, queries.loginParse, id);
+        const loginData = this._parseMessage(parts, queries.loginParse, false, id);
         if (!loginData) break;
         const user = loginData[0].getString();
         const password = loginData[1].getString();
@@ -2173,7 +2174,7 @@ export class ManagerAttach extends BaseAttach {
         // const patch = loginData[1].getInt();
         if (Main.compareMajorWithMain(major) !== 0) {
           this._log(`Technician version is not compatible`);
-          this._addIncompatible(id);
+          this._addIncompatible(id, false);
           break;
         }
 
@@ -2197,10 +2198,10 @@ export class ManagerAttach extends BaseAttach {
             ManagerAttach.connectedManager = this;
             this._log(`Logged in. User ID = ${loggedResult}.`);
           } else if (loggedResult < 0) {
-            this._addResponse(id, codes.ERR_EXECUTING_QUERY);
+            this._addResponse(id, codes.ERR_EXECUTING_QUERY, false);
             this._log('Error executing query');
           } else if (loggedResult === 0) {
-            this._addResponse(id, codes.ERR_WRONG_USRPWD);
+            this._addResponse(id, codes.ERR_WRONG_USRPWD, false);
             this._log('Wrong user or password');
           }
         }
@@ -2213,7 +2214,7 @@ export class ManagerAttach extends BaseAttach {
             case codes.CMD_TEST_CONNECTED:
             case codes.CMD_PIN_CONFIG_SET:
             case codes.CMD_ESP:
-              const testNodeData = this._parseMessage(parts, queries.idParse, id);
+              const testNodeData = this._parseMessage(parts, queries.idParse, false, id);
               if (!testNodeData) break;
               const testNodeID = testNodeData[0].getInt();
               switch (cmdOrValue) {
@@ -2250,7 +2251,7 @@ export class ManagerAttach extends BaseAttach {
               // ID. Usually, these commands send a response or list of responses with the
               // data required.
               // this._log(`Received get configuration '${command}'`);
-              const getData = this._parseMessage(parts, queries.valueParse, id);
+              const getData = this._parseMessage(parts, queries.valueParse, false, id);
               if (!getData) break;
               const valueToGet = getData[0].getInt();
               if (await this.simpleReadAndSend(valueToGet, id)) {
@@ -2261,9 +2262,9 @@ export class ManagerAttach extends BaseAttach {
                   case codes.VALUE_GENERAL:
                     await this.addGeneral(id, false);
                     break;
-                  case codes.VALUE_COM:
-                    await this.addComs(id, true);
-                    break;
+                  // case codes.VALUE_COM:
+                  //   await this.addComs(id, true);
+                  //   break;
                   case codes.VALUE_NODE:
                     await this.addNodes(selector, id, false);
                     // Just to check on keys. No other particular reason.
@@ -2280,7 +2281,7 @@ export class ManagerAttach extends BaseAttach {
                   case codes.VALUE_DELAY_TO_ARM:
                   case codes.VALUE_TICKET_DELAY_TO_ARM:
                   case codes.VALUE_STATES:
-                    const nodeData = this._parseMessage(parts, queries.idParse, id);
+                    const nodeData = this._parseMessage(parts, queries.idParse, false, id);
                     if (!nodeData) break;
                     const targetNodeID = nodeData[0].getInt();
                     const att = selector.getNodeAttachByID(targetNodeID);
@@ -2310,13 +2311,13 @@ export class ManagerAttach extends BaseAttach {
                     break;
                   default:
                     this._log(`Unknown get value. Received '${command}' Value ${useful.toHex(valueToGet)}}`);
-                    this._addUnknownValue(id);
+                    this._addUnknownValue(id, false);
                 }
               }
               break;
 
             case codes.CMD_CONFIG_SET:
-              const valueData = this._parseMessage(parts, queries.valueParse, id);
+              const valueData = this._parseMessage(parts, queries.valueParse, false, id);
               if (!valueData) break;
               const valueToSet = valueData[0].getInt();
               if (valueToSet !== codes.VALUE_WORKER_PHOTO && valueToSet !== codes.VALUE_WORKER_ADD && valueToSet !== codes.VALUE_WORKER) {
@@ -2325,7 +2326,7 @@ export class ManagerAttach extends BaseAttach {
               switch (valueToSet) {
                 // Commands that does not require a node ID
                 case codes.VALUE_GENERAL:
-                  const newGeneral = this._parseMessage(parts, queries.generalParse, id, false);
+                  const newGeneral = this._parseMessage(parts, queries.generalParse, false, id, false);
                   if (newGeneral) {
                     await this.updateGeneral(newGeneral);
                   } else {
@@ -2334,7 +2335,7 @@ export class ManagerAttach extends BaseAttach {
                   break;
                 case codes.VALUE_GROUP:
                 case codes.VALUE_GROUP_ADD:
-                  const regionData = this._parseMessage(parts, queries.regionParse, id);
+                  const regionData = this._parseMessage(parts, queries.regionParse, false, id);
                   if (!regionData) {
                     break;
                   }
@@ -2363,7 +2364,7 @@ export class ManagerAttach extends BaseAttach {
                 case codes.VALUE_NODE_PASSWORD:
                   const withPassword = valueToSet === codes.VALUE_NODE_PASSWORD || valueToSet === codes.VALUE_NODE_ADD;
                   this.updatWithPassword = withPassword;
-                  const nodeData = this._parseMessage(parts, withPassword ? queries.nodeParsePwd : queries.nodeParse, id);
+                  const nodeData = this._parseMessage(parts, withPassword ? queries.nodeParsePwd : queries.nodeParse, false, id);
                   if (!nodeData) break;
                   const nodeID = nodeData[0].getInt();
                   /*
@@ -2425,7 +2426,7 @@ export class ManagerAttach extends BaseAttach {
                 case codes.VALUE_VOLTAGE:
                 case codes.VALUE_PROTOCOL:
                   // Node dependent commands
-                  const targetNodeData = this._parseMessage(parts, queries.idParse, id);
+                  const targetNodeData = this._parseMessage(parts, queries.idParse, false, id);
                   if (!targetNodeData) break;
                   const targetNodeID = targetNodeData[0].getInt();
                   switch (valueToSet) {
@@ -2466,7 +2467,7 @@ export class ManagerAttach extends BaseAttach {
                     case codes.VALUE_CAMERA_PASSWORD:
                       const cameraWithPassword = valueToSet === codes.VALUE_CAMERA_ADD || valueToSet === codes.VALUE_CAMERA_PASSWORD;
                       // c_id, serie, tc_id, m_id, usuario, ip, puerto, descripcion, puertows, mascara, puertaenlace, contraseña
-                      const cameraData = this._parseMessage(parts, cameraWithPassword ? queries.cameraParsePwd : queries.cameraParse, id);
+                      const cameraData = this._parseMessage(parts, cameraWithPassword ? queries.cameraParsePwd : queries.cameraParse, false, id);
                       if (!cameraData) break;
                       // To update the local cameras list
                       // bundle.targetCamera = new Camera(cameraData[queries.cameraIDIndex].getInt(), targetNodeID, cameraData[queries.cameraIPIndex].getString());
@@ -2542,7 +2543,7 @@ export class ManagerAttach extends BaseAttach {
                       break;
                     case codes.VALUE_ENERGY:
                       // id, desc
-                      const energyData = this._parseMessage(parts, queries.energyParse, id);
+                      const energyData = this._parseMessage(parts, queries.energyParse, false, id);
                       await this._updateItem('energy reader', energyData, queries.energyUpdate, id, targetNodeID);
                       if (energyData) {
                         this._notifyEnergy(energyData[0].getInt(), targetNodeID, null, energyData[1].getString(), null, null, null, null, null, null);
@@ -2550,7 +2551,7 @@ export class ManagerAttach extends BaseAttach {
                       break;
                     case codes.VALUE_TEMP_SENSOR:
                       // id, serie, ubicacion
-                      const tempData = this._parseMessage(parts, queries.tempSensorParse, id);
+                      const tempData = this._parseMessage(parts, queries.tempSensorParse, false, id);
                       await this._updateItem('temperature sensor', tempData, queries.tempSensorUpdate, id, targetNodeID);
                       if (tempData) {
                         this._notifyTemp(tempData[0].getInt(), targetNodeID, null, null, tempData[1].getString(), tempData[2].getString());
@@ -2558,7 +2559,7 @@ export class ManagerAttach extends BaseAttach {
                       break;
                     case codes.VALUE_INPUT:
                       // pin, pinp, equipo, desc
-                      const inputData = this._parseMessage(parts, queries.inputParse, id);
+                      const inputData = this._parseMessage(parts, queries.inputParse, false, id);
                       await this._updateItem('input', inputData, queries.inputUpdate, id, targetNodeID);
                       if (inputData) {
                         this._notifyInput(false, inputData[0].getInt(), targetNodeID, inputData[2].getInt(), inputData[3].getString(), null, null, null);
@@ -2566,14 +2567,14 @@ export class ManagerAttach extends BaseAttach {
                       break;
                     case codes.VALUE_OUTPUT:
                       // pin, pinp, equipo, desc
-                      const outputData = this._parseMessage(parts, queries.outputParse, id);
+                      const outputData = this._parseMessage(parts, queries.outputParse, false, id);
                       await this._updateItem('output', outputData, queries.outputUpdate, id, targetNodeID);
                       if (outputData) {
                         this._notifyOutput(outputData[0].getInt(), true, targetNodeID, outputData[2].getInt(), outputData[3].getString(), null, null, null);
                       }
                       break;
                     case codes.VALUE_CARD_READER:
-                      const cardReaderData = this._parseMessage(parts, queries.cardReaderParse, id);
+                      const cardReaderData = this._parseMessage(parts, queries.cardReaderParse, false, id);
                       await this._updateItem('card reader', cardReaderData, queries.cardReaderUpdate, id, targetNodeID);
                       break;
                     case codes.VALUE_CAMERA_DISABLE:
@@ -2605,7 +2606,7 @@ export class ManagerAttach extends BaseAttach {
                   break;
                 case codes.VALUE_FIRMWARE_ADD:
                   // this._log(`Received firmware`);
-                  const firmwareData = this._parseMessage(parts, [queries.tupleTxt], id, true);
+                  const firmwareData = this._parseMessage(parts, [queries.tupleTxt], false, id, true);
                   if (!firmwareData) {
                     this._addResponse(id, codes.ERR, false);
                     this._log(`There is no firmware in the message`);
@@ -2618,7 +2619,7 @@ export class ManagerAttach extends BaseAttach {
                   if (!compareRes) {
                     this._log(`Firmware has invalid content. Sha256 mismatch.`);
                     // this._log(`Sha256 calculated: '${calculatedSha.toString('hex')}' Sha256 in file: '${hashInFile.toString('hex')}'`);
-                    this._addResponse(id, codes.ERR_CORRUPTED);
+                    this._addResponse(id, codes.ERR_CORRUPTED, false);
                     break;
                   }
 
@@ -2627,7 +2628,7 @@ export class ManagerAttach extends BaseAttach {
                   // console.log(firmwareBase64);
                   const newVer = useful.getVersionFromBase64(firmwareBase64);
                   if (!newVer || !(newVer.major >= 0 && newVer.minor >= 0 && newVer.patch >= 0)) {
-                    this._addResponse(id, codes.ERR_CORRUPTED);
+                    this._addResponse(id, codes.ERR_CORRUPTED, false);
                     this._log(`Firmware version not found or format not expected`);
                     break;
                   }
@@ -2635,7 +2636,7 @@ export class ManagerAttach extends BaseAttach {
                   // Check version
                   // this._log(`Checking version`);
                   if (Main.compareMajorWithMain(newVer.major) !== 0) {
-                    this._addResponse(id, codes.ERR_INCOMPATIBLE);
+                    this._addResponse(id, codes.ERR_INCOMPATIBLE, false);
                     this._log(`Firmware version (${newVer.major}.${newVer.minor}.${newVer.patch}) not allowed`);
                     break;
                   }
@@ -2644,7 +2645,7 @@ export class ManagerAttach extends BaseAttach {
                   // this._log(`Validating with database`);
                   const storedVersionsData = await executeQuery<db2.FirmwareData[]>(queries.firmwareOrderSelect, null);
                   if (!storedVersionsData) {
-                    this._addResponse(id, codes.ERR);
+                    this._addResponse(id, codes.ERR, false);
                     this._log(`Could not read firmware list from database`);
                     break;
                   }
@@ -2665,7 +2666,7 @@ export class ManagerAttach extends BaseAttach {
                         validationResult = true;
                       } else {
                         this._log(`Firmware version is not newer than the current`);
-                        this._addResponse(id, codes.ERR_TOO_OLD);
+                        this._addResponse(id, codes.ERR_TOO_OLD, false);
                       }
                       break;
                     } else {
@@ -2674,7 +2675,7 @@ export class ManagerAttach extends BaseAttach {
                   }
                   if (!validationResult && atLeastOneFound) {
                     this._log(`Firmware could not be validated with previous ones`);
-                    this._addResponse(id, codes.ERR);
+                    this._addResponse(id, codes.ERR, false);
                     break;
                   }
 
@@ -2684,7 +2685,7 @@ export class ManagerAttach extends BaseAttach {
                   const firmwareFilename = useful.getReplacedPath(path.join(this.FIRMWARE_RELATIVE_PATH, this.FIRMWARE_BASE_FILENAME + Date.now().toString()));
                   const res = await useful.writeFileFromBase64(firmwareBase64, firmwareFilename, firmSize);
                   if (!res) {
-                    this._addResponse(id, codes.ERR);
+                    this._addResponse(id, codes.ERR, false);
                     this._log(`Could not write firmware to file`);
                     break;
                   }
@@ -2694,13 +2695,13 @@ export class ManagerAttach extends BaseAttach {
                   const insertFirmRes = await executeQuery<ResultSetHeader>(queries.firmwareInsert, [firmwareFilename, newVer.major, newVer.minor, newVer.patch]);
                   if (!insertFirmRes) {
                     this._log(`Firmware could not be inserted`);
-                    this._addResponse(id, codes.ERR);
+                    this._addResponse(id, codes.ERR, false);
                     break;
                   }
 
                   // Notify success
                   this._log(`New firmware version is newer. Registered.`);
-                  this._addResponse(id, codes.AIO_OK);
+                  this._addResponse(id, codes.AIO_OK, false);
 
                   // Pass firmware to try to update all controllers
                   await selector.setFirmwareForAll(firmwareFilename, newVer);
@@ -2708,7 +2709,7 @@ export class ManagerAttach extends BaseAttach {
                   break;
                 default:
                   this._log(`Unknown set value. Received '${command}' Value ${useful.toHex(valueToSet)}`);
-                  this._addUnknownValue(id);
+                  this._addUnknownValue(id, false);
               }
               break;
             default:
@@ -3022,16 +3023,16 @@ export class ManagerAttach extends BaseAttach {
    * @returns The ID of the item that was disabled. 0 if an error occurred.
    */
   private async disableItem(name: string, parts: string[], disableQuery: string, id: number, nodeID: number = -1): Promise<number> {
-    const itemData = this._parseMessage(parts, queries.idParse, id);
+    const itemData = this._parseMessage(parts, queries.idParse, false, id);
     if (!itemData) return 0;
     let disabledID = itemData[0].getInt();
     if (await executeQuery<ResultSetHeader>(BaseAttach.formatQueryWithNode(disableQuery, nodeID), [disabledID])) {
       this._log(`Disabled item '${name}' ID = ${disabledID}`);
       // this._log(`Disabled id returned by ResultSetHeader: Insert ID ${res.insertId} Affected: ${res.affectedRows}`);
-      this._addResponse(id, codes.AIO_OK);
+      this._addResponse(id, codes.AIO_OK, false);
     } else {
       this._log(`Error disabling item '${name}' ID = ${disabledID}`);
-      this._addResponse(id, codes.ERR_EXECUTING_QUERY);
+      this._addResponse(id, codes.ERR_EXECUTING_QUERY, false);
       disabledID = 0;
     }
     return disabledID;
@@ -3051,7 +3052,7 @@ export class ManagerAttach extends BaseAttach {
    */
   private async getDBNameExecuteSend(parts: string[], id: number, query: string, value: number, end: number, log: boolean, tableName: string | null = null) {
     // this._log(`Received get value ${useful.toHex(value)}`);
-    const nodeData = this._parseMessage(parts, queries.idParse, id);
+    const nodeData = this._parseMessage(parts, queries.idParse, false, id);
     if (!nodeData) {
       this._log(`Node ID is missing. Message ID = ${id}`);
       return;
@@ -3151,17 +3152,6 @@ export class ManagerAttach extends BaseAttach {
       this._addOne(new Message(codes.VALUE_GENERAL, id, [generalResponse[0].nombreempresa, generalResponse[0].celular.toString(), generalResponse[0].com, Main.getVersionString()]).setLogOnSend(log));
     } else {
       this._log('Error getting general info.');
-    }
-  }
-
-  private async addComs(id: number, log: boolean) {
-    const coms = await getComs();
-    for (const com of coms) {
-      this._addOne(new Message(codes.VALUE_COM, 0, [com.path, com.name]).setLogOnSend(true));
-    }
-    this._addOne(new Message(codes.VALUE_COMS_END, id).setLogOnSend(true));
-    if (log) {
-      // this._log('Added COMs end.');
     }
   }
 
