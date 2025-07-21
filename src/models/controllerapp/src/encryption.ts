@@ -1,12 +1,29 @@
 import * as crypto from 'crypto';
 import { appConfig } from '../../../configs';
+import * as useful from './useful';
 
 export class Encryption {
   private static readonly KEY_LENGTH = 32;
   private static readonly ITERATION_COUNT = 65536;
+  private static readonly AES_PADDING = 16;
+  private static key: Buffer | null = null;
 
-  private static getKey(): Buffer {
-    return crypto.pbkdf2Sync(appConfig.encrypt.secret, appConfig.encrypt.salt, Encryption.ITERATION_COUNT, Encryption.KEY_LENGTH, 'sha256');
+  /**
+   * Generate an ecryption key
+   * @param logKey True to log and print the key. USE WITH CARE. Should be FALSE for security.
+   *
+   * @returns The key buffer
+   */
+  private static getKey(logKey: boolean = false): Buffer {
+    if (Encryption.key !== null) {
+      return Encryption.key;
+    }
+    // const keyBuffer = Buffer.from('12345678123456781234567812345678', 'ascii');
+    Encryption.key = crypto.pbkdf2Sync(appConfig.encrypt.secret, appConfig.encrypt.salt, Encryption.ITERATION_COUNT, Encryption.KEY_LENGTH, 'sha256');
+    if (logKey) {
+      console.log(`Key hex: ${useful.bufferToHex(Encryption.key)}`);
+    }
+    return Encryption.key;
   }
 
   /**
@@ -18,27 +35,37 @@ export class Encryption {
    *                     the same value in order to get the original text back.
    * @return The encrypted string in base 64 or null if an error occurred.
    */
-  static encrypt(strToEncrypt: string, withRandom: boolean): string | null {
+  static encrypt(strToEncrypt: string, withRandom: boolean, autoPadding: boolean = true, log: boolean = false): string | null {
     try {
-      let iv: Buffer = Buffer.from('');
+      // Set IV to use
+      let iv = Buffer.from([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
       if (withRandom) {
         iv = crypto.randomBytes(16);
-      } else {
-        iv = Buffer.from([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
       }
-      // console.log(`Encrypt iv hex '${iv.toString('hex')}'`)
-      const cipher = crypto.createCipheriv('aes-256-cbc', this.getKey(), iv);
-      // cipher.setAutoPadding(false)
-      let crypted = Buffer.concat([cipher.update(strToEncrypt, 'utf8'), cipher.final()]);
+
+      // Configure object
+      const cipher = crypto.createCipheriv('aes-256-cbc', this.getKey(log), iv);
+      cipher.setAutoPadding(autoPadding);
+
+      // Pad input if needed
+      let finalStrToEncrypt = Buffer.from(strToEncrypt, 'utf8');
+      if (!autoPadding) {
+        const extraBuffer = Buffer.alloc(Encryption.AES_PADDING - (strToEncrypt.length % Encryption.AES_PADDING));
+        finalStrToEncrypt = Buffer.concat([finalStrToEncrypt, extraBuffer]);
+      }
+
+      // Encrypt final input
+      let crypted = Buffer.concat([cipher.update(finalStrToEncrypt), cipher.final()]);
       if (withRandom) {
         crypted = Buffer.concat([iv, crypted]);
       }
-      //   console.log(`Encrypted hex '${crypted.toString('hex')}'`)
-      // return crypted.toString('base64'); // +fHL53d9GKUS842X7U+hlA==
-
-      // To test encryption length
       const finalEncrypted = crypted.toString('base64');
-      console.log(`Message: ${strToEncrypt.length} Encrypted: ${crypted.length} Encrypted 64: ${finalEncrypted.length}`);
+
+      if (log) {
+        console.log(`Original (${strToEncrypt.length}): '${strToEncrypt}'\nOriginal hex: ${useful.bufferToHex(Buffer.from(strToEncrypt))}\nEncrypted hex: ${useful.bufferToHex(crypted)}\nEncrypted b64: ${finalEncrypted}`);
+        // To test encryption length
+        // console.log(`Message: ${strToEncrypt.length} Extended: ${finalStrToEncrypt.length} Encrypted: ${crypted.length} Encrypted 64: ${finalEncrypted.length}`);
+      }
 
       return finalEncrypted; //  Example: +fHL53d9==
     } catch (e) {
@@ -55,7 +82,7 @@ export class Encryption {
    *                     encrypted.
    * @return The original string or null if an error occurred.
    */
-  static decrypt(strToDecrypt: string, withRandom: boolean): string | null {
+  static decrypt(strToDecrypt: string, withRandom: boolean, autoPadding: boolean = true, log: boolean = false): string | null {
     try {
       // Encrypted to buffer
       const ori = Buffer.from(strToDecrypt, 'base64');
@@ -73,6 +100,7 @@ export class Encryption {
       // Create decipher
       // console.log("Before create decipher")
       const decipher = crypto.createDecipheriv('aes-256-cbc', this.getKey(), iv);
+      decipher.setAutoPadding(autoPadding);
       // decipher.setAutoPadding(false)
       // Get decrypted
       let decrypted = Buffer.allocUnsafe(1);
@@ -94,11 +122,41 @@ export class Encryption {
       //   console.log(`Decrypt final '${a.toString()}'`);
       // console.log("Before concat")
       decrypted = Buffer.concat([decrypted, a]);
+
+      if (!autoPadding) {
+        const idx = decrypted.indexOf(0);
+        decrypted = decrypted.subarray(0, idx);
+      }
+
+      const decString = decrypted.toString('utf8');
       // console.log('Before return')
-      return decrypted.toString('utf8');
+      if (log) {
+        console.log(`Decrypted hex: ${useful.bufferToHex(decrypted)}\nDecrypted utf8 (${decString.length}): '${decString}'`);
+      }
+
+      return decString;
     } catch (e) {
       console.log(`Error decrypting. ${e}`);
     }
     return null;
+  }
+
+  /**
+   * Used to test and compare encryption with other devices or platforms
+   */
+  static testEncryption() {
+    console.log('Testing encryption');
+    const original = 'Hello Janox sistema seguro';
+    const enc = Encryption.encrypt(original, false, false, true);
+    if (enc) {
+      const dec = Encryption.decrypt(enc, false, false, true);
+      if (dec) {
+        const match = original === dec;
+        console.log(`Match original and decrypted: ${match}` + (match ? '' : `\n'${original}'\n'${dec}'`));
+      }
+    } else {
+      //
+    }
+    console.log('End test encryption');
   }
 }

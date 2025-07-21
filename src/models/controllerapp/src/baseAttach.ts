@@ -2056,7 +2056,7 @@ export class NodeAttach extends BaseAttach {
     // Close is emitted after the error event
     // Also emitted when the controller resets manually?
     controllerSocket.on('close', async () => {
-      // this._log(`Socket close callback`);
+      this._log(`Socket close callback`);
       controllerSocket.end(() => {
         // this._log(`Socket end in close callback`);
       });

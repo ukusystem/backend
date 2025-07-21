@@ -98,6 +98,15 @@ export function toHex(number: number): string {
   return '0x' + number.toString(16);
 }
 
+export function bufferToHex(buff: Buffer): string {
+  const separate = 8;
+  let hex = '';
+  buff.forEach((v, i) => {
+    hex = hex + `${i % separate === 0 && i > 0 ? ' ' : ''}${v.toString(16).padStart(2, '0')}`;
+  });
+  return hex;
+}
+
 /**
  * Parse the date time.
  *
