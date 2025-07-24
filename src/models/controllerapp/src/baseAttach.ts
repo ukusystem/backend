@@ -173,7 +173,7 @@ export class BaseAttach extends Mortal {
             this.previousMessageSent = true;
           });
           if (first.logOnSend) {
-            // this._log(`Sent '${useful.trimString(first.message)}'`);
+            this._log(`Sent '${useful.trimString(first.getMessage())}'`);
           }
           this.addPendingMessage(first);
           this.sendBuffer.shift();
@@ -1959,7 +1959,7 @@ export class NodeAttach extends BaseAttach {
   addLogin() {
     const pwd = Encryption.decrypt(this.password, true);
     if (pwd) {
-      this._addOne(new Message(codes.CMD_LOGIN, -1, [this.user, pwd]).setLogOnSend(false), true);
+      this._addOne(new Message(codes.CMD_LOGIN, -1, [this.user, pwd]).setLogOnSend(true), true);
       this._log(`Added login`);
     }
   }
@@ -2056,7 +2056,9 @@ export class NodeAttach extends BaseAttach {
     // Close is emitted after the error event
     // Also emitted when the controller resets manually?
     controllerSocket.on('close', async () => {
-      this._log(`Socket close callback`);
+      if (this.controllerID === 1) {
+        this._log(`Socket close callback`);
+      }
       controllerSocket.end(() => {
         // this._log(`Socket end in close callback`);
       });

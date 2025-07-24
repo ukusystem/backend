@@ -62,7 +62,7 @@ export class Message {
       return this;
     }
 
-    const encryptedMsg = Encryption.encrypt(this.message, false);
+    const encryptedMsg = Encryption.encrypt(this.message, false, false, false);
     if (encryptedMsg) {
       if (encryptedMsg.length + codes.SEP_MTY.length > codes.MAX_CRYPTED_LENGTH) {
         console.log(`ERROR Encrypted message too long ${encryptedMsg?.length}`);
