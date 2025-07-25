@@ -3389,17 +3389,6 @@ export class ManagerAttach extends BaseAttach {
     }
   }
 
-  // private async addComs(id: number, log: boolean) {
-  //   const coms = await getComs();
-  //   for (const com of coms) {
-  //     this._addOne(new Message(codes.VALUE_COM, 0, [com.path, com.name]).setLogOnSend(true));
-  //   }
-  //   this._addOne(new Message(codes.VALUE_COMS_END, id).setLogOnSend(true));
-  //   if (log) {
-  //     // this._log('Added COMs end.');
-  //   }
-  // }
-
   private async updateGeneral(items: DataStruct[]): Promise<boolean> {
     // nombre, celular, com
     const data = items.map((i) => {
