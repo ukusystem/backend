@@ -15,7 +15,7 @@ import { Bundle } from './bundle';
 import { CameraToCheck, PinOrder } from './types';
 import { Camara } from '../../../types/db';
 import { FirmwareVersion } from './firmware';
-import { endGSM, initGSM, isGSMAvailable } from './serial';
+// import { endGSM, initGSM, isGSMAvailable } from './serial';
 import fs from 'fs';
 import * as queries from './queries';
 import * as useful from './useful';
@@ -26,7 +26,7 @@ import * as cp from 'child_process';
 
 export class Main {
   private static readonly VERSION_MAJOR = 0;
-  private static readonly VERSION_MINOR = 6;
+  private static readonly VERSION_MINOR = 7;
   private static readonly VERSION_PATCH = 0;
 
   /**
@@ -61,6 +61,7 @@ export class Main {
   private readonly selector = new Selector();
 
   private managerServer: net.Server | null = null;
+  private gprsServer: net.Server | null = null;
 
   /* Flags to keep timeouts active */
 
@@ -163,7 +164,7 @@ export class Main {
     }
 
     /* Load serial */
-    await initGSM(this.logger, this.selector);
+    // await initGSM(this.logger, this.selector);
 
     /* Load data from database */
 
@@ -175,6 +176,10 @@ export class Main {
     /* Server for manager */
 
     this.startServerForManager();
+
+    /* Serevr for GPRS */
+
+    this.startServerForGPRS();
 
     /* Try to connect to controllers */
 
@@ -277,25 +282,18 @@ export class Main {
   };
 
   private startSendingMessages() {
-    let sendingGSM = false;
+    // let sendingGSM = false;
     this.sendMessagesTimer = setInterval(async () => {
       // Send messages to controllers
       for (const node of this.selector.nodeAttachments) {
         // Use same buffer
 
-        if (Selector.isChannelConnected(node._currentSocket) || node.isLogged()) {
+        if (Selector.isSocketConnected(node._currentSocket) || node.isLogged()) {
           // Send through websocket
           node.tryRequestKeepalive();
           if (node.sendOne(this.selector)) {
             node.setLastMessageTime();
           }
-        } else if (!node.isLogged() && isGSMAvailable() && node.canUseGSM() && !sendingGSM) {
-          // Send throught GSM
-          node.tryAddSIMAlive();
-
-          sendingGSM = true;
-          await node.sendOneGSM(node.celular);
-          sendingGSM = false;
         }
       }
 
@@ -319,7 +317,6 @@ export class Main {
         connection.setTimeout(Main.ALIVE_MANAGER_TIMEOUT, () => {
           this.log('Manager idle timeout');
           // Activate when the manager sends keep alives to the server. Managers should not reconnect automaticaly
-          // newManagerSocket.reconnect(this.selector)
         });
 
         connection.on('data', (data: Buffer) => {
@@ -335,7 +332,6 @@ export class Main {
         // Triggers 'end' and 'close' events
         connection.on('error', () => {
           this.log('Manager error');
-          // newManagerSocket.reconnect(this.selector);
         });
 
         connection.on('close', (hadError) => {
@@ -355,6 +351,30 @@ export class Main {
 
     this.managerServer.listen(appConfig.server.manager_port, appConfig.server.ip, 16, () => {
       this.log(`Server for managers listening on ${appConfig.server.manager_port}`);
+    });
+  }
+
+  /**
+   * Start the server for the GPRS sockets.
+   */
+  private startServerForGPRS() {
+    this.gprsServer = net.createServer((connection) => {
+      const time = useful.timeInt();
+      let dummy: NodeAttach | null = new NodeAttach(1, `Dummy ${time}`, '0.0.0.0', 0, '', '', this.logger, NodeAttach.DEFAULT_IMEI);
+
+      connection.on('data', (data: Buffer) => {
+        dummy?.testForGPRSNodeClient(data, this.selector, connection);
+        // Delete the dummy after using it. This object is only useful when the first message is received .
+        dummy = null;
+      });
+    });
+
+    this.gprsServer.on('error', (e: any) => {
+      this.log(`ERROR listening for GPRS sockets. Code ${e.code}`);
+    });
+
+    this.gprsServer.listen(appConfig.server.gprs_server_port, appConfig.server.ip, 1000, () => {
+      this.log(`Server for GPRS listening on ${appConfig.server.gprs_server_port}`);
     });
   }
 
@@ -426,7 +446,8 @@ export class Main {
       if (!nodeOptional) {
         this.log(`No node attach ID = ${nodeID}`);
       } else {
-        if (nodeOptional.isLogged() || nodeOptional.isSyncedThroughGSM()) {
+        // if (nodeOptional.isLogged() || nodeOptional.isSyncedThroughGSM()) {
+        if (nodeOptional.isLogged()) {
           nodeOptional.addCommandForControllerBody(codes.CMD_TICKET_REMOVE, -1, [ticketID.toString()]);
           this.log('Added command for controller.');
         } else {
@@ -509,7 +530,8 @@ export class Main {
     // Asynchronous task
     const myPromise: Promise<RequestResult> = new Promise((resolve, _reject) => {
       let ignoreTimeout = false;
-      if (Selector.isChannelConnected(node._currentSocket) || node.isSyncedThroughGSM()) {
+      // if (Selector.isChannelConnected(node._currentSocket) || node.isSyncedThroughGSM()) {
+      if (Selector.isSocketConnected(node._currentSocket)) {
         node.disableArmButton(true);
         // Timeout for this operation
         const securityHandle = setTimeout(() => {
@@ -785,17 +807,18 @@ export class Main {
       this.log(`Controller ${newOrder.ctrl_id} doesn't exist.`);
       return new RequestResult(false, `El nodo ID = ${newOrder.ctrl_id} no existe`);
     }
-    if (nodeKey.pendingOrder) {
-      this.log(`Controller ${newOrder.ctrl_id} already waiting for order.`);
-      return new RequestResult(false, `El nodo ID = ${newOrder.ctrl_id} tiene una orden pendiente.`);
-    }
+    // if (nodeKey.pendingOrder) {
+    //   this.log(`Controller ${newOrder.ctrl_id} already waiting for order.`);
+    //   return new RequestResult(false, `El nodo ID = ${newOrder.ctrl_id} tiene una orden pendiente.`);
+    // }
 
     // Asynchronous task
     // eslint-disable-next-line no-async-promise-executor
     const myPromise: Promise<RequestResult> = new Promise(async (resolve, _reject) => {
       let monitor = States.ERROR;
       let ignoreTimeout = false;
-      if (Selector.isChannelConnected(nodeKey._currentSocket) || nodeKey.isSyncedThroughGSM()) {
+      // if (Selector.isChannelConnected(nodeKey._currentSocket) || nodeKey.isSyncedThroughGSM()) {
+      if (Selector.isSocketConnected(nodeKey._currentSocket)) {
         // Timeout for this operation
         const reqHandle = setTimeout(async () => {
           if (ignoreTimeout) {
@@ -804,17 +827,17 @@ export class Main {
           this.log(`Remove message ID = ${msgID} by timeout.`);
           // Message has to be removed anyways
           nodeKey.removePendingMessageByID(msgID, codes.J_ERR_TIMEOUT, true, false);
-          nodeKey.pendingOrder = false;
+          // nodeKey.pendingOrder = false;
           monitor = States.TIMEOUT;
           await this.registerOrder(newOrder, monitor);
           resolve(new RequestResult(false, `El controlador ID = ${newOrder.ctrl_id} no ha respondido a tiempo.`));
         }, Main.REQUEST_TIMEOUT);
         // Send order to controller
-        this.log(`Bussy? ${nodeKey.pendingOrder}`);
-        nodeKey.pendingOrder = true;
+        // this.log(`Bussy? ${nodeKey.pendingOrder}`);
+        // nodeKey.pendingOrder = true;
         const msgID = nodeKey.addCommandForControllerBody(codes.CMD_PIN_CONFIG_SET, -1, [newOrder.pin.toString(), newState.toString()], true, true, async (code) => {
           ignoreTimeout = true;
-          nodeKey.pendingOrder = false;
+          // nodeKey.pendingOrder = false;
           clearTimeout(reqHandle);
           monitor = States.EXECUTED;
           await this.registerOrder(newOrder, monitor);
@@ -932,7 +955,8 @@ export class Main {
           continue;
         }
         // If node is logged in
-        if (!attach.isLogged() && !attach.isSyncedThroughGSM()) {
+        // if (!attach.isLogged() && !attach.isSyncedThroughGSM()) {
+        if (!attach.isLogged()) {
           // log("Attachment ID = %d not logged nor synced throught GSM", nodeID);
           continue;
         }
@@ -1052,21 +1076,11 @@ export class Main {
       if (node.hasBeenInactiveFor(Main.ALIVE_CONTROLLER_TIMEOUT)) {
         if (node.isLogged()) {
           this.log(`Channel '${node}' ID = ${node.controllerID} is dead. Reconnecting...`);
-          BaseAttach.simpleReconnect(this.selector, node);
+          BaseAttach.simpleReconnect(this.selector, node, node.currentSocketMethod);
+
           node.resetKeepAliveRequest();
           await node.insertNet(false);
           node.printKeyCount(selector);
-          ManagerAttach.connectedManager?.addNodeState(codes.VALUE_DISCONNECTED, node.controllerID);
-        }
-      }
-    }
-
-    for (const node of nodeCopy) {
-      if (node.hasBeenGSMInactiveFor(Main.ALIVE_CONTROLLER_GSM_TIMEOUT)) {
-        if (node.isSyncedThroughGSM()) {
-          this.log('Controller not responding through GSM. Considered disconnected.');
-          node.setGSMUnsynced();
-          await node.insertNet(false);
           ManagerAttach.connectedManager?.addNodeState(codes.VALUE_DISCONNECTED, node.controllerID);
         }
       }
@@ -1098,7 +1112,7 @@ export class Main {
   private end(signal: NodeJS.Signals) {
     this.log(`Ending with signal ${signal}`);
     // End GSM
-    endGSM();
+    // endGSM();
 
     // End processing messages
     this.processMessages = false;
@@ -1134,6 +1148,15 @@ export class Main {
         this.log(`Server for manager was not started.`);
       } else {
         this.log('Server for manager closed.');
+      }
+    });
+
+    // Close server for GPRS
+    this.gprsServer?.close((err) => {
+      if (err) {
+        this.log(`Server for GPRS was not started.`);
+      } else {
+        this.log('Server for GPRS closed.');
       }
     });
 

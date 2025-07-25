@@ -160,7 +160,7 @@ export interface Controlador {
   streamsecondaryfps: number;
   res_id_streamauxiliary: number;
   streamauxiliaryfps: number;
-  celular: number;
+  imei: number;
 }
 
 export interface EquipoEntrada {

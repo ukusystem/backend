@@ -119,3 +119,5 @@ Backend del proyecto Uku
 - Servidor se basa en XD para considerar conectado o no el controlador
 
 - Mensajes se pueden duplicar, la logica para evitar eso va a ser muy complicada por ahora. Agregar delay entre mensajes para mitigar un poco ese efecto.
+
+# GPRS

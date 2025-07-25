@@ -36,7 +36,7 @@ import path from 'path';
 import { FirmwareVersion } from './firmware';
 import { MyStringIterator } from './myStringIterator';
 import { createHash } from 'crypto';
-import { checkPath, getComs, isGSMAvailable, sendSMS } from './serial';
+// import { checkPath, getComs, isGSMAvailable, sendSMS } from './serial';
 
 /**
  * Base attachment for the sockets
@@ -90,7 +90,7 @@ export class BaseAttach extends Mortal {
    * attachments. useful when canceling a key, so its attachment can not be
    * 'found' when searching by ID.
    */
-  _selectable = true;
+  // _selectable = true;
   /**
    * Logger to use by this object.
    */
@@ -165,7 +165,7 @@ export class BaseAttach extends Mortal {
    */
   sendOne(selector: Selector): boolean {
     // Try send if previous was sent and there is one witing in the buffer
-    if (this.previousMessageSent && this.sendBuffer.length > 0 && Selector.isChannelConnected(this._currentSocket)) {
+    if (this.previousMessageSent && this.sendBuffer.length > 0 && Selector.isSocketConnected(this._currentSocket)) {
       try {
         const first = this.sendBuffer[0];
         if (first) {
@@ -196,33 +196,6 @@ export class BaseAttach extends Mortal {
   }
 
   /**
-   * Try to send one mesasge through GSM
-   */
-  async sendOneGSM(number: number): Promise<boolean> {
-    if (this.sendBuffer.length > 0 && isGSMAvailable()) {
-      // const l = this.sendBuffer.length;
-      const first = this.sendBuffer[0];
-      if (!first) {
-        return false;
-      }
-      const finalMsg = codes.SEP_SIM + first.message;
-      const res = await sendSMS(finalMsg, number);
-      if (!res) {
-        this._log('ERROR Sending SMS');
-        return false;
-      }
-      // console.log(`Sending one SMS from ${l}`);
-      if (first.logOnSend) {
-        // this._log(`Sent SMS (${number}): '${useful.trimString(finalMsg)}'`);
-      }
-      this.addPendingMessage(first);
-      this.sendBuffer.shift();
-      return true;
-    }
-    return false;
-  }
-
-  /**
    * Like {@linkcode simpleReconnect} but this method logs a
    * message.
    *simpleReconnect
@@ -235,7 +208,7 @@ export class BaseAttach extends Mortal {
       return;
     }
     // console.log("Reconnect function")
-    if (BaseAttach.simpleReconnect(selector, this)) {
+    if (BaseAttach.simpleReconnect(selector, this, NodeAttach.CON_ETHERNET)) {
       this._log('Manager can now be accepted.');
     }
     this.printKeyCount(selector);
@@ -255,23 +228,28 @@ export class BaseAttach extends Mortal {
    * @param unreachable Whether to delay the connection for {@linkcode UNREACHABLE_INTERVAL_MS} ms.
    * @returns True if the attachment was a {@linkcode ManagerAttach}, false otherwise.
    */
-  static simpleReconnect(selector: Selector, key: BaseAttach, unreachable: boolean = false): boolean {
+  static simpleReconnect(selector: Selector, key: BaseAttach, method: number, unreachable: boolean = false): boolean {
     if (selector.cancelChannel(key)) {
       return true;
     } else {
       const nodeAttach = <NodeAttach>key;
       if (key instanceof NodeAttach) {
-        if (!nodeAttach.isSyncedThroughGSM()) {
-          nodeAttach.disableArmButton(false, false);
-        }
+        // if (!nodeAttach.isSyncedThroughGSM()) {
+        nodeAttach.disableArmButton(false, false);
+        // }
         // Delay connection if was unreachable
-        setTimeout(
-          () => {
-            // console.log("Simple reconnect")
-            nodeAttach.tryConnectNode(selector, true);
-          },
-          unreachable ? this.UNREACHABLE_INTERVAL_MS : 1,
-        );
+        if (method === NodeAttach.CON_ETHERNET) {
+          if (unreachable) {
+            console.log(`Unreachable, so waiting ${this.UNREACHABLE_INTERVAL_MS}s before reconnecting`);
+          }
+          setTimeout(
+            () => {
+              // console.log("Simple reconnect")
+              nodeAttach.tryConnectNode(selector, true);
+            },
+            unreachable ? this.UNREACHABLE_INTERVAL_MS : 1,
+          );
+        }
       }
     }
     return false;
@@ -633,12 +611,13 @@ export class BaseAttach extends Mortal {
 
   /**
    * Add a {@link codes.CMD_HELLO_FROM_SRVR} message with the current server
-   * timestamp.
+   * timestamp. Include user ID for the manager
    *
    * @param id ID of the message that this method is responding to.
    */
   addHello(id: number, userID: number, action: IntConsumer = null) {
-    this._addOne(new Message(codes.CMD_HELLO_FROM_SRVR, id, [useful.timeInt().toString(), userID.toString()], action));
+    const msgID = this._addOne(new Message(codes.CMD_HELLO_FROM_SRVR, id, [useful.timeInt().toString(), userID.toString()], action));
+    this._log(`Added hello from server (${msgID})`);
   }
 
   /**
@@ -919,6 +898,9 @@ export class BaseAttach extends Mortal {
  * Attachment for channels related to controllers
  */
 export class NodeAttach extends BaseAttach {
+  public ethernetSocket: net.Socket | null = null;
+  // public gprsSocket: net.Socket | null = null;
+
   /**
    * Used to forbid sending more requests after one has been send but its response has not been received yet.
    */
@@ -947,9 +929,8 @@ export class NodeAttach extends BaseAttach {
   private lastPowerStamp = 0;
 
   private static readonly TRY_SIM_ALIVE_INTERVAL_S = 30 * 4;
-  private isGSMSynced = false;
-  public pendingOrder = false;
-
+  // private isGSMSynced = false;
+  // public pendingOrder = false;
   private unreached = false;
 
   /**
@@ -963,28 +944,28 @@ export class NodeAttach extends BaseAttach {
   private ip;
   private user;
   private password;
-  celular: number;
+
+  public static readonly CON_NONE = 1;
+  public static readonly CON_ETHERNET = 2;
+  public static readonly CON_GPRS = 3;
+
+  /**
+   * Read from the database
+   */
+  private imei: number;
+  public currentSocketMethod = NodeAttach.CON_NONE;
+  // private sentLoginMethod = NodeAttach.CON_NONE;
+
+  public static readonly DEFAULT_IMEI = 0;
+  /**
+   * Recevied with `VALUE_XD`
+   */
+  private receivedIMEI = NodeAttach.DEFAULT_IMEI;
+  public imeiReceivedAndMatched = false;
 
   private chunkIterator: MyStringIterator | null = null;
 
-  private lastChannelConnected = false;
-
-  /**
-   * @deprecated
-   */
-  private inputAI = 0;
-  /**
-   * @deprecated
-   */
-  private outputAI = 0;
-  /**
-   * @deprecated
-   */
-  private tempAI = 0;
-  /**
-   * @deprecated
-   */
-  private energyAI = 0;
+  private lastEthernetConnected = false;
 
   /**
    * Used to get the connection state of the socket for the manager. This is true
@@ -994,7 +975,7 @@ export class NodeAttach extends BaseAttach {
    */
   private loggedToController = false;
 
-  constructor(nodeID: number, nodeName: string, nodeIP: string, nodePort: number, nodeUser: string, nodePassword: string, currentLogger: Logger, celular: number) {
+  constructor(nodeID: number, nodeName: string, nodeIP: string, nodePort: number, nodeUser: string, nodePassword: string, currentLogger: Logger, imei: number) {
     super(currentLogger);
     this.controllerID = nodeID;
     this.setName(nodeName);
@@ -1002,51 +983,106 @@ export class NodeAttach extends BaseAttach {
     this.port = nodePort;
     this.user = nodeUser;
     this.password = nodePassword;
-    this.celular = celular;
+    this.imei = imei;
   }
 
-  setGSMSync() {
-    // const bigToken = BigInt(newToken);
-    // if (bigToken === codes.GSM_EMPTY_TOKEN) {
-    //   this._log('ERROR Token received was THE empty token');
-    // } else {
-    this.isGSMSynced = true;
-    this.disableArmButton(false, true);
-    this.insertNet(true);
-    this.syncCards();
-    // this.notifyNet(true);
-    // this._log(`New GSM token for controller ID=${this.controllerID} set! (${this.isGSMSynced}) `);
-    this._log('Controller synced through GSM!');
-    // }
+  /**
+   * Get the method used to log in to the controller, if logged.
+   * @returns `NodeAttach.CON_ETHERNET` if ethernet was used, `NodeAttach.CON_GPRS` if GPRS was used, or `NodeAttach.CON_NONE`
+   * if the attachment is not logged in.
+   */
+  public getLoggedMethod(): number {
+    return this.isLogged() ? this.currentSocketMethod : NodeAttach.CON_NONE;
   }
 
-  setGSMUnsynced(log: boolean = true) {
-    this.isGSMSynced = false;
-    if (log) {
-      this._log('GSM unsynced!');
+  // public getDatabaseIMEI() {
+  //   return this.imei;
+  // }
+
+  /**
+   * Called by a "dummy" atachment to try to assign the connection to the correct attachment. Free the socket if it was not used
+   * @param data Data received throught the dummy
+   * @param selector Current selector
+   * @param connection New client socket created
+   */
+  public testForGPRSNodeClient(data: Buffer, selector: Selector, connection: net.Socket) {
+    this._log(`Received GPRS data: '${data}'`);
+
+    // Process data received
+    this.addData(data);
+    const res = new ResultCode();
+    const bundle = new Bundle();
+    this.readOne(selector, res, bundle);
+
+    // Try to match node only if IMEI was valid and
+    let freeSocket = true;
+    if (useful.isValidIMEI(this.receivedIMEI) && !this.imeiReceivedAndMatched) {
+      const node = selector.getNodeByIMEI(this.receivedIMEI);
+      if (node) {
+        // If attachment already logged, ignore connection
+        if (node.getLoggedMethod() !== NodeAttach.CON_NONE) {
+          this._log('Already logged. Aborting');
+          return;
+        }
+        this._log(`Node ${this.controllerID} matched with IMEI ${this.receivedIMEI}`);
+        node.configureSocketCreated(connection, selector, NodeAttach.CON_GPRS);
+        this.imeiReceivedAndMatched = true;
+        node.currentSocketMethod = NodeAttach.CON_GPRS;
+        node.connectCallback(true, NodeAttach.CON_GPRS);
+        freeSocket = false;
+      } else {
+        this._log(`Node not found for IMEI ${this.receivedIMEI}`);
+      }
     }
-    this.markTiketsAsNotSent();
+
+    // Free connection if it was not used
+    if (freeSocket) {
+      Selector.freeSocket(connection);
+    }
   }
 
-  public isSyncedThroughGSM(): boolean {
-    return this.isGSMSynced;
+  // setGSMSync() {
+  //   // const bigToken = BigInt(newToken);
+  //   // if (bigToken === codes.GSM_EMPTY_TOKEN) {
+  //   //   this._log('ERROR Token received was THE empty token');
+  //   // } else {
+  //   this.isGSMSynced = true;
+  //   this.disableArmButton(false, true);
+  //   this.insertNet(true);
+  //   this.syncCards();
+  //   // this.notifyNet(true);
+  //   // this._log(`New GSM token for controller ID=${this.controllerID} set! (${this.isGSMSynced}) `);
+  //   this._log('Controller synced through GSM!');
+  //   // }
+  // }
+
+  // setGSMUnsynced(log: boolean = true) {
+  //   this.isGSMSynced = false;
+  //   if (log) {
+  //     this._log('GSM unsynced!');
+  //   }
+  //   this.markTiketsAsNotSent();
+  // }
+
+  // public isSyncedThroughGSM(): boolean {
+  //   return this.isGSMSynced;
+  // }
+
+  imeiMatch(imei: number): boolean {
+    return this.imei === imei;
   }
 
-  phoneMatch(phone: number): boolean {
-    return this.celular === phone;
-  }
-
-  setPhone(newPhone: number): boolean {
-    if (useful.isValidCellphone(newPhone)) {
-      this.celular = newPhone;
-      this._log(`New phone number: '${this.celular}'`);
+  setIMEI(newIMEI: number): boolean {
+    if (useful.isValidIMEI(newIMEI)) {
+      this.imei = newIMEI;
+      this._log(`New IMEI: '${this.imei}'`);
       return true;
     }
     return false;
   }
 
-  canUseGSM(): boolean {
-    return useful.isValidCellphone(this.celular);
+  canUseGPRS(): boolean {
+    return useful.isValidIMEI(this.imei);
   }
 
   resetKeepAliveRequest() {
@@ -1112,7 +1148,7 @@ export class NodeAttach extends BaseAttach {
   // }
 
   static getInstanceFromPacket(data: db2.Controlador2, logger: Logger): NodeAttach {
-    return new NodeAttach(data.ctrl_id, data.nodo, data.ip, data.puerto, data.usuario, data.contraseña, logger, data.celular);
+    return new NodeAttach(data.ctrl_id, data.nodo, data.ip, data.puerto, data.usuario, data.contraseña, logger, data.imei);
   }
 
   /**
@@ -1135,34 +1171,38 @@ export class NodeAttach extends BaseAttach {
    * a period of time. Sending this request does not mean that the controller is alive, so {@linkcode Mortal.setAlive} should not be called here.
    */
   tryRequestKeepalive() {
-    if (!Selector.isChannelConnected(this._currentSocket)) {
+    if (!Selector.isSocketConnected(this._currentSocket)) {
       return;
     }
-    if (!this._keepAliveRequestSent && this.isBufferEmpty() && useful.timeInt() >= this.lastTimeMessageSent + Main.ALIVE_REQUEST_INTERVAL) {
-      this._keepAliveRequestSent = true;
-      this._addOne(new Message(codes.CMD_KEEP_ALIVE_REQUEST, 0));
-      // this._log("Keep alive request added")
+    if (useful.timeInt() >= this.lastTimeMessageSent + Main.ALIVE_REQUEST_INTERVAL) {
+      if (!this._keepAliveRequestSent && this.isBufferEmpty()) {
+        this._keepAliveRequestSent = true;
+        this._addOne(new Message(codes.CMD_KEEP_ALIVE_REQUEST, 0));
+        // this._log('Keep alive request added');
+      } else {
+        // this._log(`Not met. sent: ${this._keepAliveRequestSent} empty: ${this.isBufferEmpty()}`);
+      }
     }
   }
 
   /**
    * Check if a CMD_SERVER_SIM_ALIVE can be sent to this controller, and if so, send it. Send the curren token to validate this operation.
    */
-  tryAddSIMAlive() {
-    // Always send discovery message in order to track connectivity
-    if (!isGSMAvailable()) {
-      // if (!isGSMAvailable() || this.gsmToken !== codes.GSM_EMPTY_TOKEN) {
-      // this._log("GSM Not ready or token is already set!")
-      this.lastTimeSIMAliveSent = 0;
-      return;
-    }
-    const currentTime = useful.timeInt();
-    if (currentTime >= this.lastTimeSIMAliveSent + NodeAttach.TRY_SIM_ALIVE_INTERVAL_S) {
-      this._addOne(new Message(codes.CMD_SERVER_SIM_ALIVE, 0, [currentTime.toString()]));
-      this.lastTimeSIMAliveSent = currentTime;
-      this._log('SIM alive added');
-    }
-  }
+  // tryAddSIMAlive() {
+  //   // Always send discovery message in order to track connectivity
+  //   if (!isGSMAvailable()) {
+  //     // if (!isGSMAvailable() || this.gsmToken !== codes.GSM_EMPTY_TOKEN) {
+  //     // this._log("GSM Not ready or token is already set!")
+  //     this.lastTimeSIMAliveSent = 0;
+  //     return;
+  //   }
+  //   const currentTime = useful.timeInt();
+  //   if (currentTime >= this.lastTimeSIMAliveSent + NodeAttach.TRY_SIM_ALIVE_INTERVAL_S) {
+  //     this._addOne(new Message(codes.CMD_SERVER_SIM_ALIVE, 0, [currentTime.toString()]));
+  //     this.lastTimeSIMAliveSent = currentTime;
+  //     this._log('SIM alive added');
+  //   }
+  // }
 
   async _processMessage(_selector: Selector, parts: string[], cmdOrValue: number, id: number, command: string, _code: ResultCode, _bundle: Bundle): Promise<boolean> {
     switch (cmdOrValue) {
@@ -1173,10 +1213,10 @@ export class NodeAttach extends BaseAttach {
         this._keepAliveRequestSent = false;
         // this._log("Keep alive response received")
         break;
-      case codes.VALUE_WRONG_TOKEN:
-        this._log('Controller notified wrong token');
-        this.setGSMUnsynced();
-        break;
+      // case codes.VALUE_WRONG_TOKEN:
+      //   this._log('Controller notified wrong token');
+      //   this.setGSMUnsynced();
+      //   break;
       case codes.CMD_POWER:
         // this._log(`Received power measure '${command}'`);
         const onePower = this._parseMessage(parts, queries.powerParse);
@@ -1435,7 +1475,7 @@ export class NodeAttach extends BaseAttach {
 
         break;
       case codes.VALUE_SERIAL:
-        // this._log(`Received controller info '${command}'`);
+        this._log(`Received controller info '${command}'`);
         this.mirrorMessage(this._appendPart(command, this.controllerID.toString()), true);
         const serialData = this._parseMessage(parts, [queries.tupleTxt, queries.tupleTxt], id, false);
         if (!serialData) {
@@ -1511,16 +1551,16 @@ export class NodeAttach extends BaseAttach {
       case codes.VALUE_CTRL_STATE:
         this.mirrorMessage(command, true);
         break;
-      case codes.VALUE_END_SYNC:
-        this._log('Received end of sync');
-        // const syncData = this._parseMessage(parts, queries.bigParse, id, false);
-        // if (syncData) {
-        // const newToken = syncData[0].getInt();
-        // this._log(`New token: ${newToken}`);
-        this._log('End sync');
-        this.setGSMSync();
-        // }
-        break;
+      // case codes.VALUE_END_SYNC:
+      //   this._log('Received end of sync');
+      //   // const syncData = this._parseMessage(parts, queries.bigParse, id, false);
+      //   // if (syncData) {
+      //   // const newToken = syncData[0].getInt();
+      //   // this._log(`New token: ${newToken}`);
+      //   this._log('End sync');
+      //   this.setGSMSync();
+      //   // }
+      //   break;
 
       // Should be mirrored with the node ID appended. These are event for the technician.
       case codes.VALUE_SD:
@@ -1715,24 +1755,31 @@ export class NodeAttach extends BaseAttach {
         }
         break;
 
-      // This message means that the login was successful
       case codes.VALUE_XD:
+        if (this.imeiReceivedAndMatched) {
+          this._log('Cannot received IMEI, VALUE_XD disabled');
+          break;
+        }
         this._log('Received XD');
-        const xdData = this._parseMessage(parts, [queries.tupleInt], id, false);
+        const xdData = this._parseMessage(parts, [queries.tupleBig], id, false);
         if (!xdData) {
           break;
         }
-        this.setGSMAlive();
-        if (xdData[0].getInt() === codes.VALUE_FALSE) {
-          this.setGSMUnsynced();
+        const tempIMEI = xdData[0].getInt();
+        if (useful.isValidIMEI(tempIMEI)) {
+          this.receivedIMEI = tempIMEI;
+          this._log(`Received valid IMEI: ${this.receivedIMEI}`);
+        } else {
+          this._log('IMEI Not valid');
         }
-        this.tryAddSyncRequest();
         break;
+      // This message means that the login was successful
       case codes.CMD_HELLO_FROM_CTRL:
         this._log('Received hello from controller. Logged in.');
         this.setLogged(true);
-        this.setGSMUnsynced();
-        this.pendingOrder = false;
+
+        // this.setGSMUnsynced();
+        // this.pendingOrder = false;
 
         ManagerAttach.connectedManager?.addNodeState(codes.VALUE_CONNECTED, this.controllerID);
 
@@ -2108,16 +2155,16 @@ export class NodeAttach extends BaseAttach {
     return this._addOne(msg);
   }
 
-  tryAddSyncRequest() {
-    if (this.isSyncedThroughGSM()) {
-      return;
-    }
-    const pwd = Encryption.decrypt(this.password, true);
-    if (pwd) {
-      this._log('Added sync request');
-      this._addOne(new Message(codes.SYNC_REQUEST, 0, [pwd]).setLogOnSend(true));
-    }
-  }
+  // tryAddSyncRequest() {
+  //   if (this.isSyncedThroughGSM()) {
+  //     return;
+  //   }
+  //   const pwd = Encryption.decrypt(this.password, true);
+  //   if (pwd) {
+  //     this._log('Added sync request');
+  //     this._addOne(new Message(codes.SYNC_REQUEST, 0, [pwd]).setLogOnSend(true));
+  //   }
+  // }
 
   /**
    * Add a {@linkcode codes.CMD_LOGIN} message with the current user and password in
@@ -2126,17 +2173,18 @@ export class NodeAttach extends BaseAttach {
   addLogin() {
     const pwd = Encryption.decrypt(this.password, true);
     if (pwd) {
-      this._addOne(new Message(codes.CMD_LOGIN, -1, [this.user, pwd]).setLogOnSend(false));
-      this._log(`Added login`);
+      const msgID = this._addOne(new Message(codes.CMD_LOGIN, -1, [this.user, pwd]).setLogOnSend(false));
+      this._log(`Added login (${msgID})`);
     }
   }
 
   async syncCards() {
-    // this._log("Sending cards");
+    this._log('Sending cards');
     const cards = await executeQuery<db2.CardForController[]>(queries.cardSelectForController);
     if (cards) {
       for (const card of cards) {
-        this.addCommandForControllerBody(codes.CMD_CONFIG_SET, -1, card.activo ? [codes.VALUE_CARD_SYNC.toString(), card.a_id.toString(), card.co_id.toString(), card.serie.toString(), card.administrador.toString()] : [codes.VALUE_CARD_EMPTY_SYNC.toString(), card.a_id.toString()], false, false);
+        // The response is not useful at the moment
+        this.addCommandForControllerBody(codes.CMD_CONFIG_SET, 0, card.activo ? [codes.VALUE_CARD_SYNC.toString(), card.a_id.toString(), card.co_id.toString(), card.serie.toString(), card.administrador.toString()] : [codes.VALUE_CARD_EMPTY_SYNC.toString(), card.a_id.toString()], false, false);
       }
     } else {
       this._log('ERROR Reading cards to sync');
@@ -2144,33 +2192,36 @@ export class NodeAttach extends BaseAttach {
   }
 
   /**
-   * Create a socket for one controller and set its connection events.
-   * @param selector Container of all the attachments.
-   * @param log Whether to log when the socket is connected.
-   * @param push Whether to add the new attachment to the list.
+   * Log in and sync some data with the controller. Should be used when the connection could be stablished successfully.
+   * @param log
    */
-  tryConnectNode(selector: Selector, log: boolean, push: boolean = true) {
-    const controllerSocket = net.createConnection(this.port, this.ip, () => {
-      // console.log(this._currentSocket?.writableLength);
-      this.lastChannelConnected = true;
-      if (log) {
-        this._log('Socket connect callback');
+  public connectCallback(log: boolean, method: number) {
+    // console.log(this._currentSocket?.writableLength);
+    this.lastEthernetConnected = method === NodeAttach.CON_ETHERNET ? true : this.lastEthernetConnected;
+    if (log) {
+      this._log('Socket connect callback');
+    }
+    this.unreached = false;
+    ManagerAttach.connectedManager?.addNodeState(codes.VALUE_DENIED, this.controllerID);
+    this.addLogin();
+    this.addHello(-1, 0, async (code: number) => {
+      if (code !== codes.AIO_OK) {
+        this._log(`ERROR Sending hello to controller ${useful.toHex(code)}`);
+        return;
       }
-      this.unreached = false;
-      ManagerAttach.connectedManager?.addNodeState(codes.VALUE_DENIED, this.controllerID);
-      this.addLogin();
-      this.addHello(-1, 0, async (code: number) => {
-        if (code !== codes.AIO_OK) {
-          this._log(`ERROR Sending hello to controller ${useful.toHex(code)}`);
-          return;
-        }
-        // Set this after the controller proves that can receive/respond to messages
-        this.resetKeepAliveRequest();
-        // Send all cards. Inactive cards will be send with an order to erase it in the controller.
-        this.syncCards();
-      });
+      // Set this after the controller proves that can receive/respond to messages
+      this.resetKeepAliveRequest();
+      // Send all cards. Inactive cards will be send with an order to erase it in the controller.
+      this.syncCards();
     });
+  }
 
+  public static getMethodString(method: number): string {
+    return method === NodeAttach.CON_ETHERNET ? 'Ethernet' : method === NodeAttach.CON_GPRS ? 'GPRS' : 'None';
+  }
+
+  configureSocketCreated(controllerSocket: net.Socket, selector: Selector, method: number): net.Socket {
+    controllerSocket.removeAllListeners();
     controllerSocket.on('data', (data: Buffer) => {
       // const a = [...data]
       // this._log(`Received buffer '${a.map((s)=>s.toString(16)).join(" ")}' from controller ID ${this.controllerID}`)
@@ -2227,21 +2278,43 @@ export class NodeAttach extends BaseAttach {
 
       // console.log("Try connect node, close event")
       if (this.isLogged()) {
-        this._log(`The node ID = ${this.controllerID} (${this.node}) closed its socket. Reconnecting ...`);
+        this._log(`The node ID = ${this.controllerID} (${this.node}) closed its socket. ${method === NodeAttach.CON_ETHERNET ? 'Reconnecting ...' : ''}`);
         await this.insertNet(false);
         this.printKeyCount(selector);
         ManagerAttach.connectedManager?.addNodeState(codes.VALUE_DISCONNECTED, this.controllerID);
       } else {
-        if (this.lastChannelConnected) {
-          this._log('Channel disconnected (falling edge)');
+        if (this.lastEthernetConnected && method === NodeAttach.CON_ETHERNET) {
+          this._log(`Channel disconnected (falling edge) (${NodeAttach.getMethodString(method)})`);
           ManagerAttach.connectedManager?.addNodeState(codes.VALUE_DISCONNECTED, this.controllerID);
         }
       }
-      this.lastChannelConnected = false;
-      BaseAttach.simpleReconnect(selector, this, this.unreached);
+      this.lastEthernetConnected = method === NodeAttach.CON_ETHERNET ? false : this.lastEthernetConnected;
+      BaseAttach.simpleReconnect(selector, this, method, this.unreached);
     });
 
-    this._currentSocket = controllerSocket;
+    // this._currentSocket = controllerSocket;
+    return controllerSocket;
+  }
+
+  /**
+   * Create a socket for one controller and set its connection events.
+   * @param selector Container of all the attachments.
+   * @param log Whether to log when the socket is connected.
+   * @param push Whether to add the new attachment to the list.
+   */
+  tryConnectNode(selector: Selector, log: boolean, push: boolean = true) {
+    if (this.controllerID === 1) {
+      this._log(`Trying`);
+    }
+    const newControllerSocket = net.createConnection(this.port, this.ip, () => {
+      // this.ethernetSocket = newControllerSocket;
+      // Clear any previous connection (created by other method)
+      Selector.freeSocket(this._currentSocket);
+      this._currentSocket = this.ethernetSocket;
+      this.connectCallback(log, NodeAttach.CON_ETHERNET);
+    });
+
+    this.ethernetSocket = this.configureSocketCreated(newControllerSocket, selector, NodeAttach.CON_ETHERNET);
 
     if (push) {
       selector.nodeAttachments.push(this);
@@ -2255,8 +2328,9 @@ export class NodeAttach extends BaseAttach {
     this.port = rowWithData.puerto;
     this.user = rowWithData.usuario;
     this.password = rowWithData.contraseña;
+    this.imei = rowWithData.imei;
     this._closeOnNextSend = false;
-    this._selectable = true;
+    // this._selectable = true;
     this.setLogged(false);
     this._log(`Data updated node ID = ${this.controllerID}.`);
   }
@@ -2426,9 +2500,9 @@ export class ManagerAttach extends BaseAttach {
                   case codes.VALUE_GENERAL:
                     await this.addGeneral(id, false);
                     break;
-                  case codes.VALUE_COM:
-                    await this.addComs(id, true);
-                    break;
+                  // case codes.VALUE_COM:
+                  //   await this.addComs(id, true);
+                  //   break;
                   case codes.VALUE_NODE:
                     await this.addNodes(selector, id, false);
                     // Just to check on keys. No other particular reason.
@@ -2479,7 +2553,6 @@ export class ManagerAttach extends BaseAttach {
                 }
               }
               break;
-
             case codes.CMD_CONFIG_SET:
               const valueData = this._parseMessage(parts, queries.valueParse, id);
               if (!valueData) break;
@@ -2555,7 +2628,7 @@ export class ManagerAttach extends BaseAttach {
                     }
                     nodePassword.setString(encrytedNodePassword);
                   }
-                  // console.log(nodeData)
+                  console.log(nodeData);
                   await this.completeReconnect(selector, nodeID, false, id, nodeData);
                   // After a node related order has been processed
                   this.printKeyCount(selector);
@@ -2957,10 +3030,6 @@ export class ManagerAttach extends BaseAttach {
     let notify = false;
     let resetData = false;
 
-    if (currentAttach) {
-      currentAttach.setGSMUnsynced();
-    }
-
     /**
      * The channel was not found.
      * In both cases, a new channel must be created IF there is data in the database.
@@ -2979,7 +3048,7 @@ export class ManagerAttach extends BaseAttach {
       if (await this._insertItem('node', newCompleteData, queries.nodeInsert, id)) {
         notify = true;
       } else {
-        this._log('Could not insert, updating node instead.');
+        this._log('Could not insert (entry already exists?), updating node instead.');
         if (await this._updateItem('node', newCompleteData, updateQuery, id)) {
           notify = true;
           this._log('Node updated');
@@ -2987,6 +3056,7 @@ export class ManagerAttach extends BaseAttach {
           this._log('Could not update node.');
         }
       }
+
       // Recover the data just saved
       const newData = await this.getOneControllerData(nodeID);
       if (!newData) {
@@ -3032,7 +3102,8 @@ export class ManagerAttach extends BaseAttach {
         currentAttach.resetOnlyData(newData);
 
         // Reset node attachment data and connect with the new data
-        BaseAttach.simpleReconnect(selector, currentAttach);
+        this._log(`Reconnecting socket by Ethernet`);
+        BaseAttach.simpleReconnect(selector, currentAttach, NodeAttach.CON_ETHERNET);
       } else {
         if (!newCompleteData) {
           this._log(`There was no data to edit node ID ${nodeID}`);
@@ -3065,6 +3136,7 @@ export class ManagerAttach extends BaseAttach {
           return;
         }
         currentAttach.setName(newData.nodo);
+        currentAttach.setIMEI(newData.imei);
         this._log(`Channel '${currentAttach.toString()}' will reconnect when the controller confirms the changes.`);
       }
     }
@@ -3076,10 +3148,10 @@ export class ManagerAttach extends BaseAttach {
         // Update node phone only when it was saved in database
         if (notify) {
           // console.log(cd);
-          const newPhone = cd[26].getInt();
-          currentAttach.setPhone(newPhone);
+          const newIMEI = cd[26].getInt();
+          currentAttach.setIMEI(newIMEI);
         }
-
+        // this._log(`Complete data: \n${cd}`);
         // Notify only when it was saved in database
         // this._log('Notifying web about controller');
         ControllerMapManager.update(currentAttach.controllerID, {
@@ -3089,22 +3161,22 @@ export class ManagerAttach extends BaseAttach {
           descripcion: cd[4].getString(),
           latitud: cd[5].getString(),
           longitud: cd[6].getString(),
-          serie: cd[8].getString(),
-          ip: cd[9].getString(),
-          personalgestion: cd[13].getString(),
-          personalimplementador: cd[14].getString(),
-          motionrecordseconds: cd[15].getInt(),
-          res_id_motionrecord: cd[16].getInt(),
-          motionrecordfps: cd[17].getInt(),
-          motionsnapshotseconds: cd[18].getInt(),
-          res_id_motionsnapshot: cd[19].getInt(),
-          motionsnapshotinterval: cd[20].getInt(),
-          res_id_streamprimary: cd[21].getInt(),
-          streamprimaryfps: cd[22].getInt(),
-          res_id_streamsecondary: cd[23].getInt(),
-          streamsecondaryfps: cd[24].getInt(),
-          res_id_streamauxiliary: cd[25].getInt(),
-          streamauxiliaryfps: cd[26].getInt(),
+          // serie: cd[8].getString(),
+          ip: cd[8].getString(),
+          personalgestion: cd[12].getString(),
+          personalimplementador: cd[13].getString(),
+          motionrecordseconds: cd[14].getInt(),
+          res_id_motionrecord: cd[15].getInt(),
+          motionrecordfps: cd[16].getInt(),
+          motionsnapshotseconds: cd[17].getInt(),
+          res_id_motionsnapshot: cd[18].getInt(),
+          motionsnapshotinterval: cd[19].getInt(),
+          res_id_streamprimary: cd[20].getInt(),
+          streamprimaryfps: cd[21].getInt(),
+          res_id_streamsecondary: cd[22].getInt(),
+          streamsecondaryfps: cd[23].getInt(),
+          res_id_streamauxiliary: cd[24].getInt(),
+          streamauxiliaryfps: cd[25].getInt(),
         });
       }
     } catch (e) {
@@ -3167,7 +3239,7 @@ export class ManagerAttach extends BaseAttach {
       companyID = workerData[0].entero;
     }
     for (const nodeAttach of selector.nodeAttachments) {
-      if (nodeAttach.isLogged() || nodeAttach.isSyncedThroughGSM()) {
+      if (nodeAttach.isLogged()) {
         nodeAttach.addCommandForControllerBody(codes.CMD_CONFIG_SET, -1, remove ? [codes.VALUE_CARD_EMPTY.toString(), cardID.toString()] : [codes.VALUE_CARD.toString(), cardID.toString(), companyID.toString(), serial.toString(), isAdmin ? '1' : '0']);
       }
     }
@@ -3311,22 +3383,22 @@ export class ManagerAttach extends BaseAttach {
   private async addGeneral(id: number, log: boolean) {
     const generalResponse = await executeQuery<db2.GeneralData[]>(queries.generalSelect);
     if (generalResponse && generalResponse.length === 1) {
-      this._addOne(new Message(codes.VALUE_GENERAL, id, [generalResponse[0].nombreempresa, generalResponse[0].celular.toString(), generalResponse[0].com, Main.getVersionString()]).setLogOnSend(log));
+      this._addOne(new Message(codes.VALUE_GENERAL, id, [generalResponse[0].nombreempresa, Main.getVersionString()]).setLogOnSend(log));
     } else {
       this._log('Error getting general info.');
     }
   }
 
-  private async addComs(id: number, log: boolean) {
-    const coms = await getComs();
-    for (const com of coms) {
-      this._addOne(new Message(codes.VALUE_COM, 0, [com.path, com.name]).setLogOnSend(true));
-    }
-    this._addOne(new Message(codes.VALUE_COMS_END, id).setLogOnSend(true));
-    if (log) {
-      // this._log('Added COMs end.');
-    }
-  }
+  // private async addComs(id: number, log: boolean) {
+  //   const coms = await getComs();
+  //   for (const com of coms) {
+  //     this._addOne(new Message(codes.VALUE_COM, 0, [com.path, com.name]).setLogOnSend(true));
+  //   }
+  //   this._addOne(new Message(codes.VALUE_COMS_END, id).setLogOnSend(true));
+  //   if (log) {
+  //     // this._log('Added COMs end.');
+  //   }
+  // }
 
   private async updateGeneral(items: DataStruct[]): Promise<boolean> {
     // nombre, celular, com
@@ -3337,17 +3409,17 @@ export class ManagerAttach extends BaseAttach {
     const res = await executeQuery<ResultSetHeader>(queries.generalUpdate, data);
     if (res) {
       // Update 'celular' in controllers
-      const celularRes = await executeQuery<db2.GeneralNumber[]>(queries.selectCelular);
-      if (celularRes && celularRes.length === 1) {
-        // Send to controllers
-      }
+      // const celularRes = await executeQuery<db2.GeneralNumber[]>(queries.selectCelular);
+      // if (celularRes && celularRes.length === 1) {
+      //   // Send to controllers
+      // }
       // Restart GSM with new com from database
-      checkPath();
+      // checkPath();
       // Notify web about general data
       this._log(`Notifying general data.`);
       SystemManager.updateGeneral({
         COMPANY_NAME: data[0],
-        EMAIL_ADMIN: 'a@b.c',
+        // EMAIL_ADMIN: 'a@b.c',
       });
       return true;
     } else {
@@ -3442,9 +3514,9 @@ export class Selector {
     }
   }
 
-  getNodeByNumber(phone: number): NodeAttach | null {
+  public getNodeByIMEI(imei: number): NodeAttach | null {
     for (const nodeAttach of this.nodeAttachments) {
-      if (nodeAttach.phoneMatch(phone)) {
+      if (nodeAttach.imeiMatch(imei)) {
         return nodeAttach;
       }
     }
@@ -3480,7 +3552,7 @@ export class Selector {
   getNodeState(nodeID: number): number {
     const nodeAttach = this.getNodeAttachByID(nodeID);
     if (nodeAttach) {
-      if (Selector.isChannelConnected(nodeAttach._currentSocket)) {
+      if (Selector.isSocketConnected(nodeAttach._currentSocket)) {
         return nodeAttach.isLogged() ? codes.VALUE_CONNECTED : codes.VALUE_DENIED;
       }
     }
@@ -3489,12 +3561,12 @@ export class Selector {
 
   /**
    *
-   * @param key The socket being tested.
+   * @param socket The socket being tested.
    * @returns True if the socket is connected.
    */
-  static isChannelConnected(key: net.Socket | null): boolean {
-    if (key) {
-      return !key.closed && !key.destroyed && !key.connecting;
+  static isSocketConnected(socket: net.Socket | null): boolean {
+    if (socket) {
+      return !socket.closed && !socket.destroyed && !socket.connecting;
     }
     return false;
   }
@@ -3503,11 +3575,72 @@ export class Selector {
    * End and destroy the inner socket of the attachment, if not null.
    * @param attach The attachment containig the socket.
    */
-  private simpleCancel(attach: BaseAttach) {
-    attach._currentSocket?.removeAllListeners();
-    attach._currentSocket?.end();
-    attach._currentSocket?.destroy();
-    attach._currentSocket = null;
+  // private simpleCancel(attach: BaseAttach) {
+  //   attach._currentSocket?.removeAllListeners();
+  //   attach._currentSocket?.end();
+  //   attach._currentSocket?.destroy();
+  //   attach._currentSocket = null;
+  //   if (attach instanceof NodeAttach) {
+  //     // Remove node attachment
+  //     const idx = this.nodeAttachments.indexOf(attach);
+  //     if (idx >= 0) {
+  //       this.nodeAttachments.splice(idx, 1);
+  //     }
+  //     // console.log('Was a NodeAttach.')
+  //   } else if (attach instanceof ManagerAttach) {
+  //     // Remove manager attachment
+  //     const index = this.managerConnections.indexOf(attach);
+  //     if (index >= 0) {
+  //       this.managerConnections.splice(index, 1);
+  //     }
+  //     // console.log("Was a ManagerAttach.");
+  //   } else {
+  //     console.log('Unknown instance.');
+  //   }
+  // }
+
+  /**
+   * Free resources from a socket
+   * @param socket
+   */
+  public static freeSocket(socket: net.Socket | null) {
+    socket?.removeAllListeners();
+    socket?.end();
+    socket?.destroy();
+    socket = null;
+  }
+
+  /**
+   * Clear the attachment, close the channel and cancel the key. This should be
+   * used after an attempt to close the socket properly has been made, the channel
+   * was closed from the other end or in general when the socket is no longer
+   * needed. If the attachment is a {@linkcode BaseAttach}, mark it as not selectable.
+   *
+   * @param key Key to perform on.
+   * @returns True if the attachment was an instance of {@linkcode ManagerAttach},
+   *         false otherwise.
+   */
+  cancelChannel(attach: BaseAttach): boolean {
+    const isManager = attach instanceof ManagerAttach;
+    // If a manager attach, allow other managers to connect
+    if (isManager) {
+      const mngrAttach = <ManagerAttach>attach;
+      if (mngrAttach.isLoggedIn()) {
+        ManagerAttach.isAnotherLoggedIn = false;
+        Selector.freeSocket(attach._currentSocket);
+      }
+    }
+    // If a node attach, log out from controller
+    else if (attach instanceof NodeAttach) {
+      const nodeAttach = <NodeAttach>attach;
+      nodeAttach.setLogged(false);
+      Selector.freeSocket(nodeAttach.ethernetSocket);
+    }
+
+    // attach._currentSocket?.removeAllListeners();
+    // attach._currentSocket?.end();
+    // attach._currentSocket?.destroy();
+    // attach._currentSocket = null;
     if (attach instanceof NodeAttach) {
       // Remove node attachment
       const idx = this.nodeAttachments.indexOf(attach);
@@ -3525,31 +3658,7 @@ export class Selector {
     } else {
       console.log('Unknown instance.');
     }
-  }
-
-  /**
-   * Clear the attachment, close the channel and cancel the key. This should be
-   * used after an attempt to close the socket properly has been made, the channel
-   * was closed from the other end or in general when the socket is no longer
-   * needed. If the attachment is a {@linkcode BaseAttach}, mark it as not selectable.
-   *
-   * @param key Key to perform on.
-   * @returns True if the attachment was an instance of {@linkcode ManagerAttach},
-   *         false otherwise.
-   */
-  cancelChannel(attach: BaseAttach): boolean {
-    const isManager = attach instanceof ManagerAttach;
-    if (isManager) {
-      const mngrAttach = <ManagerAttach>attach;
-      if (mngrAttach.isLoggedIn()) {
-        ManagerAttach.isAnotherLoggedIn = false;
-      }
-    } else if (attach instanceof NodeAttach) {
-      const nodeAttach = <NodeAttach>attach;
-      nodeAttach._selectable = false;
-      nodeAttach.setLogged(false);
-    }
-    this.simpleCancel(attach);
+    // this.simpleCancel(attach);
     return isManager;
   }
 }

@@ -54,8 +54,13 @@ export function isLinux(): boolean {
   return osName === 'linux';
 }
 
-export function isValidCellphone(phone: number): boolean {
-  return phone >= 900000000 && phone <= 999999999;
+/**
+ *
+ * @param imei IMEI to test
+ * @returns True if the passed IMEI is positive and has exactly 15 digits.
+ */
+export function isValidIMEI(imei: number): boolean {
+  return imei > 0 && imei < 1e15 && imei >= 1e14;
 }
 
 /**
