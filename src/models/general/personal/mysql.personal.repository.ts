@@ -24,8 +24,8 @@ export class MySQLPersonalRespository implements PersonalRepository {
     const sql = `
       SELECT p.*, 
       c.cargo,
-             COUNT(a.a_id) AS cantidad_tarjetas, 
-             COUNT(u.u_id) AS cantidad_cuentas  
+             COUNT(DISTINCT a.a_id) AS cantidad_tarjetas, 
+             COUNT(DISTINCT u.u_id) AS cantidad_cuentas  
       FROM general.personal p 
       INNER JOIN general.cargo c ON p.c_id = c.c_id
       LEFT JOIN general.acceso a ON p.p_id = a.p_id AND a.activo = 1 

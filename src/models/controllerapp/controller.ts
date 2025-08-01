@@ -8,6 +8,8 @@ import { ResultSetHeader } from 'mysql2';
 import { executeQuery } from './src/dbManager';
 import * as useful from './src/useful';
 import util from 'util';
+import { UpdateAccesoDTO } from '../general/Acceso/dtos/UpdateAccesoDTO';
+import { ImportAccesoDTO } from '../general/Acceso/dtos/ImportAccesoDTO';
 
 let mainService: Main | null = null;
 
@@ -260,4 +262,29 @@ export async function test_insertFakeTickets() {
     }
   }
   console.log(`Finished`);
+}
+
+export async function updateAccessController(accessID: number, updateData: UpdateAccesoDTO): Promise<boolean> {
+  console.log('Iniciando espera...');
+  await new Promise((resolve) => setTimeout(resolve, 5000));
+  console.log('Han pasado 5 segundos.');
+  console.log(`Actualizando acceso con ID: ${accessID} con datos:`, updateData);
+  return true;
+}
+
+export async function deleteAccessController(accessID: number): Promise<boolean> {
+  console.log('Iniciando espera...');
+  await new Promise((resolve) => setTimeout(resolve, 5000));
+  console.log('Han pasado 5 segundos.');
+  console.log(`Eliminando acceso con ID: ${accessID}`);
+  return true;
+}
+
+export async function importDataToController(data: ImportAccesoDTO[]): Promise<boolean> {
+  console.log('Iniciando importación de datos...');
+  await new Promise((resolve) => setTimeout(resolve, 5000));
+  console.log('Han pasado 5 segundos.');
+  console.log('Datos importados:', data);
+
+  return true;
 }

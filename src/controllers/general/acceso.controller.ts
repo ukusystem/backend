@@ -14,6 +14,7 @@ import { CreateAccesoDTO } from '../../models/general/Acceso/dtos/CreateAccesoDT
 import { UpdateAccesoDTO } from '../../models/general/Acceso/dtos/UpdateAccesoDTO';
 import fs from 'fs/promises';
 import { ImportAccesoDTO } from '../../models/general/Acceso/dtos/ImportAccesoDTO';
+import { deleteAccessController, importDataToController, updateAccessController } from '../../models/controllerapp/controller';
 export class AccesoController {
   constructor(
     private readonly acceso_repository: AccesoRepository,
@@ -54,6 +55,12 @@ export class AccesoController {
         activo: 1,
         created_at: new Date(),
       };
+      //TODO: Comunicación con el controlador
+      const isValidUpdated = await updateAccessController(idInactiveAccess, accessToCreate);
+
+      if (!isValidUpdated) {
+        return res.status(500).json({ success: false, message: 'Error al actualizar el controlador con el nuevo acceso.' });
+      }
       await this.acceso_repository.update(idInactiveAccess, accessToCreate);
 
       const newActivity: InsertRecordActivity = {
@@ -66,8 +73,6 @@ export class AccesoController {
       };
 
       AuditManager.generalInsert(newActivity);
-      //TODO: Comunicación con el controlador
-      //updateAccessController(idInactiveAccess, accessToCreate)
       const response: CreateEntityResponse = {
         id: idInactiveAccess,
         message: 'Acceso creado satisfactoriamente',
@@ -125,6 +130,13 @@ export class AccesoController {
       }
 
       if (Object.keys(finalUpdateAccesoDTO).length > 0) {
+        //TODO: Comunicación con el controlador
+        const isValidUpdated = await updateAccessController(accesoFound.a_id, finalUpdateAccesoDTO);
+        if (!isValidUpdated) {
+          return res.status(500).json({ success: false, message: 'Error al actualizar el controlador con los nuevos datos del acceso.' });
+        }
+
+        // Actualizar el acceso en la base de datos
         await this.acceso_repository.update(accesoFound.a_id, finalUpdateAccesoDTO);
 
         const oldValues = getOldRecordValues(accesoFound, finalUpdateAccesoDTO);
@@ -139,8 +151,6 @@ export class AccesoController {
         };
 
         AuditManager.generalInsert(newActivity);
-        //TODO: Comunicación con el controlador
-        //updateAccessController(accesoFound.a_id, finalUpdateAccesoDTO)
         const response: UpdateResponse<Acceso> = {
           message: 'Acceso actualizado exitosamente',
         };
@@ -210,6 +220,13 @@ export class AccesoController {
       if (accesoFound === undefined) {
         return res.status(400).json({ success: false, message: 'Acceso no disponible' });
       }
+      //TODO: Comunicacion con el controlador
+      const isValidDeletion = await deleteAccessController(Number(a_id));
+
+      if (!isValidDeletion) {
+        return res.status(500).json({ success: false, message: 'Error al eliminar el acceso en el controlador.' });
+      }
+
       await this.acceso_repository.softDelete(Number(a_id));
 
       const newActivity: InsertRecordActivity = {
@@ -222,8 +239,6 @@ export class AccesoController {
       };
 
       AuditManager.generalInsert(newActivity);
-      //TODO: Comunicacion con el controlador
-      //deleteAccessController(Number(a_id))
       const response: DeleteReponse = {
         message: 'Acceso eliminado exitosamente',
         id: Number(a_id),
@@ -320,9 +335,6 @@ export class AccesoController {
         recordsToInsert.length = MAX_ACCESS_COUNT;
       }
 
-      await this.acceso_repository.deleteAllAccess();
-      await this.acceso_repository.insertAccessBulk(recordsToInsert);
-      await fs.unlink(filePath);
       //TODO: Comunicación con el controlador
       // pasaré recordsToInsert ={
       // serie: number,
@@ -330,7 +342,15 @@ export class AccesoController {
       // p_id: number,
       // ea_id: number,
       // activo: number,}
-      //importDataToController(recordsToInsert);
+      const isValidImport = await importDataToController(recordsToInsert);
+
+      if (!isValidImport) {
+        return res.status(500).json({ success: false, message: 'Error al importar los datos.' });
+      }
+
+      await this.acceso_repository.deleteAllAccess();
+      await this.acceso_repository.insertAccessBulk(recordsToInsert);
+      await fs.unlink(filePath);
       res.status(200).json({
         message: `Importación completada. Insertados: ${recordsToInsert.length}`,
       });
